@@ -1,13 +1,13 @@
 import { Remadora, BandaCardiaca } from './remadora.js';
 import { VARIANTES } from './variantes.js';
 import { formatoSplit, formatoTiempo, kcalPorSegundo } from './protocolo.js';
-import { dibujar, dibujarPerfil, dibujarBarras } from './grafica.js';
+import { dibujar, dibujarPerfil, dibujarBarras, dibujarAvance } from './grafica.js';
 import * as db from './db.js';
 import * as Ent from './entrenamientos.js';
 import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -76,6 +76,9 @@ interruptor('#in-modo-auto', 'modoAuto', false);
 interruptor('#in-pausa-auto', 'pausaAuto', true);
 interruptor('#in-res-auto', 'resAuto', false);
 configurarVoz(ajustes.si('voz', true));
+const selVistaRemo = $('#sel-vista-remo');
+selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
+selVistaRemo.addEventListener('change', () => ajustes.escribir('vistaRemo', selVistaRemo.value));
 
 function pintarZonas() {
   const f = ftp();
@@ -175,6 +178,7 @@ $('#btn-demo').addEventListener('click', () => {
 
 // ---------- Sesión ----------
 let sesion = null;
+let entrenamientoPrevio = null;
 let entrenamientoActivo = null;
 let wakeLock = null;
 
@@ -202,7 +206,7 @@ function confirmarTerminar(boton) {
   boton.dataset.confirmar = '1';
   const span = boton.querySelector('span');
   const previo = span.textContent;
-  span.textContent = 'Toca otra vez';
+  span.textContent = '¿Seguro?';
   setTimeout(() => { if (boton.dataset.confirmar) { delete boton.dataset.confirmar; span.textContent = previo; } }, 3000);
 }
 
@@ -235,6 +239,7 @@ async function iniciarSesion() {
     fueraSeguidos: 0,
     tiempoMeta: null,
     mitadAvisada: false,
+    avance: [],
     entrenamiento: entrenamientoActivo ? entrenamientoActivo.nombre : null,
     pruebaFtp: !!entrenamientoActivo?.pruebaFtp,
     bloques: intervalos ? Ent.bloquesEnWatts(entrenamientoActivo.bloques, ftp()) : null,
@@ -357,7 +362,10 @@ function avanzarSesion() {
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
   if (!entrenamientoActivo) return;
-  if (Ent.tipoDe(entrenamientoActivo) === 'objetivo') avanceObjetivo(t);
+  if (Ent.tipoDe(entrenamientoActivo) === 'objetivo') {
+    sesion.avance.push([t, { distancia: sesion.dist, kcal: sesion.kcal, paladas: sesion.paladas }[entrenamientoActivo.objetivo.metrica]]);
+    avanceObjetivo(t);
+  }
   else avanceBloque(t);
 }
 
@@ -497,7 +505,55 @@ function pintar() {
     marcarRango(null);
   }
   if (vistaActiva('entrenar')) dibujarVivo();
+  if (!$('#modo-remo').hidden && vistaGrafica()) pintarGraficaRemo(t);
 }
+
+// Vista de gráfica del modo remo: lo más útil según el tipo de entrenamiento.
+const vistaGrafica = () => ajustes.leer('vistaRemo', 'numeros') === 'grafica';
+let leyendaRemo = '';
+function leyenda(html) {
+  if (html !== leyendaRemo) { $('#mr-leyenda').innerHTML = html; leyendaRemo = html; }
+}
+
+function pintarGraficaRemo(t) {
+  const canvas = $('#mr-grafica');
+  const ent = sesion ? entrenamientoActivo : null;
+  const previa = !sesion && Number($('#sel-entrenamiento').value) ? entrenamientoPrevio : null;
+  const plan = ent || previa;
+  if (plan && Ent.tipoDe(plan) === 'intervalos') {
+    leyenda('<span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia</span>');
+    canvas.setAttribute('aria-label', 'Plan de potencia con tu potencia real');
+    dibujarPerfil(canvas, sesion ? sesion.bloques : Ent.bloquesEnWatts(plan.bloques, ftp()), sesion ? sesion.muestras.map((x) => [x.t, x.w]) : [], sesion ? t : null);
+  } else if (plan) {
+    const unidad = Ent.METRICAS_OBJETIVO[plan.objetivo.metrica].unidad;
+    leyenda(`<span class="lw">Llevas (${unidad})</span><span class="lr">Meta ${plan.objetivo.valor} ${unidad}</span><span class="lp">Proyección a tu ritmo</span>`);
+    canvas.setAttribute('aria-label', `Avance hacia la meta de ${plan.objetivo.valor} ${unidad}`);
+    const p = sesion ? progresoActual(t) : null;
+    dibujarAvance(canvas, sesion ? sesion.avance : [], plan.objetivo.valor, p && !p.completo && p.estimadoSeg != null ? t + p.estimadoSeg : null);
+  } else {
+    leyenda('<span class="lw">Watts</span><span class="ls">Golpes/min</span>');
+    canvas.setAttribute('aria-label', 'Watts y golpes por minuto de los últimos 5 minutos');
+    dibujar(canvas, [
+      { color: color('--watts'), eje: 'izq', puntos: vivo.watts },
+      { color: color('--spm'), eje: 'der', puntos: vivo.spm },
+    ], { ventana: 300 });
+  }
+}
+
+function aplicarVistaRemo() {
+  const g = vistaGrafica();
+  $('#modo-remo').classList.toggle('vista-grafica', g);
+  const b = $('#mr-vista');
+  b.classList.toggle('activo', g);
+  b.innerHTML = g ? '<span class="num" aria-hidden="true">123</span>' : ico('i-grafica');
+  b.setAttribute('aria-label', g ? 'Cambiar a números grandes' : 'Cambiar a vista de gráfica');
+}
+$('#mr-vista').addEventListener('click', () => {
+  ajustes.escribir('vistaRemo', vistaGrafica() ? 'numeros' : 'grafica');
+  selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
+  aplicarVistaRemo();
+  requestAnimationFrame(pintar);
+});
 
 function pintarObjetivo(t) {
   const ent = entrenamientoActivo;
@@ -533,7 +589,7 @@ function pintarBloque(t) {
   const total = Ent.duracionTotal(ent);
   const puntos = sesion.muestras.map((x) => [x.t, x.w]);
   dibujarPerfil($('#grafica-perfil'), sesion.bloques, puntos, t);
-  if (!$('#modo-remo').hidden) dibujarPerfil($('#mr-perfil'), sesion.bloques, puntos, t);
+  if (!$('#modo-remo').hidden && !vistaGrafica()) dibujarPerfil($('#mr-perfil'), sesion.bloques, puntos, t);
   const actualB = Ent.bloqueEn(ent, t);
   if (!actualB) {
     const pctRango = sesion.segConMeta ? `En rango ${Math.round((100 * sesion.segEnRango) / sesion.segConMeta)}% del tiempo` : '';
@@ -584,6 +640,7 @@ async function vistaPrevia() {
   const id = Number($('#sel-entrenamiento').value) || null;
   const ent = id ? await db.obtener('entrenamientos', id) : null;
   if (sesion) return;
+  entrenamientoPrevio = ent;
   $('#bloque-actual').hidden = !ent;
   const conPerfil = !!ent && Ent.tipoDe(ent) === 'intervalos';
   $('#perfil-vivo').hidden = !conPerfil;
@@ -626,6 +683,7 @@ function abrirModoRemo() {
     $('#mr-resta').textContent = '';
     $('#mr-resta-etq').textContent = '';
   }
+  aplicarVistaRemo();
   actualizarBotones();
   try { mr.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {}); } catch { /* opcional */ }
   pintar();

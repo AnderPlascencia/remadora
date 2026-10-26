@@ -203,6 +203,12 @@
       <h2>Durante el entrenamiento</h2>
       <label class="interruptor"><input type="checkbox" id="in-voz"><span>Avisos por voz</span></label>
       <label class="interruptor"><input type="checkbox" id="in-modo-auto"><span>Abrir modo remo al iniciar sesión</span></label>
+      <label class="campo">Pantalla completa muestra
+        <select id="sel-vista-remo">
+          <option value="numeros">Números grandes</option>
+          <option value="grafica">Gráfica del entrenamiento</option>
+        </select>
+      </label>
       <label class="interruptor"><input type="checkbox" id="in-pausa-auto"><span>Pausa automática al dejar de remar</span></label>
       <label class="interruptor"><input type="checkbox" id="in-res-auto"><span>Resistencia automática (experimental)</span></label>
       <p class="ayuda">Con la resistencia automática, la app cambia el nivel de la consola cuando un intervalo tiene "Nivel" definido. Pruébala primero sin remar fuerte.</p>
@@ -214,6 +220,7 @@
       </div>
 
       <h2>Conexión</h2>
+      <p class="ayuda">Pulso: sirve cualquier banda o reloj que transmita la frecuencia cardíaca por Bluetooth. En un Huawei Watch activa "Compartir datos de frecuencia cardíaca" en Ajustes del entrenamiento del reloj, empieza un entrenamiento en el reloj y luego pulsa "Pulso" en Entrenar.</p>
       <label class="campo">Variante del protocolo <select id="sel-variante"></select></label>
       <p class="ayuda">Si al conectar no aparecen datos, desconecta, cambia la variante y vuelve a conectar.</p>
       <div class="fila-botones">
@@ -263,10 +270,15 @@
       <div><span class="mr-etq">Pulso</span><span id="mr-fc" class="mr-valor">-</span></div>
     </div>
     <canvas id="mr-perfil" class="mr-perfil" role="img" aria-label="Plan de potencia" hidden></canvas>
+    <div id="mr-zona-grafica" class="mr-zona-grafica">
+      <div id="mr-leyenda" class="leyenda"></div>
+      <canvas id="mr-grafica" class="mr-grafica" role="img" aria-label="Gráfica del entrenamiento"></canvas>
+    </div>
     <div id="mr-estado" class="mr-estado" aria-live="polite"></div>
     <div class="mr-botones">
       <button id="mr-pausa" class="boton grande" aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
       <button id="mr-terminar" class="boton peligro grande"><svg class="ico" aria-hidden="true"><use href="#i-stop"/></svg><span>Terminar</span></button>
+      <button id="mr-vista" class="boton grande" aria-label="Cambiar a vista de gráfica"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg></button>
       <button id="mr-salir" class="boton grande" aria-label="Salir del modo remo"><svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
     </div>
   </div>

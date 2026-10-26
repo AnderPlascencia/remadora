@@ -213,3 +213,72 @@ export function dibujarBarras(canvas, datos, { color = '#F97316', formato = (v) 
     ctx.fillText(d.etiqueta, cx, alto - 6);
   });
 }
+
+// Avance hacia una meta: acumulado contra tiempo, línea de meta y proyección punteada al ritmo actual.
+// puntos: [[t, acumulado], ...]; estimadoFin: segundo en que se llegaría a la meta (o null).
+export function dibujarAvance(canvas, puntos, meta, estimadoFin = null) {
+  const dpr = window.devicePixelRatio || 1;
+  const ancho = canvas.clientWidth;
+  const alto = canvas.clientHeight;
+  if (!ancho || !alto) return;
+  if (canvas.width !== ancho * dpr || canvas.height !== alto * dpr) {
+    canvas.width = ancho * dpr;
+    canvas.height = alto * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, ancho, alto);
+  const estilo = getComputedStyle(document.documentElement);
+  const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
+  const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
+  const colorLinea = estilo.getPropertyValue('--primario').trim() || '#F97316';
+  const colorMeta = estilo.getPropertyValue('--exito').trim() || '#22C55E';
+
+  const ultimo = puntos.at(-1) || [0, 0];
+  const tFin = Math.max(60, ultimo[0], estimadoFin && estimadoFin < ultimo[0] * 4 ? estimadoFin : 0) * 1.05;
+  const yMax = Math.max(meta, ultimo[1]) * 1.1 || 10;
+  const m = { izq: 44, der: 12, arr: 12, aba: 22 };
+  const w = ancho - m.izq - m.der;
+  const h = alto - m.arr - m.aba;
+  const X = (t) => m.izq + (t / tFin) * w;
+  const Y = (v) => m.arr + h - (v / yMax) * h;
+
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const v = (yMax * i) / 4;
+    ctx.strokeStyle = colorRejilla;
+    ctx.beginPath(); ctx.moveTo(m.izq, Y(v)); ctx.lineTo(m.izq + w, Y(v)); ctx.stroke();
+    ctx.fillStyle = colorTexto;
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(v), m.izq - 6, Y(v) + 4);
+  }
+  ctx.textAlign = 'center';
+  const paso = [60, 120, 300, 600, 900, 1800].find((p) => tFin / p <= 6) || 3600;
+  for (let t = 0; t <= tFin; t += paso) ctx.fillText(`${Math.round(t / 60)}m`, X(t), alto - 6);
+
+  // Meta
+  ctx.strokeStyle = colorMeta;
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(m.izq, Y(meta)); ctx.lineTo(m.izq + w, Y(meta)); ctx.stroke();
+
+  // Proyección
+  if (estimadoFin != null && ultimo[1] < meta) {
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = colorTexto;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X(ultimo[0]), Y(ultimo[1])); ctx.lineTo(X(Math.min(estimadoFin, tFin)), Y(estimadoFin <= tFin ? meta : ultimo[1] + ((meta - ultimo[1]) * (tFin - ultimo[0])) / (estimadoFin - ultimo[0]))); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Avance real
+  if (puntos.length) {
+    ctx.strokeStyle = colorLinea;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    puntos.forEach(([t, v], i) => (i ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v))));
+    ctx.stroke();
+    ctx.fillStyle = colorLinea;
+    ctx.beginPath(); ctx.arc(X(ultimo[0]), Y(ultimo[1]), 5, 0, Math.PI * 2); ctx.fill();
+  }
+}
