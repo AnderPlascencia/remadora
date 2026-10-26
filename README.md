@@ -17,7 +17,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Lee watts, golpes por minuto, split de 500 m, distancia y nivel de resistencia.
 - Banda de pulso Bluetooth opcional.
 - Entrenamientos por objetivo: calorías, distancia o paladas, con progreso y tiempo estimado.
-- Entrenamientos por intervalos de tiempo con rango de potencia (o golpes por minuto), banda objetivo en la gráfica, avisos de sube/baja y % del tiempo en rango.
+- Entrenamientos por intervalos de tiempo con rango de potencia (o golpes por minuto), gráfica del plan completo (rango en verde, fuera de rango en rojo, tu potencia encima), avisos de sube/baja y % del tiempo en rango.
 - Historial guardado en el teléfono (IndexedDB), exportable a CSV y TCX (Strava, Garmin).
 - Funciona sin conexión una vez instalada.
 

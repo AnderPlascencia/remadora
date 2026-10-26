@@ -1,11 +1,11 @@
 import { Remadora, BandaCardiaca } from './remadora.js';
 import { VARIANTES } from './variantes.js';
 import { formatoSplit, formatoTiempo, kcalPorSegundo } from './protocolo.js';
-import { dibujar } from './grafica.js';
+import { dibujar, dibujarPerfil } from './grafica.js';
 import * as db from './db.js';
 import * as Ent from './entrenamientos.js';
 
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
@@ -25,7 +25,7 @@ document.querySelectorAll('.pestanas button').forEach((b) => {
     document.querySelectorAll('.vista').forEach((v) => v.classList.toggle('activa', v.id === `vista-${b.dataset.vista}`));
     if (b.dataset.vista === 'historial') pintarHistorial();
     if (b.dataset.vista === 'entrenamientos') pintarEntrenamientos();
-    if (b.dataset.vista === 'entrenar') dibujarVivo();
+    if (b.dataset.vista === 'entrenar') { dibujarVivo(); vistaPrevia(); }
   });
 });
 
@@ -129,6 +129,7 @@ async function iniciarSesion() {
     segEnRango: 0,
     tiempoMeta: null,
     entrenamiento: entrenamientoActivo ? entrenamientoActivo.nombre : null,
+    bloques: entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos' ? structuredClone(entrenamientoActivo.bloques) : null,
     bloqueAnterior: -1,
   };
   $('#btn-grabar').textContent = 'Terminar sesión';
@@ -166,6 +167,7 @@ async function detenerSesion() {
     entrenamiento: s.entrenamiento,
     tiempoMeta: s.tiempoMeta,
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
+    bloques: s.bloques,
     muestras: m,
   };
   await db.guardar('sesiones', registro);
@@ -197,7 +199,10 @@ setInterval(() => {
     });
     if (entrenamientoActivo) {
       if (Ent.tipoDe(entrenamientoActivo) === 'objetivo') actualizarObjetivo(t, dist);
-      else actualizarBloque(t);
+      else {
+        actualizarBloque(t);
+        dibujarPerfil($('#grafica-perfil'), entrenamientoActivo.bloques, sesion.muestras.map((x) => [x.t, x.w]), t);
+      }
     }
   }
 
@@ -267,6 +272,9 @@ async function vistaPrevia() {
   const id = Number($('#sel-entrenamiento').value) || null;
   const ent = id ? await db.obtener('entrenamientos', id) : null;
   $('#bloque-actual').hidden = !ent;
+  const conPerfil = !!ent && Ent.tipoDe(ent) === 'intervalos';
+  $('#perfil-vivo').hidden = !conPerfil;
+  if (conPerfil) dibujarPerfil($('#grafica-perfil'), ent.bloques);
   if (!ent) return;
   marcarCaja(null);
   $('#bloque-barra').style.width = '0%';
@@ -437,6 +445,7 @@ function pintarBloques() {
 
 function resumenEditor() {
   if (!enEdicion) return;
+  if (form.tipo.value === 'intervalos') dibujarPerfil($('#grafica-editor'), enEdicion.bloques);
   if (form.tipo.value === 'objetivo') {
     const m = Ent.METRICAS_OBJETIVO[form.obj_metrica.value];
     $('#ent-resumen').textContent = `La sesión termina al llegar a ${form.obj_valor.value || '?'} ${m.unidad}.`;
@@ -534,6 +543,8 @@ function abrirSesion(s) {
     { color: color('--watts'), eje: 'izq', puntos: m.map((x) => [x.t, x.w]) },
     { color: color('--spm'), eje: 'der', puntos: m.map((x) => [x.t, x.spm]) },
   ]);
+  $('#det-perfil').hidden = !s.bloques;
+  if (s.bloques) dibujarPerfil($('#grafica-sesion-perfil'), s.bloques, m.map((x) => [x.t, x.w]));
   $('#detalle-sesion').scrollIntoView({ behavior: 'smooth' });
 }
 

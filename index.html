@@ -55,6 +55,11 @@
         <div class="progreso"><div id="bloque-barra"></div></div>
       </div>
 
+      <div id="perfil-vivo" hidden>
+        <div class="leyenda"><span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia (W)</span></div>
+        <canvas id="grafica-perfil" class="grafica"></canvas>
+      </div>
+
       <div class="metricas">
         <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span></div>
         <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span></div>
@@ -104,6 +109,7 @@
         </div>
 
         <div id="editor-intervalos">
+          <canvas id="grafica-editor" class="grafica baja"></canvas>
           <div id="bloques"></div>
           <div class="acciones">
             <button type="button" id="btn-add-bloque">+ Intervalo</button>
@@ -138,6 +144,10 @@
         <h2 id="det-titulo"></h2>
         <div id="det-stats" class="metricas compacta"></div>
         <canvas id="grafica-sesion" class="grafica"></canvas>
+        <div id="det-perfil" hidden>
+          <h2>Potencia contra el plan</h2>
+          <canvas id="grafica-sesion-perfil" class="grafica"></canvas>
+        </div>
         <div class="acciones">
           <button id="btn-csv">Exportar CSV</button>
           <button id="btn-tcx">Exportar TCX</button>

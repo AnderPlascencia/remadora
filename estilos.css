@@ -115,3 +115,7 @@ h2 { font-size: 16px; margin: 20px 0 6px; }
 .indicador.dentro { color: var(--spm); }
 .indicador.bajo, .indicador.alto { color: var(--peligro); }
 .etq-nivel { font-weight: 400; }
+.leyenda .lr::before { background: rgba(60, 207, 145, 0.75); height: 10px; }
+.leyenda .lf::before { background: rgba(255, 92, 92, 0.5); height: 10px; }
+.leyenda .lp::before { background: var(--texto); }
+#grafica-perfil { height: 240px; margin-bottom: 12px; }

@@ -91,3 +91,88 @@ export function dibujar(canvas, series, opciones = {}) {
   }
 
 }
+
+// Perfil completo de un entrenamiento por intervalos: eje X = tiempo del entrenamiento,
+// eje Y = watts. Cada intervalo con meta de potencia pinta su rango en verde y el resto en rojo.
+// puntos: [[t, watts], ...] de la sesión (opcional); ahora: segundo actual (opcional).
+export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
+  const dpr = window.devicePixelRatio || 1;
+  const ancho = canvas.clientWidth;
+  const alto = canvas.clientHeight;
+  if (!ancho || !alto) return;
+  if (canvas.width !== ancho * dpr || canvas.height !== alto * dpr) {
+    canvas.width = ancho * dpr;
+    canvas.height = alto * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, ancho, alto);
+
+  const estilo = getComputedStyle(document.documentElement);
+  const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
+  const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
+
+  const total = bloques.reduce((a, b) => a + b.duracion, 0) || 60;
+  const tFin = Math.max(total, puntos.length ? puntos.at(-1)[0] : 0);
+  let maxW = 0;
+  for (const b of bloques) if (b.metrica === 'watts') maxW = Math.max(maxW, b.max || b.min);
+  for (const [, v] of puntos) maxW = Math.max(maxW, v);
+  const yMax = Math.max(50, Math.ceil((maxW * 1.25) / 50) * 50);
+
+  const m = { izq: 40, der: 12, arr: 10, aba: 22 };
+  const w = ancho - m.izq - m.der;
+  const h = alto - m.arr - m.aba;
+  const X = (t) => m.izq + (t / tFin) * w;
+  const Y = (v) => m.arr + h - (Math.min(v, yMax) / yMax) * h;
+
+  // Intervalos: rojo fuera del rango, verde dentro, gris si es libre.
+  let desde = 0;
+  for (const b of bloques) {
+    const x0 = X(desde);
+    const x1 = X(desde + b.duracion);
+    const activo = ahora != null && ahora >= desde && ahora < desde + b.duracion;
+    if (b.metrica === 'watts') {
+      const max = b.max || yMax;
+      ctx.fillStyle = activo ? 'rgba(255, 92, 92, 0.38)' : 'rgba(255, 92, 92, 0.22)';
+      ctx.fillRect(x0, m.arr, x1 - x0, h);
+      ctx.fillStyle = activo ? 'rgba(60, 207, 145, 0.75)' : 'rgba(60, 207, 145, 0.5)';
+      ctx.fillRect(x0, Y(max), x1 - x0, Y(b.min) - Y(max));
+    } else {
+      ctx.fillStyle = 'rgba(142, 160, 180, 0.12)';
+      ctx.fillRect(x0, m.arr, x1 - x0, h);
+    }
+    ctx.strokeStyle = colorRejilla;
+    ctx.beginPath(); ctx.moveTo(x1, m.arr); ctx.lineTo(x1, m.arr + h); ctx.stroke();
+    desde += b.duracion;
+  }
+
+  // Eje Y en watts
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.fillStyle = colorTexto;
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = (yMax * i) / 4;
+    ctx.fillText(Math.round(v), m.izq - 6, Y(v) + 4);
+  }
+
+  // Eje X en minutos
+  ctx.textAlign = 'center';
+  const paso = [60, 120, 300, 600, 900, 1800].find((p) => tFin / p <= 6) || 3600;
+  for (let t = 0; t <= tFin; t += paso) ctx.fillText(`${Math.round(t / 60)}m`, X(t), alto - 6);
+
+  // Potencia real
+  if (puntos.length) {
+    ctx.strokeStyle = estilo.getPropertyValue('--texto').trim() || '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    puntos.forEach(([t, v], i) => (i ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v))));
+    ctx.stroke();
+  }
+
+  // Marca de "ahora"
+  if (ahora != null && ahora <= tFin) {
+    ctx.strokeStyle = estilo.getPropertyValue('--acento').trim() || '#39f';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X(ahora), m.arr); ctx.lineTo(X(ahora), m.arr + h); ctx.stroke();
+  }
+}
