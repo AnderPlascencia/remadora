@@ -1,14 +1,15 @@
 import { Remadora, BandaCardiaca } from './remadora.js';
 import { VARIANTES } from './variantes.js';
 import { formatoSplit, formatoTiempo, kcalPorSegundo } from './protocolo.js';
-import { dibujar, dibujarPerfil, dibujarBarras, dibujarAvance } from './grafica.js';
+import { dibujar, dibujarPerfil, dibujarBarras, dibujarAvance, dibujarCarrera } from './grafica.js';
+import * as F from './fantasma.js';
 import * as db from './db.js';
 import * as Ent from './entrenamientos.js';
 import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 
-const VERSION = '0.5.0';
+const VERSION = '0.5.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -246,7 +247,12 @@ async function iniciarSesion() {
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
   const plan = intervalos ? Ent.normalizarBloques(entrenamientoActivo.bloques, ftp()) : null;
   const modoRival = $('#sel-rival').value;
-  const rival = modoRival ? E.elegirRival(await db.listar('sesiones'), entrenamientoActivo?.nombre, modoRival) : null;
+  let rival = null;
+  if (F.NIVELES[modoRival]) rival = F.simular(entrenamientoActivo, modoRival, ftp());
+  else if (modoRival) {
+    rival = E.elegirRival(await db.listar('sesiones'), entrenamientoActivo?.nombre, modoRival);
+    if (rival) rival = { ...rival, nombre: modoRival === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior' };
+  }
   sesion = {
     inicio: Date.now(),
     t: 0,
@@ -335,7 +341,11 @@ async function detenerSesion() {
       desde += b.duracion;
     }
   }
-  if (s.rival) registro.rival = { fecha: s.rival.fecha, diferencia: Math.round(s.dist - E.distanciaEn(s.rival.muestras, s.t)) };
+  if (s.rival) {
+    registro.rival = {
+      fecha: s.rival.fecha ?? null, nivel: s.rival.nivel ?? null, nombre: s.rival.nombre, diferencia: Math.round(s.dist - E.distanciaEn(s.rival.muestras, s.t)),
+    };
+  }
   registro.marcas = E.marcasDeSesion(registro);
   const previas = await db.listar('sesiones');
   const id = await db.guardar('sesiones', registro);
@@ -516,9 +526,12 @@ function pintarRival() {
   const r = sesion?.rival;
   $('#rival').hidden = !r;
   $('#mr-rival').hidden = !r;
+  $('#carrera').hidden = !r;
   if (!r) return;
+  if (vistaActiva('entrenar')) dibujarCarrera($('#carrera'), datosCarrera());
   const dif = Math.round(sesion.dist - E.distanciaEn(r.muestras, sesion.t));
-  const texto = dif === 0 ? 'Empatado con tu fantasma' : `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} del fantasma`;
+  const quien = r.nivel ? `fantasma ${F.NIVELES[r.nivel].nombre.toLowerCase()}` : 'fantasma';
+  const texto = dif === 0 ? `Empatado con el ${quien}` : `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} del ${quien}`;
   for (const [caja, span] of [['#rival', '#rival-texto'], ['#mr-rival', '#mr-rival-texto']]) {
     $(span).textContent = texto;
     $(caja).classList.toggle('adelante', dif > 0);
@@ -584,8 +597,25 @@ function pintar() {
   if (!$('#modo-remo').hidden && vistaGrafica()) pintarGraficaRemo(t);
 }
 
-// Vista de gráfica del modo remo: lo más útil según el tipo de entrenamiento.
-const vistaGrafica = () => ajustes.leer('vistaRemo', 'numeros') === 'grafica';
+function datosCarrera() {
+  const r = sesion.rival;
+  const obj = entrenamientoActivo?.objetivo;
+  return {
+    yo: sesion.dist,
+    rival: E.distanciaEn(r.muestras, sesion.t),
+    meta: obj?.metrica === 'distancia' ? obj.valor : null,
+    nombreRival: r.nombre || 'Fantasma',
+    velocidad: actual.split > 0 ? 500 / actual.split : 4,
+  };
+}
+
+// Vista del modo remo: 'numeros', 'grafica' o 'carrera' (esta solo si hay fantasma).
+function vistaRemo() {
+  const v = ajustes.leer('vistaRemo', 'numeros');
+  if (v === 'carrera' && !sesion?.rival) return 'grafica';
+  return v;
+}
+const vistaGrafica = () => vistaRemo() !== 'numeros';
 let leyendaRemo = '';
 function leyenda(html) {
   if (html !== leyendaRemo) { $('#mr-leyenda').innerHTML = html; leyendaRemo = html; }
@@ -593,6 +623,12 @@ function leyenda(html) {
 
 function pintarGraficaRemo(t) {
   const canvas = $('#mr-grafica');
+  if (vistaRemo() === 'carrera') {
+    leyenda('<span class="lw">Tú</span><span class="lcar">Fantasma</span>');
+    canvas.setAttribute('aria-label', $('#mr-rival-texto').textContent);
+    dibujarCarrera(canvas, datosCarrera());
+    return;
+  }
   const ent = sesion ? entrenamientoActivo : null;
   const previa = !sesion && Number($('#sel-entrenamiento').value) ? entrenamientoPrevio : null;
   const plan = ent || previa;
@@ -616,16 +652,26 @@ function pintarGraficaRemo(t) {
   }
 }
 
+// Orden al tocar el botón: números → gráfica → carrera (si hay fantasma) → números.
+function siguienteVista() {
+  const v = vistaRemo();
+  if (v === 'numeros') return 'grafica';
+  if (v === 'grafica' && sesion?.rival) return 'carrera';
+  return 'numeros';
+}
+
 function aplicarVistaRemo() {
-  const g = vistaGrafica();
-  $('#modo-remo').classList.toggle('vista-grafica', g);
+  const v = vistaRemo();
+  $('#modo-remo').classList.toggle('vista-grafica', v !== 'numeros');
+  $('#modo-remo').classList.toggle('vista-carrera', v === 'carrera');
+  const sig = siguienteVista();
   const b = $('#mr-vista');
-  b.classList.toggle('activo', g);
-  b.innerHTML = g ? '<span class="num" aria-hidden="true">123</span>' : ico('i-grafica');
-  b.setAttribute('aria-label', g ? 'Cambiar a números grandes' : 'Cambiar a vista de gráfica');
+  b.classList.toggle('activo', v !== 'numeros');
+  b.innerHTML = { numeros: '<span class="num" aria-hidden="true">123</span>', grafica: ico('i-grafica'), carrera: ico('i-fantasma') }[sig];
+  b.setAttribute('aria-label', { numeros: 'Cambiar a números grandes', grafica: 'Cambiar a vista de gráfica', carrera: 'Cambiar a vista de carrera' }[sig]);
 }
 $('#mr-vista').addEventListener('click', () => {
-  ajustes.escribir('vistaRemo', vistaGrafica() ? 'numeros' : 'grafica');
+  ajustes.escribir('vistaRemo', siguienteVista());
   selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
   aplicarVistaRemo();
   requestAnimationFrame(pintar);

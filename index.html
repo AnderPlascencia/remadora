@@ -74,10 +74,14 @@
             <option value="">Sin fantasma</option>
             <option value="anterior">Mi sesión anterior</option>
             <option value="mejor">Mi mejor marca</option>
+            <option value="principiante">Principiante (FTP 110 W)</option>
+            <option value="intermedio">Intermedio (FTP 170 W)</option>
+            <option value="avanzado">Avanzado (FTP 250 W)</option>
           </select>
         </label>
       </div>
       <div id="rival" class="rival" hidden aria-live="polite"><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="rival-texto"></span></div>
+      <canvas id="carrera" class="grafica carrera" role="img" aria-label="Carrera contra el fantasma" hidden></canvas>
 
       <div id="bloque-actual" class="tarjeta-meta" hidden>
         <div class="tm-cabecera">
@@ -271,6 +275,7 @@
         <select id="sel-vista-remo">
           <option value="numeros">Números grandes</option>
           <option value="grafica">Gráfica del entrenamiento</option>
+          <option value="carrera">Carrera contra el fantasma (si eliges uno)</option>
         </select>
       </label>
       <label class="interruptor"><input type="checkbox" id="in-pausa-auto"><span>Pausa automática al dejar de remar</span></label>

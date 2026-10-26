@@ -285,3 +285,159 @@ export function dibujarAvance(canvas, puntos, meta, estimadoFin = null) {
     ctx.beginPath(); ctx.arc(X(ultimo[0]), Y(ultimo[1]), 5, 0, Math.PI * 2); ctx.fill();
   }
 }
+
+// Carrera contra el fantasma: dos carriles con los botes en su posición real.
+// La ventana sigue a los dos botes; si la meta está cerca se dibuja la línea de llegada.
+export function dibujarCarrera(canvas, { yo, rival, meta = null, nombreRival = 'Fantasma', velocidad = 4 }) {
+  const dpr = window.devicePixelRatio || 1;
+  const ancho = canvas.clientWidth;
+  const alto = canvas.clientHeight;
+  if (!ancho || !alto) return;
+  if (canvas.width !== ancho * dpr || canvas.height !== alto * dpr) {
+    canvas.width = ancho * dpr;
+    canvas.height = alto * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, ancho, alto);
+  const estilo = getComputedStyle(document.documentElement);
+  const c = (v, d) => estilo.getPropertyValue(v).trim() || d;
+  const colorTexto = c('--texto-suave', '#ccc');
+  const colorYo = c('--primario', '#F97316');
+  const colorRival = '#A5B4FC';
+  ctx.lineWidth = 1;
+  ctx.lineCap = 'butt';
+
+  const dif = yo - rival;
+  const arriba = Math.max(22, Math.min(40, alto * 0.16));
+  const abajo = 22;
+  // Con pantalla alta queda espacio para un mapa del recorrido completo debajo de la pista.
+  const conMapa = alto > 360;
+  const mapa = conMapa ? 100 : 0;
+  const carril = Math.min(conMapa ? 120 : 80, (alto - arriba - abajo - mapa) / 2);
+  const pista = carril * 2;
+  const libre = alto - arriba - abajo - pista - mapa;
+  const arribaPista = arriba + libre / 2;
+  const izq = 12;
+  const der = 12;
+  const w = ancho - izq - der;
+
+  // Ventana: muestra a los dos botes con margen; mínimo 60 m.
+  const ventana = Math.max(60, Math.abs(dif) * 1.6 + 40);
+  const centro = (yo + rival) / 2;
+  const desde = Math.max(0, centro - ventana / 2);
+  const X = (m) => izq + ((m - desde) / ventana) * w;
+
+  // Agua
+  const grad = ctx.createLinearGradient(0, arribaPista, 0, arribaPista + pista);
+  grad.addColorStop(0, '#0B3A5B');
+  grad.addColorStop(1, '#082A44');
+  ctx.fillStyle = grad;
+  ctx.fillRect(izq, arribaPista, w, pista);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.setLineDash([8, 8]);
+  ctx.beginPath(); ctx.moveTo(izq, arribaPista + carril); ctx.lineTo(izq + w, arribaPista + carril); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Marcas de distancia
+  const paso = [10, 25, 50, 100, 250, 500].find((p) => ventana / p <= 6) || 1000;
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  for (let m = Math.ceil(desde / paso) * paso; m <= desde + ventana; m += paso) {
+    const x = X(m);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.moveTo(x, arribaPista); ctx.lineTo(x, arribaPista + pista); ctx.stroke();
+    ctx.fillStyle = colorTexto;
+    ctx.fillText(`${m} m`, x, arribaPista + pista + 16);
+  }
+
+  // Línea de meta
+  if (meta != null && meta >= desde && meta <= desde + ventana) {
+    const x = X(meta);
+    const cuadro = 6;
+    for (let y = arribaPista, i = 0; y < arribaPista + pista; y += cuadro, i++) {
+      ctx.fillStyle = i % 2 ? '#fff' : '#111';
+      ctx.fillRect(x - cuadro, y, cuadro, cuadro);
+      ctx.fillStyle = i % 2 ? '#111' : '#fff';
+      ctx.fillRect(x, y, cuadro, cuadro);
+    }
+  }
+
+  // Botes: casco, remero y estela según la velocidad.
+  const bote = (m, fila, colorBote, etiqueta, fantasma) => {
+    const largo = Math.min(110, Math.max(56, w * 0.18));
+    const x = Math.min(izq + w - 4, Math.max(izq + largo + 4, X(m)));
+    const y = arribaPista + carril * (fila + 0.58);
+    const altoB = Math.min(11, Math.max(7, carril * 0.16));
+    const remo = Math.min(28, carril * 0.36);
+    ctx.globalAlpha = fantasma ? 0.75 : 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    for (let i = 1; i <= 3; i++) {
+      const largoEstela = Math.min(60, velocidad * 6) * (i / 3);
+      ctx.beginPath();
+      ctx.moveTo(x - largo - 2, y - altoB * 0.3 * i);
+      ctx.lineTo(x - largo - 2 - largoEstela, y - altoB * 0.6 * i);
+      ctx.moveTo(x - largo - 2, y + altoB * 0.3 * i);
+      ctx.lineTo(x - largo - 2 - largoEstela, y + altoB * 0.6 * i);
+      ctx.stroke();
+    }
+    ctx.fillStyle = colorBote;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x - largo * 0.3, y - altoB, x - largo, y - altoB * 0.35);
+    ctx.lineTo(x - largo, y + altoB * 0.35);
+    ctx.quadraticCurveTo(x - largo * 0.3, y + altoB, x, y);
+    ctx.fill();
+    // Remos
+    ctx.strokeStyle = colorBote;
+    ctx.lineWidth = 2;
+    const cx = x - largo * 0.55;
+    ctx.beginPath();
+    ctx.moveTo(cx, y); ctx.lineTo(cx - largo * 0.12, y - remo);
+    ctx.moveTo(cx, y); ctx.lineTo(cx - largo * 0.12, y + remo);
+    ctx.stroke();
+    ctx.fillStyle = '#F8FAFC';
+    ctx.beginPath(); ctx.arc(cx, y, altoB * 0.45, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 13px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillText(etiqueta, izq + 6, arribaPista + carril * fila + 15);
+  };
+  bote(rival, 0, colorRival, nombreRival, true);
+  bote(yo, 1, colorYo, 'Tú', false);
+
+  if (conMapa) {
+    const total = meta || Math.max(500, Math.ceil((Math.max(yo, rival) * 1.25) / 500) * 500);
+    const y0 = arribaPista + pista + abajo + 58;
+    const MX = (m) => izq + 10 + (Math.min(m, total) / total) * (w - 20);
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = colorTexto;
+    ctx.fillText(meta ? 'Recorrido completo' : 'Recorrido', izq, y0 - 30);
+    ctx.textAlign = 'right';
+    ctx.fillText(`${total} m${meta ? ' (meta)' : ''}`, izq + w, y0 - 30);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(MX(0), y0); ctx.lineTo(MX(total), y0); ctx.stroke();
+    ctx.strokeStyle = colorYo;
+    ctx.beginPath(); ctx.moveTo(MX(0), y0); ctx.lineTo(MX(yo), y0); ctx.stroke();
+    ctx.lineCap = 'butt';
+    for (const [m, col, dy, et] of [[rival, colorRival, -1, nombreRival], [yo, colorYo, 1, 'Tú']]) {
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(MX(m), y0, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.textAlign = MX(m) > izq + w * 0.7 ? 'right' : 'left';
+      ctx.fillText(`${et} · ${Math.round(m)} m`, MX(m) + (ctx.textAlign === 'left' ? -8 : 8), y0 + (dy > 0 ? 26 : -13));
+    }
+  }
+
+  // Encabezado: quién va adelante y por cuánto.
+  const seg = velocidad > 0 ? Math.abs(dif) / velocidad : 0;
+  const texto = Math.abs(dif) < 1 ? 'Empatados' : `${dif > 0 ? 'Vas adelante' : 'Vas atrás'} por ${Math.round(Math.abs(dif))} m (${seg.toFixed(1)} s)`;
+  ctx.font = `800 ${Math.round(Math.min(20, arriba * 0.6))}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = Math.abs(dif) < 1 ? '#F8FAFC' : dif > 0 ? c('--exito', '#22C55E') : '#FCA5A5';
+  ctx.fillText(texto, ancho / 2, Math.max(arriba * 0.72, arribaPista - 12));
+}

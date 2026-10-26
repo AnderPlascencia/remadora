@@ -26,7 +26,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Progreso: racha, meta semanal, km por semana o mes, tendencia de watts y split, récords.
 - Resistencia automática por intervalo (experimental, apagada por defecto).
 - Intervalos que terminan por tiempo, distancia o paladas, con metas de potencia, % FTP, split o golpes/min.
-- Fantasma: rema contra tu sesión anterior o tu mejor marca del mismo entrenamiento.
+- Fantasma: rema contra tu sesión anterior, tu mejor marca o un fantasma simulado (principiante, intermedio o avanzado), con vista de carrera.
 - Programas de varias semanas con calendario y "Hoy toca" (incluye plantilla para mejorar 2000 m).
 - Resumen por intervalo y parciales de 500 m; esfuerzo percibido (1–10) y notas por sesión.
 - Carga de cada sesión y gráfica de forma (condición, fatiga, frescura).
@@ -47,6 +47,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `estadisticas.js` | Récords, comparación con la sesión anterior, progreso semanal/mensual |
 | `voz.js` | Avisos por voz |
 | `programa.js` | Programas de varias semanas |
+| `fantasma.js` | Fantasmas simulados por nivel |
 | `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
 | `db.js` | Almacenamiento local |
