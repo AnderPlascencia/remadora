@@ -5,7 +5,7 @@ import { dibujar } from './grafica.js';
 import * as db from './db.js';
 import * as Ent from './entrenamientos.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
@@ -78,6 +78,7 @@ remadora.addEventListener('estado', (e) => {
   $('#btn-conectar').textContent = conectada ? 'Desconectar' : 'Conectar remadora';
   $('#btn-grabar').disabled = !conectada;
   if (!conectada && sesion) detenerSesion();
+  else vistaPrevia();
 });
 remadora.addEventListener('datos', (e) => {
   const d = e.detail;
@@ -145,7 +146,7 @@ async function detenerSesion() {
   $('#btn-grabar').textContent = 'Iniciar sesión';
   $('#btn-grabar').classList.remove('grabando');
   $('#sel-entrenamiento').disabled = false;
-  $('#bloque-actual').hidden = true;
+  vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   if (!s || s.muestras.length < 10) return;
   const m = s.muestras;
@@ -255,10 +256,34 @@ function actualizarObjetivo(t, dist) {
     $('#bloque-indicador').textContent = 'Puedes seguir remando o terminar la sesión';
     return;
   }
-  $('#bloque-resta').textContent = `${Math.round(p.hecho)} / ${p.meta}`;
-  $('#bloque-meta').textContent = `Faltan ${Math.ceil(p.falta)} ${unidad}`;
+  $('#bloque-resta').textContent = `Faltan ${Math.ceil(p.falta)}`;
+  $('#bloque-meta').textContent = `Llevas ${Math.floor(p.hecho)} de ${p.meta} ${unidad} · ${Math.floor(100 * p.fraccion)}%`;
   $('#bloque-siguiente').textContent = p.estimadoSeg != null ? `≈ ${formatoTiempo(p.estimadoSeg)} a este ritmo` : '';
 }
+
+// Muestra la meta del entrenamiento elegido antes de iniciar la sesión.
+async function vistaPrevia() {
+  if (sesion) return;
+  const id = Number($('#sel-entrenamiento').value) || null;
+  const ent = id ? await db.obtener('entrenamientos', id) : null;
+  $('#bloque-actual').hidden = !ent;
+  if (!ent) return;
+  marcarCaja(null);
+  $('#bloque-barra').style.width = '0%';
+  $('#bloque-nombre').textContent = ent.nombre;
+  if (Ent.tipoDe(ent) === 'objetivo') {
+    const unidad = Ent.METRICAS_OBJETIVO[ent.objetivo.metrica].unidad;
+    $('#bloque-resta').textContent = `Faltan ${ent.objetivo.valor}`;
+    $('#bloque-meta').textContent = `Meta: ${ent.objetivo.valor} ${unidad}`;
+  } else {
+    const b = ent.bloques[0];
+    $('#bloque-resta').textContent = formatoTiempo(Ent.duracionTotal(ent));
+    $('#bloque-meta').textContent = `${ent.bloques.length} intervalos · empieza: ${b.nombre || 'intervalo'}${b.metrica === 'watts' ? ` ${b.min}–${b.max} W` : ''}`;
+  }
+  $('#bloque-siguiente').textContent = '';
+  $('#bloque-indicador').textContent = remadora.conectada ? 'Pulsa Iniciar sesión para empezar' : 'Conecta la remadora y pulsa Iniciar sesión';
+}
+$('#sel-entrenamiento').addEventListener('change', vistaPrevia);
 
 function actualizarBloque(t) {
   const ent = entrenamientoActivo;
@@ -332,8 +357,10 @@ async function llenarSelectorEntrenamientos(lista) {
   const sel = $('#sel-entrenamiento');
   const previo = sel.value;
   sel.length = 1;
-  for (const ent of lista) sel.add(new Option(`${ent.nombre} (${Ent.describir(ent)})`, ent.id));
+  for (const ent of lista) sel.add(new Option(ent.nombre, ent.id));
   sel.value = previo;
+  if (sel.value !== previo) sel.value = '';
+  vistaPrevia();
 }
 
 $('#btn-plantillas').addEventListener('click', async () => {
