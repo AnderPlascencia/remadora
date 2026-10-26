@@ -32,6 +32,7 @@ export function dibujar(canvas, series, opciones = {}) {
   for (const eje of ['izq', 'der']) {
     let max = 0;
     for (const s of series) if (s.eje === eje) for (const [t, v] of s.puntos) if (t >= tMin) max = Math.max(max, v);
+    for (const b of opciones.metas || []) if (b.eje === eje && b.hasta >= tMin && b.desde <= tMax) max = Math.max(max, b.max);
     escalas[eje] = max > 0 ? Math.ceil((max * 1.15) / 10) * 10 : 10;
   }
 
@@ -60,6 +61,16 @@ export function dibujar(canvas, series, opciones = {}) {
     ctx.fillText(`${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`, X(t), alto - 6);
   }
 
+  // Bandas de meta del entrenamiento (opcional): [{ desde, hasta, min, max, eje }]
+  for (const b of opciones.metas || []) {
+    if (b.hasta < tMin) continue;
+    ctx.fillStyle = 'rgba(60, 207, 145, 0.16)';
+    const x0 = Math.max(X(b.desde), m.izq);
+    const x1 = Math.min(X(b.hasta), m.izq + w);
+    if (x1 <= x0) continue;
+    ctx.fillRect(x0, Y(b.max, b.eje), x1 - x0, Y(b.min, b.eje) - Y(b.max, b.eje));
+  }
+
   for (const s of series) {
     ctx.strokeStyle = s.color;
     ctx.lineWidth = 2;
@@ -79,12 +90,4 @@ export function dibujar(canvas, series, opciones = {}) {
     }
   }
 
-  // Bandas de meta del entrenamiento (opcional): [{ desde, hasta, min, max, eje }]
-  for (const b of opciones.metas || []) {
-    if (b.hasta < tMin) continue;
-    ctx.fillStyle = 'rgba(80, 160, 255, 0.12)';
-    const x0 = Math.max(X(b.desde), m.izq);
-    const x1 = Math.min(X(b.hasta), m.izq + w);
-    ctx.fillRect(x0, Y(b.max, b.eje), x1 - x0, Y(b.min, b.eje) - Y(b.max, b.eje));
-  }
 }

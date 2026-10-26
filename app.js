@@ -3,8 +3,9 @@ import { VARIANTES } from './variantes.js';
 import { formatoSplit, formatoTiempo, kcalPorSegundo } from './protocolo.js';
 import { dibujar } from './grafica.js';
 import * as db from './db.js';
+import * as Ent from './entrenamientos.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
@@ -118,9 +119,14 @@ async function iniciarSesion() {
   entrenamientoActivo = idEnt ? await db.obtener('entrenamientos', idEnt) : null;
   sesion = {
     inicio: Date.now(),
+    tVivoInicio: tVivo,
     distBase: actual.distancia,
     muestras: [],
     kcal: 0,
+    paladas: 0,
+    segConMeta: 0,
+    segEnRango: 0,
+    tiempoMeta: null,
     entrenamiento: entrenamientoActivo ? entrenamientoActivo.nombre : null,
     bloqueAnterior: -1,
   };
@@ -150,12 +156,15 @@ async function detenerSesion() {
     duracion: m.at(-1).t,
     distancia: m.at(-1).dist,
     kcal: Math.round(s.kcal),
+    paladas: Math.round(s.paladas),
     wattsProm: prom('w'),
     wattsMax: Math.max(...m.map((x) => x.w)),
     spmProm: prom('spm'),
     splitProm: conSplit.length ? Math.round(conSplit.reduce((a, x) => a + x.split, 0) / conSplit.length) : 0,
     fcProm: m.some((x) => x.fc) ? prom('fc') : 0,
     entrenamiento: s.entrenamiento,
+    tiempoMeta: s.tiempoMeta,
+    pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
     muestras: m,
   };
   await db.guardar('sesiones', registro);
@@ -181,108 +190,130 @@ setInterval(() => {
     if (sesion.distBase == null && actual.distancia != null) sesion.distBase = actual.distancia;
     dist = actual.distancia != null && sesion.distBase != null ? Math.max(0, actual.distancia - sesion.distBase) : 0;
     sesion.kcal += kcalPorSegundo(actual.watts);
+    sesion.paladas += actual.spm / 60;
     sesion.muestras.push({
       t, w: actual.watts, spm: actual.spm, split: actual.split, dist, nivel: actual.nivel ?? 0, fc: actual.fc,
     });
-    if (entrenamientoActivo) actualizarBloque(t);
+    if (entrenamientoActivo) {
+      if (Ent.tipoDe(entrenamientoActivo) === 'objetivo') actualizarObjetivo(t, dist);
+      else actualizarBloque(t);
+    }
   }
 
   $('#m-watts').textContent = actual.watts;
+  $('#m-nivel-etq').textContent = actual.nivel ? `· nivel ${actual.nivel}` : '';
   $('#m-split').textContent = formatoSplit(actual.split);
   $('#m-spm').textContent = actual.spm;
   $('#m-tiempo').textContent = formatoTiempo(t);
   $('#m-dist').textContent = sesion ? dist : (actual.distancia ?? 0);
-  $('#m-nivel').textContent = actual.nivel ?? '-';
+  $('#m-paladas').textContent = sesion ? Math.round(sesion.paladas) : 0;
   $('#m-kcal').textContent = sesion ? Math.round(sesion.kcal) : 0;
   $('#m-fc').textContent = actual.fc || '-';
   if ($('#vista-entrenar').classList.contains('activa')) dibujarVivo();
 }, 1000);
 
 function dibujarVivo() {
+  let metas = [];
+  if (sesion && entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos') {
+    metas = Ent.bandasPotencia(entrenamientoActivo).map((b) => ({
+      desde: b.desde + sesion.tVivoInicio, hasta: b.hasta + sesion.tVivoInicio, min: b.min, max: b.max || b.min, eje: 'izq',
+    }));
+  }
   dibujar($('#grafica-vivo'), [
     { nombre: 'Watts', color: color('--watts'), eje: 'izq', puntos: vivo.watts },
     { nombre: 'Golpes/min', color: color('--spm'), eje: 'der', puntos: vivo.spm },
     { nombre: 'Split', color: color('--split'), eje: 'der', puntos: vivo.split.filter(([, v]) => v > 0 && v < 400).map(([t, v]) => [t, v / 4]) },
-  ], { ventana: 300 });
+  ], { ventana: 300, metas });
 }
 
-// ---------- Entrenamientos ----------
-// Un entrenamiento es una lista de bloques: { nombre, duracion (s), metrica: 'watts'|'spm'|'', min, max }.
-function bloquesPlanos(ent) {
-  let inicio = 0;
-  return ent.bloques.map((b) => {
-    const r = { ...b, desde: inicio, hasta: inicio + b.duracion };
-    inicio += b.duracion;
-    return r;
-  });
+// ---------- Entrenamiento en curso ----------
+function marcarCaja(estadoRango) {
+  const caja = $('#bloque-actual');
+  caja.classList.toggle('dentro', estadoRango === 'dentro');
+  caja.classList.toggle('fuera', estadoRango === 'bajo' || estadoRango === 'alto');
+  const ind = $('#bloque-indicador');
+  ind.className = `indicador ${estadoRango || ''}`;
+  ind.textContent = { dentro: 'En rango', bajo: '▲ Sube la potencia', alto: '▼ Baja la potencia' }[estadoRango] || '';
+}
+
+function actualizarObjetivo(t, dist) {
+  const ent = entrenamientoActivo;
+  const p = Ent.progresoObjetivo(ent, { distancia: dist, kcal: sesion.kcal, paladas: sesion.paladas }, t);
+  const unidad = Ent.METRICAS_OBJETIVO[p.metrica].unidad;
+  $('#bloque-nombre').textContent = ent.nombre;
+  $('#bloque-barra').style.width = `${100 * p.fraccion}%`;
+  $('#bloque-siguiente').textContent = '';
+  marcarCaja(null);
+  if (p.completo) {
+    if (sesion.tiempoMeta == null) {
+      sesion.tiempoMeta = t;
+      pitido(1046, 0.4);
+      vibrar([200, 100, 200, 100, 400]);
+    }
+    $('#bloque-resta').textContent = formatoTiempo(sesion.tiempoMeta);
+    $('#bloque-meta').textContent = `¡Meta cumplida! ${p.meta} ${unidad}`;
+    $('#bloque-indicador').textContent = 'Puedes seguir remando o terminar la sesión';
+    return;
+  }
+  $('#bloque-resta').textContent = `${Math.round(p.hecho)} / ${p.meta}`;
+  $('#bloque-meta').textContent = `Faltan ${Math.ceil(p.falta)} ${unidad}`;
+  $('#bloque-siguiente').textContent = p.estimadoSeg != null ? `≈ ${formatoTiempo(p.estimadoSeg)} a este ritmo` : '';
 }
 
 function actualizarBloque(t) {
-  const bloques = bloquesPlanos(entrenamientoActivo);
-  const total = bloques.at(-1).hasta;
-  const i = bloques.findIndex((b) => t < b.hasta);
-  const caja = $('#bloque-actual');
-  if (i === -1) {
+  const ent = entrenamientoActivo;
+  const total = Ent.duracionTotal(ent);
+  const actualB = Ent.bloqueEn(ent, t);
+  if (!actualB) {
     $('#bloque-nombre').textContent = '¡Entrenamiento completado!';
     $('#bloque-resta').textContent = formatoTiempo(t - total);
-    $('#bloque-meta').textContent = 'Sigue remando o termina la sesión';
+    $('#bloque-meta').textContent = sesion.segConMeta ? `En rango ${Math.round((100 * sesion.segEnRango) / sesion.segConMeta)}% del tiempo` : '';
     $('#bloque-siguiente').textContent = '';
     $('#bloque-barra').style.width = '100%';
-    caja.classList.remove('fuera', 'dentro');
-    if (sesion.bloqueAnterior !== bloques.length) { sesion.bloqueAnterior = bloques.length; pitido(1046, 0.4); vibrar([200, 100, 200]); }
+    marcarCaja(null);
+    if (sesion.bloqueAnterior !== ent.bloques.length) {
+      sesion.bloqueAnterior = ent.bloques.length;
+      sesion.tiempoMeta = total;
+      pitido(1046, 0.4);
+      vibrar([200, 100, 200]);
+    }
     return;
   }
-  const b = bloques[i];
+  const { i, bloque: b, resta, siguiente } = actualB;
   if (i !== sesion.bloqueAnterior) {
     if (sesion.bloqueAnterior !== -1) { pitido(988, 0.25); vibrar(250); }
     sesion.bloqueAnterior = i;
   }
-  const resta = b.hasta - t;
   if (resta <= 3 && resta > 0) pitido(660, 0.08);
-  $('#bloque-nombre').textContent = `${i + 1}/${bloques.length} · ${b.nombre || 'Bloque'}`;
+  $('#bloque-nombre').textContent = `${i + 1}/${ent.bloques.length} · ${b.nombre || 'Intervalo'}`;
   $('#bloque-resta').textContent = formatoTiempo(resta);
   const unidad = b.metrica === 'watts' ? 'W' : 'golpes/min';
-  $('#bloque-meta').textContent = b.metrica ? `Meta: ${b.min}–${b.max} ${unidad}` : 'Sin meta';
-  $('#bloque-siguiente').textContent = bloques[i + 1] ? `Sigue: ${bloques[i + 1].nombre || 'bloque'}` : 'Último bloque';
+  $('#bloque-meta').textContent = b.metrica ? `Meta: ${b.min}–${b.max} ${unidad}` : 'Libre';
+  const sig = siguiente ? (siguiente.metrica ? `${siguiente.min}–${siguiente.max} ${siguiente.metrica === 'watts' ? 'W' : 'g/min'}` : 'libre') : '';
+  $('#bloque-siguiente').textContent = siguiente ? `Sigue: ${siguiente.nombre || 'intervalo'} · ${sig}` : 'Último intervalo';
   $('#bloque-barra').style.width = `${(100 * t) / total}%`;
-  const valor = b.metrica === 'watts' ? actual.watts : actual.spm;
-  const dentro = !b.metrica || (valor >= b.min && valor <= b.max);
-  caja.classList.toggle('dentro', b.metrica && dentro);
-  caja.classList.toggle('fuera', b.metrica && !dentro);
+  const rango = Ent.enRango(b, actual.watts, actual.spm);
+  if (rango) {
+    sesion.segConMeta += 1;
+    if (rango === 'dentro') sesion.segEnRango += 1;
+  }
+  marcarCaja(rango);
+  if (rango && rango !== 'dentro' && b.metrica !== 'watts') {
+    $('#bloque-indicador').textContent = rango === 'bajo' ? '▲ Sube el ritmo' : '▼ Baja el ritmo';
+  }
 }
 
-const EJEMPLOS = [
-  {
-    nombre: 'Base aeróbica 20 min',
-    bloques: [
-      { nombre: 'Calentamiento', duracion: 300, metrica: 'spm', min: 18, max: 22 },
-      { nombre: 'Ritmo constante', duracion: 900, metrica: 'spm', min: 22, max: 24 },
-      { nombre: 'Enfriamiento', duracion: 120, metrica: '', min: 0, max: 0 },
-    ],
-  },
-  {
-    nombre: 'Intervalos 8 × 1 min',
-    bloques: [
-      { nombre: 'Calentamiento', duracion: 300, metrica: 'spm', min: 18, max: 22 },
-      ...Array.from({ length: 8 }, () => [
-        { nombre: 'Fuerte', duracion: 60, metrica: 'watts', min: 160, max: 220 },
-        { nombre: 'Suave', duracion: 60, metrica: 'spm', min: 16, max: 20 },
-      ]).flat(),
-      { nombre: 'Enfriamiento', duracion: 180, metrica: '', min: 0, max: 0 },
-    ],
-  },
-];
-
+// ---------- Editor de entrenamientos ----------
 async function pintarEntrenamientos() {
   const lista = await db.listar('entrenamientos');
   const ul = $('#lista-ent');
   ul.innerHTML = '';
   if (!lista.length) ul.innerHTML = '<li class="suave">Aún no tienes entrenamientos. Crea uno o agrega los ejemplos.</li>';
   for (const ent of lista) {
-    const total = ent.bloques.reduce((a, b) => a + b.duracion, 0);
     const li = document.createElement('li');
-    li.innerHTML = `<div class="info"><div class="titulo"></div><div class="suave">${ent.bloques.length} bloques · ${formatoTiempo(total)}</div></div>`;
+    li.innerHTML = '<div class="info"><div class="titulo"></div><div class="suave"></div></div>';
     li.querySelector('.titulo').textContent = ent.nombre;
+    li.querySelector('.suave').textContent = Ent.describir(ent);
     const editar = document.createElement('button');
     editar.textContent = 'Editar';
     editar.onclick = () => abrirEditor(ent);
@@ -301,32 +332,51 @@ async function llenarSelectorEntrenamientos(lista) {
   const sel = $('#sel-entrenamiento');
   const previo = sel.value;
   sel.length = 1;
-  for (const ent of lista) sel.add(new Option(ent.nombre, ent.id));
+  for (const ent of lista) sel.add(new Option(`${ent.nombre} (${Ent.describir(ent)})`, ent.id));
   sel.value = previo;
 }
 
 $('#btn-plantillas').addEventListener('click', async () => {
-  for (const e of EJEMPLOS) await db.guardar('entrenamientos', structuredClone(e));
+  const existentes = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
+  for (const e of Ent.EJEMPLOS) if (!existentes.has(e.nombre)) await db.guardar('entrenamientos', structuredClone(e));
   pintarEntrenamientos();
 });
-$('#btn-nuevo-ent').addEventListener('click', () => abrirEditor({ nombre: '', bloques: [{ nombre: 'Calentamiento', duracion: 300, metrica: '', min: 0, max: 0 }] }));
+$('#btn-nuevo-ent').addEventListener('click', () => abrirEditor({
+  tipo: 'objetivo', nombre: '', objetivo: { metrica: 'distancia', valor: 2000 }, bloques: [],
+}));
 $('#btn-cancelar-ent').addEventListener('click', () => { $('#editor-ent').hidden = true; });
 
 let enEdicion = null;
+const form = $('#editor-ent');
+
 function abrirEditor(ent) {
   enEdicion = structuredClone(ent);
-  const f = $('#editor-ent');
-  f.nombre.value = enEdicion.nombre;
-  f.hidden = false;
+  enEdicion.tipo = Ent.tipoDe(enEdicion);
+  enEdicion.bloques = enEdicion.bloques || [];
+  enEdicion.objetivo = enEdicion.objetivo || { metrica: 'distancia', valor: 2000 };
+  form.nombre.value = enEdicion.nombre;
+  form.tipo.value = enEdicion.tipo;
+  form.obj_metrica.value = enEdicion.objetivo.metrica;
+  form.obj_valor.value = enEdicion.objetivo.valor;
+  form.hidden = false;
+  mostrarTipo();
   pintarBloques();
-  f.scrollIntoView({ behavior: 'smooth' });
+  form.scrollIntoView({ behavior: 'smooth' });
 }
 
-const aMmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-function deMmss(txt) {
-  const p = String(txt).split(':').map((x) => parseInt(x, 10) || 0);
-  return p.length > 1 ? p[0] * 60 + p[1] : p[0];
+function mostrarTipo() {
+  enEdicion.tipo = form.tipo.value;
+  $('#editor-objetivo').hidden = enEdicion.tipo !== 'objetivo';
+  $('#editor-intervalos').hidden = enEdicion.tipo !== 'intervalos';
+  if (enEdicion.tipo === 'intervalos' && !enEdicion.bloques.length) {
+    enEdicion.bloques.push({ nombre: 'Calentamiento', duracion: 300, metrica: 'watts', min: 80, max: 120 });
+    pintarBloques();
+  }
+  resumenEditor();
 }
+form.tipo.addEventListener('change', mostrarTipo);
+form.obj_metrica.addEventListener('change', resumenEditor);
+form.obj_valor.addEventListener('input', resumenEditor);
 
 function pintarBloques() {
   const cont = $('#bloques');
@@ -336,18 +386,18 @@ function pintarBloques() {
     fila.className = 'fila-bloque';
     fila.innerHTML = `
       <input data-k="nombre" placeholder="Nombre" maxlength="30">
-      <input data-k="duracion" placeholder="mm:ss" inputmode="numeric">
-      <select data-k="metrica"><option value="">Sin meta</option><option value="watts">Watts</option><option value="spm">Golpes/min</option></select>
-      <div style="display:flex;gap:6px"><input data-k="min" type="number" placeholder="mín"><input data-k="max" type="number" placeholder="máx"></div>
+      <input data-k="duracion" placeholder="Tiempo mm:ss" inputmode="numeric">
+      <select data-k="metrica"><option value="watts">Potencia (W)</option><option value="spm">Golpes/min</option><option value="">Libre</option></select>
+      <div class="par"><input data-k="min" type="number" placeholder="mín"><input data-k="max" type="number" placeholder="máx"></div>
       <button type="button" class="quitar">Quitar</button>`;
     fila.querySelector('[data-k=nombre]').value = b.nombre;
-    fila.querySelector('[data-k=duracion]').value = aMmss(b.duracion);
+    fila.querySelector('[data-k=duracion]').value = Ent.formatoMmss(b.duracion);
     fila.querySelector('[data-k=metrica]').value = b.metrica;
     fila.querySelector('[data-k=min]').value = b.min || '';
     fila.querySelector('[data-k=max]').value = b.max || '';
     fila.addEventListener('change', (e) => {
       const k = e.target.dataset.k;
-      if (k === 'duracion') b.duracion = Math.max(5, deMmss(e.target.value));
+      if (k === 'duracion') b.duracion = Math.max(5, Ent.deMmss(e.target.value));
       else if (k === 'min' || k === 'max') b[k] = Number(e.target.value) || 0;
       else b[k] = e.target.value;
       resumenEditor();
@@ -359,33 +409,50 @@ function pintarBloques() {
 }
 
 function resumenEditor() {
-  const total = enEdicion.bloques.reduce((a, b) => a + b.duracion, 0);
-  $('#ent-resumen').textContent = `${enEdicion.bloques.length} bloques · duración total ${formatoTiempo(total)}`;
+  if (!enEdicion) return;
+  if (form.tipo.value === 'objetivo') {
+    const m = Ent.METRICAS_OBJETIVO[form.obj_metrica.value];
+    $('#ent-resumen').textContent = `La sesión termina al llegar a ${form.obj_valor.value || '?'} ${m.unidad}.`;
+  } else {
+    $('#ent-resumen').textContent = `${enEdicion.bloques.length} intervalos · duración total ${formatoTiempo(Ent.duracionTotal(enEdicion))}`;
+  }
 }
 
 $('#btn-add-bloque').addEventListener('click', () => {
-  enEdicion.bloques.push({ nombre: '', duracion: 60, metrica: '', min: 0, max: 0 });
+  const ultimo = enEdicion.bloques.at(-1);
+  enEdicion.bloques.push({ nombre: '', duracion: 60, metrica: 'watts', min: ultimo?.min || 120, max: ultimo?.max || 150 });
   pintarBloques();
 });
 $('#btn-add-serie').addEventListener('click', () => {
-  const reps = parseInt(prompt('¿Cuántas repeticiones?', '6'), 10);
-  if (!reps) return;
-  const trabajo = deMmss(prompt('Duración del trabajo (mm:ss)', '1:00'));
-  const descanso = deMmss(prompt('Duración del descanso (mm:ss)', '1:00'));
-  const meta = prompt('Meta de watts para el trabajo (mín-máx), o vacío', '150-200');
-  const [min, max] = (meta || '').split('-').map((x) => parseInt(x, 10) || 0);
-  for (let i = 0; i < reps; i++) {
-    enEdicion.bloques.push({ nombre: `Trabajo ${i + 1}`, duracion: trabajo, metrica: meta ? 'watts' : '', min, max });
-    if (descanso) enEdicion.bloques.push({ nombre: 'Descanso', duracion: descanso, metrica: '', min: 0, max: 0 });
-  }
+  const n = (id) => Number($(id).value) || 0;
+  const reps = n('#s-reps');
+  const trabajo = Ent.deMmss($('#s-trabajo').value);
+  if (!reps || !trabajo) { alert('Indica repeticiones y tiempo de trabajo'); return; }
+  enEdicion.bloques.push(...Ent.serie({
+    reps, trabajo, wMin: n('#s-wmin'), wMax: n('#s-wmax'),
+    descanso: Ent.deMmss($('#s-descanso').value), dMin: n('#s-dmin'), dMax: n('#s-dmax'),
+  }));
+  $('#editor-intervalos details').open = false;
   pintarBloques();
 });
-$('#editor-ent').addEventListener('submit', async (e) => {
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  enEdicion.nombre = e.target.nombre.value.trim();
-  if (!enEdicion.bloques.length) { alert('Agrega al menos un bloque'); return; }
+  enEdicion.nombre = form.nombre.value.trim();
+  enEdicion.tipo = form.tipo.value;
+  if (enEdicion.tipo === 'objetivo') {
+    const valor = Number(form.obj_valor.value);
+    if (!valor) { alert('Indica la cantidad de la meta'); return; }
+    enEdicion.objetivo = { metrica: form.obj_metrica.value, valor };
+    delete enEdicion.bloques;
+  } else {
+    if (!enEdicion.bloques.length) { alert('Agrega al menos un intervalo'); return; }
+    for (const b of enEdicion.bloques) {
+      if (b.metrica && b.max && b.max < b.min) { alert(`En "${b.nombre || 'un intervalo'}" el máximo es menor que el mínimo`); return; }
+    }
+    delete enEdicion.objetivo;
+  }
   await db.guardar('entrenamientos', enEdicion);
-  e.target.hidden = true;
+  form.hidden = true;
   pintarEntrenamientos();
 });
 
@@ -412,6 +479,7 @@ async function pintarHistorial() {
     li.innerHTML = `<div class="info"><div class="titulo">${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>
       <div class="suave">${formatoTiempo(s.duracion)} · ${s.distancia} m · ${s.wattsProm} W prom · ${formatoSplit(s.splitProm)} /500 m</div></div>`;
     if (s.entrenamiento) li.querySelector('.suave').append(` · ${s.entrenamiento}`);
+    if (s.tiempoMeta != null) li.querySelector('.suave').append(` · meta en ${formatoTiempo(s.tiempoMeta)}`);
     const ver = document.createElement('button');
     ver.textContent = 'Ver';
     ver.onclick = () => abrirSesion(s);
@@ -430,6 +498,9 @@ function abrirSesion(s) {
     ['Split prom', formatoSplit(s.splitProm)], ['Golpes/min', s.spmProm],
     ['kcal (est.)', s.kcal], ['Pulso prom', s.fcProm || '-'],
   ];
+  if (s.paladas != null) stats.push(['Paladas', s.paladas]);
+  if (s.tiempoMeta != null) stats.push(['Meta cumplida', formatoTiempo(s.tiempoMeta)]);
+  if (s.pctEnRango != null) stats.push(['En rango', `${s.pctEnRango}%`]);
   $('#det-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${k}</span><span class="valor">${v}</span></div>`).join('');
   const m = s.muestras;
   dibujar($('#grafica-sesion'), [

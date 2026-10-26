@@ -16,7 +16,8 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 
 - Lee watts, golpes por minuto, split de 500 m, distancia y nivel de resistencia.
 - Banda de pulso Bluetooth opcional.
-- Entrenamientos por bloques con metas de watts o golpes por minuto, avisos con sonido y vibración.
+- Entrenamientos por objetivo: calorías, distancia o paladas, con progreso y tiempo estimado.
+- Entrenamientos por intervalos de tiempo con rango de potencia (o golpes por minuto), banda objetivo en la gráfica, avisos de sube/baja y % del tiempo en rango.
 - Historial guardado en el teléfono (IndexedDB), exportable a CSV y TCX (Strava, Garmin).
 - Funciona sin conexión una vez instalada.
 
@@ -27,7 +28,8 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `protocolo.js` | Decodifica los paquetes de 20 bytes de la consola |
 | `variantes.js` | Secuencias de saludo y consulta de cada variante |
 | `remadora.js` | Conexión Bluetooth, cola de escritura, modo demo, banda de pulso |
-| `app.js` | Interfaz, sesiones, entrenamientos e historial |
+| `entrenamientos.js` | Lógica de objetivos e intervalos (con pruebas en `pruebas/`) |
+| `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
 | `db.js` | Almacenamiento local |
 

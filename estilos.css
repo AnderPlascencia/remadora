@@ -105,3 +105,13 @@ label input, label select { display: block; width: 100%; margin-top: 4px; }
   max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all;
 }
 h2 { font-size: 16px; margin: 20px 0 6px; }
+
+.fila-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.par { display: flex; gap: 6px; }
+.par input { min-width: 0; margin-top: 4px; }
+.serie { margin: 8px 0; }
+.serie summary { cursor: pointer; color: var(--acento); padding: 6px 0; }
+.indicador { margin-top: 6px; font-size: 14px; font-weight: 600; min-height: 1em; }
+.indicador.dentro { color: var(--spm); }
+.indicador.bajo, .indicador.alto { color: var(--peligro); }
+.etq-nivel { font-weight: 400; }

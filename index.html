@@ -44,16 +44,17 @@
           <span id="bloque-meta"></span>
           <span id="bloque-siguiente"></span>
         </div>
+        <div id="bloque-indicador" class="indicador"></div>
         <div class="progreso"><div id="bloque-barra"></div></div>
       </div>
 
       <div class="metricas">
-        <div class="metrica destacada"><span class="etq">Watts</span><span id="m-watts" class="valor">0</span></div>
+        <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span></div>
         <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span></div>
         <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span></div>
         <div class="metrica"><span class="etq">Tiempo</span><span id="m-tiempo" class="valor">0:00</span></div>
         <div class="metrica"><span class="etq">Distancia m</span><span id="m-dist" class="valor">0</span></div>
-        <div class="metrica"><span class="etq">Nivel</span><span id="m-nivel" class="valor">-</span></div>
+        <div class="metrica"><span class="etq">Paladas</span><span id="m-paladas" class="valor">0</span></div>
         <div class="metrica"><span class="etq">kcal (est.)</span><span id="m-kcal" class="valor">0</span></div>
         <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span></div>
       </div>
@@ -81,10 +82,43 @@
 
       <form id="editor-ent" class="editor" hidden>
         <label>Nombre <input name="nombre" required maxlength="60"></label>
-        <div id="bloques"></div>
-        <div class="acciones">
-          <button type="button" id="btn-add-bloque">+ Bloque</button>
-          <button type="button" id="btn-add-serie">+ Serie de intervalos</button>
+        <label>Tipo
+          <select name="tipo">
+            <option value="objetivo">Por objetivo (calorías, distancia o paladas)</option>
+            <option value="intervalos">Por intervalos de tiempo con rango de potencia</option>
+          </select>
+        </label>
+
+        <div id="editor-objetivo">
+          <div class="fila-dos">
+            <label>Meta
+              <select name="obj_metrica">
+                <option value="distancia">Distancia (m)</option>
+                <option value="kcal">Calorías (kcal)</option>
+                <option value="paladas">Paladas</option>
+              </select>
+            </label>
+            <label>Cantidad <input name="obj_valor" type="number" min="1" inputmode="numeric"></label>
+          </div>
+        </div>
+
+        <div id="editor-intervalos">
+          <div id="bloques"></div>
+          <div class="acciones">
+            <button type="button" id="btn-add-bloque">+ Intervalo</button>
+          </div>
+          <details class="serie">
+            <summary>+ Agregar serie repetida</summary>
+            <div class="fila-dos">
+              <label>Repeticiones <input id="s-reps" type="number" min="1" value="5"></label>
+              <span></span>
+              <label>Trabajo (mm:ss) <input id="s-trabajo" value="3:00"></label>
+              <label>Potencia trabajo (W) <span class="par"><input id="s-wmin" type="number" placeholder="mín" value="160"><input id="s-wmax" type="number" placeholder="máx" value="190"></span></label>
+              <label>Descanso (mm:ss) <input id="s-descanso" value="1:30"></label>
+              <label>Potencia descanso (W) <span class="par"><input id="s-dmin" type="number" placeholder="mín"><input id="s-dmax" type="number" placeholder="máx"></span></label>
+            </div>
+            <button type="button" id="btn-add-serie">Agregar serie</button>
+          </details>
         </div>
         <p id="ent-resumen" class="suave"></p>
         <div class="acciones">
