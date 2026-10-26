@@ -65,23 +65,36 @@
         <button id="btn-hoy-toca" class="boton chico">Elegir</button>
       </div>
 
-      <div class="fila-dos">
-        <label class="campo">Entrenamiento
-          <select id="sel-entrenamiento"><option value="">Remo libre</option></select>
-        </label>
-        <label class="campo">Fantasma
-          <select id="sel-rival">
-            <option value="">Sin fantasma</option>
-            <option value="anterior">Mi sesión anterior</option>
-            <option value="mejor">Mi mejor marca</option>
-            <option value="principiante">Principiante (FTP 110 W)</option>
-            <option value="intermedio">Intermedio (FTP 170 W)</option>
-            <option value="avanzado">Avanzado (FTP 250 W)</option>
-          </select>
-        </label>
+      <label class="campo">Entrenamiento
+        <select id="sel-entrenamiento"><option value="">Remo libre</option></select>
+      </label>
+      <div class="campo fantasmas">
+        <span class="etq-campo">Fantasmas <small>(hasta 3)</small></span>
+        <div id="chips-rival" class="chips" role="group" aria-label="Fantasmas contra los que remar">
+          <button type="button" class="chip" data-rival="anterior" aria-pressed="false">Mi anterior</button>
+          <button type="button" class="chip" data-rival="mejor" aria-pressed="false">Mi mejor</button>
+          <button type="button" class="chip" data-rival="principiante" aria-pressed="false">Principiante</button>
+          <button type="button" class="chip" data-rival="intermedio" aria-pressed="false">Intermedio</button>
+          <button type="button" class="chip" data-rival="avanzado" aria-pressed="false">Avanzado</button>
+          <button type="button" class="chip" data-rival="perso" aria-pressed="false">A mi medida</button>
+        </div>
+        <div id="perso-panel" class="perso-panel" hidden>
+          <label class="campo">Fantasma a mi medida
+            <select id="perso-modo">
+              <option value="ftp">Por FTP (watts)</option>
+              <option value="tiempo">Por tiempo objetivo (mm:ss)</option>
+              <option value="mejora">Mi mejor marca + %</option>
+            </select>
+          </label>
+          <label class="campo"><span id="perso-etq">FTP del fantasma (W)</span>
+            <input id="perso-valor" inputmode="decimal" autocomplete="off">
+          </label>
+          <p id="perso-ayuda" class="ayuda"></p>
+        </div>
       </div>
       <div id="rival" class="rival" hidden aria-live="polite"><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="rival-texto"></span></div>
       <canvas id="carrera" class="grafica carrera" role="img" aria-label="Carrera contra el fantasma" hidden></canvas>
+      <p id="pista-carrera" class="pista-carrera" hidden>Toca la carrera para cambiar entre vista 2D y 3D</p>
 
       <div id="bloque-actual" class="tarjeta-meta" hidden>
         <div class="tm-cabecera">

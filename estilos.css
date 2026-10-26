@@ -407,9 +407,26 @@ textarea { font: inherit; color: var(--texto); background: var(--panel); border:
 .tabla td.ok { color: var(--exito); font-weight: 700; }
 .tabla td.mal { color: #FCA5A5; font-weight: 700; }
 .lista .rpe-chip { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 0 8px; background: var(--panel-2); color: var(--texto-suave); margin-left: 6px; }
-.grafica.carrera { height: 130px; margin-bottom: 8px; }
+.grafica.carrera { height: 210px; margin-bottom: 4px; cursor: pointer; touch-action: manipulation; }
 .grafica.carrera[hidden] { display: none; }
 #mr-vista .ico-txt { font-weight: 800; font-size: 13px; }
 .modo-remo.vista-carrera .mr-rival { display: none; }
 .leyenda .lcar::before { background: #A5B4FC; }
+.leyenda .lcar2::before { background: #F9A8D4; }
+.leyenda .lcar3::before { background: #FDE68A; }
+.leyenda .pista { color: var(--texto-tenue); font-size: 12px; }
+.leyenda .pista::before { display: none; }
+.pista-carrera { color: var(--texto-tenue); font-size: 12px; margin: 0 0 8px; text-align: center; }
+.pista-carrera[hidden] { display: none; }
+.etq-campo small { color: var(--texto-tenue); font-weight: 500; }
+.fantasmas[hidden] { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.chip { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--borde); background: var(--panel); color: var(--texto-suave); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { background: var(--panel-2); color: var(--texto); border-color: var(--chip, var(--primario)); box-shadow: inset 0 0 0 1px var(--chip, var(--primario)); }
+.chip[aria-pressed="true"]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--chip, var(--primario)); }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+.perso-panel { background: var(--panel); border-radius: 12px; padding: 4px 12px; margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.perso-panel[hidden] { display: none; }
+.perso-panel .ayuda { grid-column: 1 / -1; margin-top: 0; }
+.perso-panel .campo { min-width: 0; }
 .hoy-toca[hidden] { display: none; }

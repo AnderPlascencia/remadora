@@ -1,7 +1,8 @@
 import { Remadora, BandaCardiaca } from './remadora.js';
 import { VARIANTES } from './variantes.js';
 import { formatoSplit, formatoTiempo, kcalPorSegundo } from './protocolo.js';
-import { dibujar, dibujarPerfil, dibujarBarras, dibujarAvance, dibujarCarrera } from './grafica.js';
+import { dibujar, dibujarPerfil, dibujarBarras, dibujarAvance } from './grafica.js';
+import { crearCarrera, COLORES_RIVAL } from './carrera.js';
 import * as F from './fantasma.js';
 import * as db from './db.js';
 import * as Ent from './entrenamientos.js';
@@ -9,7 +10,7 @@ import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 
-const VERSION = '0.5.1';
+const VERSION = '0.6.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -82,6 +83,120 @@ configurarVoz(ajustes.si('voz', true));
 const selVistaRemo = $('#sel-vista-remo');
 selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
 selVistaRemo.addEventListener('change', () => ajustes.escribir('vistaRemo', selVistaRemo.value));
+
+// ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
+const MAX_RIVALES = 3;
+function rivalesElegidos() {
+  try {
+    const v = JSON.parse(ajustes.leer('rivales', '[]'));
+    return Array.isArray(v) ? v.slice(0, MAX_RIVALES) : [];
+  } catch { return []; }
+}
+function perso() {
+  try { return { modo: 'ftp', valor: '', ...JSON.parse(ajustes.leer('fantasmaPerso', '{}')) }; } catch { return { modo: 'ftp', valor: '' }; }
+}
+const PERSO = {
+  ftp: { etq: 'FTP del fantasma (W)', ayuda: () => `Rema cada intervalo a la intensidad del plan con ese FTP${ftp() ? ` (el tuyo es ${ftp()} W)` : ''}.`, ejemplo: () => String(Math.round((ftp() || 170) * 1.05)) },
+  tiempo: { etq: 'Tiempo objetivo (mm:ss)', ayuda: () => 'Termina justo en ese tiempo. Solo para entrenamientos que acaban por distancia.', ejemplo: () => '7:30' },
+  mejora: { etq: 'Más rápido que tu mejor (%)', ayuda: () => 'Tu mejor sesión de este entrenamiento, acelerada ese porcentaje.', ejemplo: () => '2' },
+};
+const leerMmss = (v) => {
+  const m = /^\s*(\d{1,3}):([0-5]\d)\s*$/.exec(v || '');
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+function pintarChips() {
+  const sel = rivalesElegidos();
+  for (const b of document.querySelectorAll('#chips-rival .chip')) {
+    const i = sel.indexOf(b.dataset.rival);
+    b.setAttribute('aria-pressed', String(i >= 0));
+    b.style.setProperty('--chip', i >= 0 ? COLORES_RIVAL[i] : '');
+    b.disabled = !!sesion || (i < 0 && sel.length >= MAX_RIVALES);
+  }
+  // Durante la sesión los fantasmas ya están en el agua: se ocultan las opciones.
+  $('.fantasmas').hidden = !!sesion;
+  const panel = $('#perso-panel');
+  panel.hidden = !sel.includes('perso');
+  const p = perso();
+  const info = PERSO[p.modo] || PERSO.ftp;
+  $('#perso-modo').value = p.modo;
+  if (document.activeElement !== $('#perso-valor')) $('#perso-valor').value = p.valor;
+  $('#perso-valor').placeholder = info.ejemplo();
+  $('#perso-etq').textContent = info.etq;
+  $('#perso-ayuda').textContent = info.ayuda();
+  for (const el of panel.querySelectorAll('select, input')) el.disabled = !!sesion;
+}
+$('#chips-rival').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.chip');
+  if (!b || b.disabled) return;
+  const sel = rivalesElegidos();
+  const i = sel.indexOf(b.dataset.rival);
+  if (i >= 0) sel.splice(i, 1); else sel.push(b.dataset.rival);
+  ajustes.escribir('rivales', JSON.stringify(sel));
+  pintarChips();
+});
+$('#perso-modo').addEventListener('change', () => {
+  ajustes.escribir('fantasmaPerso', JSON.stringify({ modo: $('#perso-modo').value, valor: '' }));
+  pintarChips();
+});
+$('#perso-valor').addEventListener('input', () => {
+  ajustes.escribir('fantasmaPerso', JSON.stringify({ modo: $('#perso-modo').value, valor: $('#perso-valor').value.trim() }));
+});
+
+// Crea los fantasmas elegidos para este entrenamiento, cada uno con su color.
+async function crearRivales(ent) {
+  const lista = [];
+  let guardadas = null;
+  const sesiones = async () => (guardadas ??= await db.listar('sesiones'));
+  for (const clave of rivalesElegidos()) {
+    let r = null;
+    if (F.NIVELES[clave]) r = F.simular(ent, clave, ftp());
+    else if (clave === 'anterior' || clave === 'mejor') {
+      r = E.elegirRival(await sesiones(), ent?.nombre, clave);
+      if (r) r = { ...r, nombre: clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior' };
+      else toast(`Aún no hay ${clave === 'mejor' ? 'una marca' : 'una sesión anterior'} de este entrenamiento para el fantasma`);
+    } else if (clave === 'perso') r = await fantasmaPerso(ent, sesiones);
+    if (r) lista.push({ ...r, clave, color: COLORES_RIVAL[lista.length] });
+  }
+  return lista;
+}
+
+async function fantasmaPerso(ent, sesiones) {
+  const { modo, valor } = perso();
+  if (modo === 'tiempo') {
+    const seg = leerMmss(valor);
+    if (!seg) { toast('Escribe el tiempo objetivo del fantasma como mm:ss'); return null; }
+    const r = F.simularPorTiempo(ent, seg, ftp());
+    if (!r) toast('El fantasma por tiempo necesita un entrenamiento que acabe por distancia');
+    return r;
+  }
+  if (modo === 'mejora') {
+    const pct = Math.min(20, Math.max(-20, Number(String(valor).replace(',', '.')) || 2));
+    const mejor = E.elegirRival(await sesiones(), ent?.nombre, 'mejor');
+    if (!mejor) { toast('Aún no tienes una marca de este entrenamiento para acelerarla'); return null; }
+    return F.acelerar(mejor, pct);
+  }
+  const w = Math.round(Number(valor)) || Math.round((ftp() || 170) * 1.05);
+  return { ...F.simular(ent, { ftp: w }, ftp()), nombre: `Fantasma ${w} W` };
+}
+
+// Dos lienzos de carrera animada: el de Entrenar y el del modo remo. Tocar alterna 2D y 3D.
+const carreraEnt = crearCarrera($('#carrera'));
+const carreraRemo = crearCarrera($('#mr-grafica'));
+function aplicarModoCarrera() {
+  const m = ajustes.leer('vistaCarrera', '2d') === '3d' ? '3d' : '2d';
+  carreraEnt.modo = m;
+  carreraRemo.modo = m;
+  $('#pista-carrera').textContent = `Toca la carrera para cambiar a vista ${m === '3d' ? '2D (desde arriba)' : '3D (desde atrás)'}`;
+}
+function alternarCarrera() {
+  ajustes.escribir('vistaCarrera', carreraEnt.modo === '3d' ? '2d' : '3d');
+  aplicarModoCarrera();
+  if (sesion?.rival && !$('#modo-remo').hidden && vistaRemo() === 'carrera') pintarGraficaRemo(sesion.t);
+}
+aplicarModoCarrera();
+$('#carrera').addEventListener('click', alternarCarrera);
+$('#mr-grafica').addEventListener('click', () => { if (sesion?.rival && vistaRemo() === 'carrera') alternarCarrera(); });
 
 function pintarZonas() {
   const f = ftp();
@@ -191,6 +306,7 @@ let sesion = null;
 let entrenamientoPrevio = null;
 let entrenamientoActivo = null;
 let wakeLock = null;
+pintarChips();
 
 function actualizarBotones() {
   const g = $('#btn-grabar');
@@ -208,6 +324,7 @@ function actualizarBotones() {
   $('#mr-pausa').disabled = !sesion;
   $('#mr-terminar').disabled = !sesion;
   $('#sel-entrenamiento').disabled = !!sesion;
+  pintarChips();
 }
 
 // Terminar pide un segundo toque para evitar cortes accidentales mientras se rema.
@@ -246,13 +363,8 @@ async function iniciarSesion() {
   entrenamientoActivo = idEnt ? await db.obtener('entrenamientos', idEnt) : null;
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
   const plan = intervalos ? Ent.normalizarBloques(entrenamientoActivo.bloques, ftp()) : null;
-  const modoRival = $('#sel-rival').value;
-  let rival = null;
-  if (F.NIVELES[modoRival]) rival = F.simular(entrenamientoActivo, modoRival, ftp());
-  else if (modoRival) {
-    rival = E.elegirRival(await db.listar('sesiones'), entrenamientoActivo?.nombre, modoRival);
-    if (rival) rival = { ...rival, nombre: modoRival === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior' };
-  }
+  const rivales = await crearRivales(entrenamientoActivo);
+  const rival = rivales[0] || null;
   sesion = {
     inicio: Date.now(),
     t: 0,
@@ -276,19 +388,20 @@ async function iniciarSesion() {
     bloqueAnterior: -1,
     avisoCerca: -1,
     rival,
+    rivales,
     sinRemar: 0,
     empezo: false,
     pausaManual: false,
     perdida: false,
   };
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
-  if (modoRival && !rival) toast('Aún no hay una sesión anterior de este entrenamiento para el fantasma');
   actualizarBotones();
   $('#bloque-actual').hidden = !entrenamientoActivo;
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* opcional */ }
   pitido(880, 0.15);
-  if (entrenamientoActivo) hablar(`Comienza ${entrenamientoActivo.nombre}${rival ? '. Remas contra tu fantasma' : ''}`);
-  else hablar(`Sesión iniciada${rival ? '. Remas contra tu fantasma' : ''}`);
+  const contra = rivales.length > 1 ? `. Remas contra ${rivales.length} fantasmas` : rival ? '. Remas contra tu fantasma' : '';
+  if (entrenamientoActivo) hablar(`Comienza ${entrenamientoActivo.nombre}${contra}`);
+  else hablar(`Sesión iniciada${contra}`);
   if (ajustes.si('modoAuto', false)) abrirModoRemo();
   pintar();
 }
@@ -302,6 +415,8 @@ async function detenerSesion() {
   cerrarModoRemo();
   $('#pausa-aviso').hidden = true;
   $('#rival').hidden = true;
+  carreraEnt.detener();
+  carreraRemo.detener();
   vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
@@ -342,9 +457,11 @@ async function detenerSesion() {
     }
   }
   if (s.rival) {
-    registro.rival = {
-      fecha: s.rival.fecha ?? null, nivel: s.rival.nivel ?? null, nombre: s.rival.nombre, diferencia: Math.round(s.dist - E.distanciaEn(s.rival.muestras, s.t)),
-    };
+    const resumen = (r) => ({
+      fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)),
+    });
+    registro.rival = resumen(s.rival);
+    if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
   }
   registro.marcas = E.marcasDeSesion(registro);
   const previas = await db.listar('sesiones');
@@ -527,16 +644,77 @@ function pintarRival() {
   $('#rival').hidden = !r;
   $('#mr-rival').hidden = !r;
   $('#carrera').hidden = !r;
-  if (!r) return;
-  if (vistaActiva('entrenar')) dibujarCarrera($('#carrera'), datosCarrera());
-  const dif = Math.round(sesion.dist - E.distanciaEn(r.muestras, sesion.t));
-  const quien = r.nivel ? `fantasma ${F.NIVELES[r.nivel].nombre.toLowerCase()}` : 'fantasma';
-  const texto = dif === 0 ? `Empatado con el ${quien}` : `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} del ${quien}`;
+  $('#pista-carrera').hidden = !r;
+  if (!r) { carreraEnt.detener(); return; }
+  const c = carreraActual();
+  if (vistaActiva('entrenar')) carreraEnt.actualizar(c.estado);
   for (const [caja, span] of [['#rival', '#rival-texto'], ['#mr-rival', '#mr-rival-texto']]) {
-    $(span).textContent = texto;
-    $(caja).classList.toggle('adelante', dif > 0);
-    $(caja).classList.toggle('atras', dif < 0);
+    $(span).textContent = c.texto;
+    $(caja).classList.toggle('adelante', c.tono === 'adelante');
+    $(caja).classList.toggle('atras', c.tono === 'atras');
   }
+}
+
+// Velocidad reciente (m/s) con los últimos ~20 s, para proyectar la llegada.
+function velocidadReciente() {
+  const m = sesion.muestras;
+  if (m.length < 5) return actual.split > 0 ? 500 / actual.split : 0;
+  const a = m[Math.max(0, m.length - 21)];
+  const b = m.at(-1);
+  return b.t > a.t ? (b.dist - a.dist) / (b.t - a.t) : 0;
+}
+
+// Todo lo que muestra la carrera en este segundo: textos, tono y estado para el lienzo.
+function carreraActual() {
+  const t = sesion.t;
+  const rs = sesion.rivales;
+  const obj = entrenamientoActivo?.objetivo;
+  const meta = obj?.metrica === 'distancia' ? obj.valor : null;
+  const difs = rs.map((r) => sesion.dist - E.distanciaEn(r.muestras, t));
+  const lugar = 1 + difs.filter((d) => d < -0.5).length;
+  const dif = Math.round(difs[0]);
+  const r = rs[0];
+  const quien = r.nivel && F.NIVELES[r.nivel] ? `fantasma ${F.NIVELES[r.nivel].nombre.toLowerCase()}` : (r.nombre || 'fantasma').replace(/^Fantasma/, 'fantasma');
+  let texto = dif === 0 ? `Empatado con ${quien}` : `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} de ${quien}`;
+  if (rs.length > 1) texto = `Vas ${lugar}º de ${rs.length + 1} · ${texto}`;
+  const tono = rs.length > 1 ? (lugar === 1 ? 'adelante' : 'atras') : (dif > 0 ? 'adelante' : dif < 0 ? 'atras' : '');
+
+  // Diferencia en segundos con el primer fantasma: cuánto tardó él en llegar a donde estás tú.
+  let l1 = texto;
+  const tr = F.tiempoA(r, sesion.dist);
+  if (rs.length === 1 && sesion.dist > 20 && tr != null && Math.abs(dif) >= 1) {
+    const seg = Math.round(t - tr);
+    if (seg !== 0) l1 = `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} · ${Math.abs(seg)} s`;
+  } else if (rs.length === 1 && dif === 0) l1 = 'Empatados';
+  else if (rs.length > 1) l1 = `${lugar}º de ${rs.length + 1} · ${dif > 0 ? '+' : ''}${dif} m vs. ${quien.replace(/^fantasma /, '')}`;
+
+  const v = velocidadReciente();
+  const p = sesion.empezo && t >= 10 ? F.proyectar({ t, dist: sesion.dist, v }, rs, { meta, duracion: duracionCarrera() }) : null;
+  let l2 = '';
+  if (p?.tipo === 'meta') l2 = `A este ritmo llegas en ${formatoTiempo(Math.round(p.miTiempo))} · ${p.lugar}º de ${p.total}`;
+  else if (p?.tipo === 'duracion') {
+    const d = Math.round(p.filas[0].diferencia);
+    l2 = `Al final: ${Math.round(p.miDist)} m · ${d >= 0 ? '+' : ''}${d} m vs. ${rs.length > 1 ? quien.replace(/^fantasma /, '') : 'fantasma'} · ${p.lugar}º de ${p.total}`;
+  }
+  const estado = {
+    t,
+    pausa: !!enPausa() || !sesion.empezo,
+    yo: { dist: sesion.dist, v: actual.split > 0 ? 500 / actual.split : 0, spm: actual.spm },
+    rivales: rs.map((x) => ({ nombre: x.nombre.replace(/^Fantasma /, ''), color: x.color, muestras: x.muestras, spmEn: (tt) => F.spmEn(x, tt) })),
+    meta,
+    cabecera: [l1, l2],
+    tono,
+  };
+  return { texto, tono, estado, proyeccion: p };
+}
+
+// Duración de la carrera para proyectar cuando la meta no es una distancia.
+function duracionCarrera() {
+  const ent = entrenamientoActivo;
+  if (ent && Ent.tipoDe(ent) === 'intervalos' && Ent.soloTiempo(ent)) return Ent.duracionTotal(ent);
+  // En remo libre contra fantasmas simulados no hay un final que proyectar.
+  if (!ent && sesion.rivales.every((r) => r.sintetico)) return null;
+  return Math.max(...sesion.rivales.map((r) => r.muestras.at(-1)?.t || 0));
 }
 
 function pintar() {
@@ -597,18 +775,6 @@ function pintar() {
   if (!$('#modo-remo').hidden && vistaGrafica()) pintarGraficaRemo(t);
 }
 
-function datosCarrera() {
-  const r = sesion.rival;
-  const obj = entrenamientoActivo?.objetivo;
-  return {
-    yo: sesion.dist,
-    rival: E.distanciaEn(r.muestras, sesion.t),
-    meta: obj?.metrica === 'distancia' ? obj.valor : null,
-    nombreRival: r.nombre || 'Fantasma',
-    velocidad: actual.split > 0 ? 500 / actual.split : 4,
-  };
-}
-
 // Vista del modo remo: 'numeros', 'grafica' o 'carrera' (esta solo si hay fantasma).
 function vistaRemo() {
   const v = ajustes.leer('vistaRemo', 'numeros');
@@ -624,11 +790,13 @@ function leyenda(html) {
 function pintarGraficaRemo(t) {
   const canvas = $('#mr-grafica');
   if (vistaRemo() === 'carrera') {
-    leyenda('<span class="lw">Tú</span><span class="lcar">Fantasma</span>');
+    const clases = ['lcar', 'lcar2', 'lcar3'];
+    leyenda(`<span class="lw">Tú</span>${sesion.rivales.map((r, i) => `<span class="${clases[i]}">${r.nombre.replace(/^Fantasma /, '')}</span>`).join('')}<span class="pista">Toca: ${carreraRemo.modo === '3d' ? '2D' : '3D'}</span>`);
     canvas.setAttribute('aria-label', $('#mr-rival-texto').textContent);
-    dibujarCarrera(canvas, datosCarrera());
+    carreraRemo.actualizar(carreraActual().estado);
     return;
   }
+  carreraRemo.detener();
   const ent = sesion ? entrenamientoActivo : null;
   const previa = !sesion && Number($('#sel-entrenamiento').value) ? entrenamientoPrevio : null;
   const plan = ent || previa;
@@ -1341,7 +1509,9 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   if (estres != null) stats.push(['Carga', estres]);
   if (s.tiempoMeta != null) stats.push(['Meta en', formatoTiempo(s.tiempoMeta)]);
   if (s.pctEnRango != null) stats.push(['En rango', `${s.pctEnRango}%`]);
-  if (s.rival) stats.push(['Vs. fantasma', `${s.rival.diferencia > 0 ? '+' : ''}${s.rival.diferencia} m`]);
+  for (const r of s.rivales || (s.rival ? [s.rival] : [])) {
+    stats.push([s.rivales ? `Vs. ${r.nombre.replace(/^Fantasma /, '')}` : 'Vs. fantasma', `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m`]);
+  }
   $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${k}</span><span class="valor">${v}</span></div>`).join('');
 
   pintarRpe();
