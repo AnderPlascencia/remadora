@@ -1,5 +1,6 @@
 // Cálculos de seguimiento: récords, comparación con la sesión anterior y progreso por periodo.
 // Una muestra de sesión es { t, w, spm, split, dist, nivel, fc } con t en segundos activos.
+import { enRango } from './entrenamientos.js';
 
 // Mayor potencia media sostenida durante `segs` segundos.
 export function mejorPotencia(muestras, segs) {
@@ -147,4 +148,182 @@ export function racha(sesiones, ahora = Date.now()) {
     d.setDate(d.getDate() - 1);
   }
   return n;
+}
+
+// ---------- Resumen por intervalo y parciales ----------
+
+// Una fila por intervalo con promedios y % del tiempo en rango. bloques ya con duración real en segundos.
+export function resumenIntervalos(sesion) {
+  if (!sesion.bloques) return [];
+  const filas = [];
+  let desde = 0;
+  for (const b of sesion.bloques) {
+    const hasta = desde + b.duracion;
+    const tramo = sesion.muestras.filter((x) => x.t > desde && x.t <= hasta);
+    if (tramo.length) {
+      const prom = (k) => Math.round(tramo.reduce((a, x) => a + (x[k] || 0), 0) / tramo.length);
+      const conSplit = tramo.filter((x) => x.split > 0);
+      const juzgados = tramo.map((x) => enRango(b, x.w, x.spm, 0, x.split)).filter(Boolean);
+      filas.push({
+        nombre: b.nombre || 'Intervalo',
+        bloque: b,
+        segundos: tramo.length,
+        metros: tramo.at(-1).dist - (sesion.muestras.find((x) => x.t > desde)?.dist ?? 0),
+        w: prom('w'),
+        spm: prom('spm'),
+        fc: tramo.some((x) => x.fc) ? prom('fc') : 0,
+        split: conSplit.length ? Math.round(conSplit.reduce((a, x) => a + x.split, 0) / conSplit.length) : 0,
+        pctRango: juzgados.length ? Math.round((100 * juzgados.filter((r) => r === 'dentro').length) / juzgados.length) : null,
+      });
+    }
+    desde = hasta;
+  }
+  return filas;
+}
+
+// Parciales cada `cada` metros: tiempo, split, watts y golpes de cada tramo.
+export function parciales(muestras, cada = 500) {
+  const res = [];
+  let inicio = { t: 0, dist: 0 };
+  let tramo = [];
+  for (const x of muestras) {
+    tramo.push(x);
+    if (x.dist - inicio.dist >= cada) {
+      const t = x.t - inicio.t;
+      res.push({
+        n: res.length + 1,
+        metros: (res.length + 1) * cada,
+        tiempo: t,
+        split: Math.round((t * 500) / (x.dist - inicio.dist)),
+        w: Math.round(tramo.reduce((a, y) => a + y.w, 0) / tramo.length),
+        spm: Math.round(tramo.reduce((a, y) => a + y.spm, 0) / tramo.length),
+      });
+      inicio = { t: x.t, dist: inicio.dist + cada };
+      tramo = [];
+    }
+  }
+  return res;
+}
+
+// ---------- Carga y forma ----------
+
+// Potencia normalizada: media móvil de 30 s elevada a la 4, promediada y con raíz cuarta.
+export function potenciaNormalizada(muestras) {
+  if (muestras.length < 30) return muestras.length ? Math.round(muestras.reduce((a, x) => a + x.w, 0) / muestras.length) : 0;
+  let suma = 0;
+  let acum = 0;
+  let n = 0;
+  for (let i = 0; i < muestras.length; i++) {
+    suma += muestras[i].w;
+    if (i >= 30) suma -= muestras[i - 30].w;
+    if (i >= 29) { acum += (suma / 30) ** 4; n++; }
+  }
+  return Math.round((acum / n) ** 0.25);
+}
+
+// Estrés de la sesión (100 = una hora a tu FTP).
+export function estres(sesion, ftp) {
+  if (!ftp || !sesion.muestras?.length) return null;
+  const np = potenciaNormalizada(sesion.muestras);
+  const intensidad = np / ftp;
+  return Math.round(((sesion.duracion * np * intensidad) / (ftp * 3600)) * 100);
+}
+
+export const claveDia = (ms) => {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// Forma: condición (promedio de 42 días), fatiga (7 días) y frescura (condición − fatiga) de los últimos `dias`.
+export function forma(sesiones, ftp, dias = 60, ahora = Date.now()) {
+  const porDia = new Map();
+  let primero = ahora;
+  for (const s of sesiones) {
+    const v = s.estres ?? estres(s, s.ftp || ftp);
+    if (v == null) continue;
+    const k = claveDia(s.fecha);
+    porDia.set(k, (porDia.get(k) || 0) + v);
+    primero = Math.min(primero, s.fecha);
+  }
+  const res = [];
+  let ctl = 0;
+  let atl = 0;
+  const d = new Date(Math.min(primero, ahora - dias * 864e5));
+  d.setHours(12, 0, 0, 0);
+  const fin = new Date(ahora);
+  fin.setHours(12, 0, 0, 0);
+  while (d <= fin) {
+    const carga = porDia.get(claveDia(d.getTime())) || 0;
+    const tsb = ctl - atl;
+    ctl += (carga - ctl) / 42;
+    atl += (carga - atl) / 7;
+    res.push({ dia: claveDia(d.getTime()), carga, condicion: Math.round(ctl), fatiga: Math.round(atl), frescura: Math.round(tsb) });
+    d.setDate(d.getDate() + 1);
+  }
+  return res.slice(-dias);
+}
+
+// ---------- Pulso ----------
+
+export const ZONAS_FC = [
+  { n: 1, nombre: 'Muy suave', min: 50, max: 60 },
+  { n: 2, nombre: 'Suave', min: 60, max: 70 },
+  { n: 3, nombre: 'Moderada', min: 70, max: 80 },
+  { n: 4, nombre: 'Intensa', min: 80, max: 90 },
+  { n: 5, nombre: 'Máxima', min: 90, max: 100 },
+];
+
+export function zonaFc(fc, fcMax) {
+  if (!fc || !fcMax) return null;
+  const pct = (100 * fc) / fcMax;
+  if (pct < 50) return null;
+  return ZONAS_FC.find((z) => pct < z.max) || ZONAS_FC.at(-1);
+}
+
+// Segundos en cada zona de pulso [z1..z5].
+export function tiempoEnZonasFc(muestras, fcMax) {
+  const res = [0, 0, 0, 0, 0];
+  for (const x of muestras) {
+    const z = zonaFc(x.fc, fcMax);
+    if (z) res[z.n - 1] += 1;
+  }
+  return res;
+}
+
+// ---------- Técnica ----------
+
+export function tecnica(s) {
+  return {
+    metrosPorPalada: s.paladas ? Math.round((100 * s.distancia) / s.paladas) / 100 : null,
+    joulesPorPalada: s.spmProm ? Math.round((s.wattsProm * 60) / s.spmProm) : null,
+    wattsPorLatido: s.fcProm ? Math.round((100 * s.wattsProm) / s.fcProm) / 100 : null,
+  };
+}
+
+// ---------- Fantasma ----------
+
+// Distancia de una sesión guardada en el segundo t (interpolada). Si ya terminó, su distancia final.
+export function distanciaEn(muestras, t) {
+  if (!muestras?.length) return 0;
+  if (t >= muestras.at(-1).t) return muestras.at(-1).dist;
+  let lo = 0;
+  let hi = muestras.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (muestras[mid].t <= t) lo = mid; else hi = mid;
+  }
+  const a = muestras[lo];
+  const b = muestras[hi];
+  if (t <= a.t) return a.dist * (t / (a.t || 1));
+  return a.dist + ((b.dist - a.dist) * (t - a.t)) / (b.t - a.t || 1);
+}
+
+// Sesión rival para el mismo entrenamiento: la anterior o la mejor.
+export function elegirRival(sesiones, nombre, modo) {
+  const mismas = sesiones.filter((s) => (s.entrenamiento || null) === (nombre || null) && s.muestras?.length);
+  if (!mismas.length || !modo) return null;
+  if (modo === 'anterior') return mismas.sort((a, b) => b.fecha - a.fecha)[0];
+  const conMeta = mismas.filter((s) => s.tiempoMeta != null);
+  if (conMeta.length) return conMeta.sort((a, b) => a.tiempoMeta - b.tiempoMeta)[0];
+  return mismas.sort((a, b) => b.distancia / b.duracion - a.distancia / a.duracion)[0];
 }

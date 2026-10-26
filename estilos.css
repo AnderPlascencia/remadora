@@ -349,3 +349,61 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
 .barra h1 .version { font-size: 12px; font-weight: 600; color: var(--texto-tenue); margin-left: 4px; letter-spacing: 0; }
 .tarjeta-version { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border-radius: var(--radio); padding: 12px 16px; margin: 4px 0 8px; color: var(--texto-suave); font-size: 14px; }
 .tarjeta-version b { color: var(--texto); font-size: 18px; font-variant-numeric: tabular-nums; }
+
+/* ---------- v0.5: programa, fantasma, esfuerzo ---------- */
+:root { --fc: #F472B6; --cond: #38BDF8; --fat: #F97316; --fres: #22C55E; }
+textarea { font: inherit; color: var(--texto); background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 10px 12px; width: 100%; display: block; margin-top: 6px; resize: vertical; }
+.hoja textarea { background: var(--panel); }
+.hoy-toca { display: flex; align-items: center; gap: 12px; background: rgba(249, 115, 22, .12); border: 1px solid rgba(249, 115, 22, .45); border-radius: var(--radio); padding: 10px 12px 10px 14px; margin: 12px 0 4px; }
+.hoy-toca > .ico { color: var(--primario); width: 26px; height: 26px; }
+.hoy-toca .etq { display: block; font-size: 12px; font-weight: 700; color: #FDBA74; text-transform: uppercase; letter-spacing: .04em; }
+.hoy-toca b { display: block; line-height: 1.25; }
+.hoy-toca.hecho { background: rgba(34, 197, 94, .1); border-color: rgba(34, 197, 94, .45); }
+.hoy-toca.hecho .etq { color: #86EFAC; }
+.hoy-toca.hecho > .ico { color: var(--exito); }
+.fila-dos .campo { min-width: 0; }
+
+.rival { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 18px; border-radius: 12px; padding: 8px 12px; margin: 8px 0; background: var(--panel); font-variant-numeric: tabular-nums; }
+.rival.adelante { color: #86EFAC; background: rgba(34, 197, 94, .1); }
+.rival.atras { color: #FCA5A5; background: rgba(239, 68, 68, .1); }
+.mr-rival { margin: 0; font-size: 22px; }
+.mr-rival[hidden], .rival[hidden] { display: none; }
+
+.p-dias { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0; }
+.p-dias label { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; color: var(--texto-suave); font-size: 14px; }
+.plantilla { background: var(--panel); border-radius: var(--radio); padding: 12px 14px; margin: 8px 0; display: flex; gap: 12px; align-items: center; }
+.plantilla .info { flex: 1; }
+.plantilla .suave { color: var(--texto-tenue); font-size: 14px; }
+#programa-activo .tm-fila { color: var(--texto); font-size: 15px; }
+.cal-cabecera, .calendario { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-cabecera { margin-top: 12px; font-size: 12px; color: var(--texto-tenue); text-align: center; font-weight: 700; }
+.calendario { margin: 4px 0 8px; }
+.calendario button { aspect-ratio: 1; min-height: 40px; padding: 0; border-radius: 10px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; background: var(--fondo); border: 1px solid transparent; color: var(--texto-tenue); }
+.calendario button .ico { width: 14px; height: 14px; stroke-width: 3; }
+.calendario .vacio { visibility: hidden; }
+.calendario .libre { opacity: .45; }
+.calendario .hecho { background: rgba(34, 197, 94, .2); color: #86EFAC; }
+.calendario .perdido { background: rgba(239, 68, 68, .15); color: #FCA5A5; }
+.calendario .hoy { border-color: var(--primario); color: var(--texto); background: rgba(249, 115, 22, .15); }
+.calendario .pendiente { background: var(--panel); color: var(--texto); }
+.calendario .elegido { outline: 2px solid var(--texto); outline-offset: 1px; }
+.cal-leyenda span::before { border-radius: 4px; }
+.cal-leyenda .c-hecho::before { background: rgba(34, 197, 94, .6); }
+.cal-leyenda .c-perdido::before { background: rgba(239, 68, 68, .5); }
+.cal-leyenda .c-hoy::before { background: var(--primario); }
+.cal-leyenda .c-pendiente::before { background: var(--panel-2); }
+.leyenda .lfc::before { background: var(--fc); height: 3px; vertical-align: 3px; }
+.leyenda .lcond::before { background: var(--cond); height: 3px; vertical-align: 3px; }
+.leyenda .lfat::before { background: var(--fat); height: 3px; vertical-align: 3px; }
+.leyenda .lfres::before { background: var(--fres); height: 3px; vertical-align: 3px; }
+.leyenda .lmpp::before { background: var(--exito); height: 3px; vertical-align: 3px; }
+.leyenda .ljp::before { background: var(--split); height: 3px; vertical-align: 3px; }
+
+.rpe { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.rpe button { min-height: 44px; padding: 0; border-radius: 10px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rpe button.activo { background: var(--primario); border-color: var(--primario); color: #0B0F19; }
+.desliza { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+.desliza .tabla { min-width: 400px; }
+.tabla td.ok { color: var(--exito); font-weight: 700; }
+.tabla td.mal { color: #FCA5A5; font-weight: 700; }
+.lista .rpe-chip { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 0 8px; background: var(--panel-2); color: var(--texto-suave); margin-left: 6px; }

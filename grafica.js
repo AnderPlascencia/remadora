@@ -33,7 +33,8 @@ export function dibujar(canvas, series, opciones = {}) {
     let max = 0;
     for (const s of series) if (s.eje === eje) for (const [t, v] of s.puntos) if (t >= tMin) max = Math.max(max, v);
     for (const b of opciones.metas || []) if (b.eje === eje && b.hasta >= tMin && b.desde <= tMax) max = Math.max(max, b.max);
-    escalas[eje] = max > 0 ? Math.ceil((max * 1.15) / 10) * 10 : 10;
+    if (opciones.decimales && max > 0 && max < 20) escalas[eje] = Math.ceil(max * 1.15 * 2) / 2;
+    else escalas[eje] = max > 0 ? Math.ceil((max * 1.15) / 10) * 10 : 10;
   }
 
   const X = (t) => m.izq + ((t - tMin) / (tMax - tMin)) * w;
@@ -48,9 +49,11 @@ export function dibujar(canvas, series, opciones = {}) {
     ctx.beginPath(); ctx.moveTo(m.izq, y); ctx.lineTo(m.izq + w, y); ctx.stroke();
     const frac = 1 - i / 4;
     ctx.textAlign = 'right';
-    if (series.some((s) => s.eje === 'izq')) ctx.fillText(Math.round(escalas.izq * frac), m.izq - 6, y + 4);
+    const num = (v) => (escalas.izq < 20 && opciones.decimales ? v.toFixed(1) : Math.round(v));
+    const numD = (v) => (escalas.der < 20 && opciones.decimales ? v.toFixed(1) : Math.round(v));
+    if (series.some((s) => s.eje === 'izq')) ctx.fillText(num(escalas.izq * frac), m.izq - 6, y + 4);
     ctx.textAlign = 'left';
-    if (series.some((s) => s.eje === 'der')) ctx.fillText(Math.round(escalas.der * frac), m.izq + w + 6, y + 4);
+    if (series.some((s) => s.eje === 'der')) ctx.fillText(numD(escalas.der * frac), m.izq + w + 6, y + 4);
   }
 
   ctx.textAlign = 'center';
@@ -58,7 +61,7 @@ export function dibujar(canvas, series, opciones = {}) {
   for (let i = 0; i <= pasos; i++) {
     const t = tMin + ((tMax - tMin) * i) / pasos;
     const seg = Math.round(t);
-    ctx.fillText(`${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`, X(t), alto - 6);
+    ctx.fillText(opciones.formatoX ? opciones.formatoX(t) : `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`, X(t), alto - 6);
   }
 
   // Bandas de meta del entrenamiento (opcional): [{ desde, hasta, min, max, eje }]

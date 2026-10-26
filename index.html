@@ -34,6 +34,10 @@
       <symbol id="i-baja" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
       <symbol id="i-trofeo" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.6 2 2 2 3.8M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
       <symbol id="i-fuego" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4.1 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3.3.3 1.6 1.3 2.8 2.5 2.8Z"/></symbol>
+      <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+      <symbol id="i-fantasma" viewBox="0 0 24 24"><path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></symbol>
+      <symbol id="i-descarga" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+      <symbol id="i-sube-archivo" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
       <symbol id="i-voz" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
     </defs>
   </svg>
@@ -55,9 +59,25 @@
         <button id="btn-banda" class="boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span>Pulso</span></button>
       </div>
 
-      <label class="campo">Entrenamiento
-        <select id="sel-entrenamiento"><option value="">Remo libre</option></select>
-      </label>
+      <div id="hoy-toca" class="hoy-toca" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#i-calendario"/></svg>
+        <div class="crece"><span class="etq">Hoy toca</span><b id="hoy-toca-nombre"></b></div>
+        <button id="btn-hoy-toca" class="boton chico">Elegir</button>
+      </div>
+
+      <div class="fila-dos">
+        <label class="campo">Entrenamiento
+          <select id="sel-entrenamiento"><option value="">Remo libre</option></select>
+        </label>
+        <label class="campo">Fantasma
+          <select id="sel-rival">
+            <option value="">Sin fantasma</option>
+            <option value="anterior">Mi sesión anterior</option>
+            <option value="mejor">Mi mejor marca</option>
+          </select>
+        </label>
+      </div>
+      <div id="rival" class="rival" hidden aria-live="polite"><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="rival-texto"></span></div>
 
       <div id="bloque-actual" class="tarjeta-meta" hidden>
         <div class="tm-cabecera">
@@ -93,7 +113,8 @@
         <div class="metrica"><span class="etq">Distancia</span><span id="m-dist" class="valor">0</span><span class="sub">m</span></div>
         <div class="metrica"><span class="etq">Paladas</span><span id="m-paladas" class="valor">0</span></div>
         <div class="metrica"><span class="etq">Calorías</span><span id="m-kcal" class="valor">0</span><span class="sub">kcal est.</span></div>
-        <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span><span class="sub">lpm</span></div>
+        <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span><span id="m-fc-zona" class="sub">lpm</span></div>
+        <div class="metrica"><span class="etq">Metros/palada</span><span id="m-mpp" class="valor">-</span><span class="sub">m</span></div>
       </div>
 
       <h2>Últimos 5 minutos</h2>
@@ -103,6 +124,32 @@
 
     <!-- PLANES -->
     <section id="vista-entrenamientos" class="vista" aria-labelledby="tab-entrenamientos">
+      <h2>Programa</h2>
+      <div id="programa-vacio">
+        <p class="ayuda">Un programa reparte tus entrenamientos en el calendario y cada día te dice cuál toca.</p>
+        <div id="plantillas-programa"></div>
+        <details class="serie">
+          <summary>Crear mi propio programa</summary>
+          <div class="fila-dos">
+            <label class="campo">Empieza <input id="p-inicio" type="date"></label>
+            <label class="campo">Semanas <input id="p-semanas" type="number" min="1" max="26" value="4" inputmode="numeric"></label>
+          </div>
+          <div id="p-dias" class="p-dias"></div>
+          <p id="p-error" class="error" role="alert"></p>
+          <button type="button" id="btn-crear-programa" class="boton primario">Crear programa</button>
+        </details>
+      </div>
+      <div id="programa-activo" hidden>
+        <div class="tm-fila"><b id="prog-nombre"></b><span id="prog-cumple"></span></div>
+        <div class="progreso" role="progressbar" aria-label="Avance del programa"><div id="prog-barra"></div></div>
+        <div class="cal-cabecera"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+        <div id="calendario" class="calendario"></div>
+        <p id="prog-dia" class="ayuda" aria-live="polite"></p>
+        <div class="leyenda cal-leyenda"><span class="c-hecho">Hecho</span><span class="c-perdido">No hecho</span><span class="c-hoy">Hoy</span><span class="c-pendiente">Próximo</span></div>
+        <button type="button" id="btn-quitar-programa" class="boton peligro">Quitar programa</button>
+      </div>
+
+      <h2>Entrenamientos</h2>
       <div class="fila-botones">
         <button id="btn-nuevo-ent" class="boton primario">Nuevo entrenamiento</button>
         <button id="btn-plantillas" class="boton">Agregar ejemplos</button>
@@ -171,20 +218,34 @@
         </div>
       </div>
 
+      <div id="aviso-respaldo" class="aviso" hidden></div>
+
       <div class="segmentado" role="group" aria-label="Periodo">
         <button class="activo" data-periodo="semana" aria-pressed="true">Semanas</button>
         <button data-periodo="mes" aria-pressed="false">Meses</button>
       </div>
       <canvas id="grafica-periodos" class="grafica baja" role="img" aria-label="Kilómetros por periodo"></canvas>
 
+      <h2>Forma</h2>
+      <div class="leyenda"><span class="lcond">Condición</span><span class="lfat">Fatiga</span><span class="lfres">Frescura</span></div>
+      <canvas id="grafica-forma" class="grafica baja" role="img" aria-label="Condición, fatiga y frescura de los últimos 60 días"></canvas>
+      <p id="forma-texto" class="ayuda"></p>
+
       <h2>Tendencia</h2>
-      <div class="leyenda"><span class="lw">Watts promedio</span><span class="lt">Split promedio (s/500 m)</span></div>
-      <canvas id="grafica-tendencia" class="grafica baja" role="img" aria-label="Watts y split promedio por sesión"></canvas>
+      <div class="segmentado" role="group" aria-label="Tendencia" id="seg-tendencia">
+        <button class="activo" data-tend="potencia" aria-pressed="true">Potencia</button>
+        <button data-tend="eficiencia" aria-pressed="false">Pulso</button>
+        <button data-tend="tecnica" aria-pressed="false">Técnica</button>
+      </div>
+      <div id="leyenda-tendencia" class="leyenda"></div>
+      <canvas id="grafica-tendencia" class="grafica baja" role="img" aria-label="Tendencia por sesión"></canvas>
+      <p id="tendencia-texto" class="ayuda"></p>
 
       <h2>Récords</h2>
       <div id="records" class="records"></div>
 
       <h2>Sesiones</h2>
+      <label class="campo">Mostrar <select id="filtro-ent"><option value="*">Todas las sesiones</option></select></label>
       <p id="resumen-historial" class="ayuda"></p>
       <ul id="lista-sesiones" class="lista"></ul>
     </section>
@@ -199,6 +260,8 @@
       </div>
       <p class="ayuda">El FTP es la potencia que puedes sostener cerca de una hora. Haz el entrenamiento "Prueba FTP 20 min" y la app lo calcula por ti.</p>
       <table id="tabla-zonas" class="tabla"></table>
+      <label class="campo">Pulso máximo (lpm) <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
+      <p class="ayuda">Si no lo conoces, usa 220 menos tu edad. Sirve para las zonas de pulso.</p>
       <label class="campo">Meta semanal (km) <input id="in-meta-semana" type="number" min="1" max="500" inputmode="numeric"></label>
 
       <h2>Durante el entrenamiento</h2>
@@ -219,6 +282,15 @@
         </label>
         <button id="btn-nivel-prueba" class="boton alinear-abajo">Enviar</button>
       </div>
+
+      <h2>Respaldo</h2>
+      <p id="respaldo-info" class="ayuda"></p>
+      <div class="fila-botones">
+        <button id="btn-respaldo" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-descarga"/></svg><span>Guardar respaldo</span></button>
+        <button id="btn-restaurar" class="boton"><svg class="ico" aria-hidden="true"><use href="#i-sube-archivo"/></svg><span>Restaurar</span></button>
+        <input id="in-restaurar" type="file" accept="application/json,.json" hidden>
+      </div>
+      <p class="ayuda">El respaldo es un archivo con todas tus sesiones, entrenamientos, programa y ajustes. Al guardarlo puedes mandarlo a Google Drive desde el menú de compartir. Restaurar agrega lo que falte sin borrar lo que ya tienes.</p>
 
       <h2>Conexión</h2>
       <p class="ayuda">Pulso: sirve cualquier banda o reloj que transmita la frecuencia cardíaca por Bluetooth. En un Huawei Watch activa "Compartir datos de frecuencia cardíaca" en Ajustes del entrenamiento del reloj, empieza un entrenamiento en el reloj y luego pulsa "Pulso" en Entrenar.</p>
@@ -275,6 +347,7 @@
       <div id="mr-leyenda" class="leyenda"></div>
       <canvas id="mr-grafica" class="mr-grafica" role="img" aria-label="Gráfica del entrenamiento"></canvas>
     </div>
+    <div id="mr-rival" class="rival mr-rival" hidden><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="mr-rival-texto"></span></div>
     <div id="mr-estado" class="mr-estado" aria-live="polite"></div>
     <div class="mr-botones">
       <button id="mr-pausa" class="boton grande" aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
@@ -295,8 +368,20 @@
       <div id="hoja-records" class="records"></div>
       <div id="hoja-ftp" class="aviso exito" hidden></div>
       <div id="hoja-stats" class="metricas compacta"></div>
+      <div id="hoja-esfuerzo" class="esfuerzo">
+        <h2>¿Qué tan duro se sintió?</h2>
+        <div id="rpe" class="rpe" role="group" aria-label="Esfuerzo del 1 al 10"></div>
+        <p id="rpe-texto" class="ayuda"></p>
+        <label class="campo">Notas <textarea id="in-notas" rows="2" maxlength="500" placeholder="Cómo te sentiste, molestias, ajustes de la consola…"></textarea></label>
+      </div>
+      <div id="hoja-intervalos"></div>
       <div id="hoja-comparacion"></div>
-      <h2>Watts y golpes por minuto</h2>
+      <div id="hoja-fc" hidden>
+        <h2>Tiempo en cada zona de pulso</h2>
+        <canvas id="hoja-zonas-fc" class="grafica baja" role="img" aria-label="Minutos en cada zona de pulso"></canvas>
+      </div>
+      <h2>Watts, golpes y pulso</h2>
+      <div class="leyenda"><span class="lw">Watts</span><span class="ls">Golpes/min</span><span class="lfc">Pulso</span></div>
       <canvas id="hoja-grafica" class="grafica" role="img" aria-label="Watts y golpes por minuto de la sesión"></canvas>
       <div id="hoja-perfil" hidden>
         <h2>Potencia contra el plan</h2>

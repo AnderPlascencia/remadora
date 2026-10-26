@@ -2,8 +2,10 @@
 //
 // Dos tipos:
 //  - 'objetivo':   { tipo, nombre, objetivo: { metrica: 'kcal'|'distancia'|'paladas', valor } }
-//  - 'intervalos': { tipo, nombre, bloques: [{ nombre, duracion (s), metrica, min, max, nivel? }] }
-//    metrica: 'watts' (min/max en W), 'ftp' (min/max en % del FTP), 'spm' (golpes/min) o '' (libre).
+//  - 'intervalos': { tipo, nombre, bloques: [{ nombre, fin?, duracion (s), cantidad?, metrica, min, max, nivel? }] }
+//    fin: 'tiempo' (por defecto, usa duracion), 'distancia' (cantidad en m) o 'paladas' (cantidad de paladas).
+//    metrica: 'watts' (min/max en W), 'ftp' (min/max en % del FTP), 'split' (min/max en s por 500 m),
+//    'spm' (golpes/min) o '' (libre).
 //    nivel (1-24, opcional): resistencia que se pide a la consola si la resistencia automática está activa.
 
 // Zonas de potencia como % del FTP.
@@ -29,8 +31,14 @@ export function rangoWatts(b, ftp) {
   return null;
 }
 
+// Watts equivalentes a un split (s/500 m) con la fórmula estándar de remo: W = 2.8 / (s/m)³.
+export function wattsDeSplit(split) {
+  return split > 0 ? Math.round(2.8 / (split / 500) ** 3) : 0;
+}
+
 // Texto corto de la meta de un bloque.
 export function textoMeta(b, ftp) {
+  if (b.metrica === 'split') return `${formatoMmss(b.min)}–${formatoMmss(b.max)} /500 m`;
   const r = rangoWatts(b, ftp);
   if (b.metrica === 'ftp') return r ? `${r.min}–${r.max} W (${b.min}–${b.max}% FTP)` : `${b.min}–${b.max}% FTP`;
   if (r) return `${r.min}–${r.max} W`;
@@ -48,16 +56,36 @@ export function tipoDe(ent) {
   return ent.tipo || (ent.objetivo ? 'objetivo' : 'intervalos');
 }
 
-export function duracionTotal(ent) {
-  return (ent.bloques || []).reduce((a, b) => a + b.duracion, 0);
+export const finDe = (b) => b.fin || 'tiempo';
+export const cantidadDe = (b) => (finDe(b) === 'tiempo' ? b.duracion : b.cantidad);
+
+// Segundos estimados de un bloque. ritmo: { split (s/500 m), spm }; por defecto 2:10 y 24 golpes/min.
+export function duracionEstimada(b, ritmo = {}) {
+  const fin = finDe(b);
+  if (fin === 'distancia') return Math.round((b.cantidad * (ritmo.split || 130)) / 500);
+  if (fin === 'paladas') return Math.round((b.cantidad * 60) / (ritmo.spm || 24));
+  return b.duracion;
 }
+
+export function textoCantidad(b) {
+  const fin = finDe(b);
+  if (fin === 'distancia') return `${b.cantidad} m`;
+  if (fin === 'paladas') return `${b.cantidad} paladas`;
+  return formatoMmss(b.duracion);
+}
+
+export function duracionTotal(ent, ritmo) {
+  return (ent.bloques || []).reduce((a, b) => a + duracionEstimada(b, ritmo), 0);
+}
+
+export const soloTiempo = (ent) => (ent.bloques || []).every((b) => finDe(b) === 'tiempo');
 
 export function describir(ent) {
   if (tipoDe(ent) === 'objetivo') {
     const m = METRICAS_OBJETIVO[ent.objetivo.metrica];
     return `Objetivo: ${ent.objetivo.valor} ${m.unidad}`;
   }
-  return `${ent.bloques.length} intervalos · ${formatoMmss(duracionTotal(ent))}`;
+  return `${ent.bloques.length} intervalos · ${soloTiempo(ent) ? '' : '≈ '}${formatoMmss(duracionTotal(ent))}`;
 }
 
 // Progreso hacia la meta. avance = { distancia, kcal, paladas } acumulados en la sesión; t en segundos.
@@ -101,17 +129,32 @@ export function bandasPotencia(ent, ftp) {
   return bandas;
 }
 
-// Bloques con la meta de potencia ya en watts (para dibujar el perfil).
-export function bloquesEnWatts(bloques, ftp) {
+// Bloques con el % de FTP convertido a watts (lo que se guarda con la sesión).
+export function normalizarBloques(bloques, ftp) {
   return bloques.map((b) => {
+    if (b.metrica !== 'ftp') return { ...b };
     const r = rangoWatts(b, ftp);
-    return r ? { ...b, metrica: 'watts', min: r.min, max: r.max } : { ...b, metrica: b.metrica === 'spm' ? 'spm' : '' };
+    return r ? { ...b, metrica: 'watts', min: r.min, max: r.max } : { ...b, metrica: '' };
+  });
+}
+
+// Bloques para dibujar el perfil: todo con meta de potencia queda en watts (el split se convierte).
+export function bloquesEnWatts(bloques, ftp) {
+  return normalizarBloques(bloques, ftp).map((b) => {
+    if (b.metrica === 'watts') return b;
+    if (b.metrica === 'split') return { ...b, metrica: 'watts', min: wattsDeSplit(b.max), max: wattsDeSplit(b.min) };
+    return { ...b, metrica: b.metrica === 'spm' ? 'spm' : '' };
   });
 }
 
 // 'dentro' | 'bajo' | 'alto' | null (sin meta)
-export function enRango(bloque, watts, spm, ftp) {
+export function enRango(bloque, watts, spm, ftp, split = 0) {
   if (!bloque || !bloque.metrica) return null;
+  if (bloque.metrica === 'split') {
+    if (!split || split > bloque.max) return 'bajo';
+    if (split < bloque.min) return 'alto';
+    return 'dentro';
+  }
   const r = rangoWatts(bloque, ftp);
   let min = bloque.min;
   let max = bloque.max;
@@ -120,6 +163,76 @@ export function enRango(bloque, watts, spm, ftp) {
   if (v < min) return 'bajo';
   if (max && v > max) return 'alto';
   return 'dentro';
+}
+
+// Seguimiento de un entrenamiento por intervalos que pueden terminar por tiempo, distancia o paladas.
+// m = { t, dist, paladas, split, spm } acumulados de la sesión (t en segundos activos).
+export function crearAvance() {
+  return { i: 0, inicio: { t: 0, dist: 0, paladas: 0 }, duraciones: [] };
+}
+
+function hechoEn(b, inicio, m) {
+  const fin = finDe(b);
+  if (fin === 'distancia') return m.dist - inicio.dist;
+  if (fin === 'paladas') return m.paladas - inicio.paladas;
+  return m.t - inicio.t;
+}
+
+export function avanzar(estado, bloques, m) {
+  while (estado.i < bloques.length) {
+    const b = bloques[estado.i];
+    if (hechoEn(b, estado.inicio, m) < cantidadDe(b)) break;
+    const tFin = finDe(b) === 'tiempo' ? estado.inicio.t + b.duracion : m.t;
+    estado.duraciones.push(tFin - estado.inicio.t);
+    estado.inicio = { t: tFin, dist: m.dist, paladas: m.paladas };
+    estado.i += 1;
+  }
+  const est = bloques.map((b) => duracionEstimada(b, m));
+  const total = est.reduce((a, x) => a + x, 0) || 1;
+  if (estado.i >= bloques.length) {
+    return { terminado: true, i: bloques.length, fraccion: 1, desde: estado.inicio.t };
+  }
+  const b = bloques[estado.i];
+  const cantidad = cantidadDe(b);
+  const hecho = Math.max(0, hechoEn(b, estado.inicio, m));
+  const resta = cantidad - hecho;
+  const fin = finDe(b);
+  let restaSeg = resta;
+  if (fin === 'distancia') restaSeg = (resta * (m.split || 130)) / 500;
+  if (fin === 'paladas') restaSeg = (resta * 60) / (m.spm || 24);
+  const previo = est.slice(0, estado.i).reduce((a, x) => a + x, 0);
+  return {
+    terminado: false,
+    i: estado.i,
+    bloque: b,
+    siguiente: bloques[estado.i + 1] || null,
+    desde: estado.inicio.t,
+    hecho,
+    resta,
+    restaSeg: Math.max(0, Math.round(restaSeg)),
+    fraccion: Math.min(1, (previo + (est[estado.i] * hecho) / (cantidad || 1)) / total),
+  };
+}
+
+// Bloques con duración en segundos: real si ya terminaron, estimada si no (para gráficas y para guardar).
+export function bloquesConDuracion(estado, bloques, m) {
+  return bloques.map((b, i) => {
+    if (i < estado.duraciones.length) return { ...b, duracion: estado.duraciones[i] };
+    if (i === estado.i) {
+      const info = avanzar({ ...estado, duraciones: [...estado.duraciones] }, bloques, m);
+      const pasado = m.t - estado.inicio.t;
+      return { ...b, duracion: Math.max(1, pasado + (info.restaSeg || 0)) };
+    }
+    return { ...b, duracion: duracionEstimada(b, m) };
+  });
+}
+
+// Texto de lo que falta en el bloque, en su unidad.
+export function textoResta(info) {
+  const fin = finDe(info.bloque);
+  if (fin === 'distancia') return `${Math.ceil(info.resta)} m`;
+  if (fin === 'paladas') return `${Math.ceil(info.resta)} pal.`;
+  return formatoMmss(info.resta);
 }
 
 // FTP estimado a partir de una prueba de 20 min: 95 % de la potencia media.
@@ -168,6 +281,39 @@ export const EJEMPLOS = [
       ...serie({ reps: 3, trabajo: 480, wMin: 0, wMax: 0, descanso: 180 }).map((b) => (b.nombre.startsWith('Trabajo')
         ? { ...b, metrica: 'ftp', min: 91, max: 105 } : { ...b, metrica: 'ftp', min: 40, max: 55 })),
       { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: '4 × 500 m',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 480, metrica: 'ftp', min: 56, max: 75 },
+      ...[1, 2, 3, 4].flatMap((n) => [
+        { nombre: `500 m fuerte ${n}/4`, fin: 'distancia', cantidad: 500, duracion: 0, metrica: 'ftp', min: 106, max: 120 },
+        ...(n < 4 ? [{ nombre: 'Descanso', duracion: 120, metrica: 'ftp', min: 40, max: 55 }] : []),
+      ]),
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: 'Ritmo 2:10 × 20 min',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'split', min: 135, max: 150 },
+      { nombre: 'Ritmo constante', duracion: 1200, metrica: 'split', min: 125, max: 130 },
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: 'Pirámide de paladas',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'spm', min: 18, max: 22 },
+      ...[50, 100, 150, 100, 50].flatMap((n, i, arr) => [
+        { nombre: `${n} paladas`, fin: 'paladas', cantidad: n, duracion: 0, metrica: 'spm', min: 26, max: 30 },
+        ...(i < arr.length - 1 ? [{ nombre: 'Suave', duracion: 60, metrica: 'spm', min: 18, max: 22 }] : []),
+      ]),
+      { nombre: 'Enfriamiento', duracion: 240, metrica: '', min: 0, max: 0 },
     ],
   },
   { tipo: 'objetivo', nombre: '2000 m', objetivo: { metrica: 'distancia', valor: 2000 } },
