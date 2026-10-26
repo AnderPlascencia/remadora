@@ -39,7 +39,7 @@
   </svg>
 
   <header class="barra">
-    <h1>Remadora</h1>
+    <h1>Remadora <span id="version-barra" class="version"></span></h1>
     <span id="estado" class="pastilla" role="status" aria-live="polite">Desconectada</span>
   </header>
 
@@ -191,6 +191,7 @@
 
     <!-- AJUSTES -->
     <section id="vista-ajustes" class="vista" aria-labelledby="tab-ajustes">
+      <div class="tarjeta-version"><span>Versión instalada</span><b id="version-ajustes"></b></div>
       <h2>Tú</h2>
       <div class="fila-dos">
         <label class="campo">Peso (kg) <input id="in-peso" type="number" min="30" max="200" inputmode="numeric"></label>

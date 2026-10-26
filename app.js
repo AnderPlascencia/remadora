@@ -7,7 +7,7 @@ import * as Ent from './entrenamientos.js';
 import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 
-const VERSION = '0.4.1';
+const VERSION = '0.4.2';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -97,6 +97,8 @@ $('#btn-nivel-prueba').addEventListener('click', () => {
   toast(`Nivel ${selNivel.value} enviado. Revisa la consola.`);
 });
 $('#version').textContent = VERSION;
+$('#version-barra').textContent = `v${VERSION}`;
+$('#version-ajustes').textContent = VERSION;
 
 const lineasLog = [];
 let logPendiente = false;

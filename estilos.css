@@ -346,3 +346,6 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
 }
 .mr-watts, .mr-indicador, .mr-botones .boton { white-space: nowrap; }
 #mr-vista .num { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.barra h1 .version { font-size: 12px; font-weight: 600; color: var(--texto-tenue); margin-left: 4px; letter-spacing: 0; }
+.tarjeta-version { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border-radius: var(--radio); padding: 12px 16px; margin: 4px 0 8px; color: var(--texto-suave); font-size: 14px; }
+.tarjeta-version b { color: var(--texto); font-size: 18px; font-variant-numeric: tabular-nums; }
