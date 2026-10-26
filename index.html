@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1720">
+  <title>Remadora</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header class="barra">
+    <h1>Remadora</h1>
+    <span id="estado" class="estado">Desconectada</span>
+  </header>
+
+  <nav class="pestanas" role="tablist">
+    <button data-vista="entrenar" class="activa">Entrenar</button>
+    <button data-vista="entrenamientos">Entrenamientos</button>
+    <button data-vista="historial">Historial</button>
+    <button data-vista="ajustes">Ajustes</button>
+  </nav>
+
+  <main>
+    <!-- ENTRENAR -->
+    <section id="vista-entrenar" class="vista activa">
+      <div id="aviso-bt" class="aviso" hidden>
+        Este navegador no tiene Bluetooth web. Abre la página en Chrome para Android.
+      </div>
+
+      <div class="acciones">
+        <button id="btn-conectar" class="primario">Conectar remadora</button>
+        <button id="btn-banda">Banda de pulso</button>
+        <button id="btn-demo" class="discreto">Demo</button>
+      </div>
+
+      <div id="bloque-actual" class="bloque" hidden>
+        <div class="bloque-fila">
+          <span id="bloque-nombre">Bloque</span>
+          <span id="bloque-resta" class="grande">0:00</span>
+        </div>
+        <div class="bloque-fila suave">
+          <span id="bloque-meta"></span>
+          <span id="bloque-siguiente"></span>
+        </div>
+        <div class="progreso"><div id="bloque-barra"></div></div>
+      </div>
+
+      <div class="metricas">
+        <div class="metrica destacada"><span class="etq">Watts</span><span id="m-watts" class="valor">0</span></div>
+        <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span></div>
+        <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span></div>
+        <div class="metrica"><span class="etq">Tiempo</span><span id="m-tiempo" class="valor">0:00</span></div>
+        <div class="metrica"><span class="etq">Distancia m</span><span id="m-dist" class="valor">0</span></div>
+        <div class="metrica"><span class="etq">Nivel</span><span id="m-nivel" class="valor">-</span></div>
+        <div class="metrica"><span class="etq">kcal (est.)</span><span id="m-kcal" class="valor">0</span></div>
+        <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span></div>
+      </div>
+
+      <div class="leyenda">
+        <span class="lw">Watts</span><span class="ls">Golpes/min</span><span class="lt">Split (s/500 m)</span>
+      </div>
+      <canvas id="grafica-vivo" class="grafica"></canvas>
+
+      <div class="acciones">
+        <select id="sel-entrenamiento" aria-label="Entrenamiento">
+          <option value="">Remo libre</option>
+        </select>
+        <button id="btn-grabar" class="primario" disabled>Iniciar sesión</button>
+      </div>
+    </section>
+
+    <!-- ENTRENAMIENTOS -->
+    <section id="vista-entrenamientos" class="vista">
+      <div class="acciones">
+        <button id="btn-nuevo-ent" class="primario">Nuevo entrenamiento</button>
+        <button id="btn-plantillas">Agregar ejemplos</button>
+      </div>
+      <ul id="lista-ent" class="lista"></ul>
+
+      <form id="editor-ent" class="editor" hidden>
+        <label>Nombre <input name="nombre" required maxlength="60"></label>
+        <div id="bloques"></div>
+        <div class="acciones">
+          <button type="button" id="btn-add-bloque">+ Bloque</button>
+          <button type="button" id="btn-add-serie">+ Serie de intervalos</button>
+        </div>
+        <p id="ent-resumen" class="suave"></p>
+        <div class="acciones">
+          <button type="submit" class="primario">Guardar</button>
+          <button type="button" id="btn-cancelar-ent">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="vista-historial" class="vista">
+      <div id="resumen-historial" class="suave"></div>
+      <canvas id="grafica-tendencia" class="grafica baja"></canvas>
+      <ul id="lista-sesiones" class="lista"></ul>
+      <div id="detalle-sesion" hidden>
+        <h2 id="det-titulo"></h2>
+        <div id="det-stats" class="metricas compacta"></div>
+        <canvas id="grafica-sesion" class="grafica"></canvas>
+        <div class="acciones">
+          <button id="btn-csv">Exportar CSV</button>
+          <button id="btn-tcx">Exportar TCX</button>
+          <button id="btn-borrar" class="peligro">Borrar</button>
+          <button id="btn-cerrar-det">Cerrar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section id="vista-ajustes" class="vista">
+      <label>Variante del protocolo
+        <select id="sel-variante"></select>
+      </label>
+      <p class="suave">Si al conectar no aparecen datos, desconecta, cambia la variante y vuelve a conectar.</p>
+      <label>Tu peso (kg) <input id="in-peso" type="number" min="30" max="200" value="75"></label>
+
+      <h2>Registro Bluetooth</h2>
+      <p class="suave">Muestra cada mensaje enviado (&gt;&gt;) y recibido (&lt;&lt;). Si algo falla, descárgalo y compártelo.</p>
+      <div class="acciones">
+        <button id="btn-log">Descargar registro</button>
+        <button id="btn-log-limpiar">Limpiar</button>
+      </div>
+      <pre id="log" class="log"></pre>
+      <p class="suave">Versión <span id="version"></span></p>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
