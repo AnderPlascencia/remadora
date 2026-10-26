@@ -2,7 +2,41 @@
 //
 // Dos tipos:
 //  - 'objetivo':   { tipo, nombre, objetivo: { metrica: 'kcal'|'distancia'|'paladas', valor } }
-//  - 'intervalos': { tipo, nombre, bloques: [{ nombre, duracion (s), metrica: 'watts'|'spm'|'', min, max }] }
+//  - 'intervalos': { tipo, nombre, bloques: [{ nombre, duracion (s), metrica, min, max, nivel? }] }
+//    metrica: 'watts' (min/max en W), 'ftp' (min/max en % del FTP), 'spm' (golpes/min) o '' (libre).
+//    nivel (1-24, opcional): resistencia que se pide a la consola si la resistencia automática está activa.
+
+// Zonas de potencia como % del FTP.
+export const ZONAS = [
+  { n: 1, nombre: 'Recuperación', min: 40, max: 55 },
+  { n: 2, nombre: 'Resistencia', min: 56, max: 75 },
+  { n: 3, nombre: 'Tempo', min: 76, max: 90 },
+  { n: 4, nombre: 'Umbral', min: 91, max: 105 },
+  { n: 5, nombre: 'VO2 máx', min: 106, max: 120 },
+  { n: 6, nombre: 'Anaeróbica', min: 121, max: 150 },
+];
+
+export function zonaDe(watts, ftp) {
+  if (!ftp || !watts) return null;
+  const pct = (100 * watts) / ftp;
+  return ZONAS.find((z) => pct <= z.max) || ZONAS.at(-1);
+}
+
+// Rango del bloque en watts (convierte % del FTP). null si el bloque no tiene meta de potencia.
+export function rangoWatts(b, ftp) {
+  if (b.metrica === 'watts') return { min: b.min, max: b.max };
+  if (b.metrica === 'ftp' && ftp) return { min: Math.round((b.min * ftp) / 100), max: Math.round((b.max * ftp) / 100) };
+  return null;
+}
+
+// Texto corto de la meta de un bloque.
+export function textoMeta(b, ftp) {
+  const r = rangoWatts(b, ftp);
+  if (b.metrica === 'ftp') return r ? `${r.min}–${r.max} W (${b.min}–${b.max}% FTP)` : `${b.min}–${b.max}% FTP`;
+  if (r) return `${r.min}–${r.max} W`;
+  if (b.metrica === 'spm') return `${b.min}–${b.max} golpes/min`;
+  return 'Libre';
+}
 
 export const METRICAS_OBJETIVO = {
   distancia: { nombre: 'Distancia', unidad: 'm' },
@@ -56,23 +90,41 @@ export function bloqueEn(ent, t) {
 }
 
 // Rangos de potencia de todos los bloques, en segundos desde el inicio, para dibujarlos en la gráfica.
-export function bandasPotencia(ent) {
+export function bandasPotencia(ent, ftp) {
   const bandas = [];
   let desde = 0;
   for (const b of ent.bloques || []) {
-    if (b.metrica === 'watts') bandas.push({ desde, hasta: desde + b.duracion, min: b.min, max: b.max });
+    const r = rangoWatts(b, ftp);
+    if (r) bandas.push({ desde, hasta: desde + b.duracion, min: r.min, max: r.max });
     desde += b.duracion;
   }
   return bandas;
 }
 
+// Bloques con la meta de potencia ya en watts (para dibujar el perfil).
+export function bloquesEnWatts(bloques, ftp) {
+  return bloques.map((b) => {
+    const r = rangoWatts(b, ftp);
+    return r ? { ...b, metrica: 'watts', min: r.min, max: r.max } : { ...b, metrica: b.metrica === 'spm' ? 'spm' : '' };
+  });
+}
+
 // 'dentro' | 'bajo' | 'alto' | null (sin meta)
-export function enRango(bloque, watts, spm) {
+export function enRango(bloque, watts, spm, ftp) {
   if (!bloque || !bloque.metrica) return null;
-  const v = bloque.metrica === 'watts' ? watts : spm;
-  if (v < bloque.min) return 'bajo';
-  if (bloque.max && v > bloque.max) return 'alto';
+  const r = rangoWatts(bloque, ftp);
+  let min = bloque.min;
+  let max = bloque.max;
+  let v = spm;
+  if (r) { min = r.min; max = r.max; v = watts; } else if (bloque.metrica !== 'spm') return null;
+  if (v < min) return 'bajo';
+  if (max && v > max) return 'alto';
   return 'dentro';
+}
+
+// FTP estimado a partir de una prueba de 20 min: 95 % de la potencia media.
+export function ftpDesdePrueba(wattsPromedio20min) {
+  return Math.round(wattsPromedio20min * 0.95);
 }
 
 // Serie de intervalos: reps × (trabajo con rango + descanso con rango opcional).
@@ -98,6 +150,26 @@ export function deMmss(txt) {
 }
 
 export const EJEMPLOS = [
+  {
+    tipo: 'intervalos',
+    nombre: 'Prueba FTP 20 min',
+    pruebaFtp: true,
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
+      { nombre: 'Prueba: máximo sostenido', duracion: 1200, metrica: '', min: 0, max: 0, prueba: true },
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: 'Umbral 3 × 8 min (zona 4)',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
+      ...serie({ reps: 3, trabajo: 480, wMin: 0, wMax: 0, descanso: 180 }).map((b) => (b.nombre.startsWith('Trabajo')
+        ? { ...b, metrica: 'ftp', min: 91, max: 105 } : { ...b, metrica: 'ftp', min: 40, max: 55 })),
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
   { tipo: 'objetivo', nombre: '2000 m', objetivo: { metrica: 'distancia', valor: 2000 } },
   { tipo: 'objetivo', nombre: '150 kcal', objetivo: { metrica: 'kcal', valor: 150 } },
   { tipo: 'objetivo', nombre: '500 paladas', objetivo: { metrica: 'paladas', valor: 500 } },

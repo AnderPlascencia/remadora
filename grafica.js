@@ -64,7 +64,7 @@ export function dibujar(canvas, series, opciones = {}) {
   // Bandas de meta del entrenamiento (opcional): [{ desde, hasta, min, max, eje }]
   for (const b of opciones.metas || []) {
     if (b.hasta < tMin) continue;
-    ctx.fillStyle = 'rgba(60, 207, 145, 0.16)';
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.16)';
     const x0 = Math.max(X(b.desde), m.izq);
     const x1 = Math.min(X(b.hasta), m.izq + w);
     if (x1 <= x0) continue;
@@ -133,12 +133,12 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
     const activo = ahora != null && ahora >= desde && ahora < desde + b.duracion;
     if (b.metrica === 'watts') {
       const max = b.max || yMax;
-      ctx.fillStyle = activo ? 'rgba(255, 92, 92, 0.38)' : 'rgba(255, 92, 92, 0.22)';
+      ctx.fillStyle = activo ? 'rgba(239, 68, 68, 0.38)' : 'rgba(239, 68, 68, 0.2)';
       ctx.fillRect(x0, m.arr, x1 - x0, h);
-      ctx.fillStyle = activo ? 'rgba(60, 207, 145, 0.75)' : 'rgba(60, 207, 145, 0.5)';
+      ctx.fillStyle = activo ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.5)';
       ctx.fillRect(x0, Y(max), x1 - x0, Y(b.min) - Y(max));
     } else {
-      ctx.fillStyle = 'rgba(142, 160, 180, 0.12)';
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.12)';
       ctx.fillRect(x0, m.arr, x1 - x0, h);
     }
     ctx.strokeStyle = colorRejilla;
@@ -175,4 +175,41 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(ahora), m.arr); ctx.lineTo(X(ahora), m.arr + h); ctx.stroke();
   }
+}
+
+// Barras simples con etiqueta debajo y valor encima. datos: [{ etiqueta, valor, resaltar }]
+export function dibujarBarras(canvas, datos, { color = '#F97316', formato = (v) => v } = {}) {
+  const dpr = window.devicePixelRatio || 1;
+  const ancho = canvas.clientWidth;
+  const alto = canvas.clientHeight;
+  if (!ancho || !alto) return;
+  canvas.width = ancho * dpr;
+  canvas.height = alto * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, ancho, alto);
+  const estilo = getComputedStyle(document.documentElement);
+  const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
+  const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
+  const m = { izq: 8, der: 8, arr: 20, aba: 22 };
+  const w = ancho - m.izq - m.der;
+  const h = alto - m.arr - m.aba;
+  const max = Math.max(1, ...datos.map((d) => d.valor));
+  const paso = w / Math.max(1, datos.length);
+  const anchoBarra = Math.min(36, paso * 0.6);
+  ctx.strokeStyle = colorRejilla;
+  ctx.beginPath(); ctx.moveTo(m.izq, m.arr + h); ctx.lineTo(m.izq + w, m.arr + h); ctx.stroke();
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  datos.forEach((d, i) => {
+    const cx = m.izq + paso * (i + 0.5);
+    const bh = (d.valor / max) * h;
+    ctx.globalAlpha = d.resaltar ? 1 : 0.55;
+    ctx.fillStyle = color;
+    ctx.fillRect(cx - anchoBarra / 2, m.arr + h - bh, anchoBarra, bh);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = colorTexto;
+    if (d.valor) ctx.fillText(formato(d.valor), cx, m.arr + h - bh - 5);
+    ctx.fillText(d.etiqueta, cx, alto - 6);
+  });
 }

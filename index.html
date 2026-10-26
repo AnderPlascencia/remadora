@@ -3,178 +3,301 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f1720">
+  <meta name="theme-color" content="#0F172A">
   <title>Remadora</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icono.svg" type="image/svg+xml">
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
+  <!-- Iconos (trazos estilo Lucide, 24×24, línea de 2 px) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-remo" viewBox="0 0 24 24"><path d="M3 20 21 4"/><circle cx="7" cy="16.5" r="2.5"/><path d="M2 21h20"/></symbol>
+      <symbol id="i-lista" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+      <symbol id="i-grafica" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></symbol>
+      <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+      <symbol id="i-bt" viewBox="0 0 24 24"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></symbol>
+      <symbol id="i-corazon" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m6 3 14 9-14 9V3z"/></symbol>
+      <symbol id="i-pausa" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+      <symbol id="i-expandir" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+      <symbol id="i-cerrar" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-arriba" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 19V5"/></symbol>
+      <symbol id="i-abajo" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-copiar" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+      <symbol id="i-borrar" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+      <symbol id="i-editar" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+      <symbol id="i-sube" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+      <symbol id="i-baja" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-trofeo" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.6 2 2 2 3.8M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+      <symbol id="i-fuego" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4.1 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3.3.3 1.6 1.3 2.8 2.5 2.8Z"/></symbol>
+      <symbol id="i-voz" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+    </defs>
+  </svg>
+
   <header class="barra">
     <h1>Remadora</h1>
-    <span id="estado" class="estado">Desconectada</span>
+    <span id="estado" class="pastilla" role="status" aria-live="polite">Desconectada</span>
   </header>
-
-  <nav class="pestanas" role="tablist">
-    <button data-vista="entrenar" class="activa">Entrenar</button>
-    <button data-vista="entrenamientos">Entrenamientos</button>
-    <button data-vista="historial">Historial</button>
-    <button data-vista="ajustes">Ajustes</button>
-  </nav>
 
   <main>
     <!-- ENTRENAR -->
-    <section id="vista-entrenar" class="vista activa">
+    <section id="vista-entrenar" class="vista activa" aria-labelledby="tab-entrenar">
       <div id="aviso-bt" class="aviso" hidden>
         Este navegador no tiene Bluetooth web. Abre la página en Chrome para Android.
       </div>
 
-      <div class="acciones">
-        <button id="btn-conectar" class="primario">Conectar remadora</button>
-        <button id="btn-banda">Banda de pulso</button>
-        <button id="btn-demo" class="discreto">Demo</button>
+      <div class="fila-botones">
+        <button id="btn-conectar" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-bt"/></svg><span>Conectar remadora</span></button>
+        <button id="btn-banda" class="boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span>Pulso</span></button>
       </div>
 
-      <div class="acciones">
-        <select id="sel-entrenamiento" aria-label="Entrenamiento">
-          <option value="">Remo libre</option>
-        </select>
-        <button id="btn-grabar" class="primario" disabled>Iniciar sesión</button>
-      </div>
+      <label class="campo">Entrenamiento
+        <select id="sel-entrenamiento"><option value="">Remo libre</option></select>
+      </label>
 
-      <div id="bloque-actual" class="bloque" hidden>
-        <div class="bloque-fila">
-          <span id="bloque-nombre">Bloque</span>
-          <span id="bloque-resta" class="grande">0:00</span>
+      <div id="bloque-actual" class="tarjeta-meta" hidden>
+        <div class="tm-cabecera">
+          <span id="bloque-nombre" class="tm-nombre">Bloque</span>
+          <span id="bloque-resta" class="tm-grande">0:00</span>
         </div>
-        <div class="bloque-fila suave">
+        <div class="tm-fila">
           <span id="bloque-meta"></span>
           <span id="bloque-siguiente"></span>
         </div>
-        <div id="bloque-indicador" class="indicador"></div>
-        <div class="progreso"><div id="bloque-barra"></div></div>
+        <div class="progreso" role="progressbar" aria-label="Avance del entrenamiento"><div id="bloque-barra"></div></div>
+        <div id="bloque-indicador" class="indicador" aria-live="polite"></div>
       </div>
 
       <div id="perfil-vivo" hidden>
-        <div class="leyenda"><span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia (W)</span></div>
-        <canvas id="grafica-perfil" class="grafica"></canvas>
+        <div class="leyenda"><span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia</span></div>
+        <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
       </div>
 
+      <div class="fila-botones">
+        <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Iniciar sesión</span></button>
+        <button id="btn-pausa" class="boton grande" hidden aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
+        <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
+      </div>
+
+      <div id="pausa-aviso" class="aviso suave-aviso" hidden aria-live="polite">En pausa: empieza a remar para continuar</div>
+
       <div class="metricas">
-        <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span></div>
+        <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span><span id="m-zona" class="sub"></span></div>
         <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span></div>
         <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span></div>
         <div class="metrica"><span class="etq">Tiempo</span><span id="m-tiempo" class="valor">0:00</span></div>
-        <div class="metrica"><span class="etq">Distancia m</span><span id="m-dist" class="valor">0</span></div>
+        <div class="metrica"><span class="etq">Distancia</span><span id="m-dist" class="valor">0</span><span class="sub">m</span></div>
         <div class="metrica"><span class="etq">Paladas</span><span id="m-paladas" class="valor">0</span></div>
-        <div class="metrica"><span class="etq">kcal (est.)</span><span id="m-kcal" class="valor">0</span></div>
-        <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span></div>
+        <div class="metrica"><span class="etq">Calorías</span><span id="m-kcal" class="valor">0</span><span class="sub">kcal est.</span></div>
+        <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span><span class="sub">lpm</span></div>
       </div>
 
-      <div class="leyenda">
-        <span class="lw">Watts</span><span class="ls">Golpes/min</span><span class="lt">Split (s/500 m)</span>
-      </div>
-      <canvas id="grafica-vivo" class="grafica"></canvas>
-
+      <h2>Últimos 5 minutos</h2>
+      <div class="leyenda"><span class="lw">Watts</span><span class="ls">Golpes/min</span></div>
+      <canvas id="grafica-vivo" class="grafica" role="img" aria-label="Watts y golpes por minuto de los últimos 5 minutos"></canvas>
     </section>
 
-    <!-- ENTRENAMIENTOS -->
-    <section id="vista-entrenamientos" class="vista">
-      <div class="acciones">
-        <button id="btn-nuevo-ent" class="primario">Nuevo entrenamiento</button>
-        <button id="btn-plantillas">Agregar ejemplos</button>
+    <!-- PLANES -->
+    <section id="vista-entrenamientos" class="vista" aria-labelledby="tab-entrenamientos">
+      <div class="fila-botones">
+        <button id="btn-nuevo-ent" class="boton primario">Nuevo entrenamiento</button>
+        <button id="btn-plantillas" class="boton">Agregar ejemplos</button>
       </div>
       <ul id="lista-ent" class="lista"></ul>
 
-      <form id="editor-ent" class="editor" hidden>
-        <label>Nombre <input name="nombre" required maxlength="60"></label>
-        <label>Tipo
+      <form id="editor-ent" class="editor" hidden novalidate>
+        <h2 id="editor-titulo">Nuevo entrenamiento</h2>
+        <label class="campo">Nombre <input name="nombre" required maxlength="60" autocomplete="off"></label>
+        <label class="campo">Tipo
           <select name="tipo">
-            <option value="objetivo">Por objetivo (calorías, distancia o paladas)</option>
+            <option value="objetivo">Por objetivo: calorías, distancia o paladas</option>
             <option value="intervalos">Por intervalos de tiempo con rango de potencia</option>
           </select>
         </label>
 
         <div id="editor-objetivo">
           <div class="fila-dos">
-            <label>Meta
+            <label class="campo">Meta
               <select name="obj_metrica">
                 <option value="distancia">Distancia (m)</option>
                 <option value="kcal">Calorías (kcal)</option>
                 <option value="paladas">Paladas</option>
               </select>
             </label>
-            <label>Cantidad <input name="obj_valor" type="number" min="1" inputmode="numeric"></label>
+            <label class="campo">Cantidad <input name="obj_valor" type="number" min="1" inputmode="numeric"></label>
           </div>
         </div>
 
         <div id="editor-intervalos">
-          <canvas id="grafica-editor" class="grafica baja"></canvas>
+          <canvas id="grafica-editor" class="grafica baja" role="img" aria-label="Vista previa del plan"></canvas>
+          <p class="ayuda">Verde: rango objetivo. Rojo: fuera de rango. Los intervalos en % FTP usan tu FTP de Ajustes.</p>
           <div id="bloques"></div>
-          <div class="acciones">
-            <button type="button" id="btn-add-bloque">+ Intervalo</button>
-          </div>
+          <button type="button" id="btn-add-bloque" class="boton">+ Intervalo</button>
           <details class="serie">
-            <summary>+ Agregar serie repetida</summary>
+            <summary>Agregar serie repetida</summary>
             <div class="fila-dos">
-              <label>Repeticiones <input id="s-reps" type="number" min="1" value="5"></label>
-              <span></span>
-              <label>Trabajo (mm:ss) <input id="s-trabajo" value="3:00"></label>
-              <label>Potencia trabajo (W) <span class="par"><input id="s-wmin" type="number" placeholder="mín" value="160"><input id="s-wmax" type="number" placeholder="máx" value="190"></span></label>
-              <label>Descanso (mm:ss) <input id="s-descanso" value="1:30"></label>
-              <label>Potencia descanso (W) <span class="par"><input id="s-dmin" type="number" placeholder="mín"><input id="s-dmax" type="number" placeholder="máx"></span></label>
+              <label class="campo">Repeticiones <input id="s-reps" type="number" min="1" value="5" inputmode="numeric"></label>
+              <label class="campo">Unidad
+                <select id="s-unidad"><option value="watts">Watts</option><option value="ftp">% FTP</option></select>
+              </label>
+              <label class="campo">Trabajo (mm:ss) <input id="s-trabajo" value="3:00"></label>
+              <label class="campo">Rango trabajo <span class="par"><input id="s-wmin" type="number" aria-label="Mínimo trabajo" placeholder="mín" value="160"><input id="s-wmax" type="number" aria-label="Máximo trabajo" placeholder="máx" value="190"></span></label>
+              <label class="campo">Descanso (mm:ss) <input id="s-descanso" value="1:30"></label>
+              <label class="campo">Rango descanso <span class="par"><input id="s-dmin" type="number" aria-label="Mínimo descanso" placeholder="mín"><input id="s-dmax" type="number" aria-label="Máximo descanso" placeholder="máx"></span></label>
             </div>
-            <button type="button" id="btn-add-serie">Agregar serie</button>
+            <button type="button" id="btn-add-serie" class="boton">Agregar serie</button>
           </details>
         </div>
-        <p id="ent-resumen" class="suave"></p>
-        <div class="acciones">
-          <button type="submit" class="primario">Guardar</button>
-          <button type="button" id="btn-cancelar-ent">Cancelar</button>
+        <p id="ent-resumen" class="ayuda" aria-live="polite"></p>
+        <p id="ent-error" class="error" role="alert"></p>
+        <div class="fila-botones">
+          <button type="submit" class="boton primario">Guardar</button>
+          <button type="button" id="btn-cancelar-ent" class="boton">Cancelar</button>
         </div>
       </form>
     </section>
 
-    <!-- HISTORIAL -->
-    <section id="vista-historial" class="vista">
-      <div id="resumen-historial" class="suave"></div>
-      <canvas id="grafica-tendencia" class="grafica baja"></canvas>
-      <ul id="lista-sesiones" class="lista"></ul>
-      <div id="detalle-sesion" hidden>
-        <h2 id="det-titulo"></h2>
-        <div id="det-stats" class="metricas compacta"></div>
-        <canvas id="grafica-sesion" class="grafica"></canvas>
-        <div id="det-perfil" hidden>
-          <h2>Potencia contra el plan</h2>
-          <canvas id="grafica-sesion-perfil" class="grafica"></canvas>
-        </div>
-        <div class="acciones">
-          <button id="btn-csv">Exportar CSV</button>
-          <button id="btn-tcx">Exportar TCX</button>
-          <button id="btn-borrar" class="peligro">Borrar</button>
-          <button id="btn-cerrar-det">Cerrar</button>
+    <!-- PROGRESO -->
+    <section id="vista-historial" class="vista" aria-labelledby="tab-historial">
+      <div class="resumen-semana">
+        <div class="rs-dato"><svg class="ico" aria-hidden="true"><use href="#i-fuego"/></svg><span><b id="racha">0</b> <span id="racha-etq">días seguidos</span></span></div>
+        <div class="rs-meta">
+          <div class="tm-fila"><span>Esta semana</span><span id="semana-texto">0 de 10 km</span></div>
+          <div class="progreso" role="progressbar" aria-label="Meta semanal"><div id="semana-barra"></div></div>
         </div>
       </div>
+
+      <div class="segmentado" role="group" aria-label="Periodo">
+        <button class="activo" data-periodo="semana" aria-pressed="true">Semanas</button>
+        <button data-periodo="mes" aria-pressed="false">Meses</button>
+      </div>
+      <canvas id="grafica-periodos" class="grafica baja" role="img" aria-label="Kilómetros por periodo"></canvas>
+
+      <h2>Tendencia</h2>
+      <div class="leyenda"><span class="lw">Watts promedio</span><span class="lt">Split promedio (s/500 m)</span></div>
+      <canvas id="grafica-tendencia" class="grafica baja" role="img" aria-label="Watts y split promedio por sesión"></canvas>
+
+      <h2>Récords</h2>
+      <div id="records" class="records"></div>
+
+      <h2>Sesiones</h2>
+      <p id="resumen-historial" class="ayuda"></p>
+      <ul id="lista-sesiones" class="lista"></ul>
     </section>
 
     <!-- AJUSTES -->
-    <section id="vista-ajustes" class="vista">
-      <label>Variante del protocolo
-        <select id="sel-variante"></select>
-      </label>
-      <p class="suave">Si al conectar no aparecen datos, desconecta, cambia la variante y vuelve a conectar.</p>
-      <label>Tu peso (kg) <input id="in-peso" type="number" min="30" max="200" value="75"></label>
-
-      <h2>Registro Bluetooth</h2>
-      <p class="suave">Muestra cada mensaje enviado (&gt;&gt;) y recibido (&lt;&lt;). Si algo falla, descárgalo y compártelo.</p>
-      <div class="acciones">
-        <button id="btn-log">Descargar registro</button>
-        <button id="btn-log-limpiar">Limpiar</button>
+    <section id="vista-ajustes" class="vista" aria-labelledby="tab-ajustes">
+      <h2>Tú</h2>
+      <div class="fila-dos">
+        <label class="campo">Peso (kg) <input id="in-peso" type="number" min="30" max="200" inputmode="numeric"></label>
+        <label class="campo">FTP (W) <input id="in-ftp" type="number" min="30" max="1000" inputmode="numeric"></label>
       </div>
-      <pre id="log" class="log"></pre>
-      <p class="suave">Versión <span id="version"></span></p>
+      <p class="ayuda">El FTP es la potencia que puedes sostener cerca de una hora. Haz el entrenamiento "Prueba FTP 20 min" y la app lo calcula por ti.</p>
+      <table id="tabla-zonas" class="tabla"></table>
+      <label class="campo">Meta semanal (km) <input id="in-meta-semana" type="number" min="1" max="500" inputmode="numeric"></label>
+
+      <h2>Durante el entrenamiento</h2>
+      <label class="interruptor"><input type="checkbox" id="in-voz"><span>Avisos por voz</span></label>
+      <label class="interruptor"><input type="checkbox" id="in-modo-auto"><span>Abrir modo remo al iniciar sesión</span></label>
+      <label class="interruptor"><input type="checkbox" id="in-pausa-auto"><span>Pausa automática al dejar de remar</span></label>
+      <label class="interruptor"><input type="checkbox" id="in-res-auto"><span>Resistencia automática (experimental)</span></label>
+      <p class="ayuda">Con la resistencia automática, la app cambia el nivel de la consola cuando un intervalo tiene "Nivel" definido. Pruébala primero sin remar fuerte.</p>
+      <div class="fila-botones">
+        <label class="campo crece">Probar nivel
+          <select id="sel-nivel-prueba"></select>
+        </label>
+        <button id="btn-nivel-prueba" class="boton alinear-abajo">Enviar</button>
+      </div>
+
+      <h2>Conexión</h2>
+      <label class="campo">Variante del protocolo <select id="sel-variante"></select></label>
+      <p class="ayuda">Si al conectar no aparecen datos, desconecta, cambia la variante y vuelve a conectar.</p>
+      <div class="fila-botones">
+        <button id="btn-demo" class="boton">Modo demo</button>
+        <button id="btn-log" class="boton">Descargar registro</button>
+        <button id="btn-log-limpiar" class="boton">Limpiar registro</button>
+      </div>
+      <details>
+        <summary>Ver registro Bluetooth</summary>
+        <pre id="log" class="log"></pre>
+      </details>
+      <p class="ayuda">Versión <span id="version"></span></p>
     </section>
   </main>
+
+  <nav class="nav-inferior" role="tablist" aria-label="Secciones">
+    <button id="tab-entrenar" role="tab" data-vista="entrenar" class="activa" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="#i-remo"/></svg><span>Entrenar</span></button>
+    <button id="tab-entrenamientos" role="tab" data-vista="entrenamientos" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg><span>Planes</span></button>
+    <button id="tab-historial" role="tab" data-vista="historial" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg><span>Progreso</span></button>
+    <button id="tab-ajustes" role="tab" data-vista="ajustes" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg><span>Ajustes</span></button>
+  </nav>
+
+  <!-- MODO REMO (pantalla completa) -->
+  <div id="modo-remo" class="modo-remo" hidden role="dialog" aria-label="Modo remo">
+    <div class="mr-arriba">
+      <div class="mr-meta">
+        <span id="mr-nombre" class="mr-nombre"></span>
+        <span id="mr-meta-texto" class="mr-meta-texto"></span>
+      </div>
+      <div class="mr-tiempo">
+        <span id="mr-resta" class="mr-resta"></span>
+        <span id="mr-resta-etq" class="mr-etq"></span>
+      </div>
+    </div>
+    <div class="progreso mr-progreso"><div id="mr-barra"></div></div>
+    <div id="mr-principal" class="mr-principal">
+      <span class="mr-etq">Watts</span>
+      <span id="mr-watts" class="mr-watts">0</span>
+      <span id="mr-indicador" class="mr-indicador" aria-live="polite"></span>
+    </div>
+    <div class="mr-grid">
+      <div><span class="mr-etq">Split</span><span id="mr-split" class="mr-valor">--:--</span></div>
+      <div><span class="mr-etq">Golpes/min</span><span id="mr-spm" class="mr-valor">0</span></div>
+      <div><span class="mr-etq">Tiempo</span><span id="mr-tiempo" class="mr-valor">0:00</span></div>
+      <div><span class="mr-etq">Distancia</span><span id="mr-dist" class="mr-valor">0</span></div>
+      <div><span class="mr-etq" id="mr-extra-etq">Calorías</span><span id="mr-extra" class="mr-valor">0</span></div>
+      <div><span class="mr-etq">Pulso</span><span id="mr-fc" class="mr-valor">-</span></div>
+    </div>
+    <canvas id="mr-perfil" class="mr-perfil" role="img" aria-label="Plan de potencia" hidden></canvas>
+    <div id="mr-estado" class="mr-estado" aria-live="polite"></div>
+    <div class="mr-botones">
+      <button id="mr-pausa" class="boton grande" aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
+      <button id="mr-terminar" class="boton peligro grande"><svg class="ico" aria-hidden="true"><use href="#i-stop"/></svg><span>Terminar</span></button>
+      <button id="mr-salir" class="boton grande" aria-label="Salir del modo remo"><svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
+    </div>
+  </div>
+
+  <!-- RESUMEN / DETALLE DE SESIÓN -->
+  <div id="hoja" class="hoja-fondo" hidden>
+    <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
+      <div class="hoja-cabecera">
+        <h2 id="hoja-titulo">Sesión</h2>
+        <button id="hoja-cerrar" class="boton icono" aria-label="Cerrar"><svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
+      </div>
+      <p id="hoja-sub" class="ayuda"></p>
+      <div id="hoja-records" class="records"></div>
+      <div id="hoja-ftp" class="aviso exito" hidden></div>
+      <div id="hoja-stats" class="metricas compacta"></div>
+      <div id="hoja-comparacion"></div>
+      <h2>Watts y golpes por minuto</h2>
+      <canvas id="hoja-grafica" class="grafica" role="img" aria-label="Watts y golpes por minuto de la sesión"></canvas>
+      <div id="hoja-perfil" hidden>
+        <h2>Potencia contra el plan</h2>
+        <canvas id="hoja-grafica-perfil" class="grafica" role="img" aria-label="Potencia contra el plan"></canvas>
+      </div>
+      <div class="fila-botones">
+        <button id="btn-csv" class="boton">Exportar CSV</button>
+        <button id="btn-tcx" class="boton">Exportar TCX</button>
+        <button id="btn-borrar" class="boton peligro">Borrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script type="module" src="app.js"></script>
 </body>
