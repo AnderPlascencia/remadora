@@ -36,6 +36,18 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Respaldo en archivo (se puede compartir a Google Drive) y restauración sin duplicados.
 - Historial guardado en el teléfono (IndexedDB), exportable a CSV y TCX (Strava, Garmin).
 - Funciona sin conexión una vez instalada.
+- Temas oscuro, claro y alto contraste; pantalla de bienvenida.
+- Celebración con confeti al lograr récords, insignias o ganarle a un fantasma; 12 insignias en Progreso.
+- Tarjeta de la sesión para compartir como imagen.
+- Gráfica del resumen con bandas de zonas de potencia y marcas de cada intervalo.
+- Plan automático hacia una meta (por ejemplo 2000 m en 7:50 en 8 semanas).
+- FTP sugerido con cualquier sesión de 20 min o más.
+- Calentamiento y enfriamiento guiados opcionales en los intervalos; intervalos por pulso (lpm o % del pulso máximo).
+- Pruebas de 500 m y 2000 m con predicción de otras distancias (ley de Paul) y biblioteca de entrenamientos clásicos.
+- Recomendación del día según tu frescura.
+- Entrenador por voz: parcial de cada 500 m, ánimo y aviso si el ritmo se cae.
+- Modo remo con gestos: doble toque para pausar, deslizar para cambiar de vista.
+- Último parcial de 500 m en pantalla (verde o rojo) y ritmo objetivo con línea en la carrera.
 
 ## Archivos
 
@@ -50,6 +62,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `programa.js` | Programas de varias semanas |
 | `fantasma.js` | Fantasmas simulados por nivel o a tu medida, y proyección de llegada |
 | `carrera.js` | Carrera animada 2D/3D contra los fantasmas |
+| `efectos.js` | Confeti y tarjeta de la sesión para compartir |
 | `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
 | `db.js` | Almacenamiento local |

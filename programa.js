@@ -1,6 +1,7 @@
 // Programas de varias semanas: una lista de días con el entrenamiento que toca.
 // programa = { nombre, inicio: 'AAAA-MM-DD', dias: [{ fecha: 'AAAA-MM-DD', ent: nombre del entrenamiento }] }
 import { claveDia } from './estadisticas.js';
+import { formatoMmss as mm } from './entrenamientos.js';
 
 const DIA = 864e5;
 const aFecha = (clave) => new Date(`${clave}T12:00:00`);
@@ -75,4 +76,47 @@ export function proximo(programa, ahora = Date.now()) {
   if (!programa) return null;
   const hoy = claveDia(ahora);
   return programa.dias.find((d) => d.fecha > hoy) || null;
+}
+
+// Plan automático hacia una meta: distancia en un tiempo, en N semanas, 3 días por semana.
+// Crea sus propios entrenamientos a partir del split meta y los va endureciendo semana a semana.
+export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana = [0, 2, 5] }) {
+  const split = Math.round((segundos * 500) / distancia);
+  const entrenamientos = [];
+  const crear = (e) => { if (!entrenamientos.some((x) => x.nombre === e.nombre)) entrenamientos.push(e); return e.nombre; };
+  const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + 14, max: split + 22 };
+  const enf = { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 };
+  const prueba = crear({ tipo: 'objetivo', nombre: `Prueba ${distancia} m`, prueba: true, objetivo: { metrica: 'distancia', valor: distancia } });
+  const fondo = crear({
+    tipo: 'intervalos', nombre: `Fondo a ${mm(split + 14)} × 20 min`,
+    bloques: [cal, { nombre: 'Fondo', duracion: 1200, metrica: 'split', min: split + 11, max: split + 17 }, enf],
+  });
+  const umbral = crear({
+    tipo: 'intervalos', nombre: `Umbral a ${mm(split + 6)} 3 × 8 min`,
+    bloques: [cal, ...[1, 2, 3].flatMap((n) => [
+      { nombre: `Umbral ${n}/3`, duracion: 480, metrica: 'split', min: split + 4, max: split + 8 },
+      ...(n < 3 ? [{ nombre: 'Descanso', duracion: 180, metrica: '', min: 0, max: 0 }] : []),
+    ]), enf],
+  });
+  const tramo = Math.max(100, Math.min(1000, Math.round(distancia / 4 / 100) * 100));
+  const reps = Math.max(3, Math.min(8, Math.round((distancia * 1.25) / tramo)));
+  const series = (sem) => {
+    const extra = semanas > 1 ? Math.round(3 * (1 - sem / (semanas - 1))) : 0;
+    const sp = split + extra;
+    return crear({
+      tipo: 'intervalos', nombre: `Ritmo ${mm(sp)} · ${reps} × ${tramo} m`,
+      bloques: [cal, ...Array.from({ length: reps }, (_, i) => [
+        { nombre: `${tramo} m ${i + 1}/${reps}`, fin: 'distancia', cantidad: tramo, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 1 },
+        ...(i < reps - 1 ? [{ nombre: 'Descanso', duracion: Math.round(tramo / 5) + 30, metrica: '', min: 0, max: 0 }] : []),
+      ]).flat(), enf],
+    });
+  };
+  const mitad = semanas >= 6 ? Math.floor(semanas / 2) - 1 : -1;
+  const semanasPlan = Array.from({ length: semanas }, (_, s) => {
+    if (s === semanas - 1) return [series(s), fondo, prueba];
+    if (s === mitad) return [umbral, series(s), prueba];
+    return [umbral, series(s), fondo];
+  });
+  const programa = desdePlantilla({ nombre: `Meta: ${distancia} m en ${mm(segundos)}`, semanas: semanasPlan, diasSemana }, inicio);
+  return { programa, entrenamientos, split };
 }

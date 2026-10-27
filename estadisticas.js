@@ -163,7 +163,7 @@ export function resumenIntervalos(sesion) {
     if (tramo.length) {
       const prom = (k) => Math.round(tramo.reduce((a, x) => a + (x[k] || 0), 0) / tramo.length);
       const conSplit = tramo.filter((x) => x.split > 0);
-      const juzgados = tramo.map((x) => enRango(b, x.w, x.spm, 0, x.split)).filter(Boolean);
+      const juzgados = tramo.map((x) => enRango(b, x.w, x.spm, 0, x.split, x.fc)).filter(Boolean);
       filas.push({
         nombre: b.nombre || 'Intervalo',
         bloque: b,
@@ -326,4 +326,68 @@ export function elegirRival(sesiones, nombre, modo) {
   const conMeta = mismas.filter((s) => s.tiempoMeta != null);
   if (conMeta.length) return conMeta.sort((a, b) => a.tiempoMeta - b.tiempoMeta)[0];
   return mismas.sort((a, b) => b.distancia / b.duracion - a.distancia / a.duracion)[0];
+}
+
+// ---------- Insignias ----------
+// Cada insignia: { clave, nombre, detalle, ganada, fecha? }. Se calcula con todo el historial.
+export const INSIGNIAS = [
+  { clave: 'primera', nombre: 'Primera palada', detalle: 'Tu primera sesión guardada' },
+  { clave: 'km5', nombre: '5 km de una', detalle: '5000 m en una sola sesión' },
+  { clave: 'km10', nombre: '10 km de una', detalle: '10 000 m en una sola sesión' },
+  { clave: 'min30', nombre: 'Media hora', detalle: '30 minutos remando en una sesión' },
+  { clave: 'ses10', nombre: 'Constancia', detalle: '10 sesiones' },
+  { clave: 'ses50', nombre: 'Veterano', detalle: '50 sesiones' },
+  { clave: 'tot100', nombre: '100 km', detalle: '100 km en total' },
+  { clave: 'racha7', nombre: 'Semana perfecta', detalle: '7 días seguidos remando' },
+  { clave: 'fantasma', nombre: 'Cazafantasmas', detalle: 'Ganarle a un fantasma' },
+  { clave: 'avanzado', nombre: 'Nivel avanzado', detalle: 'Ganarle al fantasma avanzado' },
+  { clave: 'sub8', nombre: 'Bajo 8 minutos', detalle: '2000 m en menos de 8:00' },
+  { clave: 'sub7', nombre: 'Bajo 7 minutos', detalle: '2000 m en menos de 7:00' },
+];
+
+export function insignias(sesiones) {
+  const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
+  const ganadas = {};
+  let total = 0;
+  const dias = new Set();
+  const marca = (clave, s) => { if (!ganadas[clave]) ganadas[clave] = s.fecha; };
+  orden.forEach((s, i) => {
+    total += s.distancia || 0;
+    marca('primera', s);
+    if (s.distancia >= 5000) marca('km5', s);
+    if (s.distancia >= 10000) marca('km10', s);
+    if (s.duracion >= 1800) marca('min30', s);
+    if (i + 1 >= 10) marca('ses10', s);
+    if (i + 1 >= 50) marca('ses50', s);
+    if (total >= 100000) marca('tot100', s);
+    const rivales = s.rivales || (s.rival ? [s.rival] : []);
+    if (rivales.some((r) => r.diferencia > 0)) marca('fantasma', s);
+    if (rivales.some((r) => r.nivel === 'avanzado' && r.diferencia > 0)) marca('avanzado', s);
+    const t2k = s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null;
+    if (t2k && t2k < 480) marca('sub8', s);
+    if (t2k && t2k < 420) marca('sub7', s);
+    dias.add(claveDia(s.fecha));
+    let n = 0;
+    for (let d = new Date(`${claveDia(s.fecha)}T12:00`); dias.has(claveDia(d.getTime())); d = new Date(d.getTime() - 864e5)) n++;
+    if (n >= 7) marca('racha7', s);
+  });
+  return INSIGNIAS.map((x) => ({ ...x, ganada: !!ganadas[x.clave], fecha: ganadas[x.clave] ?? null }));
+}
+
+// Recomendación del día según la frescura (condición − fatiga).
+export function recomendacion(sesiones, ftp, ahora = Date.now()) {
+  if (!ftp || !sesiones.length) return null;
+  const hoy = forma(sesiones, ftp, 42, ahora).at(-1);
+  if (!hoy || (hoy.condicion === 0 && hoy.fatiga === 0)) return null;
+  const f = hoy.frescura;
+  if (f < -25) return { tipo: 'descanso', texto: 'Mucha fatiga acumulada: hoy toca descanso o 20 min muy suaves.', frescura: f };
+  if (f < -10) return { tipo: 'suave', texto: 'Algo de fatiga: rema suave en zona 2 (Resistencia).', frescura: f };
+  if (f > 10) return { tipo: 'fuerte', texto: 'Estás fresco: buen día para una prueba o intervalos fuertes.', frescura: f };
+  return { tipo: 'normal', texto: 'Vas equilibrado: cualquier entrenamiento del plan te queda bien.', frescura: f };
+}
+
+// FTP sugerido por una sesión sin prueba formal: 95 % de los mejores 20 min (si duró al menos 20 min).
+export function ftpSugerido(sesion) {
+  const p20 = mejorPotencia(sesion.muestras || [], 1200);
+  return p20 ? Math.round(p20 * 0.95) : null;
 }

@@ -64,6 +64,38 @@ export function dibujar(canvas, series, opciones = {}) {
     ctx.fillText(opciones.formatoX ? opciones.formatoX(t) : `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`, X(t), alto - 6);
   }
 
+  // Zonas de fondo en el eje izquierdo (opcional): [{ min, max, color, etiqueta }]
+  for (const z of opciones.zonas || []) {
+    const y0 = Math.max(m.arr, Y(Math.min(z.max, escalas.izq), 'izq'));
+    const y1 = Math.min(m.arr + h, Y(z.min, 'izq'));
+    if (y1 <= y0) continue;
+    ctx.globalAlpha = 0.13;
+    ctx.fillStyle = z.color;
+    ctx.fillRect(m.izq, y0, w, y1 - y0);
+    ctx.globalAlpha = 0.85;
+    if (z.etiqueta && y1 - y0 >= 11) {
+      ctx.font = '600 10px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(z.etiqueta, m.izq + w - 4, y0 + Math.min(12, (y1 - y0) / 2 + 4));
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.font = '11px system-ui, sans-serif';
+
+  // Divisiones verticales (opcional): [{ t, etiqueta }] — p. ej. el inicio de cada intervalo.
+  if (opciones.divisiones?.length) {
+    ctx.save();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = colorTexto;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 1;
+    for (const d of opciones.divisiones) {
+      if (d.t <= tMin || d.t >= tMax) continue;
+      ctx.beginPath(); ctx.moveTo(X(d.t), m.arr); ctx.lineTo(X(d.t), m.arr + h); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Bandas de meta del entrenamiento (opcional): [{ desde, hasta, min, max, eje }]
   for (const b of opciones.metas || []) {
     if (b.hasta < tMin) continue;

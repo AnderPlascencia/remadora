@@ -5,7 +5,7 @@
 //  - 'intervalos': { tipo, nombre, bloques: [{ nombre, fin?, duracion (s), cantidad?, metrica, min, max, nivel? }] }
 //    fin: 'tiempo' (por defecto, usa duracion), 'distancia' (cantidad en m) o 'paladas' (cantidad de paladas).
 //    metrica: 'watts' (min/max en W), 'ftp' (min/max en % del FTP), 'split' (min/max en s por 500 m),
-//    'spm' (golpes/min) o '' (libre).
+//    'spm' (golpes/min), 'fc' (pulso en lpm), 'fcpct' (% del pulso máximo) o '' (libre).
 //    nivel (1-24, opcional): resistencia que se pide a la consola si la resistencia automática está activa.
 
 // Zonas de potencia como % del FTP.
@@ -36,9 +36,21 @@ export function wattsDeSplit(split) {
   return split > 0 ? Math.round(2.8 / (split / 500) ** 3) : 0;
 }
 
+// Rango de pulso en lpm (convierte % del pulso máximo). null si el bloque no es por pulso.
+export function rangoFc(b, fcMax) {
+  if (b.metrica === 'fc') return { min: b.min, max: b.max };
+  if (b.metrica === 'fcpct' && fcMax) return { min: Math.round((b.min * fcMax) / 100), max: Math.round((b.max * fcMax) / 100) };
+  return null;
+}
+
 // Texto corto de la meta de un bloque.
-export function textoMeta(b, ftp) {
+export function textoMeta(b, ftp, fcMax = 0) {
   if (b.metrica === 'split') return `${formatoMmss(b.min)}–${formatoMmss(b.max)} /500 m`;
+  if (b.metrica === 'fc') return `${b.min}–${b.max} lpm`;
+  if (b.metrica === 'fcpct') {
+    const r = rangoFc(b, fcMax);
+    return r ? `${r.min}–${r.max} lpm (${b.min}–${b.max}% pulso máx)` : `${b.min}–${b.max}% pulso máx`;
+  }
   const r = rangoWatts(b, ftp);
   if (b.metrica === 'ftp') return r ? `${r.min}–${r.max} W (${b.min}–${b.max}% FTP)` : `${b.min}–${b.max}% FTP`;
   if (r) return `${r.min}–${r.max} W`;
@@ -130,8 +142,12 @@ export function bandasPotencia(ent, ftp) {
 }
 
 // Bloques con el % de FTP convertido a watts (lo que se guarda con la sesión).
-export function normalizarBloques(bloques, ftp) {
+export function normalizarBloques(bloques, ftp, fcMax = 0) {
   return bloques.map((b) => {
+    if (b.metrica === 'fcpct') {
+      const r = rangoFc(b, fcMax);
+      return r ? { ...b, metrica: 'fc', min: r.min, max: r.max } : { ...b, metrica: '' };
+    }
     if (b.metrica !== 'ftp') return { ...b };
     const r = rangoWatts(b, ftp);
     return r ? { ...b, metrica: 'watts', min: r.min, max: r.max } : { ...b, metrica: '' };
@@ -143,13 +159,19 @@ export function bloquesEnWatts(bloques, ftp) {
   return normalizarBloques(bloques, ftp).map((b) => {
     if (b.metrica === 'watts') return b;
     if (b.metrica === 'split') return { ...b, metrica: 'watts', min: wattsDeSplit(b.max), max: wattsDeSplit(b.min) };
-    return { ...b, metrica: b.metrica === 'spm' ? 'spm' : '' };
+    return { ...b, metrica: b.metrica === 'spm' || b.metrica === 'fc' ? b.metrica : '' };
   });
 }
 
 // 'dentro' | 'bajo' | 'alto' | null (sin meta)
-export function enRango(bloque, watts, spm, ftp, split = 0) {
+export function enRango(bloque, watts, spm, ftp, split = 0, fc = 0) {
   if (!bloque || !bloque.metrica) return null;
+  if (bloque.metrica === 'fc') {
+    if (!fc) return null;
+    if (fc < bloque.min) return 'bajo';
+    if (fc > bloque.max) return 'alto';
+    return 'dentro';
+  }
   if (bloque.metrica === 'split') {
     if (!split || split > bloque.max) return 'bajo';
     if (split < bloque.min) return 'alto';
@@ -252,6 +274,23 @@ export function serie({ reps, trabajo, wMin, wMax, descanso, dMin, dMax }) {
   return bloques;
 }
 
+// Calentamiento y enfriamiento guiados alrededor de un plan de intervalos (minutos; 0 = sin él).
+// Si el plan ya los trae (por nombre), no se duplican.
+export function conCalentamiento(bloques, calMin, enfMin) {
+  const tiene = (txt) => bloques.some((b) => (b.nombre || '').toLowerCase().includes(txt));
+  const res = [...bloques];
+  if (calMin > 0 && !tiene('calentamiento')) res.unshift({ nombre: 'Calentamiento guiado', duracion: calMin * 60, metrica: 'ftp', min: 50, max: 65, guiado: true });
+  if (enfMin > 0 && !tiene('enfriamiento')) res.push({ nombre: 'Enfriamiento guiado', duracion: enfMin * 60, metrica: 'ftp', min: 40, max: 55, guiado: true });
+  return res;
+}
+
+// Predicción de tiempos con la ley de Paul: el split sube 5 s cada vez que la distancia se duplica.
+export const DISTANCIAS_PREDICCION = [500, 1000, 2000, 5000, 6000, 10000, 21097];
+export function predecir(metros, segundos, destino) {
+  const split = (segundos * 500) / metros + 5 * Math.log2(destino / metros);
+  return Math.round((split * destino) / 500);
+}
+
 export function formatoMmss(seg) {
   seg = Math.max(0, Math.round(seg));
   return `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`;
@@ -325,6 +364,75 @@ export const EJEMPLOS = [
     bloques: [
       { nombre: 'Calentamiento', duracion: 300, metrica: 'watts', min: 80, max: 120 },
       ...serie({ reps: 5, trabajo: 180, wMin: 160, wMax: 190, descanso: 90, dMin: 80, dMax: 110 }),
+      { nombre: 'Enfriamiento', duracion: 180, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  { tipo: 'objetivo', nombre: 'Prueba 500 m', prueba: true, objetivo: { metrica: 'distancia', valor: 500 } },
+  { tipo: 'objetivo', nombre: 'Prueba 2000 m', prueba: true, objetivo: { metrica: 'distancia', valor: 2000 } },
+  { tipo: 'objetivo', nombre: '5000 m', objetivo: { metrica: 'distancia', valor: 5000 } },
+  {
+    tipo: 'intervalos',
+    nombre: 'Pirámide 1-2-3-4-3-2-1 min',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'ftp', min: 56, max: 75 },
+      ...[1, 2, 3, 4, 3, 2, 1].flatMap((m, i, arr) => [
+        { nombre: `${m} min fuerte`, duracion: m * 60, metrica: 'ftp', min: 100, max: 115 },
+        ...(i < arr.length - 1 ? [{ nombre: 'Suave', duracion: Math.max(60, m * 30), metrica: 'ftp', min: 40, max: 55 }] : []),
+      ]),
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: '30 min a 20 golpes (30r20)',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'spm', min: 18, max: 22 },
+      { nombre: '30 min a 20 golpes', duracion: 1800, metrica: 'spm', min: 19, max: 21 },
+      { nombre: 'Enfriamiento', duracion: 180, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: '4 × 2000 m',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 480, metrica: 'ftp', min: 56, max: 75 },
+      ...[1, 2, 3, 4].flatMap((n) => [
+        { nombre: `2000 m ${n}/4`, fin: 'distancia', cantidad: 2000, duracion: 0, metrica: 'ftp', min: 85, max: 95 },
+        ...(n < 4 ? [{ nombre: 'Descanso', duracion: 300, metrica: 'ftp', min: 40, max: 55 }] : []),
+      ]),
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: 'Tabata 8 × 20 s',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 480, metrica: 'ftp', min: 56, max: 75 },
+      ...Array.from({ length: 8 }, (_, i) => [
+        { nombre: `Sprint ${i + 1}/8`, duracion: 20, metrica: 'ftp', min: 140, max: 200 },
+        ...(i < 7 ? [{ nombre: 'Descanso', duracion: 10, metrica: '', min: 0, max: 0 }] : []),
+      ]).flat(),
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: '8 × 500 m',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 480, metrica: 'ftp', min: 56, max: 75 },
+      ...Array.from({ length: 8 }, (_, i) => [
+        { nombre: `500 m ${i + 1}/8`, fin: 'distancia', cantidad: 500, duracion: 0, metrica: 'ftp', min: 100, max: 112 },
+        ...(i < 7 ? [{ nombre: 'Descanso', duracion: 90, metrica: 'ftp', min: 40, max: 55 }] : []),
+      ]).flat(),
+      { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
+    ],
+  },
+  {
+    tipo: 'intervalos',
+    nombre: 'Zona 2 por pulso 30 min',
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'fcpct', min: 55, max: 65 },
+      { nombre: 'Zona 2', duracion: 1800, metrica: 'fcpct', min: 60, max: 70 },
       { nombre: 'Enfriamiento', duracion: 180, metrica: '', min: 0, max: 0 },
     ],
   },

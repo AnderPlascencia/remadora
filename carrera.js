@@ -10,7 +10,7 @@ const sinMovimiento = typeof matchMedia === 'function' && matchMedia('(prefers-r
 export const COLORES_RIVAL = ['#A5B4FC', '#F9A8D4', '#FDE68A'];
 const COLOR_YO = '#F97316';
 
-// estado: { t, pausa, yo: { dist, v, spm }, rivales: [{ nombre, color, muestras, spm(t) }], meta, cabecera: [l1, l2], tono }
+// estado: { t, pausa, yo: { dist, v, spm }, rivales: [{ nombre, color, muestras, spm(t) }], meta, cabecera: [l1, l2], tono, ritmo?: { v, etiqueta } }
 export function crearCarrera(canvas) {
   const c = {
     canvas,
@@ -79,7 +79,8 @@ function interpolar(c, ahora) {
     // Oleaje de la palada: el bote acelera al jalar y se frena al recobrar.
     if (!b.yo && b.spm && !sinMovimiento) b.dist += (b.v * 0.12 * (60 / b.spm) / (2 * Math.PI)) * Math.sin(2 * Math.PI * b.fase);
   });
-  return { botes, dt, t: ahora / 1000 };
+  const ritmo = e.ritmo ? { dist: e.ritmo.v * t, etiqueta: e.ritmo.etiqueta } : null;
+  return { botes, dt, t: ahora / 1000, ritmo };
 }
 
 // Ángulo del remo (radianes, + hacia la proa) y posición del asiento (−1 popa, +1 proa) según la fase.
@@ -158,7 +159,9 @@ function cabecera(c, { ctx, ancho, alto }) {
 }
 
 // ---------- 2D: vista desde arriba, la cámara sigue tu bote ----------
-function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t }) {
+const COLOR_RITMO = '#FACC15';
+
+function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo }) {
   const n = botes.length;
   const arriba = Math.max(36, Math.min(54, alto * 0.16));
   const orilla = Math.min(16, alto * 0.06);
@@ -259,6 +262,28 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t }) {
     }
   }
 
+  // Línea del ritmo objetivo: dónde estarías remando justo a ese split
+  if (ritmo && X(ritmo.dist) > -10 && X(ritmo.dist) < ancho + 10) {
+    const x = X(ritmo.dist);
+    ctx.strokeStyle = COLOR_RITMO;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + pista); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = x > ancho - 60 ? 'right' : 'left';
+    ctx.fillStyle = COLOR_RITMO;
+    ctx.fillText(ritmo.etiqueta, x + (x > ancho - 60 ? -4 : 4), y0 + pista - 4);
+  } else if (ritmo) {
+    // Fuera de la ventana: aviso en el borde con la diferencia
+    const der = X(ritmo.dist) > ancho;
+    const dif = Math.round(ritmo.dist - yo.dist);
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = der ? 'right' : 'left';
+    ctx.fillStyle = COLOR_RITMO;
+    ctx.fillText(`${der ? '' : '◀ '}${ritmo.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 6 : 6, y0 + pista - 4);
+  }
+
   // Botes: los rivales arriba, tú en el carril de abajo
   const orden = [...botes.slice(1), botes[0]];
   orden.forEach((b, fila) => {
@@ -332,7 +357,7 @@ function bote2d(ctx, x, y, largo, remo, b, ppm) {
 }
 
 // ---------- 3D: cámara detrás de tu bote ----------
-function pintar3d(c, { ctx, ancho, alto }, { botes, t }) {
+function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo }) {
   const yo = botes[0];
   const camZ = yo.dist - 13;
   const camH = 4.6;
@@ -437,6 +462,22 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t }) {
         const x0 = a.x + ((b.x - a.x) * i) / cuadros;
         ctx.fillRect(x0, a.y - grueso / 2, (b.x - a.x) / cuadros + 1, grueso);
       }
+    }
+  }
+
+  if (ritmo && ritmo.dist - camZ < 300 && ritmo.dist > camZ + 0.5) {
+    const a = P(minX - 2, ritmo.dist);
+    const b = P(maxX + 2, ritmo.dist);
+    if (a && b) {
+      ctx.strokeStyle = COLOR_RITMO;
+      ctx.lineWidth = Math.max(2, a.s * 0.08);
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = 'bold 12px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = COLOR_RITMO;
+      if (b.x + 70 < ancho) ctx.fillText(ritmo.etiqueta, b.x + 6, b.y - 6);
     }
   }
 

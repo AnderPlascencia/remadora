@@ -39,3 +39,28 @@ assert.equal(p2k.dias.length, 18);
 assert.equal(p2k.dias[0].fecha, '2026-10-26');
 assert.equal(p2k.dias.at(-1).ent, '2000 m');
 console.log('extra OK');
+
+// v0.7.0: predicción, calentamiento, insignias, recomendación, plan por meta
+{
+  const Ent = await import('../entrenamientos.js');
+  const E = await import('../estadisticas.js');
+  const P = await import('../programa.js');
+  const assert = (await import('node:assert/strict')).default;
+  // Ley de Paul: el split sube 5 s al duplicar la distancia
+  assert.equal(Ent.predecir(2000, 480, 4000), Math.round((120 + 5) * 8));
+  const con = Ent.conCalentamiento([{ nombre: 'X', duracion: 60, metrica: '', min: 0, max: 0 }], 5, 3);
+  assert.equal(con.length, 3);
+  assert.equal(con[0].duracion, 300);
+  const sesiones = Array.from({ length: 10 }, (_, i) => ({ fecha: Date.UTC(2026, 0, 1 + i, 12), distancia: 5200, duracion: 1900, muestras: [] }));
+  const ins = E.insignias(sesiones);
+  const ganadas = new Set(ins.filter((x) => x.ganada).map((x) => x.clave));
+  for (const k of ['primera', 'km5', 'min30', 'ses10', 'racha7']) assert.ok(ganadas.has(k), k);
+  assert.ok(!ganadas.has('ses50'));
+  const plan = P.planPorMeta({ distancia: 2000, segundos: 470, semanas: 8, inicio: '2026-01-05' });
+  assert.equal(plan.split, 118);
+  assert.ok(plan.programa.dias.length >= 23);
+  assert.ok(plan.entrenamientos.some((e) => e.prueba));
+  const muestras = Array.from({ length: 1300 }, (_, t) => ({ t, w: 200, dist: t * 4 }));
+  assert.equal(E.ftpSugerido({ muestras }), 190);
+  console.log('v0.7.0 ok');
+}

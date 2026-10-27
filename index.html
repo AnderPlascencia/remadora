@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
+  <div id="bienvenida" class="bienvenida" aria-hidden="true"><img src="rw200-logo.svg" alt="" width="128" height="128"><span>NordicTrack RW200</span></div>
   <!-- Iconos (trazos estilo Lucide, 24×24, línea de 2 px) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
@@ -67,6 +68,7 @@
         <button id="btn-hoy-toca" class="boton chico">Elegir</button>
       </div>
 
+      <p id="recomendacion" class="recomendacion" hidden></p>
       <label class="campo">Entrenamiento
         <select id="sel-entrenamiento"><option value="">Remo libre</option></select>
       </label>
@@ -93,6 +95,9 @@
           </label>
           <p id="perso-ayuda" class="ayuda"></p>
         </div>
+        <label class="campo ritmo-campo">Ritmo objetivo <small>(split /500 m, opcional)</small>
+          <input id="in-ritmo" inputmode="numeric" autocomplete="off" placeholder="2:05">
+        </label>
       </div>
       </div>
       <p id="resumen-sesion" class="resumen-sesion" hidden></p>
@@ -127,7 +132,7 @@
 
       <div class="metricas">
         <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span><span id="m-zona" class="sub"></span></div>
-        <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span></div>
+        <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span><span id="m-parcial" class="sub parcial"></span></div>
         <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span></div>
         <div class="metrica"><span class="etq">Tiempo</span><span id="m-tiempo" class="valor">0:00</span></div>
         <div class="metrica"><span class="etq">Distancia</span><span id="m-dist" class="valor">0</span><span class="sub">m</span></div>
@@ -148,6 +153,21 @@
       <div id="programa-vacio">
         <p class="ayuda">Un programa reparte tus entrenamientos en el calendario y cada día te dice cuál toca.</p>
         <div id="plantillas-programa"></div>
+        <details class="serie" id="plan-meta">
+          <summary>Plan automático para una meta</summary>
+          <p class="ayuda">Dime qué distancia y en qué tiempo quieres remarla: la app arma 3 sesiones por semana a tu ritmo meta y te pone pruebas para medir el avance.</p>
+          <div class="fila-dos">
+            <label class="campo">Distancia
+              <select id="pm-dist"><option value="500">500 m</option><option value="1000">1000 m</option><option value="2000" selected>2000 m</option><option value="5000">5000 m</option><option value="6000">6000 m</option><option value="10000">10 000 m</option></select>
+            </label>
+            <label class="campo">Tiempo meta (mm:ss) <input id="pm-tiempo" inputmode="numeric" autocomplete="off" placeholder="7:45"></label>
+            <label class="campo">Semanas <input id="pm-semanas" type="number" min="2" max="16" value="8" inputmode="numeric"></label>
+            <label class="campo">Empieza <input id="pm-inicio" type="date"></label>
+          </div>
+          <p id="pm-info" class="ayuda" aria-live="polite"></p>
+          <p id="pm-error" class="error" role="alert"></p>
+          <button type="button" id="btn-plan-meta" class="boton primario">Crear plan</button>
+        </details>
         <details class="serie">
           <summary>Crear mi propio programa</summary>
           <div class="fila-dos">
@@ -272,6 +292,11 @@
       <p id="tendencia-texto" class="ayuda"></p>
       </details>
 
+      <details class="seccion" data-seccion="insignias">
+      <summary><h2>Insignias</h2><span id="insignias-resumen" class="seccion-resumen"></span></summary>
+      <div id="insignias" class="insignias"></div>
+      </details>
+
       <h2>Récords</h2>
       <div id="records" class="records"></div>
 
@@ -309,6 +334,15 @@
           <option value="carrera">Carrera contra el fantasma (si eliges uno)</option>
         </select>
       </label>
+      <label class="campo">Calentamiento y enfriamiento guiados
+        <select id="sel-guiado">
+          <option value="0-0">No agregar</option>
+          <option value="5-3">5 min de calentamiento + 3 de enfriamiento</option>
+          <option value="8-5">8 min + 5 min</option>
+          <option value="10-5">10 min + 5 min</option>
+        </select>
+      </label>
+      <p class="ayuda">Se agregan a los entrenamientos por intervalos que no los traen.</p>
       <label class="interruptor"><input type="checkbox" id="in-pausa-auto"><span>Pausa automática al dejar de remar</span></label>
       <label class="interruptor"><input type="checkbox" id="in-res-auto"><span>Resistencia automática (experimental)</span></label>
       <p class="ayuda">Con la resistencia automática, la app cambia el nivel de la consola cuando un intervalo tiene "Nivel" definido. Pruébala primero sin remar fuerte.</p>
@@ -318,6 +352,17 @@
         </label>
         <button id="btn-nivel-prueba" class="boton alinear-abajo">Enviar</button>
       </div>
+      </details>
+
+      <details class="seccion" data-seccion="apariencia">
+      <summary><h2>Apariencia</h2></summary>
+      <label class="campo">Tema
+        <select id="sel-tema">
+          <option value="oscuro">Oscuro</option>
+          <option value="claro">Claro (para remar con luz de día)</option>
+          <option value="contraste">Alto contraste</option>
+        </select>
+      </label>
       </details>
 
       <details class="seccion" data-seccion="respaldo">
@@ -375,7 +420,7 @@
       <span id="mr-indicador" class="mr-indicador" aria-live="polite"></span>
     </div>
     <div class="mr-grid">
-      <div><span class="mr-etq">Split</span><span id="mr-split" class="mr-valor">--:--</span></div>
+      <div><span class="mr-etq">Split</span><span id="mr-split" class="mr-valor">--:--</span><span id="mr-parcial" class="mr-parcial"></span></div>
       <div><span class="mr-etq">Golpes/min</span><span id="mr-spm" class="mr-valor">0</span></div>
       <div><span class="mr-etq">Tiempo</span><span id="mr-tiempo" class="mr-valor">0:00</span></div>
       <div><span class="mr-etq">Distancia</span><span id="mr-dist" class="mr-valor">0</span></div>
@@ -414,6 +459,7 @@
         <p id="rpe-texto" class="ayuda"></p>
         <label class="campo">Notas <textarea id="in-notas" rows="2" maxlength="500" placeholder="Cómo te sentiste, molestias, ajustes de la consola…"></textarea></label>
       </div>
+      <div id="hoja-prediccion"></div>
       <div id="hoja-intervalos"></div>
       <div id="hoja-comparacion"></div>
       <div id="hoja-fc" hidden>
@@ -428,6 +474,7 @@
         <canvas id="hoja-grafica-perfil" class="grafica" role="img" aria-label="Potencia contra el plan"></canvas>
       </div>
       <div class="fila-botones">
+        <button id="btn-compartir-img" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-descarga"/></svg><span>Compartir imagen</span></button>
         <button id="btn-csv" class="boton">Exportar CSV</button>
         <button id="btn-tcx" class="boton">Exportar TCX</button>
         <button id="btn-borrar" class="boton peligro">Borrar</button>

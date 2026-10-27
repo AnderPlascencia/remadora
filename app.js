@@ -9,8 +9,9 @@ import * as Ent from './entrenamientos.js';
 import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
+import { confeti, tarjetaSesion } from './efectos.js';
 
-const VERSION = '0.6.5';
+const VERSION = '0.7.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -27,6 +28,7 @@ const ajustes = {
   si(clave, defecto) { return this.leer(clave, defecto ? '1' : '0') === '1'; },
 };
 const ftp = () => ajustes.num('ftp', 0);
+const fcMaxima = () => ajustes.num('fcMax', 0);
 
 // ---------- Navegación ----------
 const vistaActiva = (v) => $(`#vista-${v}`).classList.contains('activa');
@@ -83,6 +85,34 @@ configurarVoz(ajustes.si('voz', true));
 const selVistaRemo = $('#sel-vista-remo');
 selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
 selVistaRemo.addEventListener('change', () => ajustes.escribir('vistaRemo', selVistaRemo.value));
+
+// Tema: oscuro (por defecto), claro o alto contraste.
+function aplicarTema() {
+  const tema = ajustes.leer('tema', 'oscuro');
+  if (tema === 'oscuro') delete document.documentElement.dataset.tema;
+  else document.documentElement.dataset.tema = tema;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color('--fondo') || '#0F172A');
+}
+const selTema = $('#sel-tema');
+selTema.value = ajustes.leer('tema', 'oscuro');
+selTema.addEventListener('change', () => { ajustes.escribir('tema', selTema.value); aplicarTema(); dibujarVivo(); });
+aplicarTema();
+const selGuiado = $('#sel-guiado');
+selGuiado.value = ajustes.leer('guiado', '0-0');
+selGuiado.addEventListener('change', () => ajustes.escribir('guiado', selGuiado.value));
+
+// Ritmo objetivo opcional (split /500 m): colorea los parciales y dibuja su línea en la carrera.
+const inRitmo = $('#in-ritmo');
+inRitmo.value = ajustes.leer('ritmoObjetivo', '');
+inRitmo.addEventListener('change', () => {
+  const v = leerMmss(inRitmo.value);
+  inRitmo.value = v ? formatoSplit(v) : '';
+  ajustes.escribir('ritmoObjetivo', inRitmo.value);
+});
+const ritmoObjetivo = () => leerMmss(ajustes.leer('ritmoObjetivo', '')) || 0;
+
+// Pantalla de bienvenida: se desvanece sola.
+setTimeout(() => $('#bienvenida')?.remove(), 1400);
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
@@ -195,7 +225,10 @@ function alternarCarrera() {
 }
 aplicarModoCarrera();
 $('#carrera').addEventListener('click', alternarCarrera);
-$('#mr-grafica').addEventListener('click', () => { if (sesion?.rival && vistaRemo() === 'carrera') alternarCarrera(); });
+$('#mr-grafica').addEventListener('click', () => {
+  if (Date.now() - gestoHecho < 400) return;
+  if (sesion?.rival && vistaRemo() === 'carrera') alternarCarrera();
+});
 
 function pintarZonas() {
   const f = ftp();
@@ -386,7 +419,8 @@ async function iniciarSesion() {
   const idEnt = Number($('#sel-entrenamiento').value) || null;
   entrenamientoActivo = idEnt ? await db.obtener('entrenamientos', idEnt) : null;
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
-  const plan = intervalos ? Ent.normalizarBloques(entrenamientoActivo.bloques, ftp()) : null;
+  const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
+  const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftp(), fcMaxima()) : null;
   const rivales = await crearRivales(entrenamientoActivo);
   const rival = rivales[0] || null;
   sesion = {
@@ -417,6 +451,11 @@ async function iniciarSesion() {
     empezo: false,
     pausaManual: false,
     perdida: false,
+    ritmo: ritmoObjetivo(),
+    n500: 0,
+    t500: 0,
+    parcial: null,
+    lento: 0,
   };
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
   actualizarBotones();
@@ -550,6 +589,7 @@ function avanzarSesion() {
   sesion.muestras.push({
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
+  coachRitmo(t);
   if (sesion.rival && t % 60 === 0) {
     const dif = Math.round(sesion.dist - E.distanciaEn(sesion.rival.muestras, t));
     if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
@@ -559,6 +599,40 @@ function avanzarSesion() {
     sesion.avance.push([t, { distancia: sesion.dist, kcal: sesion.kcal, paladas: sesion.paladas }[entrenamientoActivo.objetivo.metrica]]);
     avanceObjetivo(t);
   } else avanceBloque(t);
+}
+
+const ANIMOS = ['¡Buen ritmo, sigue así!', 'Vas muy bien, mantén la técnica', 'Piernas, espalda, brazos. Así se rema', '¡Fuerte! Cada palada cuenta', 'Respira y mantén el ritmo'];
+
+// Parciales de 500 m (con aviso por voz), ánimo de vez en cuando y aviso si el ritmo se cae.
+function coachRitmo(t) {
+  const n = Math.floor(sesion.dist / 500);
+  if (n > sesion.n500) {
+    const seg = t - sesion.t500;
+    sesion.parcial = { seg, n };
+    sesion.n500 = n;
+    sesion.t500 = t;
+    hablar(`${n * 500} metros. Parcial ${splitHablado(seg)}`, { clave: 'parcial', cadaSeg: 20 });
+  }
+  if (t % 240 === 0 && sesion.fueraSeguidos === 0) hablar(ANIMOS[(t / 240) % ANIMOS.length], { clave: 'animo', cadaSeg: 200 });
+  // En intervalos los descansos bajan el ritmo a propósito: ahí manda el aviso de rango.
+  if (sesion.plan || t < 60 || sesion.dist < 100) return;
+  const ref = sesion.ritmo || (t * 500) / sesion.dist;
+  const v = velocidadReciente();
+  const reciente = v > 0 ? 500 / v : Infinity;
+  sesion.lento = reciente > ref + (sesion.ritmo ? 3 : 6) ? sesion.lento + 1 : 0;
+  if (sesion.lento >= 20) {
+    sesion.lento = 0;
+    hablar(sesion.ritmo ? `Vas más lento que tu ritmo objetivo de ${splitHablado(sesion.ritmo)}. Aprieta` : 'Estás bajando el ritmo. Aprieta', { clave: 'lento', cadaSeg: 60 });
+  }
+}
+
+// Último parcial de 500 m: verde si va al ritmo objetivo (o mejor que tu promedio), rojo si no.
+function textoParcial() {
+  const p = sesion?.parcial;
+  if (!p) return { texto: sesion?.ritmo ? `Objetivo ${formatoSplit(sesion.ritmo)}` : '', clase: '' };
+  const ref = sesion.ritmo || (sesion.t500 * 500) / Math.max(1, p.n * 500);
+  const clase = sesion.ritmo ? (p.seg <= ref ? 'ok' : 'mal') : (p.seg <= ref + 0.5 ? 'ok' : 'mal');
+  return { texto: `Último 500 m ${formatoSplit(p.seg)}`, clase };
 }
 
 function avanceObjetivo(t) {
@@ -582,6 +656,7 @@ function mostrarFin() {
   $('#fin-texto').textContent = partes.join(' · ');
   $('#fin-dialogo').hidden = false;
   $('#fin-terminar').focus();
+  if (sesion.rival && carreraActual().tono === 'adelante') confeti();
 }
 function cerrarFin() { $('#fin-dialogo').hidden = true; }
 $('#fin-seguir').addEventListener('click', () => { cerrarFin(); hablar('Seguimos'); });
@@ -645,7 +720,7 @@ function avanceBloque(t) {
     pitido(660, 0.1);
     hablar(fin === 'distancia' ? 'Últimos 100 metros' : 'Últimas 10 paladas', { urgente: true });
   }
-  const rango = Ent.enRango(b, actual.watts, actual.spm, ftp(), actual.split);
+  const rango = Ent.enRango(b, actual.watts, actual.spm, ftp(), actual.split, actual.fc);
   if (rango) {
     sesion.segConMeta += 1;
     if (rango === 'dentro') sesion.segEnRango += 1;
@@ -653,7 +728,9 @@ function avanceBloque(t) {
   sesion.fueraSeguidos = rango && rango !== 'dentro' ? sesion.fueraSeguidos + 1 : 0;
   if (sesion.fueraSeguidos >= 5 && info.restaSeg > 4) {
     const potencia = !!Ent.rangoWatts(b, ftp());
-    const texto = rango === 'bajo' ? (potencia ? 'Sube la potencia' : 'Sube el ritmo') : (potencia ? 'Baja la potencia' : 'Baja el ritmo');
+    const pulso = b.metrica === 'fc';
+    const texto = pulso ? (rango === 'bajo' ? 'Pulso bajo, sube la intensidad' : 'Pulso alto, baja la intensidad')
+      : rango === 'bajo' ? (potencia ? 'Sube la potencia' : 'Sube el ritmo') : (potencia ? 'Baja la potencia' : 'Baja el ritmo');
     hablar(texto, { clave: 'fuera', cadaSeg: 20 });
   }
 }
@@ -746,6 +823,7 @@ function carreraActual() {
     meta,
     cabecera: [l1, l2],
     tono,
+    ritmo: sesion.ritmo ? { v: 500 / sesion.ritmo, etiqueta: `Ritmo ${formatoSplit(sesion.ritmo)}` } : null,
   };
   return { texto, tono, estado, proyeccion: p };
 }
@@ -779,6 +857,12 @@ function pintar() {
   $('#m-fc-zona').textContent = zfc ? `lpm · Z${zfc.n} ${zfc.nombre}` : 'lpm';
   $('#m-fc-zona').style.color = zfc ? COLOR_ZONA[zfc.n] : '';
   $('#m-mpp').textContent = sesion && sesion.paladas >= 5 ? (sesion.dist / sesion.paladas).toFixed(1) : '-';
+  const par = textoParcial();
+  for (const id of ['#m-parcial', '#mr-parcial']) {
+    $(id).textContent = par.texto;
+    $(id).classList.toggle('ok', par.clase === 'ok');
+    $(id).classList.toggle('mal', par.clase === 'mal');
+  }
 
   const pausa = enPausa();
   $('#pausa-aviso').hidden = !pausa;
@@ -915,7 +999,7 @@ function pintarObjetivo(t) {
   $('#mr-meta-texto').textContent = `${Math.floor(p.hecho)} de ${p.meta} ${unidad}${p.estimadoSeg != null ? ` · ≈ ${formatoTiempo(p.estimadoSeg)}` : ''}`;
 }
 
-const textoSiguiente = (b, f) => `${b.nombre || 'intervalo'} · ${Ent.finDe(b) === 'tiempo' ? '' : `${Ent.textoCantidad(b)} · `}${Ent.textoMeta(b, f)}`;
+const textoSiguiente = (b, f) => `${b.nombre || 'intervalo'} · ${Ent.finDe(b) === 'tiempo' ? '' : `${Ent.textoCantidad(b)} · `}${Ent.textoMeta(b, f, fcMaxima())}`;
 
 function pintarBloque(t) {
   const f = ftp();
@@ -943,7 +1027,7 @@ function pintarBloque(t) {
   const { i, bloque: b, siguiente } = info;
   const nombre = `${i + 1}/${sesion.plan.length} · ${b.nombre || 'Intervalo'}`;
   const resta = Ent.textoResta(info);
-  const meta = b.metrica ? Ent.textoMeta(b, f) : 'Libre';
+  const meta = b.metrica ? Ent.textoMeta(b, f, fcMaxima()) : 'Libre';
   $('#bloque-nombre').textContent = nombre;
   $('#bloque-resta').textContent = resta;
   $('#bloque-meta').textContent = b.metrica ? `Meta: ${meta}` : 'Libre';
@@ -952,9 +1036,9 @@ function pintarBloque(t) {
   $('#mr-nombre').textContent = nombre;
   $('#mr-meta-texto').textContent = meta;
   $('#mr-resta').textContent = resta;
-  $('#mr-resta-etq').textContent = siguiente ? `luego ${Ent.textoMeta(siguiente, f)}` : 'último';
+  $('#mr-resta-etq').textContent = siguiente ? `luego ${Ent.textoMeta(siguiente, f, fcMaxima())}` : 'último';
   $('#mr-barra').style.width = `${100 * info.fraccion}%`;
-  marcarRango(Ent.enRango(b, actual.watts, actual.spm, f, actual.split), !!Ent.rangoWatts(b, f));
+  marcarRango(Ent.enRango(b, actual.watts, actual.spm, f, actual.split, actual.fc), !!Ent.rangoWatts(b, f));
 }
 
 function dibujarVivo() {
@@ -992,7 +1076,7 @@ async function vistaPrevia() {
   } else {
     const b = ent.bloques[0];
     $('#bloque-resta').textContent = `${Ent.soloTiempo(ent) ? '' : '≈ '}${formatoTiempo(Ent.duracionTotal(ent))}`;
-    $('#bloque-meta').textContent = `${ent.bloques.length} intervalos · empieza: ${b.nombre || 'intervalo'} ${Ent.textoMeta(b, ftp())}`;
+    $('#bloque-meta').textContent = `${ent.bloques.length} intervalos · empieza: ${b.nombre || 'intervalo'} ${Ent.textoMeta(b, ftp(), fcMaxima())}`;
     if (ent.bloques.some((x) => x.metrica === 'ftp') && !ftp()) {
       $('#bloque-siguiente').textContent = 'Define tu FTP en Ajustes para ver los watts';
       $('#bloque-indicador').textContent = '';
@@ -1021,8 +1105,44 @@ function abrirModoRemo() {
   }
   aplicarVistaRemo();
   actualizarBotones();
+  const vistas = ajustes.num('ayudaGestos', 0);
+  if (vistas < 3) { ajustes.escribir('ayudaGestos', vistas + 1); toast('Doble toque: pausa · Desliza: cambia la vista'); }
   try { mr.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {}); } catch { /* opcional */ }
   pintar();
+}
+
+// Gestos en el modo remo: doble toque pausa o sigue; deslizar a un lado cambia de vista.
+let gestoHecho = 0;
+{
+  const mr = $('#modo-remo');
+  let inicio = null;
+  let ultimoToque = 0;
+  mr.addEventListener('pointerdown', (e) => { inicio = e.target.closest('button, select, input') ? null : { x: e.clientX, y: e.clientY, t: Date.now() }; });
+  mr.addEventListener('pointerup', (e) => {
+    if (!inicio) return;
+    const dx = e.clientX - inicio.x;
+    const dy = e.clientY - inicio.y;
+    const rapido = Date.now() - inicio.t < 600;
+    inicio = null;
+    if (rapido && Math.abs(dx) > 60 && Math.abs(dy) < 60) {
+      gestoHecho = Date.now();
+      ajustes.escribir('vistaRemo', siguienteVista());
+      selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
+      aplicarVistaRemo();
+      requestAnimationFrame(pintar);
+      return;
+    }
+    if (Math.abs(dx) > 12 || Math.abs(dy) > 12 || !sesion) return;
+    // En la carrera un toque cambia 2D/3D: ahí el doble toque no pausa.
+    if (e.target.id === 'mr-grafica' && vistaRemo() === 'carrera') return;
+    const ahora = Date.now();
+    if (ahora - ultimoToque < 350) {
+      ultimoToque = 0;
+      gestoHecho = ahora;
+      $('#mr-pausa').click();
+      vibrar(60);
+    } else ultimoToque = ahora;
+  });
 }
 
 function cerrarModoRemo() {
@@ -1154,7 +1274,7 @@ function pintarBloques() {
       </select></label>
       <label><span class="mini etq-cantidad"></span><input data-k="cantidad" inputmode="numeric"></label>
       <label><span class="mini">Meta</span><select data-k="metrica">
-        <option value="watts">Potencia (W)</option><option value="ftp">% de FTP</option><option value="split">Split (/500 m)</option><option value="spm">Golpes/min</option><option value="">Libre</option>
+        <option value="watts">Potencia (W)</option><option value="ftp">% de FTP</option><option value="split">Split (/500 m)</option><option value="spm">Golpes/min</option><option value="fc">Pulso (lpm)</option><option value="fcpct">% pulso máx</option><option value="">Libre</option>
       </select></label>
       <label><span class="mini">Rango <span class="unidad"></span></span><span class="par" style="margin:0"><input data-k="min" type="number" inputmode="numeric" placeholder="mín" aria-label="Mínimo"><input data-k="max" type="number" inputmode="numeric" placeholder="máx" aria-label="Máximo"></span></label>
       <label><span class="mini">Nivel (opcional)</span><input data-k="nivel" type="number" min="1" max="24" inputmode="numeric" placeholder="1–24"></label>
@@ -1181,7 +1301,7 @@ function pintarBloques() {
     q('nivel').value = b.nivel || '';
     const unidadYZonas = () => {
       const m = b.metrica;
-      fila.querySelector('.unidad').textContent = { watts: '(W)', ftp: '(% FTP)', split: '(mm:ss, rápido–lento)', spm: '(golpes/min)' }[m] || '';
+      fila.querySelector('.unidad').textContent = { watts: '(W)', ftp: '(% FTP)', split: '(mm:ss, rápido–lento)', spm: '(golpes/min)', fc: '(lpm)', fcpct: '(% pulso máx)' }[m] || '';
       q('min').disabled = !m;
       q('max').disabled = !m;
       const zonas = fila.querySelector('.zonas');
@@ -1224,6 +1344,8 @@ function pintarBloques() {
         if (b.metrica === 'ftp' && (b.min > 200 || !b.min)) { b.min = 56; b.max = 75; }
         if (b.metrica === 'split') { b.min = 120; b.max = 130; }
         if (b.metrica === 'spm') { b.min = 22; b.max = 26; }
+        if (b.metrica === 'fc') { b.min = 130; b.max = 150; }
+        if (b.metrica === 'fcpct') { b.min = 60; b.max = 70; }
         pintarBloques();
         return;
       }
@@ -1444,6 +1566,11 @@ async function pintarHistorial() {
   sel.value = nombres.includes(previo) ? previo : '*';
   pintarTendencia();
 
+  const ins = E.insignias(lista);
+  $('#insignias-resumen').textContent = `${ins.filter((x) => x.ganada).length} de ${ins.length}`;
+  $('#insignias').innerHTML = ins.map((x) => `<div class="insignia${x.ganada ? '' : ' bloqueada'}" title="${x.detalle}"><span class="medalla">${ico('i-trofeo')}</span>
+    <b>${x.nombre}</b><small>${x.ganada ? fechaCorta(x.fecha) : x.detalle}</small></div>`).join('');
+
   const recs = E.calcularRecords(lista);
   $('#records').innerHTML = E.RECORDS.filter((r) => recs[r.clave]).map((r) => `<div class="record"><div class="etq">${r.nombre}</div>
     <div class="valor">${formatoRecord(r, recs[r.clave].valor)}</div><div class="sub">${fechaCorta(recs[r.clave].fecha)}</div></div>`).join('');
@@ -1516,6 +1643,19 @@ function tablaIntervalos(s) {
   }</tbody></table></div>`;
 }
 
+// Predicción de otras distancias con la ley de Paul (+5 s de split cada vez que se duplica la distancia).
+function tablaPrediccion(s) {
+  const base = [2000, 5000, 1000, 500].map((d) => [d, E.mejorTiempo(s.muestras || [], d)]).find(([, t]) => t);
+  const [metros, seg] = base || [];
+  if (!metros) return '';
+  const filas = Ent.DISTANCIAS_PREDICCION.filter((d) => d !== metros).map((d) => {
+    const t = Ent.predecir(metros, seg, d);
+    return `<tr><td>${d === 21097 ? 'Medio maratón' : `${d} m`}</td><td>${formatoTiempo(t)}</td><td>${formatoSplit(Math.round((t * 500) / d))}</td></tr>`;
+  }).join('');
+  return `<div class="prediccion"><h2>Predicción con este esfuerzo</h2><p class="ayuda">A partir de ${metros} m en ${formatoTiempo(seg)}.</p>
+    <table><thead><tr><th>Distancia</th><th>Tiempo</th><th>Split</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+}
+
 function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   sesionAbierta = s;
   const hoja = $('#hoja');
@@ -1528,12 +1668,21 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   const recs = E.nuevosRecords(s, previas);
   $('#hoja-records').innerHTML = recs.map((r) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}${resumen ? 'Nuevo récord' : 'Récord'}</div>
     <div class="valor">${formatoRecord(r, r.valor)}</div><div class="sub">${r.nombre}${r.anterior != null ? ` · antes ${formatoRecord(r, r.anterior)}` : ''}</div></div>`).join('');
+  const antes = new Set(E.insignias(previas).filter((x) => x.ganada).map((x) => x.clave));
+  const medallas = resumen ? E.insignias([...previas, s]).filter((x) => x.ganada && !antes.has(x.clave)) : [];
+  $('#hoja-records').insertAdjacentHTML('beforeend', medallas.map((x) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}Nueva insignia</div>
+    <div class="valor">${x.nombre}</div><div class="sub">${x.detalle}</div></div>`).join(''));
+  const gano = (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);
+  if (resumen && (recs.length || medallas.length || gano)) setTimeout(confeti, 250);
 
   const hojaFtp = $('#hoja-ftp');
-  hojaFtp.hidden = !s.pruebaWatts;
-  if (s.pruebaWatts) {
-    const nuevo = Ent.ftpDesdePrueba(s.pruebaWatts);
-    hojaFtp.innerHTML = `Promedio en la prueba: <b>${s.pruebaWatts} W</b>. Tu FTP estimado es <b>${nuevo} W</b>${ftp() ? ` (antes ${ftp()} W)` : ''}.
+  const sugerido = !s.pruebaWatts ? E.ftpSugerido(s) : null;
+  const subeFtp = sugerido && sugerido > ftp() + 2;
+  hojaFtp.hidden = !s.pruebaWatts && !subeFtp;
+  if (s.pruebaWatts || subeFtp) {
+    const nuevo = s.pruebaWatts ? Ent.ftpDesdePrueba(s.pruebaWatts) : sugerido;
+    const origen = s.pruebaWatts ? `Promedio en la prueba: <b>${s.pruebaWatts} W</b>.` : `Tus mejores 20 min de esta sesión dan más que tu FTP actual.`;
+    hojaFtp.innerHTML = `${origen} Tu FTP estimado es <b>${nuevo} W</b>${ftp() ? ` (antes ${ftp()} W)` : ''}.
       <div class="fila-botones"><button class="boton primario" id="btn-usar-ftp">Usar ${nuevo} W como FTP</button></div>`;
     $('#btn-usar-ftp').onclick = () => {
       ajustes.escribir('ftp', nuevo);
@@ -1567,6 +1716,7 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   pintarRpe();
   $('#in-notas').value = s.notas || '';
   $('#hoja-intervalos').innerHTML = tablaIntervalos(s);
+  $('#hoja-prediccion').innerHTML = tablaPrediccion(s);
 
   const cmp = E.compararConAnterior(s, previas);
   const fmt = (c, v) => (c.clave === 'splitProm' || c.clave === 'tiempoMeta' ? formatoTiempo(v) : `${v}${c.unidad && c.unidad !== 's' ? ` ${c.unidad}` : ''}`);
@@ -1591,7 +1741,11 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
       { color: color('--spm'), eje: 'der', puntos: m.map((x) => [x.t, x.spm]) },
     ];
     if (conFc) series.push({ color: color('--fc'), eje: 'izq', puntos: m.filter((x) => x.fc).map((x) => [x.t, x.fc]) });
-    dibujar($('#hoja-grafica'), series);
+    const f = s.ftp || ftp();
+    const zonas = f ? Ent.ZONAS.map((z) => ({ min: (z.min * f) / 100, max: (z.max * f) / 100, color: COLOR_ZONA[z.n - 1], etiqueta: `Z${z.n}` })) : [];
+    let acum = 0;
+    const divisiones = (s.bloques || []).map((b) => { acum += b.duracion || 0; return { t: acum }; });
+    dibujar($('#hoja-grafica'), series, { zonas, divisiones });
     $('#hoja-perfil').hidden = !s.bloques;
     if (s.bloques) dibujarPerfil($('#hoja-grafica-perfil'), Ent.bloquesEnWatts(s.bloques, s.ftp || ftp()), m.map((x) => [x.t, x.w]));
     if (conFc && fcMax) {
@@ -1685,6 +1839,48 @@ async function pintarPrograma() {
   describirDia(porFecha.has(hoyK) ? hoyK : (P.proximo(prog)?.fecha || hoyK));
 }
 
+// Plan automático: sugiere la meta a partir de tu mejor marca y predicción en esa distancia.
+async function pintarPlanMeta() {
+  const dist = Number($('#pm-dist').value);
+  if (!$('#pm-inicio').value) $('#pm-inicio').value = E.claveDia(Date.now());
+  const sesiones = await db.listar('sesiones');
+  let mejor = null;
+  for (const s of sesiones) {
+    for (const d of [dist, ...Ent.DISTANCIAS_PREDICCION]) {
+      const t = s.muestras?.length ? E.mejorTiempo(s.muestras, d) : null;
+      if (t) {
+        const pred = d === dist ? t : Ent.predecir(d, t, dist);
+        if (!mejor || pred < mejor.t) mejor = { t: pred, real: d === dist };
+      }
+    }
+  }
+  $('#pm-info').textContent = mejor
+    ? `${mejor.real ? 'Tu mejor' : 'Tu predicción para'} ${dist} m: ${Ent.formatoMmss(mejor.t)}. Una meta realista en 8 semanas: ${Ent.formatoMmss(Math.round(mejor.t * 0.96))}.`
+    : 'Aún no hay sesiones para sugerirte una meta: elige una que te rete.';
+  $('#pm-tiempo').placeholder = mejor ? Ent.formatoMmss(Math.round(mejor.t * 0.96)) : '8:00';
+}
+$('#pm-dist').addEventListener('change', pintarPlanMeta);
+$('#plan-meta').addEventListener('toggle', () => { if ($('#plan-meta').open) pintarPlanMeta(); });
+$('#btn-plan-meta').addEventListener('click', async () => {
+  const distancia = Number($('#pm-dist').value);
+  const segundos = leerMmss($('#pm-tiempo').value || $('#pm-tiempo').placeholder);
+  const semanas = Math.round(Number($('#pm-semanas').value));
+  const inicio = $('#pm-inicio').value;
+  if (!segundos) { $('#pm-error').textContent = 'Escribe el tiempo meta como mm:ss, por ejemplo 7:45.'; return; }
+  if (!(semanas >= 2 && semanas <= 16) || !inicio) { $('#pm-error').textContent = 'Elige entre 2 y 16 semanas y la fecha de inicio.'; return; }
+  const split = (segundos * 500) / distancia;
+  if (split < 80 || split > 200) { $('#pm-error').textContent = 'Ese tiempo da un ritmo fuera de lo posible: revisa la distancia y el tiempo.'; return; }
+  $('#pm-error').textContent = '';
+  const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio });
+  const existentes = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
+  for (const e of entrenamientos) if (!existentes.has(e.nombre)) await db.guardar('entrenamientos', e);
+  guardarPrograma(programa);
+  toast(`Plan creado: ${programa.dias.length} sesiones en ${semanas} semanas`);
+  pintarEntrenamientos();
+  llenarSelectorEntrenamientos();
+  pintarHoyToca();
+});
+
 $('#btn-crear-programa').addEventListener('click', async () => {
   const semanas = Number($('#p-semanas').value);
   const inicio = $('#p-inicio').value;
@@ -1703,7 +1899,15 @@ $('#btn-quitar-programa').addEventListener('click', () => {
   pintarEntrenamientos();
 });
 
+async function pintarRecomendacion() {
+  const r = E.recomendacion(await db.listar('sesiones'), ftp());
+  const el = $('#recomendacion');
+  el.hidden = !r;
+  if (r) { el.textContent = r.texto; el.className = `recomendacion ${r.tipo}`; }
+}
+
 async function pintarHoyToca() {
+  pintarRecomendacion();
   const prog = leerPrograma();
   const hoy = P.deHoy(prog);
   const caja = $('#hoy-toca');
@@ -1733,7 +1937,7 @@ async function pintarHoyToca() {
 }
 
 // ---------- Respaldo ----------
-const CLAVES_AJUSTES = ['peso', 'ftp', 'fcMax', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante'];
+const CLAVES_AJUSTES = ['peso', 'ftp', 'fcMax', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo'];
 
 async function guardarRespaldo() {
   const datos = {
@@ -1830,6 +2034,33 @@ $('#btn-borrar').addEventListener('click', async () => {
     cerrarHoja();
   }
 });
+$('#btn-compartir-img').addEventListener('click', async (ev) => {
+  const s = sesionAbierta;
+  if (!s) return;
+  const boton = ev.currentTarget;
+  boton.disabled = true;
+  const f = new Date(s.fecha);
+  const stats = [['Distancia', `${s.distancia} m`], ['Tiempo', formatoTiempo(s.duracion)], ['Split prom', formatoSplit(s.splitProm)],
+    ['Watts prom', `${s.wattsProm} W`], ['Golpes/min', s.spmProm], [s.fcProm ? 'Pulso prom' : 'Calorías', s.fcProm ? `${s.fcProm} lpm` : s.kcal]];
+  const rivales = s.rivales || (s.rival ? [s.rival] : []);
+  const recs = E.nuevosRecords(s, (cacheSesiones || []).filter((x) => x.id !== s.id && x.fecha < s.fecha));
+  const extra = recs.length ? `Récord: ${recs[0].nombre} ${formatoRecord(recs[0], recs[0].valor)}`
+    : rivales.length ? rivales.map((r) => `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m vs. ${r.nombre.replace(/^Fantasma /, '')}`).join(' · ') : '';
+  try {
+    const blob = await tarjetaSesion({
+      titulo: s.entrenamiento || 'Remo libre',
+      fecha: f.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      stats, extra, puntos: (s.muestras || []).map((x) => [x.t, x.w]),
+    });
+    const nombre = `rw200-${marcaFecha(s.fecha)}.png`;
+    const archivo = new File([blob], nombre, { type: 'image/png' });
+    if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Mi sesión en RW200' });
+    else descargar(nombre, blob, 'image/png');
+  } catch (err) {
+    if (err.name !== 'AbortError') toast('No se pudo crear la imagen');
+  } finally { boton.disabled = false; }
+});
+
 $('#btn-csv').addEventListener('click', () => {
   const s = sesionAbierta;
   const filas = ['segundo,watts,golpes_min,split_s_500m,distancia_m,nivel,pulso'];
