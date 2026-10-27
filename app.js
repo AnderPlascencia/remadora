@@ -10,8 +10,9 @@ import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 import { confeti, tarjetaSesion } from './efectos.js';
+import * as J from './juego.js';
 
-const VERSION = '0.7.0';
+const VERSION = '0.8.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -41,6 +42,7 @@ function irA(vista) {
   document.querySelectorAll('.vista').forEach((v) => v.classList.toggle('activa', v.id === `vista-${vista}`));
   window.scrollTo(0, 0);
   if (vista === 'historial') pintarHistorial();
+  if (vista === 'heroe') pintarHeroe();
   if (vista === 'entrenamientos') pintarEntrenamientos();
   if (vista === 'entrenar') { dibujarVivo(); vistaPrevia(); }
   if (vista === 'ajustes') $('#log').textContent = lineasLog.slice(-300).join('\n');
@@ -1601,6 +1603,87 @@ async function pintarHistorial() {
   }
 }
 
+// ---------- Héroe ----------
+function leerPersonaje() {
+  try { return JSON.parse(ajustes.leer('personaje', 'null')); } catch { return null; }
+}
+const emblema = (c) => `<svg viewBox="0 0 24 24" aria-hidden="true">${c.icono}</svg>`;
+const nombreAtributo = (k) => J.ATRIBUTOS.find((a) => a.clave === k)?.nombre || k;
+const miles = (n) => n.toLocaleString('es-MX');
+let claseElegida = null;
+
+async function pintarHeroe() {
+  const per = leerPersonaje();
+  const clase = J.claseDe(per?.clase);
+  $('#heroe-crear').hidden = !!clase;
+  $('#heroe-ficha').hidden = !clase;
+  if (!clase) {
+    claseElegida = claseElegida || null;
+    $('#clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase" role="radio" aria-checked="${c.clave === claseElegida}" data-clase="${c.clave}">
+      <span class="emblema">${emblema(c)}</span><b>${c.nombre}</b><span class="fav">+15 % ${nombreAtributo(c.favorito)}</span><small>${c.lema}</small></button>`).join('');
+    $('#btn-crear-heroe').disabled = !claseElegida;
+    if (per?.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
+    return;
+  }
+  const sesiones = await db.listar('sesiones');
+  const h = J.progresoHeroe(sesiones, { ftp: ftp(), clase: clase.clave });
+  $('#heroe-emblema').innerHTML = emblema(clase);
+  $('#heroe-titulo').textContent = per.nombre || `${clase.nombre} sin nombre`;
+  $('#heroe-clase').textContent = `${clase.nombre} · ${h.titulo}`;
+  $('#heroe-nivel').textContent = h.nivel;
+  const pct = h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100;
+  $('#heroe-xp-barra').style.width = `${pct}%`;
+  $('#heroe-xp-texto').textContent = h.hasta ? `${miles(h.xp)} XP · faltan ${miles(h.hasta - h.xp)} para el nivel ${h.nivel + 1}` : `${miles(h.xp)} XP · nivel máximo`;
+  $('#heroe-talentos').hidden = !h.talentos;
+  $('#heroe-talentos').textContent = `Tienes ${h.talentos} ${h.talentos === 1 ? 'punto de talento guardado' : 'puntos de talento guardados'} para el árbol de habilidades, que llega pronto.`;
+  const max = Math.max(50, ...Object.values(h.atributos));
+  $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div class="atributo${a.clave === clase.favorito ? ' fav' : ''}">
+    <div class="fila"><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''}</b><span class="valor">${h.atributos[a.clave]}</span></div>
+    <div class="at-barra"><div style="width:${(100 * h.atributos[a.clave]) / max}%"></div></div><small>${a.detalle}</small></div>`).join('');
+  const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 5);
+  $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
+    const g = h.porSesion.get(x.fecha);
+    return `<li><div class="fila-xp"><b>${fechaCorta(x.fecha)} · ${x.entrenamiento || 'Remo libre'}</b> <span class="xp">+${miles(g.xp)} XP</span></div>
+      <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
+  }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
+}
+$('#clases').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-clase]');
+  if (!b) return;
+  claseElegida = b.dataset.clase;
+  for (const x of document.querySelectorAll('#clases .clase')) x.setAttribute('aria-checked', String(x === b));
+  $('#btn-crear-heroe').disabled = false;
+});
+$('#btn-crear-heroe').addEventListener('click', () => {
+  if (!claseElegida) return;
+  ajustes.escribir('personaje', JSON.stringify({ ...leerPersonaje(), clase: claseElegida, nombre: $('#heroe-nombre').value.trim() }));
+  confeti();
+  pintarHeroe();
+});
+$('#btn-cambiar-clase').addEventListener('click', () => {
+  const per = leerPersonaje();
+  claseElegida = per?.clase || null;
+  ajustes.escribir('personaje', JSON.stringify({ ...per, clase: null }));
+  pintarHeroe();
+});
+
+// XP y atributos que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel.
+function pintarXpSesion(s, previas, resumen) {
+  const caja = $('#hoja-xp');
+  const clase = J.claseDe(leerPersonaje()?.clase);
+  const h = J.progresoHeroe([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), clase: clase?.clave });
+  const g = h.porSesion.get(s.fecha);
+  caja.hidden = !g;
+  if (!g) return false;
+  const subio = resumen && g.nivelDespues > g.nivelAntes;
+  caja.innerHTML = `<span class="xp-total">+${miles(g.xp)} XP</span>${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!</span>` : ''}
+    <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
+    <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul>
+    ${clase ? '' : '<p class="ayuda">Crea tu héroe en la pestaña Héroe para darle vida a esta experiencia.</p>'}`;
+  if (subio) hablar(`Subiste a nivel ${g.nivelDespues}`);
+  return subio;
+}
+
 // ---------- Resumen / detalle de sesión ----------
 let sesionAbierta = null;
 const TEXTO_RPE = ['', 'Muy fácil', 'Muy fácil', 'Fácil', 'Fácil', 'Moderado', 'Moderado', 'Duro', 'Duro', 'Muy duro', 'Máximo'];
@@ -1673,7 +1756,8 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   $('#hoja-records').insertAdjacentHTML('beforeend', medallas.map((x) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}Nueva insignia</div>
     <div class="valor">${x.nombre}</div><div class="sub">${x.detalle}</div></div>`).join(''));
   const gano = (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);
-  if (resumen && (recs.length || medallas.length || gano)) setTimeout(confeti, 250);
+  const subio = pintarXpSesion(s, previas, resumen);
+  if (resumen && (recs.length || medallas.length || gano || subio)) setTimeout(confeti, 250);
 
   const hojaFtp = $('#hoja-ftp');
   const sugerido = !s.pruebaWatts ? E.ftpSugerido(s) : null;
@@ -1937,7 +2021,7 @@ async function pintarHoyToca() {
 }
 
 // ---------- Respaldo ----------
-const CLAVES_AJUSTES = ['peso', 'ftp', 'fcMax', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo'];
+const CLAVES_AJUSTES = ['peso', 'ftp', 'fcMax', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje'];
 
 async function guardarRespaldo() {
   const datos = {

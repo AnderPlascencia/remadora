@@ -40,6 +40,7 @@
       <symbol id="i-fantasma" viewBox="0 0 24 24"><path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></symbol>
       <symbol id="i-descarga" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
       <symbol id="i-sube-archivo" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+      <symbol id="i-heroe" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></symbol>
       <symbol id="i-voz" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
     </defs>
   </svg>
@@ -249,6 +250,36 @@
     </section>
 
     <!-- PROGRESO -->
+    <section id="vista-heroe" class="vista" aria-labelledby="tab-heroe">
+      <div id="heroe-crear" class="heroe-crear" hidden>
+        <h2>Crea tu héroe</h2>
+        <p class="ayuda">Tu héroe crece con cada entrenamiento real. Tu historial ya cuenta: empiezas con el nivel que te ganaste. Elige una clase: su atributo favorito crece un 15 % más rápido.</p>
+        <div id="clases" class="clases" role="radiogroup" aria-label="Clase"></div>
+        <label class="campo">Nombre de tu héroe <small>(opcional)</small>
+          <input id="heroe-nombre" maxlength="20" autocomplete="off" placeholder="Ander el Implacable">
+        </label>
+        <div class="fila-botones"><button id="btn-crear-heroe" class="boton primario grande" disabled>Crear héroe</button></div>
+      </div>
+      <div id="heroe-ficha" hidden>
+        <div class="heroe-tarjeta">
+          <div id="heroe-emblema" class="emblema"></div>
+          <div class="crece">
+            <b id="heroe-titulo" class="heroe-nombre"></b>
+            <span id="heroe-clase" class="suave"></span>
+          </div>
+          <div class="heroe-nivel"><span class="etq">Nivel</span><b id="heroe-nivel">1</b></div>
+        </div>
+        <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div id="heroe-xp-barra"></div></div>
+        <p id="heroe-xp-texto" class="ayuda"></p>
+        <p id="heroe-talentos" class="aviso suave-aviso"></p>
+        <h2>Atributos</h2>
+        <div id="heroe-atributos" class="atributos"></div>
+        <h2>Últimas sesiones</h2>
+        <ul id="heroe-sesiones" class="lista heroe-sesiones"></ul>
+        <div class="fila-botones"><button id="btn-cambiar-clase" class="boton">Cambiar de clase</button></div>
+      </div>
+    </section>
+
     <section id="vista-historial" class="vista" aria-labelledby="tab-historial">
       <div id="progreso-vacio" class="vacio-grande" hidden>
         <svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg>
@@ -397,6 +428,7 @@
   <nav class="nav-inferior" role="tablist" aria-label="Secciones">
     <button id="tab-entrenar" role="tab" data-vista="entrenar" class="activa" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="#i-remo"/></svg><span>Entrenar</span></button>
     <button id="tab-entrenamientos" role="tab" data-vista="entrenamientos" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg><span>Planes</span></button>
+    <button id="tab-heroe" role="tab" data-vista="heroe" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-heroe"/></svg><span>Héroe</span></button>
     <button id="tab-historial" role="tab" data-vista="historial" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg><span>Progreso</span></button>
     <button id="tab-ajustes" role="tab" data-vista="ajustes" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg><span>Ajustes</span></button>
   </nav>
@@ -450,6 +482,7 @@
         <button id="hoja-cerrar" class="boton icono" aria-label="Cerrar"><svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
       </div>
       <p id="hoja-sub" class="ayuda"></p>
+      <div id="hoja-xp" class="hoja-xp" hidden></div>
       <div id="hoja-records" class="records"></div>
       <div id="hoja-ftp" class="aviso exito" hidden></div>
       <div id="hoja-stats" class="metricas compacta"></div>

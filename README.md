@@ -47,6 +47,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Recomendación del día según tu frescura.
 - Entrenador por voz: parcial de cada 500 m, ánimo y aviso si el ritmo se cae.
 - Modo remo con gestos: doble toque para pausar, deslizar para cambiar de vista.
+- Héroe: elige una clase (Vikingo, Pirata, Explorador, Monje, Samurái o Gladiador) y sube de nivel con tus entrenamientos; 6 atributos crecen según el tipo de entrenamiento.
 - Último parcial de 500 m en pantalla (verde o rojo) y ritmo objetivo con línea en la carrera.
 
 ## Archivos
@@ -63,6 +64,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `fantasma.js` | Fantasmas simulados por nivel o a tu medida, y proyección de llegada |
 | `carrera.js` | Carrera animada 2D/3D contra los fantasmas |
 | `efectos.js` | Confeti y tarjeta de la sesión para compartir |
+| `juego.js` | Héroe: clases, atributos, XP y niveles calculados con tu historial |
 | `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
 | `db.js` | Almacenamiento local |
