@@ -14,13 +14,15 @@ El sexto atributo, Recuperación, es común a todas las clases y no tiene clase 
 
 ## Rangos
 
-| id | Rango | Edad aparente | Nivel del héroe | Expresión |
-|---|---|---|---|---|
-| `principiante` | Principiante | 18–22 | 1–9 | alerta |
-| `combatiente` | Combatiente | 23–28 | 10–19 | decidido |
-| `veterano` | Veterano | 30–38 | 20–34 | confiado |
-| `elite` | Élite | 39–48 | 35–49 | dominante |
-| `legendario` | Legendario | 50–65 | 50 | sereno |
+Escala aprobada por el proyecto. Es la fuente de verdad: si otra regla la contradice, gana esta.
+
+| id | Rango | Lema | Edad aparente | Pulcritud | Barba | Vestuario | Porte | Nivel del héroe |
+|---|---|---|---|---|---|---|---|---|
+| `principiante` | Principiante | Inexperto | 18–22 | Aspecto descuidado, ropa sencilla y sin mantenimiento | Inexistente o incipiente, según la clase | Piezas básicas, telas simples, cuero barato | Postura insegura, hombros encorvados, mirada inquieta | 1–9 |
+| `combatiente` | Combatiente | Aprendiz avanzado | 23–28 | Aseado, aunque con desgaste de combate | Corta, recortada o a medio crecer | Equipo funcional, protecciones básicas, armas mejores | Postura firme, mirada directa, movimientos decididos | 10–19 |
+| `veterano` | Veterano | Experimentado | 30–38 | Cuidado personal constante; cicatrices y desgaste visibles | Completa, o lo que equivalga en el estilo de la clase | Armadura y accesorios personalizados, materiales de calidad | Aplomo, hombros abiertos, expresión seria y controlada | 20–34 |
+| `elite` | Élite | Campeón | 39–48 | Cuidado meticuloso; apariencia deliberada y distinguida | Elaborada, trenzada o estilizada con cuidado cuando corresponda | Piezas únicas, adornos de rango, materiales superiores | Presencia dominante, movimientos económicos, mirada serena | 35–49 |
+| `legendario` | Legendario | Máximo rango | 50–65, sin parecer débil | Impecable o de cuidado austero, según su cultura | Distintiva, icónica, reconocible a distancia | Equipo excepcional, símbolos de hazañas, detalles exclusivos | Autoridad absoluta, expresión contenida, postura erguida | 50 |
 
 ## Reglas generales
 

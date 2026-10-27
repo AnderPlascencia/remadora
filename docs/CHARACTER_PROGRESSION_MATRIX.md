@@ -6,14 +6,16 @@ Columnas: P = Principiante, C = Combatiente, V = Veterano, E = Élite, L = Legen
 
 Ejes comunes a todas las clases:
 
-| Eje | P | C | V | E | L |
+| Eje | P · Inexperto | C · Aprendiz avanzado | V · Experimentado | E · Campeón | L · Máximo rango |
 |---|---|---|---|---|---|
-| Edad aparente | 18–22 | 23–28 | 30–38 | 39–48 | 50–65 |
-| Cara (cambios) | Lisa, ojos muy abiertos | Lisa | Primeras marcas | Patas de gallo, surcos suaves | Surcos marcados, canas en cejas |
-| Pulcritud | Sencillo, despeinado, remiendos | Funcional, en parte cuidado | Mantenido, con desgaste de combate | Limpio y distinguido | Impecable, ceremonial |
-| Porte | Hombros caídos (+5), cabeza adelantada (+4), pies juntos | Firme | Equilibrado | Dominante, pecho alto (−2) | Autoridad serena (−3), pies más abiertos (+6) |
-| Expresión | Alerta | Decidido | Confiado | Dominante (párpados a media altura) | Sereno (párpados caídos, sonrisa leve) |
+| Edad aparente | 18–22 | 23–28 | 30–38 | 39–48 | 50–65 (sin debilidad) |
+| Cara (cambios) | Lisa, ojos inquietos | Lisa, mirada directa | Primeras cicatrices y líneas de expresión | Patas de gallo, surcos suaves | Surcos marcados, canas en cejas |
+| Pulcritud | Descuidado, sin mantenimiento | Aseado con desgaste de combate | Cuidado constante, cicatrices visibles | Meticuloso y distinguido | Impecable o austero según la cultura |
+| Barba | Ninguna o incipiente | Corta o recortada | Completa o su equivalente en la clase | Elaborada o trenzada | Icónica, reconocible a distancia |
+| Vestuario | Básico, telas simples, cuero barato | Funcional, protecciones básicas, mejor arma | Armadura y accesorios personalizados | Piezas únicas, adornos de rango | Equipo excepcional, símbolos de hazañas |
+| Porte | Inseguro, hombros encorvados | Firme, decidido | Aplomo, hombros abiertos, expresión seria | Dominante, mirada serena | Autoridad absoluta, postura erguida, expresión contenida |
 | Canas | 0 % | 0 % | 0 % | 22 % | 62 % |
+| Expresión | Inquieta, alerta | Directa, decidida | Seria, controlada | Serena, dominante | Contenida |
 
 ---
 

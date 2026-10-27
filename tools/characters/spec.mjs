@@ -1,14 +1,14 @@
 // Datos fijos del sistema de personajes: clases, rangos, paletas y formato de exportación.
 // Fuente única para el generador, los scripts de validación y el manifiesto.
 
-export const VERSION_MAESTRO = '1.0.0';
+export const VERSION_MAESTRO = '2.0.0';
 
 export const RANGOS = [
-  { id: 'principiante', nombre: 'Principiante', edad: '18–22', nivel: 1 },
-  { id: 'combatiente', nombre: 'Combatiente', edad: '23–28', nivel: 10 },
-  { id: 'veterano', nombre: 'Veterano', edad: '30–38', nivel: 20 },
-  { id: 'elite', nombre: 'Élite', edad: '39–48', nivel: 35 },
-  { id: 'legendario', nombre: 'Legendario', edad: '50–65', nivel: 50 },
+  { id: 'principiante', nombre: 'Principiante', lema: 'Inexperto', edad: '18–22', nivel: 1 },
+  { id: 'combatiente', nombre: 'Combatiente', lema: 'Aprendiz avanzado', edad: '23–28', nivel: 10 },
+  { id: 'veterano', nombre: 'Veterano', lema: 'Experimentado', edad: '30–38', nivel: 20 },
+  { id: 'elite', nombre: 'Élite', lema: 'Campeón', edad: '39–48', nivel: 35 },
+  { id: 'legendario', nombre: 'Legendario', lema: 'Máximo rango', edad: '50–65', nivel: 50 },
 ];
 
 // Paleta por clase: piel y pelo fijos (invariantes de identidad) + roles de material.
@@ -41,7 +41,7 @@ export const FORMATO = {
   cuerpo: { ancho: 720, alto: 840 },  // PNG de cuerpo entero (escala 2x)
   retrato: { ancho: 256, alto: 256 }, // PNG de retrato (cabeza y hombros)
   // Recorte del retrato en unidades del viewBox: x, y, ancho, alto.
-  recorteRetrato: [60, 4, 180, 180],
+  recorteRetrato: [96, 2, 108, 108],
   pivote: { x: 0.5, y: 0.97 },        // centro de los pies, normalizado
   margenMin: 4,                       // px transparentes mínimos alrededor del contenido
   tamanosJuego: [48, 84, 180],        // alturas en px en las que se usa en la app

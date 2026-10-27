@@ -9,12 +9,12 @@ El estado de cada asset se guarda en `assets/characters/approvals.json`. Este do
 | Nombre de la app | Rower |
 | Paleta de la app (15) | B: verde táctico `#556B2F`, acento ámbar `#F2A33A`, fondo `#111410` |
 | Logo (16) | A: remos cruzados con letra stencil |
-| Estilo de personaje | Cartoon retro, cabeza grande, contorno grueso, colores planos con sombra de borde |
+| Estilo de personaje | Semirrealista (v2). El cartoon retro de cabeza grande (v1) se descartó por demasiado básico. |
 | Progresión del cuerpo (14) | C: el nivel marca la base y los atributos la inclinan (Fuerza → masa, Resistencia → definición) |
 | Progresión de rango | Edad, pulcritud, barba y cabello, vestuario y porte, al estilo de los rangos de *AdVenture Communist* |
 | Clases | Vikingo, Pirata, Samurái, Polinesio, Romano |
 
-## Diseños maestros (rango Principiante), versión 1.0.0
+## Diseños maestros (rango Principiante), versión 2.0.0
 
 | Clase | Archivo | Estado |
 |---|---|---|
@@ -33,7 +33,7 @@ Hoja de contacto: `assets/characters/_qa/contact_principiante.png`.
 3. Confirmar las estilizaciones de torso descubierto (`CHARACTER_RULES.md`).
 4. Migración de clases en la app: explorador, monje y gladiador desaparecen. Propuesta para los héroes ya creados: gladiador pasa a romano, explorador a polinesio y monje a samurái, conservando XP, talentos y objetos.
 5. Animaciones necesarias, que dependen de las decisiones 11 y 12 (`ANIMATION_SPEC.md`).
-6. Si se autoriza algún proveedor de imagen o vídeo de pago (hoy no se usa ninguno).
+6. Si se autoriza algún proveedor de imagen o vídeo de pago (hoy no se usa ninguno). El usuario decide después de ver la v2 vectorial.
 
 ## Exploraciones previas (no son referencia)
 

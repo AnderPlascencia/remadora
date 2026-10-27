@@ -1,7 +1,7 @@
 {
   "clase": "vikingo",
   "rango": "principiante",
-  "versionMaestro": "1.0.0",
+  "versionMaestro": "2.0.0",
   "herramienta": {
     "nombre": "tools/characters/generator.mjs",
     "motor": "SVG + Chromium (Playwright)",
