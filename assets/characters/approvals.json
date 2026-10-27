@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "registros": {
+    "vikingo/principiante": {
+      "estado": "pending",
+      "version": "1.0.0",
+      "notas": ""
+    },
+    "pirata/principiante": {
+      "estado": "pending",
+      "version": "1.0.0",
+      "notas": ""
+    },
+    "samurai/principiante": {
+      "estado": "pending",
+      "version": "1.0.0",
+      "notas": ""
+    },
+    "polinesio/principiante": {
+      "estado": "pending",
+      "version": "1.0.0",
+      "notas": ""
+    },
+    "romano/principiante": {
+      "estado": "pending",
+      "version": "1.0.0",
+      "notas": ""
+    }
+  }
+}

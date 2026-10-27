@@ -1,0 +1,29 @@
+{
+  "clase": "romano",
+  "rango": "principiante",
+  "versionMaestro": "1.0.0",
+  "herramienta": {
+    "nombre": "tools/characters/generator.mjs",
+    "motor": "SVG + Chromium (Playwright)",
+    "parametros": {
+      "rango": "principiante",
+      "masa": 0,
+      "def": 0
+    }
+  },
+  "fuente": {
+    "tipo": "vector generado por código",
+    "licencia": "propia del proyecto",
+    "proveedorExterno": null
+  },
+  "viewBox": [
+    -30,
+    -2,
+    360,
+    420
+  ],
+  "pivote": {
+    "x": 0.5,
+    "y": 0.97
+  }
+}

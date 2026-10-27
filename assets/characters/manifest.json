@@ -1,0 +1,507 @@
+{
+  "schema": 1,
+  "generadoPor": "tools/build-manifest.mjs",
+  "total": 15,
+  "assets": [
+    {
+      "id": "vikingo.principiante.cuerpo",
+      "clase": "vikingo",
+      "rango": "principiante",
+      "nombre": "vikingo_principiante_full.png",
+      "ruta": "assets/characters/vikingo/principiante/vikingo_principiante_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 76834,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "vikingo.principiante.retrato",
+      "clase": "vikingo",
+      "rango": "principiante",
+      "nombre": "vikingo_principiante_portrait.png",
+      "ruta": "assets/characters/vikingo/principiante/vikingo_principiante_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 23014,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "vikingo.principiante.fuente",
+      "clase": "vikingo",
+      "rango": "principiante",
+      "nombre": "vikingo_principiante.svg",
+      "ruta": "assets/characters/vikingo/principiante/vikingo_principiante.svg",
+      "tipo": "fuente",
+      "dimensiones": {
+        "viewBox": [
+          -30,
+          -2,
+          360,
+          420
+        ]
+      },
+      "formato": "svg",
+      "transparencia": true,
+      "bytes": 17369,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "pirata.principiante.cuerpo",
+      "clase": "pirata",
+      "rango": "principiante",
+      "nombre": "pirata_principiante_full.png",
+      "ruta": "assets/characters/pirata/principiante/pirata_principiante_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 76045,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "pirata.principiante.retrato",
+      "clase": "pirata",
+      "rango": "principiante",
+      "nombre": "pirata_principiante_portrait.png",
+      "ruta": "assets/characters/pirata/principiante/pirata_principiante_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 21886,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "pirata.principiante.fuente",
+      "clase": "pirata",
+      "rango": "principiante",
+      "nombre": "pirata_principiante.svg",
+      "ruta": "assets/characters/pirata/principiante/pirata_principiante.svg",
+      "tipo": "fuente",
+      "dimensiones": {
+        "viewBox": [
+          -30,
+          -2,
+          360,
+          420
+        ]
+      },
+      "formato": "svg",
+      "transparencia": true,
+      "bytes": 18092,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "samurai.principiante.cuerpo",
+      "clase": "samurai",
+      "rango": "principiante",
+      "nombre": "samurai_principiante_full.png",
+      "ruta": "assets/characters/samurai/principiante/samurai_principiante_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 70053,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "samurai.principiante.retrato",
+      "clase": "samurai",
+      "rango": "principiante",
+      "nombre": "samurai_principiante_portrait.png",
+      "ruta": "assets/characters/samurai/principiante/samurai_principiante_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 19236,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "samurai.principiante.fuente",
+      "clase": "samurai",
+      "rango": "principiante",
+      "nombre": "samurai_principiante.svg",
+      "ruta": "assets/characters/samurai/principiante/samurai_principiante.svg",
+      "tipo": "fuente",
+      "dimensiones": {
+        "viewBox": [
+          -30,
+          -2,
+          360,
+          420
+        ]
+      },
+      "formato": "svg",
+      "transparencia": true,
+      "bytes": 14048,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "polinesio.principiante.cuerpo",
+      "clase": "polinesio",
+      "rango": "principiante",
+      "nombre": "polinesio_principiante_full.png",
+      "ruta": "assets/characters/polinesio/principiante/polinesio_principiante_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 72087,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "polinesio.principiante.retrato",
+      "clase": "polinesio",
+      "rango": "principiante",
+      "nombre": "polinesio_principiante_portrait.png",
+      "ruta": "assets/characters/polinesio/principiante/polinesio_principiante_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 17398,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "polinesio.principiante.fuente",
+      "clase": "polinesio",
+      "rango": "principiante",
+      "nombre": "polinesio_principiante.svg",
+      "ruta": "assets/characters/polinesio/principiante/polinesio_principiante.svg",
+      "tipo": "fuente",
+      "dimensiones": {
+        "viewBox": [
+          -30,
+          -2,
+          360,
+          420
+        ]
+      },
+      "formato": "svg",
+      "transparencia": true,
+      "bytes": 13709,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "romano.principiante.cuerpo",
+      "clase": "romano",
+      "rango": "principiante",
+      "nombre": "romano_principiante_full.png",
+      "ruta": "assets/characters/romano/principiante/romano_principiante_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 74147,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "romano.principiante.retrato",
+      "clase": "romano",
+      "rango": "principiante",
+      "nombre": "romano_principiante_portrait.png",
+      "ruta": "assets/characters/romano/principiante/romano_principiante_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 18644,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    },
+    {
+      "id": "romano.principiante.fuente",
+      "clase": "romano",
+      "rango": "principiante",
+      "nombre": "romano_principiante.svg",
+      "ruta": "assets/characters/romano/principiante/romano_principiante.svg",
+      "tipo": "fuente",
+      "dimensiones": {
+        "viewBox": [
+          -30,
+          -2,
+          360,
+          420
+        ]
+      },
+      "formato": "svg",
+      "transparencia": true,
+      "bytes": 16694,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "1.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/characters/generator.mjs",
+        "motor": "SVG + Chromium (Playwright)",
+        "parametros": {
+          "rango": "principiante",
+          "masa": 0,
+          "def": 0
+        }
+      }
+    }
+  ]
+}
