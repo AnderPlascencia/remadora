@@ -24,7 +24,8 @@ export const CLASES = [
 ];
 export const claseDe = (clave) => CLASES.find((c) => c.clave === clave) || null;
 
-export const NIVEL_MAX = 50;
+// 9 rangos de personaje, uno cada 10 niveles: Legendario en el 80 y 10 niveles más de recorrido.
+export const NIVEL_MAX = 90;
 // XP total para llegar a un nivel: con 3 sesiones por semana, nivel 10 en un mes y 30 en unos 6 meses.
 export const xpParaNivel = (n) => Math.round(250 * Math.max(0, n - 1) ** 1.6);
 export function nivelDe(xp) {
@@ -33,7 +34,8 @@ export function nivelDe(xp) {
   return n;
 }
 
-const TITULOS = [[1, 'Novato'], [5, 'Aprendiz'], [10, 'Remero'], [15, 'Veterano'], [20, 'Capitán'], [30, 'Campeón'], [40, 'Leyenda'], [50, 'Mito']];
+// Coinciden con los rangos de personaje (tools/characters/spec.mjs).
+const TITULOS = [[1, 'Novato'], [10, 'Aprendiz'], [20, 'Combatiente'], [30, 'Guerrero'], [40, 'Veterano'], [50, 'Campeón'], [60, 'Élite'], [70, 'Maestro'], [80, 'Legendario']];
 export const tituloDe = (nivel) => TITULOS.filter(([n]) => nivel >= n).at(-1)[1];
 
 // ---------- Talentos: 3 por atributo. El 1 y el 3 son pasivos; el 2 es una habilidad activa para la carrera. ----------

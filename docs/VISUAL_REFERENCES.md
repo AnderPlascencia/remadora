@@ -10,7 +10,7 @@ El estado de cada asset se guarda en `assets/characters/approvals.json`. Este do
 | Paleta de la app (15) | B: verde táctico `#556B2F`, acento ámbar `#F2A33A`, fondo `#111410` |
 | Logo (16) | A: remos cruzados con letra stencil |
 | Estilo de personaje | El de la lámina «Clases y progresión» aportada por el usuario (v3). Antes: vectorial semirrealista (v2) y cartoon de cabeza grande (v1), descartados. |
-| Ritmo de rangos | Un rango cada 10 niveles, 9 rangos (los que dibuja la lámina) |
+| Ritmo de rangos | Un rango cada 10 niveles, 9 rangos (los que dibuja la lámina); nivel máximo 90 |
 | Progresión del cuerpo (14) | C: el nivel marca la base y los atributos la inclinan (Fuerza → masa, Resistencia → definición) |
 | Progresión de rango | Edad, pulcritud, barba y cabello, vestuario y porte, al estilo de los rangos de *AdVenture Communist* |
 | Clases | Vikingo, Pirata, Samurái, Polinesio, Romano |
@@ -31,12 +31,11 @@ Limitaciones conocidas de la fuente:
 ## Decisiones pendientes
 
 1. Aprobar o pedir cambios en los 45 personajes extraídos.
-2. Subir el nivel máximo de la app de 50 a 80 o más para que exista el rango Legendario.
-3. **Cultura polinesia de referencia.** Propuesta: Hawái (malo, kākau, mahiole, ʻahu ʻula, leiomano). La alternativa es Aotearoa, con estética maorí (tā moko, korowai, taiaha). No se mezclan.
-4. Confirmar las estilizaciones de torso descubierto (`CHARACTER_RULES.md`).
-5. Migración de clases en la app: explorador, monje y gladiador desaparecen. Propuesta para los héroes ya creados: gladiador pasa a romano, explorador a polinesio y monje a samurái, conservando XP, talentos y objetos.
-6. Animaciones necesarias, que dependen de las decisiones 11 y 12 (`ANIMATION_SPEC.md`).
-7. Si se autoriza algún proveedor de imagen o vídeo de pago (hoy no se usa ninguno).
+2. **Cultura polinesia de referencia.** Propuesta: Hawái (malo, kākau, mahiole, ʻahu ʻula, leiomano). La alternativa es Aotearoa, con estética maorí (tā moko, korowai, taiaha). No se mezclan.
+3. Confirmar las estilizaciones de torso descubierto (`CHARACTER_RULES.md`).
+4. Migración de clases en la app: explorador, monje y gladiador desaparecen. Propuesta para los héroes ya creados: gladiador pasa a romano, explorador a polinesio y monje a samurái, conservando XP, talentos y objetos.
+5. Animaciones necesarias, que dependen de las decisiones 11 y 12 (`ANIMATION_SPEC.md`).
+6. Si se autoriza algún proveedor de imagen o vídeo de pago (hoy no se usa ninguno).
 
 ## Exploraciones previas (no son referencia)
 

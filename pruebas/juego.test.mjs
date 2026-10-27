@@ -6,6 +6,12 @@ assert.equal(J.nivelDe(0), 1);
 assert.equal(J.nivelDe(J.xpParaNivel(10)), 10);
 assert.equal(J.nivelDe(J.xpParaNivel(10) - 1), 9);
 assert.equal(J.nivelDe(1e9), J.NIVEL_MAX);
+assert.equal(J.NIVEL_MAX, 90);
+assert.equal(J.tituloDe(9), 'Novato');
+assert.equal(J.tituloDe(10), 'Aprendiz');
+assert.equal(J.tituloDe(79), 'Maestro');
+assert.equal(J.tituloDe(80), 'Legendario');
+assert.equal(J.tituloDe(90), 'Legendario');
 
 // 30 min a 150 W con FTP 200: zona 2-3 → resistencia; luego series sobre FTP → fuerza y agilidad.
 const sesion = (dia, w, dur, extra = {}) => ({

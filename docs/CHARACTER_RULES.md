@@ -26,9 +26,9 @@ Vigente desde la versión 3.0.0: **9 rangos, uno cada 10 niveles**, tomados de l
 | `campeon` | Campeón | Dominio | 38–43 | 50–59 |
 | `elite` | Élite | Distinguido | 43–50 | 60–69 |
 | `maestro` | Maestro | Leyenda local | 50–57 | 70–79 |
-| `legendario` | Legendario | Inmortal | 57–65 | 80 o más |
+| `legendario` | Legendario | Inmortal | 57–65 | 80–90 |
 
-Los ejes de pulcritud, barba, vestuario y porte de la escala anterior de 5 rangos siguen valiendo como dirección: crecen de forma gradual a lo largo de los 9. **Pendiente:** el nivel máximo de la app es 50 (`juego.js → NIVEL_MAX`); con un rango cada 10 niveles hay que subirlo al menos a 80 para llegar a Legendario.
+Los ejes de pulcritud, barba, vestuario y porte de la escala anterior de 5 rangos siguen valiendo como dirección: crecen de forma gradual a lo largo de los 9. El nivel máximo de la app es 90 (`juego.js → NIVEL_MAX`, decidido por el usuario), y los títulos del héroe usan los mismos nombres de rango.
 
 ## Reglas generales
 
