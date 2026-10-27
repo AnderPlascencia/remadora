@@ -11,8 +11,9 @@ import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
+import * as O from './objetos.js';
 
-const VERSION = '0.8.0';
+const VERSION = '0.9.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -826,6 +827,7 @@ function carreraActual() {
     cabecera: [l1, l2],
     tono,
     ritmo: sesion.ritmo ? { v: 500 / sesion.ritmo, etiqueta: `Ritmo ${formatoSplit(sesion.ritmo)}` } : null,
+    yoColor: O.objeto(leerPersonaje().equipo?.bote)?.color || null,
   };
   return { texto, tono, estado, proyeccion: p };
 }
@@ -1605,37 +1607,55 @@ async function pintarHistorial() {
 
 // ---------- Héroe ----------
 function leerPersonaje() {
-  try { return JSON.parse(ajustes.leer('personaje', 'null')); } catch { return null; }
+  try { return JSON.parse(ajustes.leer('personaje', 'null')) || {}; } catch { return {}; }
+}
+function guardarPersonaje(cambios) {
+  ajustes.escribir('personaje', JSON.stringify({ ...leerPersonaje(), ...cambios }));
 }
 const emblema = (c) => `<svg viewBox="0 0 24 24" aria-hidden="true">${c.icono}</svg>`;
 const nombreAtributo = (k) => J.ATRIBUTOS.find((a) => a.clave === k)?.nombre || k;
-const miles = (n) => n.toLocaleString('es-MX');
+const miles = (n) => Math.round(n).toLocaleString('es-MX');
+const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
 let claseElegida = null;
+let seccionHeroe = 'ficha';
+let talentoElegido = null;
+
+async function estadoHeroe() {
+  const per = leerPersonaje();
+  return { per, h: J.estadoJuego(await db.listar('sesiones'), { ftp: ftp(), per }) };
+}
 
 async function pintarHeroe() {
   const per = leerPersonaje();
-  const clase = J.claseDe(per?.clase);
+  const clase = J.claseDe(per.clase);
   $('#heroe-crear').hidden = !!clase;
   $('#heroe-ficha').hidden = !clase;
   if (!clase) {
-    claseElegida = claseElegida || null;
     $('#clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase" role="radio" aria-checked="${c.clave === claseElegida}" data-clase="${c.clave}">
       <span class="emblema">${emblema(c)}</span><b>${c.nombre}</b><span class="fav">+15 % ${nombreAtributo(c.favorito)}</span><small>${c.lema}</small></button>`).join('');
     $('#btn-crear-heroe').disabled = !claseElegida;
-    if (per?.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
+    if (per.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
     return;
   }
   const sesiones = await db.listar('sesiones');
-  const h = J.progresoHeroe(sesiones, { ftp: ftp(), clase: clase.clave });
-  $('#heroe-emblema').innerHTML = emblema(clase);
+  const h = J.estadoJuego(sesiones, { ftp: ftp(), per });
+  $('#heroe-avatar').innerHTML = O.dibujarHeroe(per, { tam: 84 }) + `<span class="emblema mini">${emblema(clase)}</span>`;
   $('#heroe-titulo').textContent = per.nombre || `${clase.nombre} sin nombre`;
   $('#heroe-clase').textContent = `${clase.nombre} · ${h.titulo}`;
+  $('#heroe-monedas').innerHTML = `${icoMoneda}${miles(h.monedas)}`;
   $('#heroe-nivel').textContent = h.nivel;
   const pct = h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100;
   $('#heroe-xp-barra').style.width = `${pct}%`;
   $('#heroe-xp-texto').textContent = h.hasta ? `${miles(h.xp)} XP · faltan ${miles(h.hasta - h.xp)} para el nivel ${h.nivel + 1}` : `${miles(h.xp)} XP · nivel máximo`;
-  $('#heroe-talentos').hidden = !h.talentos;
-  $('#heroe-talentos').textContent = `Tienes ${h.talentos} ${h.talentos === 1 ? 'punto de talento guardado' : 'puntos de talento guardados'} para el árbol de habilidades, que llega pronto.`;
+  for (const b of document.querySelectorAll('.heroe-tabs button')) {
+    b.classList.toggle('activa', b.dataset.hp === seccionHeroe);
+    if (b.dataset.hp === 'talentos') b.dataset.aviso = h.talentosLibres > 0 ? h.talentosLibres : '';
+  }
+  for (const el of document.querySelectorAll('.hp')) el.hidden = el.id !== `hp-${seccionHeroe}`;
+  ({ ficha: pintarFicha, talentos: pintarTalentos, misiones: pintarMisiones, armario: pintarArmario, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
+}
+
+function pintarFicha(h, per, clase, sesiones) {
   const max = Math.max(50, ...Object.values(h.atributos));
   $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div class="atributo${a.clave === clase.favorito ? ' fav' : ''}">
     <div class="fila"><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''}</b><span class="valor">${h.atributos[a.clave]}</span></div>
@@ -1643,10 +1663,95 @@ async function pintarHeroe() {
   const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 5);
   $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
     const g = h.porSesion.get(x.fecha);
-    return `<li><div class="fila-xp"><b>${fechaCorta(x.fecha)} · ${x.entrenamiento || 'Remo libre'}</b> <span class="xp">+${miles(g.xp)} XP</span></div>
+    return `<li><div><b>${fechaCorta(x.fecha)} · ${x.entrenamiento || 'Remo libre'}</b> <span class="xp">+${miles(g.xp)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
       <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
+
+function pintarTalentos(h, per) {
+  const apr = per.talentos || {};
+  $('#talentos-libres').textContent = h.talentosLibres > 0
+    ? `Tienes ${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento. Cada nivel de héroe te da uno.`
+    : 'Sin puntos libres: sube de nivel para ganar más.';
+  $('#arbol').innerHTML = J.ATRIBUTOS.map((a) => {
+    const ts = J.TALENTOS.filter((t) => t.atributo === a.clave);
+    const elegido = ts.find((t) => t.id === talentoElegido);
+    const nodos = ts.map((t) => {
+      const estado = apr[t.id] != null ? 'aprendido' : J.motivoBloqueo(t.id, h, apr) ? 'bloqueado' : 'disponible';
+      return `<button type="button" class="nodo ${estado}${t.id === talentoElegido ? ' elegido' : ''}" data-talento="${t.id}">
+        <span class="nodo-nivel">${['I', 'II', 'III'][t.nivel - 1]}</span><b>${t.nombre}</b><small>${t.activa ? 'Activa' : 'Pasiva'} · ${J.COSTO_TALENTO[t.nivel]} pt</small></button>`;
+    }).join('<span class="enlace" aria-hidden="true"></span>');
+    let detalle = '';
+    if (elegido) {
+      const motivo = apr[elegido.id] != null ? null : J.motivoBloqueo(elegido.id, h, apr);
+      detalle = `<div class="nodo-detalle"><p>${elegido.texto}${elegido.activa ? ' <em>Se activa cuando llegue la carrera de tu héroe.</em>' : ''}</p>${
+        apr[elegido.id] != null ? '<span class="ok-texto">Aprendido</span>'
+          : motivo ? `<span class="suave">${motivo}</span>`
+            : `<button type="button" class="boton primario" data-aprender="${elegido.id}">Aprender (${J.COSTO_TALENTO[elegido.nivel]} ${J.COSTO_TALENTO[elegido.nivel] === 1 ? 'punto' : 'puntos'})</button>`}</div>`;
+    }
+    return `<div class="rama"><div class="rama-titulo"><b>${a.nombre}</b><span>${h.atributos[a.clave]}</span></div><div class="nodos">${nodos}</div>${detalle}</div>`;
+  }).join('');
+}
+
+function filaMision(m) {
+  const pct = Math.min(100, (100 * m.valor) / m.meta);
+  const valor = m.meta >= 100 ? miles(m.valor) : Math.round(m.valor * 10) / 10;
+  return `<li class="${m.hecha ? 'hecha' : ''}"><div class="mision-fila"><span>${m.hecha ? ico('i-check') : ''}${m.texto}</span>
+    ${m.monedas ? `<span class="monedas">${icoMoneda}${m.monedas}</span>` : ''}</div>
+    <div class="progreso"><div style="width:${pct}%"></div></div><small>${valor} de ${miles(m.meta)}${m.premio ? ` · premio: <b>${m.premio}</b>` : ''}</small></li>`;
+}
+
+function pintarMisiones(h) {
+  $('#mis-diarias').innerHTML = h.diarias.map((m) => filaMision(m)).join('');
+  $('#mis-semanales').innerHTML = h.semanales.map((m) => filaMision(m)).join('');
+  const c = h.capitulo;
+  $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p></div>
+    <ul class="lista misiones">${c.progreso.map((r) => filaMision({ texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
+    <div class="jefe ${c.progreso.every((r) => r.valor >= r.meta) ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}${
+      c.progreso.every((r) => r.valor >= r.meta) ? ' · ¡ya puedes enfrentarlo!' : ' · se desbloquea al cumplir lo de arriba'}</small></div>
+      <span class="premio">${icoMoneda}${c.monedas} + ${O.objeto(c.objeto).nombre}</span></div>`
+    : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
+  $('#mis-hazanas').innerHTML = h.hazanas.map((x) => filaMision({ texto: `${x.nombre}: ${x.texto}`, meta: x.meta, valor: x.valor, monedas: x.monedas, premio: O.objeto(x.objeto).nombre, hecha: x.hecha })).join('');
+}
+
+function tarjetaObjeto(x, per, { accion = '', extra = '' } = {}) {
+  const prueba = { ...per, equipo: { ...(per.equipo || {}), [x.ranura]: x.id } };
+  const vista = x.ranura === 'bote' ? `<span class="bote-muestra" style="background:${x.color}"></span>` : O.dibujarHeroe(prueba, { tam: 72 });
+  const r = O.RAREZAS[x.rareza];
+  return `<div class="objeto" style="--rareza:${r.color}">${vista}<b>${x.nombre}</b><small>${r.nombre}</small>${extra}${accion}</div>`;
+}
+
+function pintarArmario(h, per) {
+  const equipo = per.equipo || {};
+  $('#armario-vista').innerHTML = O.dibujarHeroe(per, { tam: 180 });
+  $('#pieles').innerHTML = O.PIELES.map((c, i) => `<button type="button" class="piel" role="radio" aria-checked="${(per.piel ?? 1) === i}" data-piel="${i}" style="background:${c}" aria-label="Tono ${i + 1}"></button>`).join('');
+  $('#armario').innerHTML = O.RANURAS.map((r) => {
+    const mios = O.OBJETOS.filter((x) => x.ranura === r.clave && h.poseidos.has(x.id));
+    const items = mios.map((x) => tarjetaObjeto(x, per, {
+      accion: `<button type="button" class="boton chico${equipo[r.clave] === x.id ? ' primario' : ''}" data-equipar="${x.id}">${equipo[r.clave] === x.id ? 'Puesto' : 'Ponerme'}</button>`,
+    })).join('');
+    return `<h3>${r.nombre}${r.clave === 'bote' ? ' <small>(se ve en la carrera)</small>' : ''}</h3><div class="objetos">${items || '<p class="suave">Aún no tienes nada aquí. Mira la tienda o las misiones.</p>'}</div>`;
+  }).join('');
+  $('#colecciones').innerHTML = O.COLECCIONES.map((c) => {
+    const todos = O.OBJETOS.filter((x) => x.coleccion === c.clave);
+    const tengo = todos.filter((x) => h.poseidos.has(x.id)).length;
+    return `<div class="coleccion${tengo === todos.length ? ' completa' : ''}"><b>${c.nombre}</b><span>${tengo} de ${todos.length}</span>
+      <div class="at-barra"><div style="width:${(100 * tengo) / todos.length}%"></div></div></div>`;
+  }).join('');
+}
+
+function pintarTienda(h, per) {
+  const lunes = J.lunesDe(Date.now());
+  const items = J.tiendaSemana(lunes, h.poseidos);
+  const sig = new Date(`${lunes}T12:00`);
+  sig.setDate(sig.getDate() + 7);
+  $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}. Ganas monedas con cada sesión y con las misiones.`;
+  $('#tienda').innerHTML = items.length ? items.map((x) => tarjetaObjeto(x, per, {
+    extra: `<span class="monedas">${icoMoneda}${x.precio}</span>`,
+    accion: `<button type="button" class="boton chico primario" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button>`,
+  })).join('') : '<p class="suave">Ya tienes todo lo de la tienda. ¡Vuelve el lunes!</p>';
+}
+
 $('#clases').addEventListener('click', (e) => {
   const b = e.target.closest('[data-clase]');
   if (!b) return;
@@ -1656,32 +1761,82 @@ $('#clases').addEventListener('click', (e) => {
 });
 $('#btn-crear-heroe').addEventListener('click', () => {
   if (!claseElegida) return;
-  ajustes.escribir('personaje', JSON.stringify({ ...leerPersonaje(), clase: claseElegida, nombre: $('#heroe-nombre').value.trim() }));
+  guardarPersonaje({ clase: claseElegida, nombre: $('#heroe-nombre').value.trim() });
   confeti();
   pintarHeroe();
 });
 $('#btn-cambiar-clase').addEventListener('click', () => {
-  const per = leerPersonaje();
-  claseElegida = per?.clase || null;
-  ajustes.escribir('personaje', JSON.stringify({ ...per, clase: null }));
+  claseElegida = leerPersonaje().clase || null;
+  guardarPersonaje({ clase: null });
+  pintarHeroe();
+});
+document.querySelector('.heroe-tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-hp]');
+  if (!b) return;
+  seccionHeroe = b.dataset.hp;
+  pintarHeroe();
+});
+$('#arbol').addEventListener('click', async (e) => {
+  const ap = e.target.closest('[data-aprender]');
+  if (ap) {
+    const { per, h } = await estadoHeroe();
+    if (J.motivoBloqueo(ap.dataset.aprender, h, per.talentos || {})) return;
+    guardarPersonaje({ talentos: { ...(per.talentos || {}), [ap.dataset.aprender]: Date.now() } });
+    toast(`Aprendiste ${J.talento(ap.dataset.aprender).nombre}`);
+    vibrar(80);
+    pintarHeroe();
+    return;
+  }
+  const n = e.target.closest('[data-talento]');
+  if (n) { talentoElegido = talentoElegido === n.dataset.talento ? null : n.dataset.talento; pintarHeroe(); }
+});
+$('#pieles').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-piel]');
+  if (b) { guardarPersonaje({ piel: Number(b.dataset.piel) }); pintarHeroe(); }
+});
+$('#armario').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-equipar]');
+  if (!b) return;
+  const x = O.objeto(b.dataset.equipar);
+  const equipo = { ...(leerPersonaje().equipo || {}) };
+  if (equipo[x.ranura] === x.id) delete equipo[x.ranura];
+  else equipo[x.ranura] = x.id;
+  guardarPersonaje({ equipo });
+  pintarHeroe();
+});
+$('#tienda').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-comprar]');
+  if (!b) return;
+  const { per, h } = await estadoHeroe();
+  const x = J.tiendaSemana(J.lunesDe(Date.now()), h.poseidos).find((y) => y.id === b.dataset.comprar);
+  if (!x || h.monedas < x.precio) return;
+  guardarPersonaje({ compras: [...(per.compras || []), x.id], gastado: (per.gastado || 0) + x.precio, equipo: { ...(per.equipo || {}), [x.ranura]: x.id } });
+  confeti(1500);
+  toast(`${x.nombre}: ¡ya es tuyo y te lo pusiste!`);
   pintarHeroe();
 });
 
-// XP y atributos que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel.
+// XP, monedas y logros que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel o venciste a un jefe.
 function pintarXpSesion(s, previas, resumen) {
   const caja = $('#hoja-xp');
-  const clase = J.claseDe(leerPersonaje()?.clase);
-  const h = J.progresoHeroe([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), clase: clase?.clave });
+  const per = leerPersonaje();
+  const clase = J.claseDe(per.clase);
+  const h = J.estadoJuego([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), per });
   const g = h.porSesion.get(s.fecha);
   caja.hidden = !g;
   if (!g) return false;
+  const logros = h.logros.filter((l) => l.fecha === s.fecha);
+  const monedas = g.monedas + logros.reduce((a, l) => a + l.monedas, 0);
   const subio = resumen && g.nivelDespues > g.nivelAntes;
-  caja.innerHTML = `<span class="xp-total">+${miles(g.xp)} XP</span>${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!</span>` : ''}
+  caja.innerHTML = `<span class="xp-total">+${miles(g.xp)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
+    ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!</span>` : ''}
+    ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(l.tipo === 'jefe' || l.tipo === 'hazana' ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · ganaste <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="monedas">${icoMoneda}${l.monedas}</span></div>`).join('')}
     <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
     <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul>
     ${clase ? '' : '<p class="ayuda">Crea tu héroe en la pestaña Héroe para darle vida a esta experiencia.</p>'}`;
   if (subio) hablar(`Subiste a nivel ${g.nivelDespues}`);
-  return subio;
+  if (resumen && logros.some((l) => l.tipo === 'jefe')) hablar('¡Jefe vencido!');
+  return subio || logros.some((l) => l.tipo === 'jefe' || l.tipo === 'hazana');
 }
 
 // ---------- Resumen / detalle de sesión ----------

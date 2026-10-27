@@ -262,21 +262,56 @@
       </div>
       <div id="heroe-ficha" hidden>
         <div class="heroe-tarjeta">
-          <div id="heroe-emblema" class="emblema"></div>
+          <div id="heroe-avatar" class="heroe-avatar"></div>
           <div class="crece">
             <b id="heroe-titulo" class="heroe-nombre"></b>
             <span id="heroe-clase" class="suave"></span>
+            <span id="heroe-monedas" class="monedas"></span>
           </div>
           <div class="heroe-nivel"><span class="etq">Nivel</span><b id="heroe-nivel">1</b></div>
         </div>
         <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div id="heroe-xp-barra"></div></div>
         <p id="heroe-xp-texto" class="ayuda"></p>
-        <p id="heroe-talentos" class="aviso suave-aviso"></p>
-        <h2>Atributos</h2>
-        <div id="heroe-atributos" class="atributos"></div>
-        <h2>Últimas sesiones</h2>
-        <ul id="heroe-sesiones" class="lista heroe-sesiones"></ul>
-        <div class="fila-botones"><button id="btn-cambiar-clase" class="boton">Cambiar de clase</button></div>
+        <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
+          <button type="button" data-hp="ficha" class="activa">Ficha</button>
+          <button type="button" data-hp="talentos">Talentos</button>
+          <button type="button" data-hp="misiones">Misiones</button>
+          <button type="button" data-hp="armario">Armario</button>
+          <button type="button" data-hp="tienda">Tienda</button>
+        </div>
+        <div id="hp-ficha" class="hp">
+          <h2>Atributos</h2>
+          <div id="heroe-atributos" class="atributos"></div>
+          <h2>Últimas sesiones</h2>
+          <ul id="heroe-sesiones" class="lista heroe-sesiones"></ul>
+          <div class="fila-botones"><button id="btn-cambiar-clase" class="boton">Cambiar de clase</button></div>
+        </div>
+        <div id="hp-talentos" class="hp" hidden>
+          <p id="talentos-libres" class="aviso suave-aviso"></p>
+          <div id="arbol" class="arbol"></div>
+        </div>
+        <div id="hp-misiones" class="hp" hidden>
+          <h2>Hoy</h2>
+          <ul id="mis-diarias" class="lista misiones"></ul>
+          <h2>Esta semana</h2>
+          <ul id="mis-semanales" class="lista misiones"></ul>
+          <h2>Historia</h2>
+          <div id="mis-capitulo" class="capitulo"></div>
+          <h2>Hazañas</h2>
+          <ul id="mis-hazanas" class="lista misiones"></ul>
+        </div>
+        <div id="hp-armario" class="hp" hidden>
+          <div id="armario-vista" class="armario-vista"></div>
+          <span class="etq-campo">Tono de piel</span>
+          <div id="pieles" class="pieles" role="radiogroup" aria-label="Tono de piel"></div>
+          <div id="armario" class="armario"></div>
+          <h2>Colecciones</h2>
+          <div id="colecciones" class="colecciones"></div>
+        </div>
+        <div id="hp-tienda" class="hp" hidden>
+          <p id="tienda-info" class="ayuda"></p>
+          <div id="tienda" class="tienda"></div>
+        </div>
       </div>
     </section>
 

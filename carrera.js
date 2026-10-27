@@ -65,7 +65,7 @@ function interpolar(c, ahora) {
   c.yoVista += (objetivo - c.yoVista) * Math.min(1, dt * 8);
   if (sinMovimiento) c.yoVista = objetivo;
   const t = e.t + el;
-  const botes = [{ nombre: 'Tú', color: COLOR_YO, dist: c.yoVista, spm: e.pausa ? 0 : e.yo.spm, v: e.pausa ? 0 : e.yo.v, yo: true }];
+  const botes = [{ nombre: 'Tú', color: e.yoColor || COLOR_YO, dist: c.yoVista, spm: e.pausa ? 0 : e.yo.spm, v: e.pausa ? 0 : e.yo.v, yo: true }];
   e.rivales.forEach((r, i) => {
     const d = distanciaEn(r.muestras, t);
     const d2 = distanciaEn(r.muestras, t + 1);

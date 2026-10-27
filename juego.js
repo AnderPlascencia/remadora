@@ -1,7 +1,8 @@
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
-import { estres, claveDia, RECORDS } from './estadisticas.js';
+import { estres, claveDia, RECORDS, mejorTiempo } from './estadisticas.js';
+import { objeto, OBJETOS, precioDe } from './objetos.js';
 
 export const ATRIBUTOS = [
   { clave: 'fuerza', nombre: 'Fuerza', detalle: 'Minutos en zona 4 o más y récords de potencia' },
@@ -35,10 +36,122 @@ export function nivelDe(xp) {
 const TITULOS = [[1, 'Novato'], [5, 'Aprendiz'], [10, 'Remero'], [15, 'Veterano'], [20, 'Capitán'], [30, 'Campeón'], [40, 'Leyenda'], [50, 'Mito']];
 export const tituloDe = (nivel) => TITULOS.filter(([n]) => nivel >= n).at(-1)[1];
 
-// FTP para medir intensidad: el de la sesión, el actual o uno estimado con la propia sesión.
+// ---------- Talentos: 3 por atributo. El 1 y el 3 son pasivos; el 2 es una habilidad activa para la carrera. ----------
+export const TALENTOS = [
+  { id: 'brazos-hierro', atributo: 'fuerza', nivel: 1, nombre: 'Brazos de hierro', texto: '+10 % de XP en sesiones con 10 min o más en zona 4.' },
+  { id: 'turbo', atributo: 'fuerza', nivel: 2, activa: true, nombre: 'Turbo', texto: 'En la carrera: 20 s sobre tu FTP encienden un turbo que empuja a tu héroe.' },
+  { id: 'critico', atributo: 'fuerza', nivel: 3, nombre: 'Golpe crítico', texto: 'Los récords dan el doble de XP.' },
+  { id: 'pies-ligeros', atributo: 'agilidad', nivel: 1, nombre: 'Pies ligeros', texto: '+10 % de XP en sesiones de menos de 20 min.' },
+  { id: 'esquivar', atributo: 'agilidad', nivel: 2, activa: true, nombre: 'Esquivar', texto: 'En la carrera: subir el ritmo cuando un fantasma ataca anula su ataque.' },
+  { id: 'remate', atributo: 'agilidad', nivel: 3, nombre: 'Remate', texto: '+100 XP si le ganas a un fantasma por menos de 5 m.' },
+  { id: 'pulmones', atributo: 'resistencia', nivel: 1, nombre: 'Pulmones de acero', texto: '+10 % de XP en sesiones de 30 min o más.' },
+  { id: 'segundo-aire', atributo: 'resistencia', nivel: 2, activa: true, nombre: 'Segundo aire', texto: 'En la carrera: después de 10 min parejos, tu héroe recupera energía.' },
+  { id: 'incansable', atributo: 'resistencia', nivel: 3, nombre: 'Incansable', texto: '+20 XP por cada kilómetro después del quinto.' },
+  { id: 'respiro', atributo: 'recuperacion', nivel: 1, nombre: 'Respiro', texto: '+20 monedas cuando descansas después de un día duro.' },
+  { id: 'curacion', atributo: 'recuperacion', nivel: 2, activa: true, nombre: 'Curación', texto: 'En la carrera: los descansos de los intervalos curan a tu héroe.' },
+  { id: 'sabiduria', atributo: 'recuperacion', nivel: 3, nombre: 'Sabiduría', texto: 'La misión diaria que más paga vale el doble.' },
+  { id: 'precision', atributo: 'tecnica', nivel: 1, nombre: 'Precisión', texto: '+10 % de XP si estás 80 % o más en rango.' },
+  { id: 'combo', atributo: 'tecnica', nivel: 2, activa: true, nombre: 'Combo', texto: 'En la carrera: 30 s seguidos en rango encadenan un combo.' },
+  { id: 'maestria', atributo: 'tecnica', nivel: 3, nombre: 'Maestría', texto: 'Una misión diaria extra: 4 en vez de 3.' },
+  { id: 'bolsa-llena', atributo: 'voluntad', nivel: 1, nombre: 'Bolsa llena', texto: '+10 % de monedas por sesiones y misiones diarias.' },
+  { id: 'ultimo-aliento', atributo: 'voluntad', nivel: 2, activa: true, nombre: 'Último aliento', texto: 'En la carrera: en los últimos 250 m tu héroe saca fuerzas extra.' },
+  { id: 'imparable', atributo: 'voluntad', nivel: 3, nombre: 'Imparable', texto: 'El bono de racha sigue creciendo hasta 14 días.' },
+];
+export const talento = (id) => TALENTOS.find((t) => t.id === id) || null;
+export const COSTO_TALENTO = { 1: 1, 2: 2, 3: 3 };
+export const REQUISITO_TALENTO = { 1: 0, 2: 15, 3: 40 };
+
+// ¿Se puede aprender? Devuelve null si sí, o el motivo si no.
+export function motivoBloqueo(id, estado, aprendidos = {}) {
+  const t = talento(id);
+  if (!t || aprendidos[id]) return 'Ya lo tienes';
+  const previo = TALENTOS.find((x) => x.atributo === t.atributo && x.nivel === t.nivel - 1);
+  if (previo && !aprendidos[previo.id]) return `Primero aprende ${previo.nombre}`;
+  const nombre = ATRIBUTOS.find((a) => a.clave === t.atributo).nombre;
+  if (estado.atributos[t.atributo] < REQUISITO_TALENTO[t.nivel]) return `Necesitas ${nombre} ${REQUISITO_TALENTO[t.nivel]}`;
+  if (estado.talentosLibres < COSTO_TALENTO[t.nivel]) return `Necesitas ${COSTO_TALENTO[t.nivel]} puntos`;
+  return null;
+}
+
+// ---------- Misiones ----------
+const DIARIAS = [
+  { id: 'z2', texto: (m) => `${m} min en zona 2`, metas: [10, 15, 20], valor: (d) => d.z2min, monedas: 20 },
+  { id: 'dist', texto: (m) => `Rema ${m.toLocaleString('es-MX')} m`, metas: [2000, 3000, 5000], valor: (d) => d.metros, monedas: 20 },
+  { id: 'rango', texto: (m) => `${m} % en rango en un entrenamiento`, metas: [70, 80, 90], valor: (d) => d.mejorPct, monedas: 25 },
+  { id: 'fantasma', texto: () => 'Gánale a un fantasma', metas: [1], valor: (d) => d.ganados, monedas: 25 },
+  { id: 'sobre', texto: (m) => `${m} s por encima de tu FTP`, metas: [60, 120, 180], valor: (d) => d.sobreSeg, monedas: 20 },
+  { id: 'spm', texto: (m) => `${m} min a 24 golpes/min o más`, metas: [5, 10], valor: (d) => d.spm24min, monedas: 15 },
+  { id: 'kcal', texto: (m) => `Quema ${m} kcal`, metas: [100, 150, 250], valor: (d) => d.kcal, monedas: 15 },
+  { id: 'tiempo', texto: (m) => `Rema ${m} min`, metas: [15, 20, 30], valor: (d) => d.min, monedas: 20 },
+  { id: 'z4', texto: (m) => `${m} min en zona 4 o más`, metas: [3, 5, 8], valor: (d) => d.z4min, monedas: 25 },
+];
+const SEMANALES = [
+  { id: 'km', texto: (m) => `${m} km esta semana`, metas: [10, 15, 20], valor: (d) => d.metros / 1000, monedas: 80 },
+  { id: 'ses', texto: (m) => `${m} sesiones esta semana`, metas: [3, 4], valor: (d) => d.sesiones, monedas: 60 },
+  { id: 'z4', texto: (m) => `${m} min en zona 4 o más esta semana`, metas: [15, 20], valor: (d) => d.z4min, monedas: 70 },
+  { id: 'fant', texto: (m) => `Gánale a ${m} fantasmas esta semana`, metas: [2, 3], valor: (d) => d.ganados, monedas: 70 },
+  { id: 'dias', texto: (m) => `Rema ${m} días distintos esta semana`, metas: [3, 4], valor: (d) => d.dias.size, monedas: 60 },
+];
+
+// Azar repetible: la misma fecha siempre da las mismas misiones.
+function azar(semilla) {
+  let h = 2166136261;
+  for (const c of semilla) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+function elegir(pool, n, semilla) {
+  const r = azar(semilla);
+  const lista = [...pool];
+  const salida = [];
+  while (salida.length < n && lista.length) {
+    const d = lista.splice(Math.floor(r() * lista.length), 1)[0];
+    const meta = d.metas[Math.floor(r() * d.metas.length)];
+    salida.push({ id: `${semilla}:${d.id}`, texto: d.texto(meta), meta, valor: d.valor, monedas: d.monedas });
+  }
+  return salida;
+}
+export const lunesDe = (ms) => {
+  const d = new Date(ms);
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return claveDia(d.getTime());
+};
+export const misionesDelDia = (dia, extra = false) => elegir(DIARIAS, extra ? 4 : 3, `d${dia}`);
+export const misionesDeSemana = (lunes) => elegir(SEMANALES, 2, `s${lunes}`);
+
+// Capítulos de la historia: requisitos desde que empieza el capítulo y un jefe que es una prueba real.
+export const CAPITULOS = [
+  { nombre: 'El despertar', historia: 'Tu bote despierta en un muelle olvidado. Para zarpar, demuestra que puedes remar.',
+    req: [['sesiones', 2], ['km', 3]], jefe: { nombre: 'El Guardián del muelle', tipo: 'p500', texto: 'Completa la «Prueba 500 m»' }, monedas: 100, objeto: 'casco-cuernos-oro' },
+  { nombre: 'Río arriba', historia: 'La corriente empuja en contra. Solo la constancia te lleva al nacimiento del río.',
+    req: [['sesiones', 5], ['km', 15], ['z2min', 30]], jefe: { nombre: 'La Serpiente del río', tipo: 'p2000', texto: 'Completa una prueba de 2000 m' }, monedas: 150, objeto: 'sombrero-capitan' },
+  { nombre: 'La tormenta', historia: 'El cielo se rompe. Rayos, olas y fantasmas en la niebla.',
+    req: [['z4min', 30], ['fantasmas', 3]], jefe: { nombre: 'El Kraken', tipo: 'pftp', texto: 'Completa la «Prueba FTP 20 min»' }, monedas: 200, objeto: 'kabuto' },
+  { nombre: 'Mar abierto', historia: 'Nada a la vista más que agua. Tu racha es tu brújula.',
+    req: [['km', 50], ['racha', 4]], jefe: { nombre: 'El Dragón de los 500', tipo: 'mejor500', texto: 'Supera tu mejor 500 m' }, monedas: 250, objeto: 'corona-hielo' },
+  { nombre: 'La leyenda', historia: 'Los bardos ya cantan tu nombre. Falta el último duelo.',
+    req: [['km', 80], ['sesiones', 10]], jefe: { nombre: 'El Rey de los mares', tipo: 'mejor2000', texto: 'Supera tu mejor 2000 m' }, monedas: 300, objeto: 'armadura-gladiador' },
+];
+export const REQ_TEXTO = { sesiones: 'Sesiones', km: 'Kilómetros', z2min: 'Minutos en zona 2', z4min: 'Minutos en zona 4+', fantasmas: 'Fantasmas vencidos', racha: 'Días seguidos' };
+
+export const HAZANAS = [
+  { id: 'canal', nombre: 'Cruzar el Canal de la Mancha', texto: '34 km en total', meta: 34, valor: (g) => g.kmTotal, monedas: 150, objeto: 'aura-fuego' },
+  { id: 'hora', nombre: 'La hora del remero', texto: '60 minutos en una sesión', meta: 60, valor: (g) => g.minMax, monedas: 150, objeto: 'cinta-campeon' },
+  { id: 'racha14', nombre: 'Dos semanas sin parar', texto: '14 días seguidos', meta: 14, valor: (g) => g.rachaMax, monedas: 250, objeto: 'capa-leyenda' },
+  { id: 'sub8', nombre: 'Bajo 8 minutos', texto: '2000 m en menos de 8:00', meta: 1, valor: (g) => (g.mejor2000 && g.mejor2000 < 480 ? 1 : 0), monedas: 200, objeto: 'aura-hielo' },
+  { id: 'km100', nombre: 'Cien kilómetros', texto: '100 km en total', meta: 100, valor: (g) => g.kmTotal, monedas: 300, objeto: 'bote-dorado' },
+  { id: 'nivel25', nombre: 'Héroe de nivel 25', texto: 'Llega al nivel 25', meta: 25, valor: (g) => g.nivel, monedas: 300, objeto: 'aura-dorada' },
+];
+
+// ---------- Medidas de una sesión ----------
 const ftpDe = (s, ftpActual) => s.ftp || ftpActual || Math.max(60, Math.round((s.wattsProm || 100) / 0.8));
 
-// Segundos en que el pulso cayó al menos 20 lpm durante el primer minuto de cada descanso.
+// Descansos en que el pulso cayó al menos 20 lpm en el primer minuto.
 function recuperacionesFc(s) {
   if (!s.bloques || !s.muestras?.some((x) => x.fc)) return 0;
   let desde = 0;
@@ -54,96 +167,213 @@ function recuperacionesFc(s) {
   return n;
 }
 
-// Ganancia de una sesión: XP con detalle y puntos por atributo (antes del bono de clase).
-function gananciaSesion(s, ctx) {
-  const f = ftpDe(s, ctx.ftp);
-  const m = s.muestras || [];
+export function medidas(s, ftpActual) {
+  const f = ftpDe(s, ftpActual);
   let z2 = 0;
   let z4 = 0;
   let sobre = 0;
-  for (const x of m) {
+  let spm24 = 0;
+  for (const x of s.muestras || []) {
     const p = x.w / f;
     if (p >= 0.56 && p <= 0.9) z2++;
     if (p >= 0.91) z4++;
-    if (p >= 1.06) sobre++;
+    if (p >= 1.0) sobre++;
+    if (x.spm >= 24) spm24++;
   }
-  const min = (seg) => seg / 60;
+  const rivales = s.rivales || (s.rival ? [s.rival] : []);
+  return {
+    f, min: (s.duracion || 0) / 60, metros: s.distancia || 0, kcal: s.kcal || 0,
+    z2min: z2 / 60, z4min: z4 / 60, sobreSeg: sobre, spm24min: spm24 / 60,
+    pct: s.pctEnRango, ganados: rivales.filter((r) => r.diferencia > 0).length,
+    margenMin: Math.min(Infinity, ...rivales.filter((r) => r.diferencia > 0).map((r) => r.diferencia)),
+    t500: s.muestras?.length ? mejorTiempo(s.muestras, 500) : null,
+    t2000: s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null,
+  };
+}
+
+// Ganancia de una sesión: XP con detalle y puntos por atributo (antes del bono de clase).
+function gananciaSesion(s, m, ctx) {
+  const tiene = (id) => ctx.tal.has(id);
   const at = { fuerza: 0, agilidad: 0, resistencia: 0, recuperacion: 0, tecnica: 0, voluntad: 0 };
-  at.fuerza += min(z4) * 1.2;
-  at.agilidad += sobre / 20;
-  at.resistencia += min(z2) * 0.5 + (s.duracion >= 1200 ? 4 : 0);
+  at.fuerza += m.z4min * 1.2;
+  at.agilidad += (s.muestras || []).filter((x) => x.w / m.f >= 1.06).length / 20;
+  at.resistencia += m.z2min * 0.5 + (s.duracion >= 1200 ? 4 : 0);
   if (s.distancia >= 400 && s.distancia <= 600 && s.duracion <= 150) at.agilidad += 5;
-  const suave = s.wattsProm && s.wattsProm / f < 0.75;
+  const suave = s.wattsProm && s.wattsProm / m.f < 0.75;
   if (suave && ctx.cargaAyer >= 60) at.recuperacion += 5;
   else if (suave) at.recuperacion += 2;
   if (ctx.descansoATiempo) at.recuperacion += 4;
   at.recuperacion += recuperacionesFc(s) * 3;
-  if (s.pctEnRango != null) at.tecnica += (min(s.duracion) * s.pctEnRango) / 100 * 0.6;
+  if (s.pctEnRango != null) at.tecnica += (m.min * s.pctEnRango) / 100 * 0.6;
   if (s.paladas && ctx.mppPromedio && s.distancia / s.paladas > ctx.mppPromedio * 1.02) at.tecnica += 3;
   const completo = s.tiempoMeta != null;
   if (completo) at.voluntad += 3;
   if (s.rpe >= 8) at.voluntad += 3;
   at.voluntad += Math.min(ctx.racha, 7) * 0.5;
 
-  const carga = s.estres ?? estres(s, f) ?? Math.round(min(s.duracion) * 0.8);
-  const detalle = [['Esfuerzo', Math.round(carga * 18)]];
+  const carga = s.estres ?? estres(s, m.f) ?? Math.round(m.min * 0.8);
+  const base = Math.round(carga * 18);
+  const detalle = [['Esfuerzo', base]];
   if (completo) detalle.push(['Entrenamiento completo', 100]);
-  if (ctx.records) detalle.push([ctx.records === 1 ? 'Récord' : `${ctx.records} récords`, 50 * ctx.records]);
-  const ganados = (s.rivales || (s.rival ? [s.rival] : [])).filter((r) => r.diferencia > 0).length;
-  if (ganados) detalle.push([ganados === 1 ? 'Fantasma vencido' : `${ganados} fantasmas vencidos`, 75 * ganados]);
-  if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 10 * Math.min(ctx.racha, 7)]);
+  if (ctx.records) detalle.push([ctx.records === 1 ? 'Récord' : `${ctx.records} récords`, 50 * ctx.records * (tiene('critico') ? 2 : 1)]);
+  if (m.ganados) detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, 75 * m.ganados]);
+  const topeRacha = tiene('imparable') ? 14 : 7;
+  if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 10 * Math.min(ctx.racha, topeRacha)]);
+  const extra = (id, cond, texto, xp) => { if (tiene(id) && cond) detalle.push([texto, xp]); };
+  extra('brazos-hierro', m.z4min >= 10, 'Brazos de hierro', Math.round(base * 0.1));
+  extra('pies-ligeros', s.duracion < 1200, 'Pies ligeros', Math.round(base * 0.1));
+  extra('pulmones', s.duracion >= 1800, 'Pulmones de acero', Math.round(base * 0.1));
+  extra('precision', (s.pctEnRango ?? 0) >= 80, 'Precisión', Math.round(base * 0.1));
+  extra('remate', m.margenMin < 5, 'Remate', 100);
+  extra('incansable', m.metros > 5000, 'Incansable', 20 * Math.floor((m.metros - 5000) / 1000));
   return { xp: detalle.reduce((a, [, v]) => a + v, 0), detalle, atributos: at, carga };
 }
 
-// Recorre el historial en orden y devuelve el estado del héroe y lo que ganó cada sesión.
-export function progresoHeroe(sesiones, { ftp = 0, clase = null } = {}) {
+// ---------- Estado completo del juego ----------
+// per = { clase, talentos: { id: fecha }, compras: [id], gastado, equipo, piel }
+export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
-  const fav = claseDe(clase)?.favorito;
+  const fav = claseDe(per.clase)?.favorito;
+  const aprendidos = per.talentos || {};
   const atributos = Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0]));
   const mejores = {};
   const cargaDia = new Map();
   const dias = new Set();
   const porSesion = new Map();
+  const logros = [];
+  const premios = new Set();
   let xp = 0;
+  let monedas = 0;
   let mppSuma = 0;
   let mppN = 0;
+  const g = { kmTotal: 0, minMax: 0, rachaMax: 0, mejor2000: null, nivel: 1 };
+  const dia = { clave: null, misiones: [], hechas: new Set(), d: null };
+  const semana = { clave: null, misiones: [], hechas: new Set(), d: null };
+  const nuevoAgg = () => ({ metros: 0, min: 0, kcal: 0, z2min: 0, z4min: 0, sobreSeg: 0, spm24min: 0, mejorPct: 0, ganados: 0, sesiones: 0, dias: new Set() });
+  let cap = 0;
+  let capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
+  let capMejores = {};
+  const hazanas = new Set();
+  const tiene = (id, fecha) => aprendidos[id] != null && fecha >= aprendidos[id];
+
+  const lograr = (fecha, tipo, texto, m, obj) => {
+    monedas += m;
+    if (obj) premios.add(obj);
+    logros.push({ fecha, tipo, texto, monedas: m, objeto: obj || null });
+  };
+  const revisar = (fecha, grupo, extraBolsa, sabio) => {
+    const mayor = sabio ? Math.max(...grupo.misiones.map((x) => x.monedas)) : null;
+    for (const mi of grupo.misiones) {
+      if (grupo.hechas.has(mi.id) || mi.valor(grupo.d) < mi.meta) continue;
+      grupo.hechas.add(mi.id);
+      let pago = mi.monedas * (sabio && mi.monedas === mayor ? 2 : 1);
+      if (extraBolsa) pago = Math.round(pago * 1.1);
+      lograr(fecha, grupo === dia ? 'diaria' : 'semanal', mi.texto, pago);
+    }
+  };
+
   for (const s of orden) {
     const hoy = claveDia(s.fecha);
     const ayer = claveDia(s.fecha - 864e5);
     const anteayer = claveDia(s.fecha - 2 * 864e5);
+    const nuevoDia = !dias.has(hoy);
     dias.add(hoy);
     let racha = 0;
     for (let d = s.fecha; dias.has(claveDia(d)); d -= 864e5) racha++;
+    const m = medidas(s, ftp);
     let records = 0;
     if (s.muestras?.length) {
       for (const r of RECORDS) {
         const v = r.calc(s);
         if (v == null) continue;
         const previo = mejores[r.clave];
-        if (previo != null && (r.tipo === 'tiempo' ? v < previo : v > previo)) records++;
-        if (previo == null || (r.tipo === 'tiempo' ? v < previo : v > previo)) mejores[r.clave] = v;
+        const mejor = previo == null || (r.tipo === 'tiempo' ? v < previo : v > previo);
+        if (previo != null && mejor) records++;
+        if (mejor) mejores[r.clave] = v;
       }
     }
-    const ctx = {
-      ftp, racha, records,
-      cargaAyer: cargaDia.get(ayer) || 0,
-      descansoATiempo: !dias.has(ayer) && (cargaDia.get(anteayer) || 0) >= 60,
-      mppPromedio: mppN ? mppSuma / mppN : 0,
-    };
-    const g = gananciaSesion(s, ctx);
-    cargaDia.set(hoy, (cargaDia.get(hoy) || 0) + g.carga);
+    const tal = new Set(Object.keys(aprendidos).filter((id) => tiene(id, s.fecha)));
+    const descansoATiempo = !dias.has(ayer) && (cargaDia.get(anteayer) || 0) >= 60;
+    const gan = gananciaSesion(s, m, { tal, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0 });
+    cargaDia.set(hoy, (cargaDia.get(hoy) || 0) + gan.carga);
     if (s.paladas) { mppSuma += s.distancia / s.paladas; mppN++; }
     const nivelAntes = nivelDe(xp);
-    xp += g.xp;
+    xp += gan.xp;
     const ganancias = {};
-    for (const [k, v] of Object.entries(g.atributos)) {
+    for (const [k, v] of Object.entries(gan.atributos)) {
       const total = v * (k === fav ? 1.15 : 1);
       atributos[k] += total;
       if (total >= 0.5) ganancias[k] = Math.round(total);
     }
-    porSesion.set(s.fecha, { xp: g.xp, detalle: g.detalle, ganancias, nivelAntes, nivelDespues: nivelDe(xp) });
+    const bolsa = tal.has('bolsa-llena');
+    const monedasSesion = Math.round(Math.floor(gan.xp / 50) * (bolsa ? 1.1 : 1));
+    monedas += monedasSesion;
+    if (nuevoDia && descansoATiempo && tal.has('respiro')) lograr(s.fecha, 'talento', 'Respiro: descansaste a tiempo', 20);
+
+    // Misiones del día y de la semana
+    if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy, tal.has('maestria')), hechas: new Set(), d: nuevoAgg() });
+    const lunes = lunesDe(s.fecha);
+    if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes), hechas: new Set(), d: nuevoAgg() });
+    for (const agg of [dia.d, semana.d]) {
+      agg.metros += m.metros; agg.min += m.min; agg.kcal += m.kcal; agg.z2min += m.z2min; agg.z4min += m.z4min;
+      agg.sobreSeg += m.sobreSeg; agg.spm24min += m.spm24min; agg.ganados += m.ganados; agg.sesiones++;
+      agg.mejorPct = Math.max(agg.mejorPct, m.pct ?? 0);
+      agg.dias.add(hoy);
+    }
+    revisar(s.fecha, dia, bolsa, tal.has('sabiduria'));
+    revisar(s.fecha, semana, false, false);
+
+    // Capítulo de la historia
+    g.kmTotal += m.metros / 1000;
+    g.minMax = Math.max(g.minMax, m.min);
+    g.rachaMax = Math.max(g.rachaMax, racha);
+    if (m.t2000) g.mejor2000 = g.mejor2000 == null ? m.t2000 : Math.min(g.mejor2000, m.t2000);
+    g.nivel = nivelDe(xp);
+    if (cap < CAPITULOS.length) {
+      const c = CAPITULOS[cap];
+      capAgg.sesiones++; capAgg.km += m.metros / 1000; capAgg.z2min += m.z2min; capAgg.z4min += m.z4min;
+      capAgg.fantasmas += m.ganados; capAgg.racha = Math.max(capAgg.racha, racha);
+      const listo = c.req.every(([k, v]) => capAgg[k] >= v);
+      const nombre = s.entrenamiento || '';
+      const vence = {
+        p500: nombre.startsWith('Prueba 500') && s.tiempoMeta != null,
+        p2000: (nombre.startsWith('Prueba 2000') || nombre === '2000 m') && s.tiempoMeta != null,
+        pftp: !!s.pruebaWatts,
+        mejor500: m.t500 != null && (capMejores.t500 == null || m.t500 < capMejores.t500),
+        mejor2000: m.t2000 != null && (capMejores.t2000 == null || m.t2000 < capMejores.t2000),
+      }[c.jefe.tipo];
+      if (listo && vence) {
+        lograr(s.fecha, 'jefe', `Venciste ${c.jefe.nombre.replace(/^El /, 'al ').replace(/^La /, 'a la ')} y terminaste «${c.nombre}»`, c.monedas, c.objeto);
+        cap++;
+        capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
+        capMejores = { t500: mejores.t500, t2000: mejores.t2000 };
+      }
+    }
+    for (const h of HAZANAS) {
+      if (!hazanas.has(h.id) && h.valor(g) >= h.meta) {
+        hazanas.add(h.id);
+        lograr(s.fecha, 'hazana', `Hazaña: ${h.nombre}`, h.monedas, h.objeto);
+      }
+    }
+    porSesion.set(s.fecha, { xp: gan.xp, detalle: gan.detalle, ganancias, nivelAntes, nivelDespues: nivelDe(xp), monedas: monedasSesion });
   }
+
+  // Misiones de hoy y de esta semana aunque todavía no hayas remado.
+  const hoy = claveDia(ahora);
+  const lunes = lunesDe(ahora);
+  const maestria = aprendidos.maestria != null;
+  const diaHoy = dia.clave === hoy ? dia : { misiones: misionesDelDia(hoy, maestria), hechas: new Set(), d: nuevoAgg() };
+  const semanaHoy = semana.clave === lunes ? semana : { misiones: misionesDeSemana(lunes), hechas: new Set(), d: nuevoAgg() };
+  const vista = (gr) => gr.misiones.map((mi) => ({ id: mi.id, texto: mi.texto, meta: mi.meta, monedas: mi.monedas, hecha: gr.hechas.has(mi.id), valor: Math.min(mi.meta, mi.valor(gr.d)) }));
+
   const nivel = nivelDe(xp);
+  const gastados = Object.keys(aprendidos).reduce((a, id) => a + (COSTO_TALENTO[talento(id)?.nivel] || 0), 0);
+  const compras = per.compras || [];
+  const poseidos = new Set([...premios, ...compras]);
+  const capitulo = cap < CAPITULOS.length ? {
+    n: cap + 1, ...CAPITULOS[cap],
+    progreso: CAPITULOS[cap].req.map(([k, v]) => ({ clave: k, texto: REQ_TEXTO[k], meta: v, valor: Math.min(v, Math.round(capAgg[k] * 10) / 10) })),
+  } : null;
   return {
     xp,
     nivel,
@@ -151,7 +381,31 @@ export function progresoHeroe(sesiones, { ftp = 0, clase = null } = {}) {
     desde: xpParaNivel(nivel),
     hasta: nivel >= NIVEL_MAX ? null : xpParaNivel(nivel + 1),
     talentos: nivel - 1,
+    talentosLibres: nivel - 1 - gastados,
     atributos: Object.fromEntries(Object.entries(atributos).map(([k, v]) => [k, Math.round(v)])),
     porSesion,
+    logros,
+    monedas: monedas - (per.gastado || 0),
+    monedasGanadas: monedas,
+    poseidos,
+    diarias: vista(diaHoy),
+    semanales: vista(semanaHoy),
+    capitulo,
+    capitulosHechos: cap,
+    hazanas: HAZANAS.map((h) => ({ ...h, hecha: hazanas.has(h.id), valor: Math.min(h.meta, Math.floor(h.valor(g))) })),
   };
 }
+export const progresoHeroe = (sesiones, { ftp = 0, clase = null } = {}) => estadoJuego(sesiones, { ftp, per: { clase } });
+
+// Tienda de la semana: 2 raras y 2 comunes que aún no tienes, iguales toda la semana.
+export function tiendaSemana(lunes, poseidos) {
+  const r = azar(`t${lunes}`);
+  const toma = (rareza, n) => {
+    const lista = OBJETOS.filter((x) => x.rareza === rareza && !poseidos.has(x.id));
+    const salida = [];
+    while (salida.length < n && lista.length) salida.push(lista.splice(Math.floor(r() * lista.length), 1)[0]);
+    return salida;
+  };
+  return [...toma('rara', 2), ...toma('comun', 2)].map((x) => ({ ...x, precio: precioDe(x) }));
+}
+export { objeto };
