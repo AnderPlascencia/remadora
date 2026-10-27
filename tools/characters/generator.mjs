@@ -2,7 +2,7 @@
 // Volumen con degradados por pieza (luz desde arriba a la izquierda), sombras y luces
 // difuminadas recortadas a la piel, textura de piel, mechones de pelo y pliegues de tela.
 // Cuerpo paramétrico: masa (hombros, brazos, cuello) y def (cintura, abdomen).
-// Fase 1: solo está implementado el rango maestro (principiante).
+// Fase 1: solo está implementado el rango maestro (novato).
 import { CLASES, RANGOS, FORMATO } from './spec.mjs';
 
 export const mezcla = (a, b, t) => {
@@ -43,7 +43,7 @@ let uid = 0;
  * @param {string} clase  id de clase (vikingo, pirata, samurai, polinesio, romano)
  * @param {object} o      { rango: id de rango, masa: 0-1, def: 0-1, ancho: px }
  */
-export function personaje(clase, { rango = 'principiante', masa = 0, def = 0, ancho = 360 } = {}) {
+export function personaje(clase, { rango = RANGOS[0].id, masa = 0, def = 0, ancho = 360 } = {}) {
   const c = CLASES[clase];
   if (!c) throw new Error(`Clase desconocida: ${clase}`);
   const t = RANGOS.findIndex((r) => r.id === rango);

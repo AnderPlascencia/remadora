@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Exporta personajes: SVG fuente + PNG de cuerpo entero + PNG de retrato, con meta.json.
 // Uso:
-//   node tools/render-characters.mjs                 # fase 1: los 5 maestros (principiante)
+//   node tools/render-characters.mjs                 # fase 1: los 5 maestros (novato)
 //   node tools/render-characters.mjs --class vikingo --rank combatiente
 //   node tools/render-characters.mjs --force          # permite sobrescribir assets aprobados
 // Reglas:
-//   - Un rango distinto de principiante exige que el maestro de su clase esté aprobado.
+//   - Un rango distinto de novato exige que el maestro de su clase esté aprobado.
 //   - Nunca sobrescribe un asset con estado "approved" sin --force.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,7 +18,7 @@ const require = createRequire(import.meta.url);
 const args = process.argv.slice(2);
 const opt = (n) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : null; };
 const force = args.includes('--force');
-const MAESTRO = 'principiante';
+const MAESTRO = RANGOS[0].id;
 
 const clases = opt('class') ? [opt('class')] : Object.keys(CLASES);
 const rangos = opt('rank') ? [opt('rank')] : [MAESTRO];

@@ -1,0 +1,40 @@
+{
+  "clase": "polinesio",
+  "rango": "combatiente",
+  "versionMaestro": "3.0.0",
+  "herramienta": {
+    "nombre": "tools/extract-sheet.py",
+    "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+    "parametros": {
+      "celda": [
+        568,
+        587,
+        700,
+        749
+      ],
+      "escala": 5.084,
+      "cajaFigura": [
+        0,
+        10,
+        87,
+        162
+      ],
+      "retrato": true
+    }
+  },
+  "fuente": {
+    "tipo": "imagen generada externamente",
+    "archivo": null,
+    "lamina": "assets/characters/_source/lamina_clases_v1.png",
+    "generador": "sin indicar (lámina aportada por el usuario)",
+    "licencia": "según los términos del generador",
+    "resolucionOrigen": [
+      87,
+      152
+    ]
+  },
+  "pivote": {
+    "x": 0.5,
+    "y": 0.97
+  }
+}

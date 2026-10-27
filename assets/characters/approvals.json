@@ -1,29 +1,229 @@
 {
   "version": 1,
   "registros": {
-    "vikingo/principiante": {
+    "vikingo/novato": {
       "estado": "pending",
-      "version": "1.0.0",
+      "version": "3.0.0",
       "notas": ""
     },
-    "pirata/principiante": {
+    "vikingo/aprendiz": {
       "estado": "pending",
-      "version": "1.0.0",
+      "version": "3.0.0",
       "notas": ""
     },
-    "samurai/principiante": {
+    "vikingo/combatiente": {
       "estado": "pending",
-      "version": "1.0.0",
+      "version": "3.0.0",
       "notas": ""
     },
-    "polinesio/principiante": {
+    "vikingo/guerrero": {
       "estado": "pending",
-      "version": "1.0.0",
+      "version": "3.0.0",
       "notas": ""
     },
-    "romano/principiante": {
+    "vikingo/veterano": {
       "estado": "pending",
-      "version": "1.0.0",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "vikingo/campeon": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "vikingo/elite": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "vikingo/maestro": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "vikingo/legendario": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/novato": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/aprendiz": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/combatiente": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/guerrero": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/veterano": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/campeon": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/elite": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/maestro": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "pirata/legendario": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/novato": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/aprendiz": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/combatiente": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/guerrero": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/veterano": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/campeon": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/elite": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/maestro": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "samurai/legendario": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/novato": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/aprendiz": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/combatiente": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/guerrero": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/veterano": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/campeon": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/elite": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/maestro": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "polinesio/legendario": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/novato": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/aprendiz": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/combatiente": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/guerrero": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/veterano": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/campeon": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/elite": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/maestro": {
+      "estado": "pending",
+      "version": "3.0.0",
+      "notas": ""
+    },
+    "romano/legendario": {
+      "estado": "pending",
+      "version": "3.0.0",
       "notas": ""
     }
   }

@@ -16,7 +16,7 @@ const strict = args.includes('--strict');
 const errores = [], avisos = [];
 const filas = [];
 const ESTADOS = ['pending', 'approved', 'rejected'];
-const RAIZ_PERMITIDA = new Set([...Object.keys(CLASES), 'approvals.json', 'manifest.json', '_qa']);
+const RAIZ_PERMITIDA = new Set([...Object.keys(CLASES), 'approvals.json', 'manifest.json', '_qa', '_source']);
 
 // 1. Estructura: nada inesperado en la raíz ni en las carpetas de clase.
 if (!existsSync(DIR_PERSONAJES)) errores.push('no existe assets/characters');
@@ -36,15 +36,16 @@ for (const [k, v] of Object.entries(aprob.registros)) {
 }
 
 // 3. Cada combinación
-function revisarPng(ruta, esperado, etiqueta, problemas) {
+function revisarPng(ruta, esperado, etiqueta, problemas, minTransparente = 0.2, soloEsquinasSup = false) {
   let png;
   try { png = leerPng(ruta); } catch (e) { problemas.push(`${etiqueta}: ${e.message}`); return; }
   if (png.ancho !== esperado.ancho || png.alto !== esperado.alto) problemas.push(`${etiqueta}: mide ${png.ancho}×${png.alto}, se esperaba ${esperado.ancho}×${esperado.alto}`);
   if (!png.alfa) { problemas.push(`${etiqueta}: sin canal alfa`); return; }
   const a = analizarAlfa(png);
   if (!a.caja) { problemas.push(`${etiqueta}: imagen vacía`); return; }
-  if (a.transparentes < 0.2) problemas.push(`${etiqueta}: solo ${(a.transparentes * 100).toFixed(1)} % transparente (¿fondo horneado?)`);
-  const esquinas = [[0, 0], [png.ancho - 1, 0], [0, png.alto - 1], [png.ancho - 1, png.alto - 1]];
+  if (a.transparentes < minTransparente) problemas.push(`${etiqueta}: solo ${(a.transparentes * 100).toFixed(1)} % transparente (¿fondo horneado?)`);
+  // Un retrato de busto corta los hombros por abajo: solo se exigen transparentes las esquinas superiores.
+  const esquinas = [[0, 0], [png.ancho - 1, 0], ...(soloEsquinasSup ? [] : [[0, png.alto - 1], [png.ancho - 1, png.alto - 1]])];
   if (esquinas.some(([x, y]) => png.rgba[(y * png.ancho + x) * 4 + 3] !== 0)) problemas.push(`${etiqueta}: esquinas no transparentes`);
   return a;
 }
@@ -61,10 +62,12 @@ for (const clase of Object.keys(CLASES)) {
     }
     const problemas = [];
     const f = archivos(clase, r.id);
-    const esperados = [f.svg, f.cuerpo, f.retrato, f.meta];
+    const metaPre = leerJson(join(dir, f.meta), {});
+    const raster = metaPre?.fuente?.tipo === 'imagen generada externamente';
+    const esperados = raster ? [f.cuerpo, f.retrato, f.meta, metaPre.fuente.archivo].filter(Boolean) : [f.svg, f.cuerpo, f.retrato, f.meta];
     for (const n of esperados) if (!existsSync(join(dir, n))) problemas.push(`${k}: falta ${n}`);
     for (const n of readdirSync(dir)) if (![...esperados, f.notas].includes(n)) problemas.push(`${k}: archivo inesperado ${n}`);
-    if (existsSync(join(dir, f.svg))) {
+    if (!raster && existsSync(join(dir, f.svg))) {
       const svg = readFileSync(join(dir, f.svg), 'utf8');
       if (!svg.trimStart().startsWith('<svg') || !svg.includes(`data-clase="${clase}"`) || !svg.includes(`data-rango="${r.id}"`)) problemas.push(`${k}: el SVG no corresponde a la clase o el rango`);
     }
@@ -77,7 +80,8 @@ for (const clase of Object.keys(CLASES)) {
         if (Math.abs(base - FORMATO.pivote.y) > 0.03) avisos.push(`${k}: la base del personaje está en ${(base * 100).toFixed(1)} % de la altura (pivote ${FORMATO.pivote.y * 100} %)`);
       }
     }
-    if (existsSync(join(dir, f.retrato))) revisarPng(join(dir, f.retrato), FORMATO.retrato, `${k} retrato`, problemas);
+    // El retrato es un busto: los hombros llenan la parte baja, así que se pide menos transparencia.
+    if (existsSync(join(dir, f.retrato))) revisarPng(join(dir, f.retrato), FORMATO.retrato, `${k} retrato`, problemas, 0.05, true);
     const meta = leerJson(join(dir, f.meta), null);
     if (meta) {
       for (const campo of ['clase', 'rango', 'versionMaestro', 'herramienta', 'fuente', 'pivote']) if (meta[campo] == null) problemas.push(`${k}: meta.json sin "${campo}"`);
@@ -96,7 +100,8 @@ else {
   const enDisco = new Set();
   for (const clase of Object.keys(CLASES)) for (const r of RANGOS) {
     const dir = dirDe(clase, r.id), f = archivos(clase, r.id);
-    for (const n of [f.svg, f.cuerpo, f.retrato]) if (existsSync(join(dir, n))) enDisco.add(join('assets/characters', clase, r.id, n));
+    const fu = leerJson(join(dir, f.meta), {})?.fuente?.archivo;
+    for (const n of [f.svg, f.cuerpo, f.retrato, fu].filter(Boolean)) if (existsSync(join(dir, n))) enDisco.add(join('assets/characters', clase, r.id, n));
   }
   const enMan = new Set(man.assets.map((a) => a.ruta));
   for (const a of man.assets) {

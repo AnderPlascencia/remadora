@@ -1,8 +1,10 @@
 # Guía de estilo: personajes de Rower
 
-Estado: **propuesta, pendiente de aprobación** (versión de maestro 2.0.0).
+Estado: **propuesta, pendiente de aprobación**.
 
-Esta guía es el contrato visual de los 25 personajes (5 clases × 5 rangos). Si un asset se ve bien por sí solo pero rompe alguna de estas reglas, se rechaza.
+> **Versión 3.0.0 (vigente):** los 45 personajes (5 clases × 9 rangos) se extraen de la lámina «Clases y progresión» que aportó el usuario, con `tools/extract-sheet.py`. Esa lámina es ahora la referencia de estilo: ilustración pintada semirrealista con contorno oscuro. Las secciones 2 a 4 describen el generador vectorial v2, que queda como herramienta de respaldo; las reglas de color, cara, vestuario y legibilidad (secciones 5 a 8) siguen aplicándose a cualquier fuente.
+
+Esta guía es el contrato visual de los personajes. Si un asset se ve bien por sí solo pero rompe alguna de estas reglas, se rechaza.
 
 ## 1. Dirección
 
@@ -78,4 +80,4 @@ El nivel del héroe fija el mínimo de ambos y los atributos lo inclinan. La car
 
 ## 9. Referencias aprobadas
 
-El registro vivo está en `docs/VISUAL_REFERENCES.md`. El diseño maestro de cada clase es el rango **Principiante**, y los rangos superiores se derivan de él.
+El registro vivo está en `docs/VISUAL_REFERENCES.md`. El diseño maestro de cada clase es el rango **Novato**, y los rangos superiores se derivan de él.

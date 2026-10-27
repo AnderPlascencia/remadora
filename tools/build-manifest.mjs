@@ -16,17 +16,18 @@ for (const clase of Object.keys(CLASES)) {
     const f = archivos(clase, r.id);
     const meta = leerJson(join(dir, f.meta), {});
     const estado = aprob.registros[clave(clase, r.id)]?.estado || 'pending';
-    for (const [tipo, nombre] of [['cuerpo', f.cuerpo], ['retrato', f.retrato], ['fuente', f.svg]]) {
+    const fuente = meta.fuente?.archivo || f.svg;
+    for (const [tipo, nombre] of [['cuerpo', f.cuerpo], ['retrato', f.retrato], ['fuente', fuente]]) {
       const ruta = join(dir, nombre);
       if (!existsSync(ruta)) continue;
-      const png = nombre.endsWith('.png') ? leerPng(ruta, { pixeles: false }) : null;
+      const png = nombre.endsWith('.png') && tipo !== 'fuente' ? leerPng(ruta, { pixeles: false }) : null;
       assets.push({
         id: `${clase}.${r.id}.${tipo}`,
         clase, rango: r.id, nombre,
         ruta: relative(RAIZ, ruta),
         tipo,
-        dimensiones: png ? { ancho: png.ancho, alto: png.alto } : { viewBox: FORMATO.viewBox },
-        formato: png ? 'png' : 'svg',
+        dimensiones: png ? { ancho: png.ancho, alto: png.alto } : nombre.endsWith('.svg') ? { viewBox: FORMATO.viewBox } : null,
+        formato: png ? 'png' : nombre.split('.').pop(),
         transparencia: png ? png.alfa : true,
         bytes: statSync(ruta).size,
         fotogramas: 1,

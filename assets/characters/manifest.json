@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "generadoPor": "tools/build-manifest.mjs",
-  "total": 15,
+  "total": 90,
   "assets": [
     {
-      "id": "vikingo.principiante.cuerpo",
+      "id": "vikingo.novato.cuerpo",
       "clase": "vikingo",
-      "rango": "principiante",
-      "nombre": "vikingo_principiante_full.png",
-      "ruta": "assets/characters/vikingo/principiante/vikingo_principiante_full.png",
+      "rango": "novato",
+      "nombre": "vikingo_novato_full.png",
+      "ruta": "assets/characters/vikingo/novato/vikingo_novato_full.png",
       "tipo": "cuerpo",
       "dimensiones": {
         "ancho": 720,
@@ -16,7 +16,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 185408,
+      "bytes": 364178,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -24,24 +24,35 @@
         "x": 0.5,
         "y": 0.97
       },
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            300,
+            75,
+            437,
+            233
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            5,
+            9,
+            91,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "vikingo.principiante.retrato",
+      "id": "vikingo.novato.retrato",
       "clase": "vikingo",
-      "rango": "principiante",
-      "nombre": "vikingo_principiante_portrait.png",
-      "ruta": "assets/characters/vikingo/principiante/vikingo_principiante_portrait.png",
+      "rango": "novato",
+      "nombre": "vikingo_novato_portrait.png",
+      "ruta": "assets/characters/vikingo/novato/vikingo_novato_portrait.png",
       "tipo": "retrato",
       "dimensiones": {
         "ancho": 256,
@@ -49,41 +60,48 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 50757,
+      "bytes": 79908,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
       "pivote": null,
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            300,
+            75,
+            437,
+            233
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            5,
+            9,
+            91,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "vikingo.principiante.fuente",
+      "id": "vikingo.aprendiz.cuerpo",
       "clase": "vikingo",
-      "rango": "principiante",
-      "nombre": "vikingo_principiante.svg",
-      "ruta": "assets/characters/vikingo/principiante/vikingo_principiante.svg",
-      "tipo": "fuente",
+      "rango": "aprendiz",
+      "nombre": "vikingo_aprendiz_full.png",
+      "ruta": "assets/characters/vikingo/aprendiz/vikingo_aprendiz_full.png",
+      "tipo": "cuerpo",
       "dimensiones": {
-        "viewBox": [
-          -30,
-          -2,
-          360,
-          420
-        ]
+        "ancho": 720,
+        "alto": 840
       },
-      "formato": "svg",
+      "formato": "png",
       "transparencia": true,
-      "bytes": 56491,
+      "bytes": 374942,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -91,24 +109,671 @@
         "x": 0.5,
         "y": 0.97
       },
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            437,
+            75,
+            568,
+            233
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            1,
+            9,
+            89,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "pirata.principiante.cuerpo",
+      "id": "vikingo.aprendiz.retrato",
+      "clase": "vikingo",
+      "rango": "aprendiz",
+      "nombre": "vikingo_aprendiz_portrait.png",
+      "ruta": "assets/characters/vikingo/aprendiz/vikingo_aprendiz_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 80749,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            437,
+            75,
+            568,
+            233
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            1,
+            9,
+            89,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.combatiente.cuerpo",
+      "clase": "vikingo",
+      "rango": "combatiente",
+      "nombre": "vikingo_combatiente_full.png",
+      "ruta": "assets/characters/vikingo/combatiente/vikingo_combatiente_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 391714,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            75,
+            700,
+            233
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            3,
+            9,
+            88,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.combatiente.retrato",
+      "clase": "vikingo",
+      "rango": "combatiente",
+      "nombre": "vikingo_combatiente_portrait.png",
+      "ruta": "assets/characters/vikingo/combatiente/vikingo_combatiente_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 81296,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            75,
+            700,
+            233
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            3,
+            9,
+            88,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.guerrero.cuerpo",
+      "clase": "vikingo",
+      "rango": "guerrero",
+      "nombre": "vikingo_guerrero_full.png",
+      "ruta": "assets/characters/vikingo/guerrero/vikingo_guerrero_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 418320,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            75,
+            837,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            3,
+            8,
+            95,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.guerrero.retrato",
+      "clase": "vikingo",
+      "rango": "guerrero",
+      "nombre": "vikingo_guerrero_portrait.png",
+      "ruta": "assets/characters/vikingo/guerrero/vikingo_guerrero_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 83852,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            75,
+            837,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            3,
+            8,
+            95,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.veterano.cuerpo",
+      "clase": "vikingo",
+      "rango": "veterano",
+      "nombre": "vikingo_veterano_full.png",
+      "ruta": "assets/characters/vikingo/veterano/vikingo_veterano_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 457306,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            75,
+            977,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            1,
+            8,
+            100,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.veterano.retrato",
+      "clase": "vikingo",
+      "rango": "veterano",
+      "nombre": "vikingo_veterano_portrait.png",
+      "ruta": "assets/characters/vikingo/veterano/vikingo_veterano_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 82888,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            75,
+            977,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            1,
+            8,
+            100,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.campeon.cuerpo",
+      "clase": "vikingo",
+      "rango": "campeon",
+      "nombre": "vikingo_campeon_full.png",
+      "ruta": "assets/characters/vikingo/campeon/vikingo_campeon_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 510813,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            75,
+            1115,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            106,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.campeon.retrato",
+      "clase": "vikingo",
+      "rango": "campeon",
+      "nombre": "vikingo_campeon_portrait.png",
+      "ruta": "assets/characters/vikingo/campeon/vikingo_campeon_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 87474,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            75,
+            1115,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            106,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.elite.cuerpo",
+      "clase": "vikingo",
+      "rango": "elite",
+      "nombre": "vikingo_elite_full.png",
+      "ruta": "assets/characters/vikingo/elite/vikingo_elite_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 485870,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            75,
+            1254,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            107,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.elite.retrato",
+      "clase": "vikingo",
+      "rango": "elite",
+      "nombre": "vikingo_elite_portrait.png",
+      "ruta": "assets/characters/vikingo/elite/vikingo_elite_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 85720,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            75,
+            1254,
+            233
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            107,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.maestro.cuerpo",
+      "clase": "vikingo",
+      "rango": "maestro",
+      "nombre": "vikingo_maestro_full.png",
+      "ruta": "assets/characters/vikingo/maestro/vikingo_maestro_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 508447,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            75,
+            1387,
+            233
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            0,
+            7,
+            101,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.maestro.retrato",
+      "clase": "vikingo",
+      "rango": "maestro",
+      "nombre": "vikingo_maestro_portrait.png",
+      "ruta": "assets/characters/vikingo/maestro/vikingo_maestro_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 90512,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            75,
+            1387,
+            233
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            0,
+            7,
+            101,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.legendario.cuerpo",
+      "clase": "vikingo",
+      "rango": "legendario",
+      "nombre": "vikingo_legendario_full.png",
+      "ruta": "assets/characters/vikingo/legendario/vikingo_legendario_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 579604,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            75,
+            1536,
+            233
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            0,
+            5,
+            116,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "vikingo.legendario.retrato",
+      "clase": "vikingo",
+      "rango": "legendario",
+      "nombre": "vikingo_legendario_portrait.png",
+      "ruta": "assets/characters/vikingo/legendario/vikingo_legendario_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 93260,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            75,
+            1536,
+            233
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            0,
+            5,
+            116,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.novato.cuerpo",
       "clase": "pirata",
-      "rango": "principiante",
-      "nombre": "pirata_principiante_full.png",
-      "ruta": "assets/characters/pirata/principiante/pirata_principiante_full.png",
+      "rango": "novato",
+      "nombre": "pirata_novato_full.png",
+      "ruta": "assets/characters/pirata/novato/pirata_novato_full.png",
       "tipo": "cuerpo",
       "dimensiones": {
         "ancho": 720,
@@ -116,7 +781,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 191573,
+      "bytes": 359147,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -124,24 +789,35 @@
         "x": 0.5,
         "y": 0.97
       },
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            300,
+            245,
+            437,
+            403
+          ],
+          "escala": 5.257,
+          "cajaFigura": [
+            9,
+            11,
+            87,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "pirata.principiante.retrato",
+      "id": "pirata.novato.retrato",
       "clase": "pirata",
-      "rango": "principiante",
-      "nombre": "pirata_principiante_portrait.png",
-      "ruta": "assets/characters/pirata/principiante/pirata_principiante_portrait.png",
+      "rango": "novato",
+      "nombre": "pirata_novato_portrait.png",
+      "ruta": "assets/characters/pirata/novato/pirata_novato_portrait.png",
       "tipo": "retrato",
       "dimensiones": {
         "ancho": 256,
@@ -149,66 +825,40 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 54694,
+      "bytes": 77998,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
       "pivote": null,
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            300,
+            245,
+            437,
+            403
+          ],
+          "escala": 5.257,
+          "cajaFigura": [
+            9,
+            11,
+            87,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "pirata.principiante.fuente",
+      "id": "pirata.aprendiz.cuerpo",
       "clase": "pirata",
-      "rango": "principiante",
-      "nombre": "pirata_principiante.svg",
-      "ruta": "assets/characters/pirata/principiante/pirata_principiante.svg",
-      "tipo": "fuente",
-      "dimensiones": {
-        "viewBox": [
-          -30,
-          -2,
-          360,
-          420
-        ]
-      },
-      "formato": "svg",
-      "transparencia": true,
-      "bytes": 48086,
-      "fotogramas": 1,
-      "animaciones": [],
-      "duracionFotogramaMs": null,
-      "pivote": {
-        "x": 0.5,
-        "y": 0.97
-      },
-      "versionMaestro": "2.0.0",
-      "estado": "pending",
-      "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
-        "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
-        }
-      }
-    },
-    {
-      "id": "samurai.principiante.cuerpo",
-      "clase": "samurai",
-      "rango": "principiante",
-      "nombre": "samurai_principiante_full.png",
-      "ruta": "assets/characters/samurai/principiante/samurai_principiante_full.png",
+      "rango": "aprendiz",
+      "nombre": "pirata_aprendiz_full.png",
+      "ruta": "assets/characters/pirata/aprendiz/pirata_aprendiz_full.png",
       "tipo": "cuerpo",
       "dimensiones": {
         "ancho": 720,
@@ -216,7 +866,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 188585,
+      "bytes": 380191,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -224,24 +874,35 @@
         "x": 0.5,
         "y": 0.97
       },
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            437,
+            245,
+            568,
+            403
+          ],
+          "escala": 5.293,
+          "cajaFigura": [
+            6,
+            12,
+            87,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "samurai.principiante.retrato",
-      "clase": "samurai",
-      "rango": "principiante",
-      "nombre": "samurai_principiante_portrait.png",
-      "ruta": "assets/characters/samurai/principiante/samurai_principiante_portrait.png",
+      "id": "pirata.aprendiz.retrato",
+      "clase": "pirata",
+      "rango": "aprendiz",
+      "nombre": "pirata_aprendiz_portrait.png",
+      "ruta": "assets/characters/pirata/aprendiz/pirata_aprendiz_portrait.png",
       "tipo": "retrato",
       "dimensiones": {
         "ancho": 256,
@@ -249,66 +910,40 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 46075,
+      "bytes": 78657,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
       "pivote": null,
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            437,
+            245,
+            568,
+            403
+          ],
+          "escala": 5.293,
+          "cajaFigura": [
+            6,
+            12,
+            87,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "samurai.principiante.fuente",
-      "clase": "samurai",
-      "rango": "principiante",
-      "nombre": "samurai_principiante.svg",
-      "ruta": "assets/characters/samurai/principiante/samurai_principiante.svg",
-      "tipo": "fuente",
-      "dimensiones": {
-        "viewBox": [
-          -30,
-          -2,
-          360,
-          420
-        ]
-      },
-      "formato": "svg",
-      "transparencia": true,
-      "bytes": 37242,
-      "fotogramas": 1,
-      "animaciones": [],
-      "duracionFotogramaMs": null,
-      "pivote": {
-        "x": 0.5,
-        "y": 0.97
-      },
-      "versionMaestro": "2.0.0",
-      "estado": "pending",
-      "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
-        "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
-        }
-      }
-    },
-    {
-      "id": "polinesio.principiante.cuerpo",
-      "clase": "polinesio",
-      "rango": "principiante",
-      "nombre": "polinesio_principiante_full.png",
-      "ruta": "assets/characters/polinesio/principiante/polinesio_principiante_full.png",
+      "id": "pirata.combatiente.cuerpo",
+      "clase": "pirata",
+      "rango": "combatiente",
+      "nombre": "pirata_combatiente_full.png",
+      "ruta": "assets/characters/pirata/combatiente/pirata_combatiente_full.png",
       "tipo": "cuerpo",
       "dimensiones": {
         "ancho": 720,
@@ -316,7 +951,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 131953,
+      "bytes": 402905,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -324,24 +959,35 @@
         "x": 0.5,
         "y": 0.97
       },
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            568,
+            245,
+            700,
+            403
+          ],
+          "escala": 5.257,
+          "cajaFigura": [
+            1,
+            11,
+            87,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "polinesio.principiante.retrato",
-      "clase": "polinesio",
-      "rango": "principiante",
-      "nombre": "polinesio_principiante_portrait.png",
-      "ruta": "assets/characters/polinesio/principiante/polinesio_principiante_portrait.png",
+      "id": "pirata.combatiente.retrato",
+      "clase": "pirata",
+      "rango": "combatiente",
+      "nombre": "pirata_combatiente_portrait.png",
+      "ruta": "assets/characters/pirata/combatiente/pirata_combatiente_portrait.png",
       "tipo": "retrato",
       "dimensiones": {
         "ancho": 256,
@@ -349,66 +995,40 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 46162,
+      "bytes": 83851,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
       "pivote": null,
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            568,
+            245,
+            700,
+            403
+          ],
+          "escala": 5.257,
+          "cajaFigura": [
+            1,
+            11,
+            87,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "polinesio.principiante.fuente",
-      "clase": "polinesio",
-      "rango": "principiante",
-      "nombre": "polinesio_principiante.svg",
-      "ruta": "assets/characters/polinesio/principiante/polinesio_principiante.svg",
-      "tipo": "fuente",
-      "dimensiones": {
-        "viewBox": [
-          -30,
-          -2,
-          360,
-          420
-        ]
-      },
-      "formato": "svg",
-      "transparencia": true,
-      "bytes": 38967,
-      "fotogramas": 1,
-      "animaciones": [],
-      "duracionFotogramaMs": null,
-      "pivote": {
-        "x": 0.5,
-        "y": 0.97
-      },
-      "versionMaestro": "2.0.0",
-      "estado": "pending",
-      "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
-        "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
-        }
-      }
-    },
-    {
-      "id": "romano.principiante.cuerpo",
-      "clase": "romano",
-      "rango": "principiante",
-      "nombre": "romano_principiante_full.png",
-      "ruta": "assets/characters/romano/principiante/romano_principiante_full.png",
+      "id": "pirata.guerrero.cuerpo",
+      "clase": "pirata",
+      "rango": "guerrero",
+      "nombre": "pirata_guerrero_full.png",
+      "ruta": "assets/characters/pirata/guerrero/pirata_guerrero_full.png",
       "tipo": "cuerpo",
       "dimensiones": {
         "ancho": 720,
@@ -416,7 +1036,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 146257,
+      "bytes": 417603,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -424,24 +1044,35 @@
         "x": 0.5,
         "y": 0.97
       },
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            700,
+            245,
+            837,
+            403
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            99,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "romano.principiante.retrato",
-      "clase": "romano",
-      "rango": "principiante",
-      "nombre": "romano_principiante_portrait.png",
-      "ruta": "assets/characters/romano/principiante/romano_principiante_portrait.png",
+      "id": "pirata.guerrero.retrato",
+      "clase": "pirata",
+      "rango": "guerrero",
+      "nombre": "pirata_guerrero_portrait.png",
+      "ruta": "assets/characters/pirata/guerrero/pirata_guerrero_portrait.png",
       "tipo": "retrato",
       "dimensiones": {
         "ancho": 256,
@@ -449,41 +1080,48 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 43355,
+      "bytes": 86096,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
       "pivote": null,
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            700,
+            245,
+            837,
+            403
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            99,
+            158
+          ],
+          "retrato": true
         }
       }
     },
     {
-      "id": "romano.principiante.fuente",
-      "clase": "romano",
-      "rango": "principiante",
-      "nombre": "romano_principiante.svg",
-      "ruta": "assets/characters/romano/principiante/romano_principiante.svg",
-      "tipo": "fuente",
+      "id": "pirata.veterano.cuerpo",
+      "clase": "pirata",
+      "rango": "veterano",
+      "nombre": "pirata_veterano_full.png",
+      "ruta": "assets/characters/pirata/veterano/pirata_veterano_full.png",
+      "tipo": "cuerpo",
       "dimensiones": {
-        "viewBox": [
-          -30,
-          -2,
-          360,
-          420
-        ]
+        "ancho": 720,
+        "alto": 840
       },
-      "formato": "svg",
+      "formato": "png",
       "transparencia": true,
-      "bytes": 45712,
+      "bytes": 408038,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -491,15 +1129,2702 @@
         "x": 0.5,
         "y": 0.97
       },
-      "versionMaestro": "2.0.0",
+      "versionMaestro": "3.0.0",
       "estado": "pending",
       "herramienta": {
-        "nombre": "tools/characters/generator.mjs",
-        "motor": "SVG + Chromium (Playwright)",
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
         "parametros": {
-          "rango": "principiante",
-          "masa": 0,
-          "def": 0
+          "celda": [
+            837,
+            245,
+            977,
+            403
+          ],
+          "escala": 5.084,
+          "cajaFigura": [
+            5,
+            6,
+            97,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.veterano.retrato",
+      "clase": "pirata",
+      "rango": "veterano",
+      "nombre": "pirata_veterano_portrait.png",
+      "ruta": "assets/characters/pirata/veterano/pirata_veterano_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 88166,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            245,
+            977,
+            403
+          ],
+          "escala": 5.084,
+          "cajaFigura": [
+            5,
+            6,
+            97,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.campeon.cuerpo",
+      "clase": "pirata",
+      "rango": "campeon",
+      "nombre": "pirata_campeon_full.png",
+      "ruta": "assets/characters/pirata/campeon/pirata_campeon_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 433062,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            245,
+            1115,
+            403
+          ],
+          "escala": 5.084,
+          "cajaFigura": [
+            4,
+            6,
+            102,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.campeon.retrato",
+      "clase": "pirata",
+      "rango": "campeon",
+      "nombre": "pirata_campeon_portrait.png",
+      "ruta": "assets/characters/pirata/campeon/pirata_campeon_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 93028,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            245,
+            1115,
+            403
+          ],
+          "escala": 5.084,
+          "cajaFigura": [
+            4,
+            6,
+            102,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.elite.cuerpo",
+      "clase": "pirata",
+      "rango": "elite",
+      "nombre": "pirata_elite_full.png",
+      "ruta": "assets/characters/pirata/elite/pirata_elite_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 487370,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            245,
+            1254,
+            403
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            3,
+            5,
+            108,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.elite.retrato",
+      "clase": "pirata",
+      "rango": "elite",
+      "nombre": "pirata_elite_portrait.png",
+      "ruta": "assets/characters/pirata/elite/pirata_elite_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 100313,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            245,
+            1254,
+            403
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            3,
+            5,
+            108,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.maestro.cuerpo",
+      "clase": "pirata",
+      "rango": "maestro",
+      "nombre": "pirata_maestro_full.png",
+      "ruta": "assets/characters/pirata/maestro/pirata_maestro_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 470909,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            245,
+            1387,
+            403
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            95,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.maestro.retrato",
+      "clase": "pirata",
+      "rango": "maestro",
+      "nombre": "pirata_maestro_portrait.png",
+      "ruta": "assets/characters/pirata/maestro/pirata_maestro_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 101833,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            245,
+            1387,
+            403
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            8,
+            95,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.legendario.cuerpo",
+      "clase": "pirata",
+      "rango": "legendario",
+      "nombre": "pirata_legendario_full.png",
+      "ruta": "assets/characters/pirata/legendario/pirata_legendario_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 580656,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            245,
+            1536,
+            403
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            0,
+            5,
+            116,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "pirata.legendario.retrato",
+      "clase": "pirata",
+      "rango": "legendario",
+      "nombre": "pirata_legendario_portrait.png",
+      "ruta": "assets/characters/pirata/legendario/pirata_legendario_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 100964,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            245,
+            1536,
+            403
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            0,
+            5,
+            116,
+            158
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.novato.cuerpo",
+      "clase": "samurai",
+      "rango": "novato",
+      "nombre": "samurai_novato_full.png",
+      "ruta": "assets/characters/samurai/novato/samurai_novato_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 308364,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            300,
+            414,
+            437,
+            577
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            15,
+            12,
+            84,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.novato.retrato",
+      "clase": "samurai",
+      "rango": "novato",
+      "nombre": "samurai_novato_portrait.png",
+      "ruta": "assets/characters/samurai/novato/samurai_novato_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 67066,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            300,
+            414,
+            437,
+            577
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            15,
+            12,
+            84,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.aprendiz.cuerpo",
+      "clase": "samurai",
+      "rango": "aprendiz",
+      "nombre": "samurai_aprendiz_full.png",
+      "ruta": "assets/characters/samurai/aprendiz/samurai_aprendiz_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 340006,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            437,
+            414,
+            568,
+            577
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            6,
+            8,
+            86,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.aprendiz.retrato",
+      "clase": "samurai",
+      "rango": "aprendiz",
+      "nombre": "samurai_aprendiz_portrait.png",
+      "ruta": "assets/characters/samurai/aprendiz/samurai_aprendiz_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 76466,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            437,
+            414,
+            568,
+            577
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            6,
+            8,
+            86,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.combatiente.cuerpo",
+      "clase": "samurai",
+      "rango": "combatiente",
+      "nombre": "samurai_combatiente_full.png",
+      "ruta": "assets/characters/samurai/combatiente/samurai_combatiente_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 345932,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            414,
+            700,
+            577
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            13,
+            13,
+            88,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.combatiente.retrato",
+      "clase": "samurai",
+      "rango": "combatiente",
+      "nombre": "samurai_combatiente_portrait.png",
+      "ruta": "assets/characters/samurai/combatiente/samurai_combatiente_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 80587,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            414,
+            700,
+            577
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            13,
+            13,
+            88,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.guerrero.cuerpo",
+      "clase": "samurai",
+      "rango": "guerrero",
+      "nombre": "samurai_guerrero_full.png",
+      "ruta": "assets/characters/samurai/guerrero/samurai_guerrero_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 424442,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            414,
+            837,
+            577
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            2,
+            13,
+            98,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.guerrero.retrato",
+      "clase": "samurai",
+      "rango": "guerrero",
+      "nombre": "samurai_guerrero_portrait.png",
+      "ruta": "assets/characters/samurai/guerrero/samurai_guerrero_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 84480,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            414,
+            837,
+            577
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            2,
+            13,
+            98,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.veterano.cuerpo",
+      "clase": "samurai",
+      "rango": "veterano",
+      "nombre": "samurai_veterano_full.png",
+      "ruta": "assets/characters/samurai/veterano/samurai_veterano_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 457732,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            414,
+            977,
+            577
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            6,
+            14,
+            107,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.veterano.retrato",
+      "clase": "samurai",
+      "rango": "veterano",
+      "nombre": "samurai_veterano_portrait.png",
+      "ruta": "assets/characters/samurai/veterano/samurai_veterano_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 84559,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            414,
+            977,
+            577
+          ],
+          "escala": 5.187,
+          "cajaFigura": [
+            6,
+            14,
+            107,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.campeon.cuerpo",
+      "clase": "samurai",
+      "rango": "campeon",
+      "nombre": "samurai_campeon_full.png",
+      "ruta": "assets/characters/samurai/campeon/samurai_campeon_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 475923,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            414,
+            1115,
+            577
+          ],
+          "escala": 4.954,
+          "cajaFigura": [
+            4,
+            7,
+            106,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.campeon.retrato",
+      "clase": "samurai",
+      "rango": "campeon",
+      "nombre": "samurai_campeon_portrait.png",
+      "ruta": "assets/characters/samurai/campeon/samurai_campeon_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 89845,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            414,
+            1115,
+            577
+          ],
+          "escala": 4.954,
+          "cajaFigura": [
+            4,
+            7,
+            106,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.elite.cuerpo",
+      "clase": "samurai",
+      "rango": "elite",
+      "nombre": "samurai_elite_full.png",
+      "ruta": "assets/characters/samurai/elite/samurai_elite_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 523649,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            414,
+            1254,
+            577
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            2,
+            8,
+            108,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.elite.retrato",
+      "clase": "samurai",
+      "rango": "elite",
+      "nombre": "samurai_elite_portrait.png",
+      "ruta": "assets/characters/samurai/elite/samurai_elite_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 98983,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            414,
+            1254,
+            577
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            2,
+            8,
+            108,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.maestro.cuerpo",
+      "clase": "samurai",
+      "rango": "maestro",
+      "nombre": "samurai_maestro_full.png",
+      "ruta": "assets/characters/samurai/maestro/samurai_maestro_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 476247,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            414,
+            1387,
+            577
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            6,
+            10,
+            102,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.maestro.retrato",
+      "clase": "samurai",
+      "rango": "maestro",
+      "nombre": "samurai_maestro_portrait.png",
+      "ruta": "assets/characters/samurai/maestro/samurai_maestro_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 100753,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            414,
+            1387,
+            577
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            6,
+            10,
+            102,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.legendario.cuerpo",
+      "clase": "samurai",
+      "rango": "legendario",
+      "nombre": "samurai_legendario_full.png",
+      "ruta": "assets/characters/samurai/legendario/samurai_legendario_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 521317,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            414,
+            1536,
+            577
+          ],
+          "escala": 4.891,
+          "cajaFigura": [
+            2,
+            5,
+            111,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "samurai.legendario.retrato",
+      "clase": "samurai",
+      "rango": "legendario",
+      "nombre": "samurai_legendario_portrait.png",
+      "ruta": "assets/characters/samurai/legendario/samurai_legendario_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 99330,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            414,
+            1536,
+            577
+          ],
+          "escala": 4.891,
+          "cajaFigura": [
+            2,
+            5,
+            111,
+            163
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.novato.cuerpo",
+      "clase": "polinesio",
+      "rango": "novato",
+      "nombre": "polinesio_novato_full.png",
+      "ruta": "assets/characters/polinesio/novato/polinesio_novato_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 319867,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            300,
+            587,
+            437,
+            749
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            12,
+            82,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.novato.retrato",
+      "clase": "polinesio",
+      "rango": "novato",
+      "nombre": "polinesio_novato_portrait.png",
+      "ruta": "assets/characters/polinesio/novato/polinesio_novato_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 62450,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            300,
+            587,
+            437,
+            749
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            12,
+            82,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.aprendiz.cuerpo",
+      "clase": "polinesio",
+      "rango": "aprendiz",
+      "nombre": "polinesio_aprendiz_full.png",
+      "ruta": "assets/characters/polinesio/aprendiz/polinesio_aprendiz_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 350514,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            437,
+            587,
+            568,
+            749
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            12,
+            84,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.aprendiz.retrato",
+      "clase": "polinesio",
+      "rango": "aprendiz",
+      "nombre": "polinesio_aprendiz_portrait.png",
+      "ruta": "assets/characters/polinesio/aprendiz/polinesio_aprendiz_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 72197,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            437,
+            587,
+            568,
+            749
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            0,
+            12,
+            84,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.combatiente.cuerpo",
+      "clase": "polinesio",
+      "rango": "combatiente",
+      "nombre": "polinesio_combatiente_full.png",
+      "ruta": "assets/characters/polinesio/combatiente/polinesio_combatiente_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 396190,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            587,
+            700,
+            749
+          ],
+          "escala": 5.084,
+          "cajaFigura": [
+            0,
+            10,
+            87,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.combatiente.retrato",
+      "clase": "polinesio",
+      "rango": "combatiente",
+      "nombre": "polinesio_combatiente_portrait.png",
+      "ruta": "assets/characters/polinesio/combatiente/polinesio_combatiente_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 77346,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            587,
+            700,
+            749
+          ],
+          "escala": 5.084,
+          "cajaFigura": [
+            0,
+            10,
+            87,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.guerrero.cuerpo",
+      "clase": "polinesio",
+      "rango": "guerrero",
+      "nombre": "polinesio_guerrero_full.png",
+      "ruta": "assets/characters/polinesio/guerrero/polinesio_guerrero_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 422511,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            587,
+            837,
+            749
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            0,
+            9,
+            92,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.guerrero.retrato",
+      "clase": "polinesio",
+      "rango": "guerrero",
+      "nombre": "polinesio_guerrero_portrait.png",
+      "ruta": "assets/characters/polinesio/guerrero/polinesio_guerrero_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 83088,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            587,
+            837,
+            749
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            0,
+            9,
+            92,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.veterano.cuerpo",
+      "clase": "polinesio",
+      "rango": "veterano",
+      "nombre": "polinesio_veterano_full.png",
+      "ruta": "assets/characters/polinesio/veterano/polinesio_veterano_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 418665,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            587,
+            977,
+            749
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            1,
+            7,
+            94,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.veterano.retrato",
+      "clase": "polinesio",
+      "rango": "veterano",
+      "nombre": "polinesio_veterano_portrait.png",
+      "ruta": "assets/characters/polinesio/veterano/polinesio_veterano_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 82782,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            587,
+            977,
+            749
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            1,
+            7,
+            94,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.campeon.cuerpo",
+      "clase": "polinesio",
+      "rango": "campeon",
+      "nombre": "polinesio_campeon_full.png",
+      "ruta": "assets/characters/polinesio/campeon/polinesio_campeon_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 436924,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            587,
+            1115,
+            749
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            2,
+            9,
+            94,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.campeon.retrato",
+      "clase": "polinesio",
+      "rango": "campeon",
+      "nombre": "polinesio_campeon_portrait.png",
+      "ruta": "assets/characters/polinesio/campeon/polinesio_campeon_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 88310,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            587,
+            1115,
+            749
+          ],
+          "escala": 5.051,
+          "cajaFigura": [
+            2,
+            9,
+            94,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.elite.cuerpo",
+      "clase": "polinesio",
+      "rango": "elite",
+      "nombre": "polinesio_elite_full.png",
+      "ruta": "assets/characters/polinesio/elite/polinesio_elite_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 480763,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            587,
+            1254,
+            749
+          ],
+          "escala": 4.77,
+          "cajaFigura": [
+            0,
+            0,
+            100,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.elite.retrato",
+      "clase": "polinesio",
+      "rango": "elite",
+      "nombre": "polinesio_elite_portrait.png",
+      "ruta": "assets/characters/polinesio/elite/polinesio_elite_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 112939,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            587,
+            1254,
+            749
+          ],
+          "escala": 4.77,
+          "cajaFigura": [
+            0,
+            0,
+            100,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.maestro.cuerpo",
+      "clase": "polinesio",
+      "rango": "maestro",
+      "nombre": "polinesio_maestro_full.png",
+      "ruta": "assets/characters/polinesio/maestro/polinesio_maestro_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 464504,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            587,
+            1387,
+            749
+          ],
+          "escala": 5.018,
+          "cajaFigura": [
+            0,
+            8,
+            95,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.maestro.retrato",
+      "clase": "polinesio",
+      "rango": "maestro",
+      "nombre": "polinesio_maestro_portrait.png",
+      "ruta": "assets/characters/polinesio/maestro/polinesio_maestro_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 92820,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            587,
+            1387,
+            749
+          ],
+          "escala": 5.018,
+          "cajaFigura": [
+            0,
+            8,
+            95,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.legendario.cuerpo",
+      "clase": "polinesio",
+      "rango": "legendario",
+      "nombre": "polinesio_legendario_full.png",
+      "ruta": "assets/characters/polinesio/legendario/polinesio_legendario_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 588822,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            587,
+            1536,
+            749
+          ],
+          "escala": 4.77,
+          "cajaFigura": [
+            1,
+            0,
+            107,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "polinesio.legendario.retrato",
+      "clase": "polinesio",
+      "rango": "legendario",
+      "nombre": "polinesio_legendario_portrait.png",
+      "ruta": "assets/characters/polinesio/legendario/polinesio_legendario_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 116922,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            587,
+            1536,
+            749
+          ],
+          "escala": 4.77,
+          "cajaFigura": [
+            1,
+            0,
+            107,
+            162
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.novato.cuerpo",
+      "clase": "romano",
+      "rango": "novato",
+      "nombre": "romano_novato_full.png",
+      "ruta": "assets/characters/romano/novato/romano_novato_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 325317,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            300,
+            758,
+            437,
+            923
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            5,
+            15,
+            85,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.novato.retrato",
+      "clase": "romano",
+      "rango": "novato",
+      "nombre": "romano_novato_portrait.png",
+      "ruta": "assets/characters/romano/novato/romano_novato_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 68195,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            300,
+            758,
+            437,
+            923
+          ],
+          "escala": 5.152,
+          "cajaFigura": [
+            5,
+            15,
+            85,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.aprendiz.cuerpo",
+      "clase": "romano",
+      "rango": "aprendiz",
+      "nombre": "romano_aprendiz_full.png",
+      "ruta": "assets/characters/romano/aprendiz/romano_aprendiz_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 351905,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            437,
+            758,
+            568,
+            923
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            4,
+            14,
+            85,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.aprendiz.retrato",
+      "clase": "romano",
+      "rango": "aprendiz",
+      "nombre": "romano_aprendiz_portrait.png",
+      "ruta": "assets/characters/romano/aprendiz/romano_aprendiz_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 76911,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            437,
+            758,
+            568,
+            923
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            4,
+            14,
+            85,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.combatiente.cuerpo",
+      "clase": "romano",
+      "rango": "combatiente",
+      "nombre": "romano_combatiente_full.png",
+      "ruta": "assets/characters/romano/combatiente/romano_combatiente_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 395155,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            758,
+            700,
+            923
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            0,
+            14,
+            89,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.combatiente.retrato",
+      "clase": "romano",
+      "rango": "combatiente",
+      "nombre": "romano_combatiente_portrait.png",
+      "ruta": "assets/characters/romano/combatiente/romano_combatiente_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 81352,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            568,
+            758,
+            700,
+            923
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            0,
+            14,
+            89,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.guerrero.cuerpo",
+      "clase": "romano",
+      "rango": "guerrero",
+      "nombre": "romano_guerrero_full.png",
+      "ruta": "assets/characters/romano/guerrero/romano_guerrero_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 404497,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            758,
+            837,
+            923
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            1,
+            14,
+            91,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.guerrero.retrato",
+      "clase": "romano",
+      "rango": "guerrero",
+      "nombre": "romano_guerrero_portrait.png",
+      "ruta": "assets/characters/romano/guerrero/romano_guerrero_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 81462,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            700,
+            758,
+            837,
+            923
+          ],
+          "escala": 5.118,
+          "cajaFigura": [
+            1,
+            14,
+            91,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.veterano.cuerpo",
+      "clase": "romano",
+      "rango": "veterano",
+      "nombre": "romano_veterano_full.png",
+      "ruta": "assets/characters/romano/veterano/romano_veterano_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 426356,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            758,
+            977,
+            923
+          ],
+          "escala": 4.954,
+          "cajaFigura": [
+            1,
+            9,
+            98,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.veterano.retrato",
+      "clase": "romano",
+      "rango": "veterano",
+      "nombre": "romano_veterano_portrait.png",
+      "ruta": "assets/characters/romano/veterano/romano_veterano_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 78331,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            837,
+            758,
+            977,
+            923
+          ],
+          "escala": 4.954,
+          "cajaFigura": [
+            1,
+            9,
+            98,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.campeon.cuerpo",
+      "clase": "romano",
+      "rango": "campeon",
+      "nombre": "romano_campeon_full.png",
+      "ruta": "assets/characters/romano/campeon/romano_campeon_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 406372,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            758,
+            1115,
+            923
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            0,
+            10,
+            88,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.campeon.retrato",
+      "clase": "romano",
+      "rango": "campeon",
+      "nombre": "romano_campeon_portrait.png",
+      "ruta": "assets/characters/romano/campeon/romano_campeon_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 81894,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            977,
+            758,
+            1115,
+            923
+          ],
+          "escala": 4.986,
+          "cajaFigura": [
+            0,
+            10,
+            88,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.elite.cuerpo",
+      "clase": "romano",
+      "rango": "elite",
+      "nombre": "romano_elite_full.png",
+      "ruta": "assets/characters/romano/elite/romano_elite_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 476817,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            758,
+            1254,
+            923
+          ],
+          "escala": 4.891,
+          "cajaFigura": [
+            0,
+            7,
+            106,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.elite.retrato",
+      "clase": "romano",
+      "rango": "elite",
+      "nombre": "romano_elite_portrait.png",
+      "ruta": "assets/characters/romano/elite/romano_elite_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 82386,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1115,
+            758,
+            1254,
+            923
+          ],
+          "escala": 4.891,
+          "cajaFigura": [
+            0,
+            7,
+            106,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.maestro.cuerpo",
+      "clase": "romano",
+      "rango": "maestro",
+      "nombre": "romano_maestro_full.png",
+      "ruta": "assets/characters/romano/maestro/romano_maestro_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 456677,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            758,
+            1387,
+            923
+          ],
+          "escala": 4.891,
+          "cajaFigura": [
+            0,
+            7,
+            100,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.maestro.retrato",
+      "clase": "romano",
+      "rango": "maestro",
+      "nombre": "romano_maestro_portrait.png",
+      "ruta": "assets/characters/romano/maestro/romano_maestro_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 84853,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1254,
+            758,
+            1387,
+            923
+          ],
+          "escala": 4.891,
+          "cajaFigura": [
+            0,
+            7,
+            100,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.legendario.cuerpo",
+      "clase": "romano",
+      "rango": "legendario",
+      "nombre": "romano_legendario_full.png",
+      "ruta": "assets/characters/romano/legendario/romano_legendario_full.png",
+      "tipo": "cuerpo",
+      "dimensiones": {
+        "ancho": 720,
+        "alto": 840
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 537039,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            758,
+            1536,
+            923
+          ],
+          "escala": 4.684,
+          "cajaFigura": [
+            0,
+            0,
+            119,
+            165
+          ],
+          "retrato": true
+        }
+      }
+    },
+    {
+      "id": "romano.legendario.retrato",
+      "clase": "romano",
+      "rango": "legendario",
+      "nombre": "romano_legendario_portrait.png",
+      "ruta": "assets/characters/romano/legendario/romano_legendario_portrait.png",
+      "tipo": "retrato",
+      "dimensiones": {
+        "ancho": 256,
+        "alto": 256
+      },
+      "formato": "png",
+      "transparencia": true,
+      "bytes": 86968,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": null,
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/extract-sheet.py",
+        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "parametros": {
+          "celda": [
+            1387,
+            758,
+            1536,
+            923
+          ],
+          "escala": 4.684,
+          "cajaFigura": [
+            0,
+            0,
+            119,
+            165
+          ],
+          "retrato": true
         }
       }
     }

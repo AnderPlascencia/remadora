@@ -1,0 +1,40 @@
+{
+  "clase": "pirata",
+  "rango": "novato",
+  "versionMaestro": "3.0.0",
+  "herramienta": {
+    "nombre": "tools/extract-sheet.py",
+    "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+    "parametros": {
+      "celda": [
+        300,
+        245,
+        437,
+        403
+      ],
+      "escala": 5.257,
+      "cajaFigura": [
+        9,
+        11,
+        87,
+        158
+      ],
+      "retrato": true
+    }
+  },
+  "fuente": {
+    "tipo": "imagen generada externamente",
+    "archivo": null,
+    "lamina": "assets/characters/_source/lamina_clases_v1.png",
+    "generador": "sin indicar (lámina aportada por el usuario)",
+    "licencia": "según los términos del generador",
+    "resolucionOrigen": [
+      78,
+      147
+    ]
+  },
+  "pivote": {
+    "x": 0.5,
+    "y": 0.97
+  }
+}

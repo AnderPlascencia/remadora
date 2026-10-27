@@ -1,15 +1,21 @@
 // Datos fijos del sistema de personajes: clases, rangos, paletas y formato de exportación.
 // Fuente única para el generador, los scripts de validación y el manifiesto.
 
-export const VERSION_MAESTRO = '2.0.0';
+export const VERSION_MAESTRO = '3.0.0';
 
+// 9 rangos de la lámina de referencia; se sube de rango cada 10 niveles.
 export const RANGOS = [
-  { id: 'principiante', nombre: 'Principiante', lema: 'Inexperto', edad: '18–22', nivel: 1 },
-  { id: 'combatiente', nombre: 'Combatiente', lema: 'Aprendiz avanzado', edad: '23–28', nivel: 10 },
-  { id: 'veterano', nombre: 'Veterano', lema: 'Experimentado', edad: '30–38', nivel: 20 },
-  { id: 'elite', nombre: 'Élite', lema: 'Campeón', edad: '39–48', nivel: 35 },
-  { id: 'legendario', nombre: 'Legendario', lema: 'Máximo rango', edad: '50–65', nivel: 50 },
+  { id: 'novato', nombre: 'Novato', lema: 'Inexperto', edad: '18–20', nivel: 1 },
+  { id: 'aprendiz', nombre: 'Aprendiz', lema: 'En formación', edad: '20–24', nivel: 10 },
+  { id: 'combatiente', nombre: 'Combatiente', lema: 'En acción', edad: '24–28', nivel: 20 },
+  { id: 'guerrero', nombre: 'Guerrero', lema: 'Con experiencia', edad: '28–33', nivel: 30 },
+  { id: 'veterano', nombre: 'Veterano', lema: 'Conocido', edad: '33–38', nivel: 40 },
+  { id: 'campeon', nombre: 'Campeón', lema: 'Dominio', edad: '38–43', nivel: 50 },
+  { id: 'elite', nombre: 'Élite', lema: 'Distinguido', edad: '43–50', nivel: 60 },
+  { id: 'maestro', nombre: 'Maestro', lema: 'Leyenda local', edad: '50–57', nivel: 70 },
+  { id: 'legendario', nombre: 'Legendario', lema: 'Inmortal', edad: '57–65', nivel: 80 },
 ];
+export const rangoPorNivel = (nivel) => RANGOS[Math.min(RANGOS.length - 1, Math.floor(Math.max(1, nivel) / 10))];
 
 // Paleta por clase: piel y pelo fijos (invariantes de identidad) + roles de material.
 export const CLASES = {

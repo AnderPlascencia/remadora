@@ -1,6 +1,6 @@
 # Matriz de progresión de personajes
 
-25 combinaciones (5 clases × 5 rangos). Solo los **Principiantes** (diseños maestros) existen como asset. Los demás rangos se producen en la fase 3, cuando el maestro de su clase esté aprobado.
+**Actualización 3.0.0:** ahora hay 45 combinaciones (5 clases × 9 rangos, uno cada 10 niveles) y las 45 existen como asset, extraídas de la lámina del usuario. La tabla de rangos vigente está en `CHARACTER_RULES.md`. Las columnas de abajo describen la escala anterior de 5 rangos y se mantienen como guía de dirección: P corresponde a Novato, C a Combatiente, V a Veterano, E a Élite y L a Legendario; los rangos intermedios (Aprendiz, Guerrero, Campeón, Maestro) son pasos entre ellos.
 
 Columnas: P = Principiante, C = Combatiente, V = Veterano, E = Élite, L = Legendario.
 

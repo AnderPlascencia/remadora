@@ -1,0 +1,40 @@
+{
+  "clase": "romano",
+  "rango": "combatiente",
+  "versionMaestro": "3.0.0",
+  "herramienta": {
+    "nombre": "tools/extract-sheet.py",
+    "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+    "parametros": {
+      "celda": [
+        568,
+        758,
+        700,
+        923
+      ],
+      "escala": 5.118,
+      "cajaFigura": [
+        0,
+        14,
+        89,
+        165
+      ],
+      "retrato": true
+    }
+  },
+  "fuente": {
+    "tipo": "imagen generada externamente",
+    "archivo": null,
+    "lamina": "assets/characters/_source/lamina_clases_v1.png",
+    "generador": "sin indicar (lámina aportada por el usuario)",
+    "licencia": "según los términos del generador",
+    "resolucionOrigen": [
+      89,
+      151
+    ]
+  },
+  "pivote": {
+    "x": 0.5,
+    "y": 0.97
+  }
+}

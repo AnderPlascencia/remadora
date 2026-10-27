@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Hoja de contacto para revisión visual: cada personaje sobre damero (transparencia),
 // sobre el fondo de la app, en silueta y a los tamaños reales de uso.
-// Uso: node tools/contact-sheet.mjs [--rank principiante] [--class vikingo]
+// Uso: node tools/contact-sheet.mjs [--rank novato] [--class vikingo]
 //   Sin --rank genera la hoja de los maestros; con --class compara los 5 rangos de una clase.
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +13,7 @@ const require = createRequire(import.meta.url);
 const args = process.argv.slice(2);
 const opt = (n) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : null; };
 const clase = opt('class');
-const rango = opt('rank') || 'principiante';
+const rango = opt('rank') || RANGOS[0].id;
 const filas = clase ? RANGOS.map((r) => [clase, r.id]) : Object.keys(CLASES).map((k) => [k, rango]);
 const datos = (ruta) => `data:image/png;base64,${readFileSync(ruta).toString('base64')}`;
 const celdas = [];

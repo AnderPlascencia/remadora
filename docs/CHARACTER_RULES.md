@@ -14,19 +14,25 @@ El sexto atributo, Recuperación, es común a todas las clases y no tiene clase 
 
 ## Rangos
 
-Escala aprobada por el proyecto. Es la fuente de verdad: si otra regla la contradice, gana esta.
+Vigente desde la versión 3.0.0: **9 rangos, uno cada 10 niveles**, tomados de la lámina «Clases y progresión» que aportó el usuario (`assets/characters/_source/lamina_clases_v1.png`). La lámina rotula 10 rangos pero solo dibuja 9 (falta el 6), así que se numeran de nuevo en orden. Fuente única: `RANGOS` en `tools/characters/spec.mjs`.
 
-| id | Rango | Lema | Edad aparente | Pulcritud | Barba | Vestuario | Porte | Nivel del héroe |
-|---|---|---|---|---|---|---|---|---|
-| `principiante` | Principiante | Inexperto | 18–22 | Aspecto descuidado, ropa sencilla y sin mantenimiento | Inexistente o incipiente, según la clase | Piezas básicas, telas simples, cuero barato | Postura insegura, hombros encorvados, mirada inquieta | 1–9 |
-| `combatiente` | Combatiente | Aprendiz avanzado | 23–28 | Aseado, aunque con desgaste de combate | Corta, recortada o a medio crecer | Equipo funcional, protecciones básicas, armas mejores | Postura firme, mirada directa, movimientos decididos | 10–19 |
-| `veterano` | Veterano | Experimentado | 30–38 | Cuidado personal constante; cicatrices y desgaste visibles | Completa, o lo que equivalga en el estilo de la clase | Armadura y accesorios personalizados, materiales de calidad | Aplomo, hombros abiertos, expresión seria y controlada | 20–34 |
-| `elite` | Élite | Campeón | 39–48 | Cuidado meticuloso; apariencia deliberada y distinguida | Elaborada, trenzada o estilizada con cuidado cuando corresponda | Piezas únicas, adornos de rango, materiales superiores | Presencia dominante, movimientos económicos, mirada serena | 35–49 |
-| `legendario` | Legendario | Máximo rango | 50–65, sin parecer débil | Impecable o de cuidado austero, según su cultura | Distintiva, icónica, reconocible a distancia | Equipo excepcional, símbolos de hazañas, detalles exclusivos | Autoridad absoluta, expresión contenida, postura erguida | 50 |
+| id | Rango | Lema | Edad aparente | Nivel del héroe |
+|---|---|---|---|---|
+| `novato` | Novato | Inexperto | 18–20 | 1–9 |
+| `aprendiz` | Aprendiz | En formación | 20–24 | 10–19 |
+| `combatiente` | Combatiente | En acción | 24–28 | 20–29 |
+| `guerrero` | Guerrero | Con experiencia | 28–33 | 30–39 |
+| `veterano` | Veterano | Conocido | 33–38 | 40–49 |
+| `campeon` | Campeón | Dominio | 38–43 | 50–59 |
+| `elite` | Élite | Distinguido | 43–50 | 60–69 |
+| `maestro` | Maestro | Leyenda local | 50–57 | 70–79 |
+| `legendario` | Legendario | Inmortal | 57–65 | 80 o más |
+
+Los ejes de pulcritud, barba, vestuario y porte de la escala anterior de 5 rangos siguen valiendo como dirección: crecen de forma gradual a lo largo de los 9. **Pendiente:** el nivel máximo de la app es 50 (`juego.js → NIVEL_MAX`); con un rango cada 10 niveles hay que subirlo al menos a 80 para llegar a Legendario.
 
 ## Reglas generales
 
-1. **El maestro manda.** El Principiante aprobado de cada clase es la referencia de los otros 4 rangos. Si un rango se desvía del maestro, se corrige el rango; el maestro no se toca.
+1. **El maestro manda.** El Novato aprobado de cada clase es la referencia de los otros 8 rangos. Si un rango se desvía del maestro, se corrige el rango; el maestro no se toca.
 2. **La cara no cambia de estructura.** Cráneo, orejas, nariz, ojos, tono de piel y color base del pelo son fijos. Por rango solo cambian la expresión, las arrugas, las canas y el vello.
 3. **Misma pose, misma escala y mismo pivote** en los 25 personajes.
 4. **Un ascenso se tiene que notar.** Entre dos rangos seguidos cambian al menos 3 de los 5 ejes (edad, pulcritud, barba o cabello, vestuario, porte).

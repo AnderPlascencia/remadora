@@ -23,8 +23,9 @@ assets/characters/
   approvals.json                 estado de aprobación por clase/rango (único lugar editable a mano)
   manifest.json                  generado; refleja los archivos que existen
   _qa/contact_<rango|clase>.png  hojas de contacto de revisión
+  _source/lamina_clases_v1.png   lámina original aportada por el usuario
   <clase>/<rango>/
-    <clase>_<rango>.svg          fuente vectorial
+    <clase>_<rango>.svg          fuente vectorial (solo assets del generador v2)
     <clase>_<rango>_full.png     cuerpo entero 720×840, RGBA
     <clase>_<rango>_portrait.png retrato 256×256, RGBA
     meta.json                    parámetros, herramienta, versión del maestro, procedencia
@@ -32,26 +33,29 @@ assets/characters/
 tools/
   characters/spec.mjs            clases, rangos, paletas, formato (fuente única)
   characters/generator.mjs       generador SVG
-  render-characters.mjs          exporta SVG + PNG + meta
+  extract-sheet.py               recorta los 45 personajes de la lámina (fuente vigente)
+  render-characters.mjs          exporta SVG + PNG + meta (generador v2, respaldo)
+  ingest-character.mjs           importa una imagen suelta sobre fondo croma
   build-manifest.mjs             reconstruye manifest.json
   validate-assets.mjs            validación técnica y reporte
   contact-sheet.mjs              hoja de contacto
   lib/png.mjs, lib/assets.mjs    lector PNG sin dependencias y utilidades
 ```
 
-Los ids son estables y en minúsculas: clases `vikingo|pirata|samurai|polinesio|romano`, rangos `principiante|combatiente|veterano|elite|legendario`. Las futuras animaciones irán en `<clase>/<rango>/anim/<animación>.png` más `.json`.
+Los ids son estables y en minúsculas: clases `vikingo|pirata|samurai|polinesio|romano`, rangos `novato|aprendiz|combatiente|guerrero|veterano|campeon|elite|maestro|legendario`. Las futuras animaciones irán en `<clase>/<rango>/anim/<animación>.png` más `.json`.
 
 ## 4. Comandos
 
 Requisitos: Node 22 y Playwright con Chromium, que ya vienen en el entorno. No hacen falta paquetes npm del repo.
 
 ```bash
-node tools/render-characters.mjs             # exporta los 5 maestros
+python3 tools/extract-sheet.py               # recorta los 45 personajes de la lámina (Pillow + NumPy)
+node tools/render-characters.mjs             # generador vectorial v2 (respaldo)
 node tools/build-manifest.mjs                # reconstruye el manifiesto
 node tools/validate-assets.mjs               # valida; código 1 si hay errores
-node tools/validate-assets.mjs --strict      # además exige las 25 combinaciones
+node tools/validate-assets.mjs --strict      # además exige las 45 combinaciones
 node tools/contact-sheet.mjs                 # hoja de contacto de los maestros
-node tools/contact-sheet.mjs --class vikingo # comparativa de los 5 rangos de una clase
+node tools/contact-sheet.mjs --class vikingo # comparativa de los 9 rangos de una clase
 ```
 
 ## 5. Puertas de calidad
@@ -76,11 +80,12 @@ Los scripts se pueden ejecutar las veces que haga falta. Los JSON se escriben de
 
 ## 6. Integración en la app (después de aprobar)
 
-`objetos.js → dibujarHeroe()` pasará a usar `personaje()` con clase, rango (por nivel), masa y definición (por atributos), más las capas de equipo del armario. Las clases de la app (explorador, monje y gladiador) se migran a las 5 nuevas. Eso es una decisión pendiente en `VISUAL_REFERENCES.md`.
+`objetos.js → dibujarHeroe()` pasará a dibujar el PNG de la clase y del rango que toca por nivel (`rangoPorNivel` en `spec.mjs`), más las capas de equipo del armario. Las clases de la app (explorador, monje y gladiador) se migran a las 5 nuevas. Eso es una decisión pendiente en `VISUAL_REFERENCES.md`.
 
 ## 7. Limitaciones
 
-- No hay ningún proveedor de generación de imágenes ni de vídeo configurado. Todo el arte es vectorial y está generado por código.
+- No hay ningún proveedor de generación de imágenes ni de vídeo configurado. El arte vigente sale de la lámina que aportó el usuario; `extract-sheet.py` solo recorta, quita el fondo y escala, no genera nada.
+- `extract-sheet.py` depende de la rejilla medida a mano sobre esa lámina de 1536×1024. Otra lámina necesita medir la rejilla de nuevo.
 - Solo hay vista frontal. Otras vistas se diseñarán aparte cuando se necesiten.
 - El lector PNG propio solo admite PNG de 8 bits no entrelazados, que es lo que exporta Chromium.
 - El generador de atlas y animaciones todavía no está implementado. Se hará después de aprobar los estáticos y de elegir qué animaciones hacen falta.
