@@ -92,18 +92,18 @@ export function motivoBloqueo(id, estado, aprendidos = {}) {
 
 // ---------- Misiones ----------
 // La distancia es la fuente principal de XP; las misiones dan variedad con recompensas moderadas:
-// diarias 30–120 XP, semanales 150–250 XP. Ninguna exige intensidad alta.
+// diarias 15–60 XP (la mitad de la propuesta inicial, para que la distancia pese más), semanales 150–250 XP. Ninguna exige intensidad alta.
 const km = (m) => (m / 1000).toLocaleString('es-MX');
 const monedasDe = (xp) => Math.max(5, Math.round(xp / 20) * 5);
 // Diarias: siempre una de distancia y una de duración, más 3 variadas.
-const DIARIA_DIST = { id: 'impulso', nombre: 'Primer impulso', texto: (m) => `Completa una sesión de al menos ${km(m)} km`, metas: [2000, 3000, 5000], xp: [50, 70, 100], valor: (d) => d.maxMetros };
-const DIARIA_DUR = { id: 'tiempo', nombre: 'Tiempo en el agua', texto: (m) => `Rema ${m} min activos en una sesión`, metas: [10, 20, 30], xp: [30, 70, 120], valor: (d) => d.maxMin };
+const DIARIA_DIST = { id: 'impulso', nombre: 'Primer impulso', texto: (m) => `Completa una sesión de al menos ${km(m)} km`, metas: [2000, 3000, 5000], xp: [25, 35, 50], valor: (d) => d.maxMetros };
+const DIARIA_DUR = { id: 'tiempo', nombre: 'Tiempo en el agua', texto: (m) => `Rema ${m} min activos en una sesión`, metas: [10, 20, 30], xp: [15, 35, 60], valor: (d) => d.maxMin };
 const DIARIAS = [
-  { id: 'constante', nombre: 'Remero constante', texto: (m) => `Acumula ${m} min de remo activo hoy`, metas: [20, 30], xp: [60, 80], valor: (d) => d.min },
-  { id: 'distdia', nombre: 'Travesía del día', texto: (m) => `Acumula ${km(m)} km hoy`, metas: [4000, 6000], xp: [70, 100], valor: (d) => d.metros },
-  { id: 'fantasma', nombre: 'Caza de fantasmas', texto: () => 'Gánale a un fantasma', metas: [1], xp: [50], valor: (d) => d.ganados },
-  { id: 'rango', nombre: 'En tu rango', texto: (m) => `Mantén el ${m} % de un entrenamiento en tu rango de vatios`, metas: [70, 80], xp: [75, 75], valor: (d) => d.mejorPct },
-  { id: 'ritmo', nombre: 'Ritmo de crucero', texto: () => 'Completa 10 min o más con ritmo estable', metas: [1], xp: [75], valor: (d) => d.estables },
+  { id: 'constante', nombre: 'Remero constante', texto: (m) => `Acumula ${m} min de remo activo hoy`, metas: [20, 30], xp: [30, 40], valor: (d) => d.min },
+  { id: 'distdia', nombre: 'Travesía del día', texto: (m) => `Acumula ${km(m)} km hoy`, metas: [4000, 6000], xp: [35, 50], valor: (d) => d.metros },
+  { id: 'fantasma', nombre: 'Caza de fantasmas', texto: () => 'Gánale a un fantasma', metas: [1], xp: [25], valor: (d) => d.ganados },
+  { id: 'rango', nombre: 'En tu rango', texto: (m) => `Mantén el ${m} % de un entrenamiento en tu rango de vatios`, metas: [70, 80], xp: [40, 40], valor: (d) => d.mejorPct },
+  { id: 'ritmo', nombre: 'Ritmo de crucero', texto: () => 'Completa 10 min o más con ritmo estable', metas: [1], xp: [40], valor: (d) => d.estables },
 ];
 // Semanales: la ruta, una temática de tu clase y una de constancia o fondo.
 const SEMANAL_RUTA = { id: 'ruta', nombre: 'La ruta del explorador', texto: (m) => `Acumula ${m} km esta semana`, metas: [10, 15, 20], xp: [150, 200, 250], valor: (d) => d.metros / 1000 };

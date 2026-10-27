@@ -13,7 +13,7 @@ import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
 import * as O from './objetos.js';
 
-const VERSION = '0.11.0';
+const VERSION = '0.11.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -1660,10 +1660,11 @@ async function pintarHeroe() {
     if (b.dataset.hp === 'talentos') b.dataset.aviso = h.talentosLibres > 0 ? h.talentosLibres : '';
   }
   for (const el of document.querySelectorAll('.hp')) el.hidden = el.id !== `hp-${seccionHeroe}`;
-  ({ ficha: pintarFicha, talentos: pintarTalentos, misiones: pintarMisiones, armario: pintarArmario, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
+  ({ ficha: pintarFicha, talentos: pintarTalentos, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
 }
 
 function pintarFicha(h, per, clase, sesiones) {
+  $('#ficha-figura').innerHTML = figuraHeroe(per, h.nivel, 180);
   const max = Math.max(50, ...Object.values(h.atributos));
   $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div class="atributo${a.clave === clase.favorito ? ' fav' : ''}">
     <div class="fila"><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''}</b><span class="valor">${h.atributos[a.clave]}</span></div>
@@ -1729,25 +1730,6 @@ function tarjetaObjeto(x, per, { accion = '', extra = '' } = {}) {
   return `<div class="objeto" style="--rareza:${r.color}">${vista}<b>${x.nombre}</b><small>${r.nombre}</small>${extra}${accion}</div>`;
 }
 
-function pintarArmario(h, per) {
-  const equipo = per.equipo || {};
-  $('#armario-vista').innerHTML = figuraHeroe(per, h.nivel, 180);
-  $('#pieles').innerHTML = O.PIELES.map((c, i) => `<button type="button" class="piel" role="radio" aria-checked="${(per.piel ?? 1) === i}" data-piel="${i}" style="background:${c}" aria-label="Tono ${i + 1}"></button>`).join('');
-  $('#armario').innerHTML = O.RANURAS.map((r) => {
-    const mios = O.OBJETOS.filter((x) => x.ranura === r.clave && h.poseidos.has(x.id));
-    const items = mios.map((x) => tarjetaObjeto(x, per, {
-      accion: `<button type="button" class="boton chico${equipo[r.clave] === x.id ? ' primario' : ''}" data-equipar="${x.id}">${equipo[r.clave] === x.id ? 'Puesto' : 'Ponerme'}</button>`,
-    })).join('');
-    return `<h3>${r.nombre}${r.clave === 'bote' ? ' <small>(se ve en la carrera)</small>' : ''}</h3><div class="objetos">${items || '<p class="suave">Aún no tienes nada aquí. Mira la tienda o las misiones.</p>'}</div>`;
-  }).join('');
-  $('#colecciones').innerHTML = O.COLECCIONES.map((c) => {
-    const todos = O.OBJETOS.filter((x) => x.coleccion === c.clave);
-    const tengo = todos.filter((x) => h.poseidos.has(x.id)).length;
-    return `<div class="coleccion${tengo === todos.length ? ' completa' : ''}"><b>${c.nombre}</b><span>${tengo} de ${todos.length}</span>
-      <div class="at-barra"><div style="width:${(100 * tengo) / todos.length}%"></div></div></div>`;
-  }).join('');
-}
-
 function pintarTienda(h, per) {
   const lunes = J.lunesDe(Date.now());
   const items = J.tiendaSemana(lunes, h.poseidos);
@@ -1797,20 +1779,6 @@ $('#arbol').addEventListener('click', async (e) => {
   }
   const n = e.target.closest('[data-talento]');
   if (n) { talentoElegido = talentoElegido === n.dataset.talento ? null : n.dataset.talento; pintarHeroe(); }
-});
-$('#pieles').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-piel]');
-  if (b) { guardarPersonaje({ piel: Number(b.dataset.piel) }); pintarHeroe(); }
-});
-$('#armario').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-equipar]');
-  if (!b) return;
-  const x = O.objeto(b.dataset.equipar);
-  const equipo = { ...(leerPersonaje().equipo || {}) };
-  if (equipo[x.ranura] === x.id) delete equipo[x.ranura];
-  else equipo[x.ranura] = x.id;
-  guardarPersonaje({ equipo });
-  pintarHeroe();
 });
 $('#tienda').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-comprar]');

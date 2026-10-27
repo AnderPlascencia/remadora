@@ -49,7 +49,7 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
 {
   const d = J.misionesDelDia('2026-01-05');
   assert.equal(d.length, 5);
-  assert.ok(d.every((x) => x.xp >= 30 && x.xp <= 120), 'diarias moderadas');
+  assert.ok(d.every((x) => x.xp >= 15 && x.xp <= 60), 'diarias moderadas');
   assert.ok(d[0].texto.startsWith('Completa una sesión de al menos') && d[1].texto.includes('min activos'), 'una de distancia y una de duración');
   assert.deepEqual(d.map((x) => x.texto), J.misionesDelDia('2026-01-05').map((x) => x.texto), 'misiones repetibles');
   assert.equal(J.misionesDelDia('2026-01-05', true).length, 6);
