@@ -435,6 +435,18 @@
     </div>
   </div>
 
+  <div id="fin-dialogo" class="fin-fondo" hidden role="alertdialog" aria-modal="true" aria-labelledby="fin-titulo" aria-describedby="fin-texto">
+    <div class="fin-caja">
+      <svg class="ico fin-ico" aria-hidden="true"><use href="#i-fuego"/></svg>
+      <h3 id="fin-titulo">¡Entrenamiento completado!</h3>
+      <p id="fin-texto"></p>
+      <div class="fin-botones">
+        <button type="button" id="fin-seguir" class="boton grande">Seguir remando</button>
+        <button type="button" id="fin-terminar" class="boton primario grande">Terminar y guardar</button>
+      </div>
+      <p class="fin-nota">Si sigues, todo lo que reme se suma a esta sesión.</p>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script type="module" src="app.js"></script>

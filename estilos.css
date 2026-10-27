@@ -457,3 +457,13 @@ details.seccion[open] { padding-bottom: 8px; }
 .barra h1 { display: flex; align-items: center; gap: 10px; }
 .barra h1 .version { margin-left: -4px; }
 .barra h1 .logo { width: 32px; height: 32px; border-radius: 8px; flex: none; }
+
+/* ---------- Fin del entrenamiento ---------- */
+.fin-fondo { position: fixed; inset: 0; z-index: 70; background: rgba(2, 6, 23, .78); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.fin-fondo[hidden] { display: none; }
+.fin-caja { background: var(--panel); border: 1px solid var(--borde); border-radius: 20px; padding: 24px 20px 16px; width: 100%; max-width: 420px; text-align: center; animation: subir .25s ease-out; }
+.fin-ico { width: 44px; height: 44px; color: var(--primario); }
+.fin-caja h3 { margin: 8px 0 4px; font-size: 22px; }
+.fin-caja #fin-texto { margin: 0 0 18px; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.fin-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fin-nota { margin: 12px 0 0; font-size: 13px; color: var(--texto-tenue); }

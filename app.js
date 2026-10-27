@@ -10,7 +10,7 @@ import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 
-const VERSION = '0.6.4';
+const VERSION = '0.6.5';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -441,6 +441,7 @@ async function detenerSesion() {
   $('#rival').hidden = true;
   carreraEnt.detener();
   carreraRemo.detener();
+  cerrarFin();
   vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
@@ -566,12 +567,25 @@ function avanceObjetivo(t) {
     sesion.tiempoMeta = t;
     pitido(1046, 0.4);
     vibrar([200, 100, 200, 100, 400]);
-    hablar(`¡Meta cumplida! en ${tiempoHablado(t)}`, { urgente: true });
+    hablar(`¡Meta cumplida! en ${tiempoHablado(t)}. ¿Sigues o terminas?`, { urgente: true });
+    mostrarFin();
   } else if (!p.completo && p.fraccion >= 0.5 && !sesion.mitadAvisada) {
     sesion.mitadAvisada = true;
     hablar(`Vas a la mitad. Faltan ${Math.ceil(p.falta)} ${Ent.METRICAS_OBJETIVO[p.metrica].unidad === 'm' ? 'metros' : Ent.METRICAS_OBJETIVO[p.metrica].unidad}`);
   }
 }
+
+// Al completar el entrenamiento se pregunta si seguir remando o terminar y guardar.
+function mostrarFin() {
+  const partes = [formatoTiempo(sesion.tiempoMeta ?? sesion.t), `${Math.round(sesion.dist)} m`];
+  if (sesion.rival) partes.push(carreraActual().texto.replace(/^Vas /, ''));
+  $('#fin-texto').textContent = partes.join(' · ');
+  $('#fin-dialogo').hidden = false;
+  $('#fin-terminar').focus();
+}
+function cerrarFin() { $('#fin-dialogo').hidden = true; }
+$('#fin-seguir').addEventListener('click', () => { cerrarFin(); hablar('Seguimos'); });
+$('#fin-terminar').addEventListener('click', () => { cerrarFin(); if (sesion) detenerSesion(); });
 
 function progresoActual(t) {
   return Ent.progresoObjetivo(entrenamientoActivo, { distancia: sesion.dist, kcal: sesion.kcal, paladas: sesion.paladas }, t);
@@ -604,7 +618,8 @@ function avanceBloque(t) {
       pitido(1046, 0.4);
       vibrar([200, 100, 200]);
       const pct = sesion.segConMeta ? Math.round((100 * sesion.segEnRango) / sesion.segConMeta) : null;
-      hablar(`Entrenamiento completado${pct != null ? `. Estuviste en rango el ${pct} por ciento del tiempo` : ''}`, { urgente: true });
+      hablar(`Entrenamiento completado${pct != null ? `. Estuviste en rango el ${pct} por ciento del tiempo` : ''}. ¿Sigues o terminas?`, { urgente: true });
+      mostrarFin();
     }
     return;
   }
