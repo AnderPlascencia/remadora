@@ -136,6 +136,9 @@ function aura(x) {
     <circle cx="100" cy="100" r="98" fill="url(#aura-${x.id})"/>`;
 }
 
+// Solo el aura equipada (va detrás de la ilustración del personaje).
+export const auraHeroe = ({ equipo = {} } = {}) => aura(objeto(equipo.aura));
+
 // SVG del héroe con lo que tiene puesto. equipo: { cabeza, cara, torso, aura }, piel: índice de PIELES.
 export function dibujarHeroe({ equipo = {}, piel = 1 } = {}, { tam = 160 } = {}) {
   const tono = PIELES[piel] || PIELES[1];

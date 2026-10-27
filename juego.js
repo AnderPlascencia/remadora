@@ -17,26 +17,41 @@ export const ATRIBUTOS = [
 export const CLASES = [
   { clave: 'vikingo', nombre: 'Vikingo', favorito: 'fuerza', lema: 'Cada palada es un hachazo.', icono: '<path d="M5 14a7 7 0 0 1 14 0v3H5z"/><path d="M5 13 2.5 6M19 13l2.5-7M9 17v3M15 17v3M12 7v4"/>' },
   { clave: 'pirata', nombre: 'Pirata', favorito: 'agilidad', lema: 'Rápido, impredecible y al abordaje.', icono: '<path d="M12 3a7 7 0 0 0-7 7c0 2.4 1.3 4 3 5v3h8v-3c1.7-1 3-2.6 3-5a7 7 0 0 0-7-7z"/><path d="M9 10h.01M15 10h.01M10 18v3M14 18v3"/>' },
-  { clave: 'explorador', nombre: 'Explorador', favorito: 'resistencia', lema: 'Ningún río es demasiado largo.', icono: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>' },
-  { clave: 'monje', nombre: 'Monje', favorito: 'recuperacion', lema: 'Respira, recupera y vuelve más fuerte.', icono: '<path d="M20 12a8 8 0 1 1-3.3-6.5"/><path d="M12 8c-1.5 2-1.5 4 0 6 1.5-2 1.5-4 0-6zM8 12.5c1.2 1.4 2.5 1.8 4 1.5M16 12.5c-1.2 1.4-2.5 1.8-4 1.5"/>' },
   { clave: 'samurai', nombre: 'Samurái', favorito: 'tecnica', lema: 'La forma perfecta vence a la fuerza.', icono: '<path d="M5 19 19 5l1.5-1.5M15 5l4 4M7 15l2 2M3.5 20.5 5 19"/>' },
-  { clave: 'gladiador', nombre: 'Gladiador', favorito: 'voluntad', lema: 'No se rinde. Nunca.', icono: '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M12 7v10M8 11h8"/>' },
+  { clave: 'polinesio', nombre: 'Polinesio', favorito: 'resistencia', lema: 'El océano entero es tu camino.', icono: '<path d="M12 2v12"/><path d="M9.5 14h5l-1 6.5a1.5 1.5 0 0 1-3 0z"/><path d="M3 9c2 1.5 4 1.5 6 0M15 9c2 1.5 4 1.5 6 0"/>' },
+  { clave: 'romano', nombre: 'Romano', favorito: 'voluntad', lema: 'No se rinde. Nunca.', icono: '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M12 7v10M8 11h8"/>' },
 ];
-export const claseDe = (clave) => CLASES.find((c) => c.clave === clave) || null;
+// Clases antiguas → clase nueva con el mismo espíritu. El héroe conserva XP, talentos y objetos.
+export const CLASES_ANTIGUAS = { explorador: 'polinesio', monje: 'samurai', gladiador: 'romano' };
+export const claseDe = (clave) => CLASES.find((c) => c.clave === (CLASES_ANTIGUAS[clave] || clave)) || null;
 
 // 9 rangos de personaje, uno cada 10 niveles: Legendario en el 80 y 10 niveles más de recorrido.
 export const NIVEL_MAX = 90;
-// XP total para llegar a un nivel: con 3 sesiones por semana, nivel 10 en un mes y 30 en unos 6 meses.
-export const xpParaNivel = (n) => Math.round(250 * Math.max(0, n - 1) ** 1.6);
+// Del nivel 1 al 2 cuestan 200 XP y cada nivel siguiente cuesta un 5 % más que el anterior.
+export const XP_PRIMER_NIVEL = 200;
+export const XP_INCREMENTO = 1.05;
+export const XP_POR_METROS = 10;
+export const xpDelNivel = (n) => Math.round(XP_PRIMER_NIVEL * XP_INCREMENTO ** (n - 1)); // coste de n → n + 1
+const XP_ACUMULADA = [0, 0];
+for (let n = 2; n <= NIVEL_MAX; n++) XP_ACUMULADA[n] = XP_ACUMULADA[n - 1] + xpDelNivel(n - 1);
+// XP total para llegar a un nivel.
+export const xpParaNivel = (n) => XP_ACUMULADA[Math.min(Math.max(1, n), NIVEL_MAX)];
 export function nivelDe(xp) {
   let n = 1;
   while (n < NIVEL_MAX && xp >= xpParaNivel(n + 1)) n++;
   return n;
 }
 
-// Coinciden con los rangos de personaje (tools/characters/spec.mjs).
-const TITULOS = [[1, 'Novato'], [10, 'Aprendiz'], [20, 'Combatiente'], [30, 'Guerrero'], [40, 'Veterano'], [50, 'Campeón'], [60, 'Élite'], [70, 'Maestro'], [80, 'Legendario']];
-export const tituloDe = (nivel) => TITULOS.filter(([n]) => nivel >= n).at(-1)[1];
+// Rangos del personaje: uno cada 10 niveles. El título del héroe es el nombre del rango.
+export const RANGOS = [
+  { id: 'novato', nombre: 'Novato', nivel: 1 }, { id: 'aprendiz', nombre: 'Aprendiz', nivel: 10 },
+  { id: 'combatiente', nombre: 'Combatiente', nivel: 20 }, { id: 'guerrero', nombre: 'Guerrero', nivel: 30 },
+  { id: 'veterano', nombre: 'Veterano', nivel: 40 }, { id: 'campeon', nombre: 'Campeón', nivel: 50 },
+  { id: 'elite', nombre: 'Élite', nivel: 60 }, { id: 'maestro', nombre: 'Maestro', nivel: 70 },
+  { id: 'legendario', nombre: 'Legendario', nivel: 80 },
+];
+export const rangoDe = (nivel) => RANGOS.filter((r) => nivel >= r.nivel).at(-1);
+export const tituloDe = (nivel) => rangoDe(nivel).nombre;
 
 // ---------- Talentos: 3 por atributo. El 1 y el 3 son pasivos; el 2 es una habilidad activa para la carrera. ----------
 export const TALENTOS = [
@@ -214,8 +229,9 @@ function gananciaSesion(s, m, ctx) {
   at.voluntad += Math.min(ctx.racha, 7) * 0.5;
 
   const carga = s.estres ?? estres(s, m.f) ?? Math.round(m.min * 0.8);
-  const base = Math.round(carga * 18);
-  const detalle = [['Esfuerzo', base]];
+  // XP base: 1 por cada 10 m remados.
+  const base = Math.floor(m.metros / XP_POR_METROS);
+  const detalle = [['Distancia', base]];
   if (completo) detalle.push(['Entrenamiento completo', 100]);
   if (ctx.records) detalle.push([ctx.records === 1 ? 'Récord' : `${ctx.records} récords`, 50 * ctx.records * (tiene('critico') ? 2 : 1)]);
   if (m.ganados) detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, 75 * m.ganados]);

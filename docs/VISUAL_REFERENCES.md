@@ -17,7 +17,7 @@ El estado de cada asset se guarda en `assets/characters/approvals.json`. Este do
 
 ## Personajes extraídos de la lámina, versión 3.0.0
 
-Fuente: `assets/characters/_source/lamina_clases_v1.png` (1536×1024, generada externamente; la herramienta no consta). Los 45 assets están en `assets/characters/<clase>/<rango>/` y todos figuran como **pendientes** en `approvals.json`.
+Fuente: `assets/characters/_source/lamina_clases_v1.png` (1536×1024, generada externamente; la herramienta no consta). Los 45 assets están en `assets/characters/<clase>/<rango>/` y el usuario los **aprobó** el 27-10-2026.
 
 Hojas de contacto por clase: `assets/characters/_qa/contact_<clase>.png`.
 
@@ -28,14 +28,17 @@ Limitaciones conocidas de la fuente:
 - Las muestras de color de la lámina tapan parte del escudo romano y del timón pirata en los rangos altos; se borraron y queda un corte en esas piezas.
 - Mezclas culturales: el polinesio de Élite y Legendario lleva un tocado de plumas de estilo nativo americano.
 
+## Decisiones ya resueltas en la app
+
+- Clases antiguas migradas (versión 0.10.0): gladiador pasa a romano, explorador a polinesio y monje a samurái, conservando XP, talentos y objetos.
+- Experiencia: 1 XP por cada 10 m remados más los bonos de la sesión; del nivel 1 al 2 cuestan 200 XP y cada nivel un 5 % más. Nivel máximo 90.
+
 ## Decisiones pendientes
 
-1. Aprobar o pedir cambios en los 45 personajes extraídos.
-2. **Cultura polinesia de referencia.** Propuesta: Hawái (malo, kākau, mahiole, ʻahu ʻula, leiomano). La alternativa es Aotearoa, con estética maorí (tā moko, korowai, taiaha). No se mezclan.
-3. Confirmar las estilizaciones de torso descubierto (`CHARACTER_RULES.md`).
-4. Migración de clases en la app: explorador, monje y gladiador desaparecen. Propuesta para los héroes ya creados: gladiador pasa a romano, explorador a polinesio y monje a samurái, conservando XP, talentos y objetos.
-5. Animaciones necesarias, que dependen de las decisiones 11 y 12 (`ANIMATION_SPEC.md`).
-6. Si se autoriza algún proveedor de imagen o vídeo de pago (hoy no se usa ninguno).
+1. **Cultura polinesia de referencia.** Propuesta: Hawái (malo, kākau, mahiole, ʻahu ʻula, leiomano). La alternativa es Aotearoa, con estética maorí (tā moko, korowai, taiaha). No se mezclan.
+2. Confirmar las estilizaciones de torso descubierto (`CHARACTER_RULES.md`).
+3. Animaciones necesarias, que dependen de las decisiones 11 y 12 (`ANIMATION_SPEC.md`).
+4. Si se autoriza algún proveedor de imagen o vídeo de pago (hoy no se usa ninguno).
 
 ## Exploraciones previas (no son referencia)
 

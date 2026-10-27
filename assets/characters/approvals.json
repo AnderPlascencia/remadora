@@ -2,229 +2,229 @@
   "version": 1,
   "registros": {
     "vikingo/novato": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/aprendiz": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/combatiente": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/guerrero": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/veterano": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/campeon": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/elite": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/maestro": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "vikingo/legendario": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/novato": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/aprendiz": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/combatiente": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/guerrero": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/veterano": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/campeon": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/elite": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/maestro": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "pirata/legendario": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/novato": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/aprendiz": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/combatiente": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/guerrero": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/veterano": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/campeon": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/elite": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/maestro": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "samurai/legendario": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/novato": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/aprendiz": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/combatiente": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/guerrero": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/veterano": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/campeon": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/elite": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/maestro": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "polinesio/legendario": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/novato": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/aprendiz": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/combatiente": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/guerrero": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/veterano": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/campeon": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/elite": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/maestro": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     },
     "romano/legendario": {
-      "estado": "pending",
+      "estado": "approved",
       "version": "3.0.0",
-      "notas": ""
+      "notas": "Aprobado por el usuario el 2026-10-27."
     }
   }
 }

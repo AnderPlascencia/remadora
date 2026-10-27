@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import * as J from '../juego.js';
 
 assert.equal(J.xpParaNivel(1), 0);
+assert.equal(J.xpParaNivel(2), 200);
+assert.equal(J.xpParaNivel(3), 410);
+assert.equal(J.xpDelNivel(10), Math.round(200 * 1.05 ** 9));
 assert.equal(J.nivelDe(0), 1);
 assert.equal(J.nivelDe(J.xpParaNivel(10)), 10);
 assert.equal(J.nivelDe(J.xpParaNivel(10) - 1), 9);
@@ -12,6 +15,12 @@ assert.equal(J.tituloDe(10), 'Aprendiz');
 assert.equal(J.tituloDe(79), 'Maestro');
 assert.equal(J.tituloDe(80), 'Legendario');
 assert.equal(J.tituloDe(90), 'Legendario');
+assert.equal(J.rangoDe(35).id, 'guerrero');
+// Clases: 5 nuevas; las antiguas se migran sin perder nada
+assert.deepEqual(J.CLASES.map((c) => c.clave), ['vikingo', 'pirata', 'samurai', 'polinesio', 'romano']);
+assert.equal(J.claseDe('explorador').clave, 'polinesio');
+assert.equal(J.claseDe('monje').clave, 'samurai');
+assert.equal(J.claseDe('gladiador').clave, 'romano');
 
 // 30 min a 150 W con FTP 200: zona 2-3 → resistencia; luego series sobre FTP → fuerza y agilidad.
 const sesion = (dia, w, dur, extra = {}) => ({
@@ -29,11 +38,11 @@ assert.ok(g2.ganancias.fuerza >= 10 && g2.ganancias.agilidad >= 20, 'series dan 
 assert.ok(g2.detalle.some(([t]) => t === 'Fantasma vencido'));
 assert.ok(g2.detalle.some(([t]) => t.startsWith('Racha')));
 assert.ok(h.nivel >= 2);
-// Bono de clase: el explorador gana 15 % más resistencia
+// Bono de clase: el explorador (ahora polinesio) gana 15 % más resistencia
 const sin = J.progresoHeroe([fondo], { ftp: 200 });
 assert.ok(h.atributos.resistencia > sin.atributos.resistencia);
-// Una sesión típica de 30 min da alrededor de 400-900 XP
-assert.ok(g1.xp > 300 && g1.xp < 1000, `xp ${g1.xp}`);
+// 1 XP por cada 10 m: 7200 m de fondo dan 720 XP de base
+assert.deepEqual(g1.detalle[0], ['Distancia', 720]);
 console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
 
 // Misiones, capítulos, talentos y tienda

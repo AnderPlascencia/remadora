@@ -25,7 +25,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -66,7 +66,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -110,7 +110,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -151,7 +151,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -195,7 +195,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -236,7 +236,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -280,7 +280,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -321,7 +321,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -365,7 +365,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -406,7 +406,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -450,7 +450,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -491,7 +491,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -535,7 +535,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -576,7 +576,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -620,7 +620,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -661,7 +661,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -705,7 +705,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -746,7 +746,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -790,7 +790,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -831,7 +831,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -875,7 +875,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -916,7 +916,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -960,7 +960,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1001,7 +1001,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1045,7 +1045,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1086,7 +1086,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1130,7 +1130,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1171,7 +1171,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1215,7 +1215,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1256,7 +1256,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1300,7 +1300,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1341,7 +1341,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1385,7 +1385,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1426,7 +1426,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1470,7 +1470,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1511,7 +1511,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1555,7 +1555,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1596,7 +1596,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1640,7 +1640,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1681,7 +1681,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1725,7 +1725,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1766,7 +1766,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1810,7 +1810,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1851,7 +1851,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1895,7 +1895,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1936,7 +1936,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -1980,7 +1980,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2021,7 +2021,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2065,7 +2065,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2106,7 +2106,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2150,7 +2150,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2191,7 +2191,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2235,7 +2235,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2276,7 +2276,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2320,7 +2320,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2361,7 +2361,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2405,7 +2405,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2446,7 +2446,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2490,7 +2490,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2531,7 +2531,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2575,7 +2575,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2616,7 +2616,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2660,7 +2660,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2701,7 +2701,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2745,7 +2745,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2786,7 +2786,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2830,7 +2830,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2871,7 +2871,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2915,7 +2915,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -2956,7 +2956,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3000,7 +3000,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3041,7 +3041,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3085,7 +3085,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3126,7 +3126,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3170,7 +3170,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3211,7 +3211,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3255,7 +3255,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3296,7 +3296,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3340,7 +3340,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3381,7 +3381,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3425,7 +3425,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3466,7 +3466,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3510,7 +3510,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3551,7 +3551,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3595,7 +3595,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3636,7 +3636,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3680,7 +3680,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3721,7 +3721,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3765,7 +3765,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
@@ -3806,7 +3806,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/extract-sheet.py",
         "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",

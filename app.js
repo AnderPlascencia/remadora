@@ -13,7 +13,7 @@ import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
 import * as O from './objetos.js';
 
-const VERSION = '0.9.1';
+const VERSION = '0.10.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -1613,6 +1613,14 @@ function guardarPersonaje(cambios) {
   ajustes.escribir('personaje', JSON.stringify({ ...leerPersonaje(), ...cambios }));
 }
 const emblema = (c) => `<svg viewBox="0 0 24 24" aria-hidden="true">${c.icono}</svg>`;
+// Ilustración del personaje según su clase y el rango de su nivel (assets/heroes, generados por tools/build-app-assets.py).
+const srcHeroe = (clave, nivel, retrato = false) => `assets/heroes/${clave}_${J.rangoDe(nivel).id}${retrato ? '_retrato' : ''}.webp`;
+function figuraHeroe(per, nivel, ancho) {
+  const c = J.claseDe(per.clase);
+  const alto = Math.round((ancho * 420) / 360);
+  return `<div class="heroe-figura" style="width:${ancho}px;height:${alto}px"><svg class="aura" viewBox="0 0 200 200" aria-hidden="true">${O.auraHeroe(per)}</svg>
+    <img src="${srcHeroe(c.clave, nivel)}" width="${ancho}" height="${alto}" alt="${c.nombre} ${J.rangoDe(nivel).nombre}"></div>`;
+}
 const nombreAtributo = (k) => J.ATRIBUTOS.find((a) => a.clave === k)?.nombre || k;
 const miles = (n) => Math.round(n).toLocaleString('es-MX');
 const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
@@ -1632,14 +1640,14 @@ async function pintarHeroe() {
   $('#heroe-ficha').hidden = !clase;
   if (!clase) {
     $('#clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase" role="radio" aria-checked="${c.clave === claseElegida}" data-clase="${c.clave}">
-      <span class="emblema">${emblema(c)}</span><b>${c.nombre}</b><span class="fav">+15 % ${nombreAtributo(c.favorito)}</span><small>${c.lema}</small></button>`).join('');
+      <img class="clase-retrato" src="${srcHeroe(c.clave, 1, true)}" width="84" height="84" alt=""><b>${c.nombre}</b><span class="fav">+15 % ${nombreAtributo(c.favorito)}</span><small>${c.lema}</small></button>`).join('');
     $('#btn-crear-heroe').disabled = !claseElegida;
     if (per.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
     return;
   }
   const sesiones = await db.listar('sesiones');
   const h = J.estadoJuego(sesiones, { ftp: ftp(), per });
-  $('#heroe-avatar').innerHTML = O.dibujarHeroe(per, { tam: 84 }) + `<span class="emblema mini">${emblema(clase)}</span>`;
+  $('#heroe-avatar').innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="84" height="84" alt="${clase.nombre} ${h.titulo}"><span class="emblema mini">${emblema(clase)}</span>`;
   $('#heroe-titulo').textContent = per.nombre || `${clase.nombre} sin nombre`;
   $('#heroe-clase').textContent = `${clase.nombre} · ${h.titulo}`;
   $('#heroe-monedas').innerHTML = `${icoMoneda}${miles(h.monedas)}`;
@@ -1723,7 +1731,7 @@ function tarjetaObjeto(x, per, { accion = '', extra = '' } = {}) {
 
 function pintarArmario(h, per) {
   const equipo = per.equipo || {};
-  $('#armario-vista').innerHTML = O.dibujarHeroe(per, { tam: 180 });
+  $('#armario-vista').innerHTML = figuraHeroe(per, h.nivel, 180);
   $('#pieles').innerHTML = O.PIELES.map((c, i) => `<button type="button" class="piel" role="radio" aria-checked="${(per.piel ?? 1) === i}" data-piel="${i}" style="background:${c}" aria-label="Tono ${i + 1}"></button>`).join('');
   $('#armario').innerHTML = O.RANURAS.map((r) => {
     const mios = O.OBJETOS.filter((x) => x.ranura === r.clave && h.poseidos.has(x.id));
@@ -1828,13 +1836,14 @@ function pintarXpSesion(s, previas, resumen) {
   const logros = h.logros.filter((l) => l.fecha === s.fecha);
   const monedas = g.monedas + logros.reduce((a, l) => a + l.monedas, 0);
   const subio = resumen && g.nivelDespues > g.nivelAntes;
+  const ascenso = subio && J.rangoDe(g.nivelDespues).id !== J.rangoDe(g.nivelAntes).id;
   caja.innerHTML = `<span class="xp-total">+${miles(g.xp)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
-    ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!</span>` : ''}
+    ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.rangoDe(g.nivelDespues).nombre}.` : ''}</span>` : ''}
     ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(l.tipo === 'jefe' || l.tipo === 'hazana' ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · ganaste <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="monedas">${icoMoneda}${l.monedas}</span></div>`).join('')}
     <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
     <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul>
     ${clase ? '' : '<p class="ayuda">Crea tu héroe en la pestaña Héroe para darle vida a esta experiencia.</p>'}`;
-  if (subio) hablar(`Subiste a nivel ${g.nivelDespues}`);
+  if (subio) hablar(ascenso ? `Subiste a nivel ${g.nivelDespues}. Ahora eres ${J.rangoDe(g.nivelDespues).nombre}` : `Subiste a nivel ${g.nivelDespues}`);
   if (resumen && logros.some((l) => l.tipo === 'jefe')) hablar('¡Jefe vencido!');
   return subio || logros.some((l) => l.tipo === 'jefe' || l.tipo === 'hazana');
 }

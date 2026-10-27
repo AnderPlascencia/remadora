@@ -80,7 +80,7 @@ Los scripts se pueden ejecutar las veces que haga falta. Los JSON se escriben de
 
 ## 6. Integración en la app (después de aprobar)
 
-`objetos.js → dibujarHeroe()` pasará a dibujar el PNG de la clase y del rango que toca por nivel (`rangoPorNivel` en `spec.mjs`), más las capas de equipo del armario. Las clases de la app (explorador, monje y gladiador) se migran a las 5 nuevas. Eso es una decisión pendiente en `VISUAL_REFERENCES.md`.
+Hecho en la versión 0.10.0. `python3 tools/build-app-assets.py` genera en `assets/heroes/` versiones WebP ligeras de los assets aprobados (cuerpo 360×420 y busto 168×168, 1,7 MB en total). La app elige la imagen con `juego.js → rangoDe(nivel)`: el busto en la ficha y en la elección de clase, y el cuerpo entero con el aura equipada en el armario. Las prendas de cabeza, cara y torso todavía se dibujan solo en las miniaturas de objeto, no sobre la ilustración. Las clases de la app (explorador, monje y gladiador) se migran a las 5 nuevas. Eso es una decisión pendiente en `VISUAL_REFERENCES.md`.
 
 ## 7. Limitaciones
 

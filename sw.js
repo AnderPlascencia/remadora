@@ -1,5 +1,5 @@
 // Guarda la app en caché para que abra sin conexión. Cambia VERSION al publicar cambios.
-const VERSION = 'remadora-0.9.1';
+const VERSION = 'remadora-0.10.0';
 const ARCHIVOS = ['./', 'index.html', 'estilos.css', 'app.js', 'remadora.js', 'protocolo.js', 'variantes.js',
   'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'efectos.js', 'juego.js', 'objetos.js', 'manifest.webmanifest', 'rw200-logo.svg', 'rw200-192.png', 'rw200-512.png'];
 
