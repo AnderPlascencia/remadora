@@ -213,7 +213,7 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
 }
 
 // Barras simples con etiqueta debajo y valor encima. datos: [{ etiqueta, valor, resaltar }]
-export function dibujarBarras(canvas, datos, { color = '#F97316', formato = (v) => v } = {}) {
+export function dibujarBarras(canvas, datos, { color = '#F2A33A', formato = (v) => v } = {}) {
   const dpr = window.devicePixelRatio || 1;
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
@@ -266,7 +266,7 @@ export function dibujarAvance(canvas, puntos, meta, estimadoFin = null) {
   const estilo = getComputedStyle(document.documentElement);
   const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
   const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
-  const colorLinea = estilo.getPropertyValue('--primario').trim() || '#F97316';
+  const colorLinea = estilo.getPropertyValue('--acento').trim() || '#F2A33A';
   const colorMeta = estilo.getPropertyValue('--exito').trim() || '#22C55E';
 
   const ultimo = puntos.at(-1) || [0, 0];

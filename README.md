@@ -1,4 +1,4 @@
-# RW200
+# Rower
 
 App web (PWA) para la remadora NordicTrack RW200: métricas en vivo, entrenamientos por bloques e historial local.
 

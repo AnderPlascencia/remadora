@@ -8,7 +8,7 @@ let animando = false;
 const sinMovimiento = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export const COLORES_RIVAL = ['#A5B4FC', '#F9A8D4', '#FDE68A'];
-const COLOR_YO = '#F97316';
+const COLOR_YO = '#F2A33A';
 
 // estado: { t, pausa, yo: { dist, v, spm }, rivales: [{ nombre, color, muestras, spm(t) }], meta, cabecera: [l1, l2], tono, ritmo?: { v, etiqueta } }
 export function crearCarrera(canvas) {
@@ -230,7 +230,7 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo }) {
       if (m < 0) continue;
       const x = X(m);
       const grande = m % 250 === 0;
-      ctx.fillStyle = grande ? '#F97316' : m % 25 === 0 ? '#EF4444' : 'rgba(255,255,255,0.75)';
+      ctx.fillStyle = grande ? '#F2A33A' : m % 25 === 0 ? '#EF4444' : 'rgba(255,255,255,0.75)';
       ctx.beginPath(); ctx.arc(x, y, grande ? 5 : Math.min(2.6, ppm * 0.35 + 1), 0, Math.PI * 2); ctx.fill();
     }
   }
@@ -490,7 +490,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo }) {
       if (!q) continue;
       const grande = z % 250 === 0;
       if (!grande && q.s < 2) continue;
-      ctx.fillStyle = grande ? '#F97316' : z % 25 === 0 ? '#EF4444' : 'rgba(255,255,255,0.8)';
+      ctx.fillStyle = grande ? '#F2A33A' : z % 25 === 0 ? '#EF4444' : 'rgba(255,255,255,0.8)';
       const r = Math.max(0.8, q.s * (grande ? 0.35 : 0.12));
       ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
     }

@@ -1,6 +1,6 @@
 // Efectos visuales: confeti de celebración y tarjeta de la sesión para compartir como imagen.
 const sinMovimiento = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-const COLORES = ['#F97316', '#FDBA74', '#22C55E', '#38BDF8', '#F8FAFC', '#FACC15', '#EF4444'];
+const COLORES = ['#F2A33A', '#F7C873', '#8FAE4A', '#38BDF8', '#F8FAFC', '#FACC15', '#EF4444'];
 
 // Lluvia de confeti sobre toda la pantalla, sin bloquear toques.
 export function confeti(duracion = 2600) {
@@ -66,31 +66,30 @@ export async function tarjetaSesion(datos) {
   c.height = H;
   const ctx = c.getContext('2d');
   const fondo = ctx.createLinearGradient(0, 0, W, H);
-  fondo.addColorStop(0, '#1A2233');
-  fondo.addColorStop(1, '#05070D');
+  fondo.addColorStop(0, '#232C17');
+  fondo.addColorStop(1, '#070906');
   ctx.fillStyle = fondo;
   ctx.fillRect(0, 0, W, H);
-  // Franja diagonal naranja, como el logo
+  // Franja diagonal en verde táctico y ámbar, los colores de Rower
   const fuego = ctx.createLinearGradient(0, 0, W, 0);
-  fuego.addColorStop(0, '#FDBA74');
-  fuego.addColorStop(0.5, '#F97316');
-  fuego.addColorStop(1, '#DC2626');
+  fuego.addColorStop(0, '#8FAE4A');
+  fuego.addColorStop(0.5, '#F2A33A');
+  fuego.addColorStop(1, '#D9822B');
   ctx.fillStyle = fuego;
   ctx.globalAlpha = 0.14;
   ctx.beginPath(); ctx.moveTo(0, 1010); ctx.lineTo(W, 760); ctx.lineTo(W, 860); ctx.lineTo(0, 1110); ctx.fill();
   ctx.globalAlpha = 1;
 
-  const logo = await cargarImagen('rw200-logo.svg');
+  const logo = await cargarImagen('rower-logo.svg');
+  const marca = await cargarImagen('rower-marca.svg');
   if (logo) {
     ctx.save();
     ctx.beginPath(); ctx.roundRect(72, 72, 120, 120, 26); ctx.clip();
     ctx.drawImage(logo, 72, 72, 120, 120);
     ctx.restore();
   }
-  ctx.fillStyle = '#F8FAFC';
-  ctx.font = '900 italic 64px Inter, system-ui, sans-serif';
-  ctx.fillText('RW200', 220, 150);
-  ctx.fillStyle = '#94A3B8';
+  if (marca) ctx.drawImage(marca, 220, 92, (marca.width / marca.height) * 58, 58);
+  ctx.fillStyle = '#9AA38C';
   ctx.font = '500 30px Inter, system-ui, sans-serif';
   ctx.fillText(datos.fecha, 222, 190);
 
@@ -106,10 +105,10 @@ export async function tarjetaSesion(datos) {
     const y = 400 + Math.floor(i / 2) * 170;
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.beginPath(); ctx.roundRect(x, y, 456, 146, 24); ctx.fill();
-    ctx.fillStyle = '#94A3B8';
+    ctx.fillStyle = '#9AA38C';
     ctx.font = '600 28px Inter, system-ui, sans-serif';
     ctx.fillText(etq, x + 30, y + 48);
-    ctx.fillStyle = i === 0 ? '#FB923C' : '#F8FAFC';
+    ctx.fillStyle = i === 0 ? '#F7C873' : '#F8FAFC';
     ctx.font = '900 64px Inter, system-ui, sans-serif';
     ctx.fillText(String(valor), x + 30, y + 118, 400);
   });
@@ -134,7 +133,7 @@ export async function tarjetaSesion(datos) {
     area.addColorStop(1, 'rgba(249,115,22,0.02)');
     ctx.fillStyle = area;
     ctx.fill();
-    ctx.strokeStyle = '#F97316';
+    ctx.strokeStyle = '#F2A33A';
     ctx.lineWidth = 4;
     ctx.beginPath();
     for (let i = 0; i < pts.length; i += paso) {
@@ -143,7 +142,7 @@ export async function tarjetaSesion(datos) {
       if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
     }
     ctx.stroke();
-    ctx.fillStyle = '#94A3B8';
+    ctx.fillStyle = '#9AA38C';
     ctx.font = '600 26px Inter, system-ui, sans-serif';
     ctx.fillText('Potencia (W)', x0, y0 - 16);
   }

@@ -13,7 +13,7 @@ import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
 import * as O from './objetos.js';
 
-const VERSION = '0.11.1';
+const VERSION = '0.12.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -94,7 +94,7 @@ function aplicarTema() {
   const tema = ajustes.leer('tema', 'oscuro');
   if (tema === 'oscuro') delete document.documentElement.dataset.tema;
   else document.documentElement.dataset.tema = tema;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color('--fondo') || '#0F172A');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color('--fondo') || '#111410');
 }
 const selTema = $('#sel-tema');
 selTema.value = ajustes.leer('tema', 'oscuro');
@@ -2165,12 +2165,12 @@ async function guardarRespaldo() {
     programa: leerPrograma(),
     ajustes: Object.fromEntries(CLAVES_AJUSTES.map((k) => [k, ajustes.leer(k, null)]).filter(([, v]) => v != null)),
   };
-  const nombre = `rw200-respaldo-${E.claveDia(Date.now())}.json`;
+  const nombre = `rower-respaldo-${E.claveDia(Date.now())}.json`;
   const texto = JSON.stringify(datos);
   const archivo = new File([texto], nombre, { type: 'application/json' });
   try {
     if (navigator.canShare?.({ files: [archivo] })) {
-      await navigator.share({ files: [archivo], title: 'Respaldo de RW200' });
+      await navigator.share({ files: [archivo], title: 'Respaldo de Rower' });
     } else {
       descargar(nombre, texto, 'application/json');
     }
@@ -2187,7 +2187,7 @@ async function guardarRespaldo() {
 async function restaurarRespaldo(archivo) {
   let datos;
   try { datos = JSON.parse(await archivo.text()); } catch { toast('Ese archivo no es un respaldo válido'); return; }
-  if (datos?.app !== 'remadora' || !Array.isArray(datos.sesiones)) { toast('Ese archivo no es un respaldo de RW200'); return; }
+  if (datos?.app !== 'remadora' || !Array.isArray(datos.sesiones)) { toast('Ese archivo no es un respaldo de Rower'); return; }
   const fechas = new Set((await db.listar('sesiones')).map((s) => s.fecha));
   let nS = 0;
   for (const s of datos.sesiones) {
@@ -2268,9 +2268,9 @@ $('#btn-compartir-img').addEventListener('click', async (ev) => {
       fecha: f.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
       stats, extra, puntos: (s.muestras || []).map((x) => [x.t, x.w]),
     });
-    const nombre = `rw200-${marcaFecha(s.fecha)}.png`;
+    const nombre = `rower-${marcaFecha(s.fecha)}.png`;
     const archivo = new File([blob], nombre, { type: 'image/png' });
-    if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Mi sesión en RW200' });
+    if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Mi sesión en Rower' });
     else descargar(nombre, blob, 'image/png');
   } catch (err) {
     if (err.name !== 'AbortError') toast('No se pudo crear la imagen');
