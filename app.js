@@ -10,7 +10,7 @@ import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 
-const VERSION = '0.6.3';
+const VERSION = '0.6.4';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;

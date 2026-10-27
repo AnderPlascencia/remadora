@@ -1,10 +1,10 @@
 // Guarda la app en caché para que abra sin conexión. Cambia VERSION al publicar cambios.
-const VERSION = 'remadora-0.6.3';
+const VERSION = 'remadora-0.6.4';
 const ARCHIVOS = ['./', 'index.html', 'estilos.css', 'app.js', 'remadora.js', 'protocolo.js', 'variantes.js',
-  'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'manifest.webmanifest', 'icono.svg', 'icono-192.png', 'icono-512.png'];
+  'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'manifest.webmanifest', 'rw200-logo.svg', 'rw200-192.png', 'rw200-512.png'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS.map((a) => new Request(a, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -16,7 +16,8 @@ self.addEventListener('activate', (e) => {
 // Red primero (para recibir actualizaciones) y caché si no hay conexión.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(fetch(e.request)
+  // cache: 'no-cache' revalida con el servidor para no quedarse con archivos viejos del navegador.
+  e.respondWith(fetch(e.request, { cache: 'no-cache' })
     .then((r) => { const copia = r.clone(); caches.open(VERSION).then((c) => c.put(e.request, copia)); return r; })
     .catch(() => caches.match(e.request)));
 });
