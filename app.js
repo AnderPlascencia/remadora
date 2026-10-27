@@ -13,7 +13,7 @@ import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
 import * as O from './objetos.js';
 
-const VERSION = '0.10.0';
+const VERSION = '0.11.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -1671,7 +1671,7 @@ function pintarFicha(h, per, clase, sesiones) {
   const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 5);
   $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
     const g = h.porSesion.get(x.fecha);
-    return `<li><div><b>${fechaCorta(x.fecha)} · ${x.entrenamiento || 'Remo libre'}</b> <span class="xp">+${miles(g.xp)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
+    return `<li><div><b>${fechaCorta(x.fecha)} · ${x.entrenamiento || 'Remo libre'}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
       <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
@@ -1704,8 +1704,8 @@ function pintarTalentos(h, per) {
 function filaMision(m) {
   const pct = Math.min(100, (100 * m.valor) / m.meta);
   const valor = m.meta >= 100 ? miles(m.valor) : Math.round(m.valor * 10) / 10;
-  return `<li class="${m.hecha ? 'hecha' : ''}"><div class="mision-fila"><span>${m.hecha ? ico('i-check') : ''}${m.texto}</span>
-    ${m.monedas ? `<span class="monedas">${icoMoneda}${m.monedas}</span>` : ''}</div>
+  return `<li class="${m.hecha ? 'hecha' : ''}"><div class="mision-fila"><span>${m.hecha ? ico('i-check') : ''}${m.nombre ? `<b>${m.nombre}</b> · ` : ''}${m.texto}</span>
+    <span class="recompensa">${m.xp ? `<span class="xp">+${miles(m.xp)} XP</span>` : ''}${m.monedas ? `<span class="monedas">${icoMoneda}${m.monedas}</span>` : ''}</span></div>
     <div class="progreso"><div style="width:${pct}%"></div></div><small>${valor} de ${miles(m.meta)}${m.premio ? ` · premio: <b>${m.premio}</b>` : ''}</small></li>`;
 }
 
@@ -1719,7 +1719,7 @@ function pintarMisiones(h) {
       c.progreso.every((r) => r.valor >= r.meta) ? ' · ¡ya puedes enfrentarlo!' : ' · se desbloquea al cumplir lo de arriba'}</small></div>
       <span class="premio">${icoMoneda}${c.monedas} + ${O.objeto(c.objeto).nombre}</span></div>`
     : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
-  $('#mis-hazanas').innerHTML = h.hazanas.map((x) => filaMision({ texto: `${x.nombre}: ${x.texto}`, meta: x.meta, valor: x.valor, monedas: x.monedas, premio: O.objeto(x.objeto).nombre, hecha: x.hecha })).join('');
+  $('#mis-hazanas').innerHTML = h.hazanas.map((x) => filaMision({ nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas, premio: x.objeto ? O.objeto(x.objeto).nombre : '', hecha: x.hecha })).join('');
 }
 
 function tarjetaObjeto(x, per, { accion = '', extra = '' } = {}) {
@@ -1837,9 +1837,9 @@ function pintarXpSesion(s, previas, resumen) {
   const monedas = g.monedas + logros.reduce((a, l) => a + l.monedas, 0);
   const subio = resumen && g.nivelDespues > g.nivelAntes;
   const ascenso = subio && J.rangoDe(g.nivelDespues).id !== J.rangoDe(g.nivelAntes).id;
-  caja.innerHTML = `<span class="xp-total">+${miles(g.xp)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
+  caja.innerHTML = `<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
     ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.rangoDe(g.nivelDespues).nombre}.` : ''}</span>` : ''}
-    ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(l.tipo === 'jefe' || l.tipo === 'hazana' ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · ganaste <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="monedas">${icoMoneda}${l.monedas}</span></div>`).join('')}
+    ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(l.tipo === 'jefe' || l.tipo === 'hazana' ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · ganaste <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="recompensa">${l.xp ? `<span class="xp">+${miles(l.xp)} XP</span>` : ''}<span class="monedas">${icoMoneda}${l.monedas}</span></span></div>`).join('')}
     <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
     <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul>
     ${clase ? '' : '<p class="ayuda">Crea tu héroe en la pestaña Héroe para darle vida a esta experiencia.</p>'}`;

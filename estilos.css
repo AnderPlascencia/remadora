@@ -648,3 +648,6 @@ details.seccion[open] { padding-bottom: 8px; }
 .hoja-xp .logro.jefe .ico, .hoja-xp .logro.hazana .ico { color: #FACC15; }
 #heroe-monedas { display: flex; margin-top: 4px; }
 .objetos > p { grid-column: 1 / -1; margin: 0; }
+
+.recompensa { display: inline-flex; gap: 8px; align-items: center; flex: none; }
+.recompensa .xp { color: var(--primario); font-weight: 700; font-size: 13px; white-space: nowrap; }

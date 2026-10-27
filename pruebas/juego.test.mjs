@@ -48,9 +48,15 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
 // Misiones, capítulos, talentos y tienda
 {
   const d = J.misionesDelDia('2026-01-05');
-  assert.equal(d.length, 3);
+  assert.equal(d.length, 5);
+  assert.ok(d.every((x) => x.xp >= 30 && x.xp <= 120), 'diarias moderadas');
+  assert.ok(d[0].texto.startsWith('Completa una sesión de al menos') && d[1].texto.includes('min activos'), 'una de distancia y una de duración');
   assert.deepEqual(d.map((x) => x.texto), J.misionesDelDia('2026-01-05').map((x) => x.texto), 'misiones repetibles');
-  assert.equal(J.misionesDelDia('2026-01-05', true).length, 4);
+  assert.equal(J.misionesDelDia('2026-01-05', true).length, 6);
+  const sem = J.misionesDeSemana('2026-01-05', 'pirata');
+  assert.equal(sem.length, 3);
+  assert.ok(sem.some((x) => x.nombre === 'Rumbo pirata'), 'misión temática de la clase');
+  assert.ok(sem.every((x) => x.xp >= 150 && x.xp <= 250), 'semanales moderadas');
   assert.equal(J.lunesDe(Date.UTC(2026, 0, 8, 12)), '2026-01-05');
 
   // Capítulo 1: 2 sesiones + 3 km + Prueba 500 m
@@ -62,7 +68,13 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.ok(e.logros.some((l) => l.tipo === 'jefe'));
   assert.equal(e.capitulo.n, 2);
   assert.ok(e.monedas >= 100);
-  assert.equal(e.diarias.length, 3);
+  assert.equal(e.diarias.length, 5);
+  // Logros y constancia dan XP aparte de la sesión
+  assert.ok(e.logros.some((l) => l.texto === 'Logro: Primera travesía' && l.xp === 100));
+  assert.ok(e.logros.some((l) => l.tipo === 'constancia' && l.xp === 40), 'primer entrenamiento de la semana');
+  assert.ok(e.logros.some((l) => l.tipo === 'diaria' && l.xp > 0), 'las misiones dan XP');
+  const ps = e.porSesion.get(s1.fecha);
+  assert.ok(ps.xpExtra >= 140, `xp extra ${ps.xpExtra}`);
 
   // Talentos: requisitos y puntos
   const est = { atributos: { fuerza: 20 }, talentosLibres: 3 };
