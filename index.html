@@ -51,7 +51,7 @@
     <!-- ENTRENAR -->
     <section id="vista-entrenar" class="vista activa" aria-labelledby="tab-entrenar">
       <div id="aviso-bt" class="aviso" hidden>
-        Este navegador no tiene Bluetooth web. Abre la página en Chrome para Android.
+        Este navegador no tiene Bluetooth web: abre la app en Chrome para Android o prueba el modo demo en Ajustes.
       </div>
 
       <div class="fila-botones">
@@ -59,6 +59,7 @@
         <button id="btn-banda" class="boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span>Pulso</span></button>
       </div>
 
+      <div id="preparar" class="preparar">
       <div id="hoy-toca" class="hoy-toca" hidden>
         <svg class="ico" aria-hidden="true"><use href="#i-calendario"/></svg>
         <div class="crece"><span class="etq">Hoy toca</span><b id="hoy-toca-nombre"></b></div>
@@ -92,9 +93,10 @@
           <p id="perso-ayuda" class="ayuda"></p>
         </div>
       </div>
+      </div>
+      <p id="resumen-sesion" class="resumen-sesion" hidden></p>
       <div id="rival" class="rival" hidden aria-live="polite"><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="rival-texto"></span></div>
       <canvas id="carrera" class="grafica carrera" role="img" aria-label="Carrera contra el fantasma" hidden></canvas>
-      <p id="pista-carrera" class="pista-carrera" hidden>Toca la carrera para cambiar entre vista 2D y 3D</p>
 
       <div id="bloque-actual" class="tarjeta-meta" hidden>
         <div class="tm-cabecera">
@@ -227,6 +229,13 @@
 
     <!-- PROGRESO -->
     <section id="vista-historial" class="vista" aria-labelledby="tab-historial">
+      <div id="progreso-vacio" class="vacio-grande" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg>
+        <h3>Aquí verás tu progreso</h3>
+        <p>Cuando guardes tu primera sesión aparecerán tus kilómetros, tu forma, tus récords y el historial.</p>
+        <button type="button" class="boton primario" data-ir="entrenar">Ir a entrenar</button>
+      </div>
+      <div id="progreso-contenido">
       <div class="resumen-semana">
         <div class="rs-dato"><svg class="ico" aria-hidden="true"><use href="#i-fuego"/></svg><span><b id="racha">0</b> <span id="racha-etq">días seguidos</span></span></div>
         <div class="rs-meta">
@@ -243,12 +252,15 @@
       </div>
       <canvas id="grafica-periodos" class="grafica baja" role="img" aria-label="Kilómetros por periodo"></canvas>
 
-      <h2>Forma</h2>
+      <details class="seccion" data-seccion="forma">
+      <summary><h2>Forma</h2><span id="forma-resumen" class="seccion-resumen"></span></summary>
       <div class="leyenda"><span class="lcond">Condición</span><span class="lfat">Fatiga</span><span class="lfres">Frescura</span></div>
       <canvas id="grafica-forma" class="grafica baja" role="img" aria-label="Condición, fatiga y frescura de los últimos 60 días"></canvas>
       <p id="forma-texto" class="ayuda"></p>
+      </details>
 
-      <h2>Tendencia</h2>
+      <details class="seccion" data-seccion="tendencia">
+      <summary><h2>Tendencia</h2></summary>
       <div class="segmentado" role="group" aria-label="Tendencia" id="seg-tendencia">
         <button class="activo" data-tend="potencia" aria-pressed="true">Potencia</button>
         <button data-tend="eficiencia" aria-pressed="false">Pulso</button>
@@ -257,6 +269,7 @@
       <div id="leyenda-tendencia" class="leyenda"></div>
       <canvas id="grafica-tendencia" class="grafica baja" role="img" aria-label="Tendencia por sesión"></canvas>
       <p id="tendencia-texto" class="ayuda"></p>
+      </details>
 
       <h2>Récords</h2>
       <div id="records" class="records"></div>
@@ -265,12 +278,14 @@
       <label class="campo">Mostrar <select id="filtro-ent"><option value="*">Todas las sesiones</option></select></label>
       <p id="resumen-historial" class="ayuda"></p>
       <ul id="lista-sesiones" class="lista"></ul>
+      </div>
     </section>
 
     <!-- AJUSTES -->
     <section id="vista-ajustes" class="vista" aria-labelledby="tab-ajustes">
       <div class="tarjeta-version"><span>Versión instalada</span><b id="version-ajustes"></b></div>
-      <h2>Tú</h2>
+      <details class="seccion" data-seccion="perfil" open>
+      <summary><h2>Tú</h2></summary>
       <div class="fila-dos">
         <label class="campo">Peso (kg) <input id="in-peso" type="number" min="30" max="200" inputmode="numeric"></label>
         <label class="campo">FTP (W) <input id="in-ftp" type="number" min="30" max="1000" inputmode="numeric"></label>
@@ -280,8 +295,10 @@
       <label class="campo">Pulso máximo (lpm) <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
       <p class="ayuda">Si no lo conoces, usa 220 menos tu edad. Sirve para las zonas de pulso.</p>
       <label class="campo">Meta semanal (km) <input id="in-meta-semana" type="number" min="1" max="500" inputmode="numeric"></label>
+      </details>
 
-      <h2>Durante el entrenamiento</h2>
+      <details class="seccion" data-seccion="durante">
+      <summary><h2>Durante el entrenamiento</h2></summary>
       <label class="interruptor"><input type="checkbox" id="in-voz"><span>Avisos por voz</span></label>
       <label class="interruptor"><input type="checkbox" id="in-modo-auto"><span>Abrir modo remo al iniciar sesión</span></label>
       <label class="campo">Pantalla completa muestra
@@ -300,8 +317,10 @@
         </label>
         <button id="btn-nivel-prueba" class="boton alinear-abajo">Enviar</button>
       </div>
+      </details>
 
-      <h2>Respaldo</h2>
+      <details class="seccion" data-seccion="respaldo">
+      <summary><h2>Respaldo</h2><span id="respaldo-resumen" class="seccion-resumen"></span></summary>
       <p id="respaldo-info" class="ayuda"></p>
       <div class="fila-botones">
         <button id="btn-respaldo" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-descarga"/></svg><span>Guardar respaldo</span></button>
@@ -309,8 +328,10 @@
         <input id="in-restaurar" type="file" accept="application/json,.json" hidden>
       </div>
       <p class="ayuda">El respaldo es un archivo con todas tus sesiones, entrenamientos, programa y ajustes. Al guardarlo puedes mandarlo a Google Drive desde el menú de compartir. Restaurar agrega lo que falte sin borrar lo que ya tienes.</p>
+      </details>
 
-      <h2>Conexión</h2>
+      <details class="seccion" data-seccion="conexion">
+      <summary><h2>Conexión y pulso</h2></summary>
       <p class="ayuda">Pulso: sirve cualquier banda o reloj que transmita la frecuencia cardíaca por Bluetooth. En un Huawei Watch activa "Compartir datos de frecuencia cardíaca" en Ajustes del entrenamiento del reloj, empieza un entrenamiento en el reloj y luego pulsa "Pulso" en Entrenar.</p>
       <label class="campo">Variante del protocolo <select id="sel-variante"></select></label>
       <p class="ayuda">Si al conectar no aparecen datos, desconecta, cambia la variante y vuelve a conectar.</p>
@@ -323,7 +344,7 @@
         <summary>Ver registro Bluetooth</summary>
         <pre id="log" class="log"></pre>
       </details>
-      <p class="ayuda">Versión <span id="version"></span></p>
+      </details>
     </section>
   </main>
 

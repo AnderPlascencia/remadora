@@ -120,7 +120,23 @@ export function pintarCarrera(c, ahora = performance.now()) {
   const datos = interpolar(c, ahora);
   if (c.modo === '3d') pintar3d(c, p, datos);
   else pintar2d(c, p, datos);
-  cabecera(c, p);
+  insignia(c, p, cabecera(c, p));
+}
+
+// Pequeña pastilla en la esquina que recuerda que tocar cambia de vista.
+function insignia(c, { ctx, ancho }, arriba) {
+  const txt = c.modo === '3d' ? 'Toca: 2D' : 'Toca: 3D';
+  ctx.font = '600 11px system-ui, sans-serif';
+  const w = ctx.measureText(txt).width + 14;
+  const x = ancho - w - 6;
+  const y = arriba + 6;
+  ctx.fillStyle = 'rgba(2, 6, 23, 0.6)';
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(x, y, w, 18, 9) : ctx.rect(x, y, w, 18);
+  ctx.fill();
+  ctx.fillStyle = '#CBD5E1';
+  ctx.textAlign = 'center';
+  ctx.fillText(txt, x + w / 2, y + 13);
 }
 
 function cabecera(c, { ctx, ancho, alto }) {
@@ -138,6 +154,7 @@ function cabecera(c, { ctx, ancho, alto }) {
     ctx.fillStyle = '#E2E8F0';
     ctx.fillText(l2, ancho / 2, grande + 19);
   }
+  return altoCaja;
 }
 
 // ---------- 2D: vista desde arriba, la cámara sigue tu bote ----------
@@ -162,12 +179,15 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t }) {
   const ppm = ancho / ventana;
 
   // Orillas
-  for (const [y, h] of [[y0 - orilla, orilla], [y0 + pista, orilla]]) {
-    ctx.fillStyle = '#1F3A2A';
-    ctx.fillRect(0, y, ancho, h);
-    ctx.fillStyle = '#C2A878';
-    ctx.fillRect(0, y === y0 - orilla ? y0 - 3 : y0 + pista, ancho, 3);
-  }
+  // Si sobra alto, la tierra llena el espacio en vez de dejar franjas vacías.
+  const tierraArriba = Math.max(orilla, y0 - arriba);
+  const tierraAbajo = Math.max(orilla, alto - abajo - (y0 + pista));
+  ctx.fillStyle = '#1F3A2A';
+  ctx.fillRect(0, y0 - tierraArriba, ancho, tierraArriba);
+  ctx.fillRect(0, y0 + pista, ancho, tierraAbajo);
+  ctx.fillStyle = '#C2A878';
+  ctx.fillRect(0, y0 - 3, ancho, 3);
+  ctx.fillRect(0, y0 + pista, ancho, 3);
   // Árboles en la orilla, anclados al mundo (se desplazan al avanzar)
   ctx.fillStyle = '#2F6B3F';
   for (let m = Math.floor(M(0) / 9) * 9; m < M(ancho) + 9; m += 9) {

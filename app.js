@@ -10,7 +10,7 @@ import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 
-const VERSION = '0.6.0';
+const VERSION = '0.6.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -187,7 +187,6 @@ function aplicarModoCarrera() {
   const m = ajustes.leer('vistaCarrera', '2d') === '3d' ? '3d' : '2d';
   carreraEnt.modo = m;
   carreraRemo.modo = m;
-  $('#pista-carrera').textContent = `Toca la carrera para cambiar a vista ${m === '3d' ? '2D (desde arriba)' : '3D (desde atrás)'}`;
 }
 function alternarCarrera() {
   ajustes.escribir('vistaCarrera', carreraEnt.modo === '3d' ? '2d' : '3d');
@@ -214,7 +213,6 @@ $('#btn-nivel-prueba').addEventListener('click', () => {
   remadora.fijarResistencia(Number(selNivel.value));
   toast(`Nivel ${selNivel.value} enviado. Revisa la consola.`);
 });
-$('#version').textContent = VERSION;
 $('#version-barra').textContent = `v${VERSION}`;
 $('#version-ajustes').textContent = VERSION;
 
@@ -258,6 +256,8 @@ remadora.addEventListener('estado', (e) => {
   el.classList.toggle('espera', /…$/.test(texto));
   $('#btn-conectar span').textContent = conectada || remadora.reconectando ? 'Desconectar' : 'Conectar remadora';
   $('#btn-demo').textContent = remadora.demoTimer ? 'Detener demo' : 'Modo demo';
+  // El aviso de Bluetooth sobra mientras se usa el modo demo.
+  if (!Remadora.soportado()) $('#aviso-bt').hidden = !!remadora.demoTimer;
   if (sesion) {
     if (texto.startsWith('Reconectando')) hablar('Conexión perdida, reconectando', { clave: 'reconectando', cadaSeg: 30 });
     if (texto === 'Conectada' && sesion.perdida) { hablar('Reconectada'); toast('Reconectada: la sesión sigue'); }
@@ -302,6 +302,23 @@ $('#btn-demo').addEventListener('click', () => {
 });
 
 // ---------- Sesión ----------
+// Secciones plegables: recuerdan si estaban abiertas y redibujan su gráfica al abrirse.
+for (const d of document.querySelectorAll('details.seccion')) {
+  const clave = `seccion-${d.dataset.seccion}`;
+  const guardado = ajustes.leer(clave, null);
+  if (guardado != null) d.open = guardado === '1';
+  d.addEventListener('toggle', () => {
+    ajustes.escribir(clave, d.open ? '1' : '0');
+    if (!d.open) return;
+    if (d.dataset.seccion === 'forma') pintarForma();
+    if (d.dataset.seccion === 'tendencia') pintarTendencia();
+  });
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ir]');
+  if (b) irA(b.dataset.ir);
+});
+
 let sesion = null;
 let entrenamientoPrevio = null;
 let entrenamientoActivo = null;
@@ -324,6 +341,13 @@ function actualizarBotones() {
   $('#mr-pausa').disabled = !sesion;
   $('#mr-terminar').disabled = !sesion;
   $('#sel-entrenamiento').disabled = !!sesion;
+  // Antes de remar se muestra la tarjeta Preparar; durante la sesión, solo una línea de resumen.
+  $('#preparar').hidden = !!sesion;
+  $('#resumen-sesion').hidden = !sesion;
+  if (sesion) {
+    const contra = sesion.rivales.length ? ` · contra ${sesion.rivales.map((r) => r.nombre.replace(/^Fantasma /, '')).join(', ')}` : '';
+    $('#resumen-sesion').textContent = `${sesion.entrenamiento || 'Remo libre'}${contra}`;
+  }
   pintarChips();
 }
 
@@ -484,6 +508,7 @@ setInterval(() => {
     if (vivo[k].length > 600) vivo[k].shift();
   }
   if (sesion) avanzarSesion();
+  if (!Remadora.soportado()) $('#aviso-bt').hidden = !!remadora.demoTimer;
   pintar();
 }, 1000);
 
@@ -641,12 +666,13 @@ function marcarRango(rango, potencia = true) {
 
 function pintarRival() {
   const r = sesion?.rival;
-  $('#rival').hidden = !r;
+  // En Entrenar la carrera ya muestra la diferencia: el aviso de texto queda solo para el modo remo.
+  $('#rival').hidden = true;
   $('#mr-rival').hidden = !r;
   $('#carrera').hidden = !r;
-  $('#pista-carrera').hidden = !r;
   if (!r) { carreraEnt.detener(); return; }
   const c = carreraActual();
+  $('#carrera').setAttribute('aria-label', c.texto);
   if (vistaActiva('entrenar')) carreraEnt.actualizar(c.estado);
   for (const [caja, span] of [['#rival', '#rival-texto'], ['#mr-rival', '#mr-rival-texto']]) {
     $(span).textContent = c.texto;
@@ -677,7 +703,8 @@ function carreraActual() {
   const quien = r.nivel && F.NIVELES[r.nivel] ? `fantasma ${F.NIVELES[r.nivel].nombre.toLowerCase()}` : (r.nombre || 'fantasma').replace(/^Fantasma/, 'fantasma');
   let texto = dif === 0 ? `Empatado con ${quien}` : `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} de ${quien}`;
   if (rs.length > 1) texto = `Vas ${lugar}º de ${rs.length + 1} · ${texto}`;
-  const tono = rs.length > 1 ? (lugar === 1 ? 'adelante' : 'atras') : (dif > 0 ? 'adelante' : dif < 0 ? 'atras' : '');
+  // Verde solo si vas ganando, rojo solo si vas último; en medio, neutro.
+  const tono = rs.length > 1 ? (lugar === 1 ? 'adelante' : lugar === rs.length + 1 ? 'atras' : '') : (dif > 0 ? 'adelante' : dif < 0 ? 'atras' : '');
 
   // Diferencia en segundos con el primer fantasma: cuánto tardó él en llegar a donde estás tú.
   let l1 = texto;
@@ -791,7 +818,7 @@ function pintarGraficaRemo(t) {
   const canvas = $('#mr-grafica');
   if (vistaRemo() === 'carrera') {
     const clases = ['lcar', 'lcar2', 'lcar3'];
-    leyenda(`<span class="lw">Tú</span>${sesion.rivales.map((r, i) => `<span class="${clases[i]}">${r.nombre.replace(/^Fantasma /, '')}</span>`).join('')}<span class="pista">Toca: ${carreraRemo.modo === '3d' ? '2D' : '3D'}</span>`);
+    leyenda(`<span class="lw">Tú</span>${sesion.rivales.map((r, i) => `<span class="${clases[i]}">${r.nombre.replace(/^Fantasma /, '')}</span>`).join('')}`);
     canvas.setAttribute('aria-label', $('#mr-rival-texto').textContent);
     carreraRemo.actualizar(carreraActual().estado);
     return;
@@ -998,7 +1025,12 @@ async function pintarEntrenamientos() {
   const lista = await db.listar('entrenamientos');
   const ul = $('#lista-ent');
   ul.innerHTML = '';
-  if (!lista.length) ul.innerHTML = '<li class="vacio">Aún no tienes entrenamientos. Crea uno o agrega los ejemplos.</li>';
+  if (!lista.length) {
+    ul.innerHTML = `<li class="vacio vacio-grande">${ico('i-lista')}<h3>Aún no tienes entrenamientos</h3>
+      <p>Empieza con los ejemplos (2000 m, intervalos, prueba FTP…) y luego ajústalos a tu gusto.</p>
+      <button type="button" class="boton primario" data-ejemplos>Agregar ejemplos</button></li>`;
+    ul.querySelector('[data-ejemplos]').addEventListener('click', () => $('#btn-plantillas').click());
+  }
   for (const ent of lista) {
     const li = document.createElement('li');
     li.innerHTML = `<div class="info clic" role="button" tabindex="0"><div class="titulo"></div><div class="suave"></div></div>
@@ -1355,6 +1387,7 @@ function pintarForma() {
     else if (hoy.frescura > 10) consejo = 'Estás fresco: buen momento para una prueba o una sesión fuerte.';
     $('#forma-texto').textContent = `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}`;
   }
+  $('#forma-resumen').textContent = ftp() && hay ? `Frescura ${hoy.frescura > 0 ? '+' : ''}${hoy.frescura}` : '';
 }
 
 function pintarAvisoRespaldo(total) {
@@ -1372,6 +1405,8 @@ function pintarAvisoRespaldo(total) {
 async function pintarHistorial() {
   const lista = (await db.listar('sesiones')).sort((a, b) => b.fecha - a.fecha);
   cacheSesiones = lista;
+  $('#progreso-vacio').hidden = lista.length > 0;
+  $('#progreso-contenido').hidden = !lista.length;
 
   const dias = E.racha(lista);
   $('#racha').textContent = dias;
@@ -1750,6 +1785,7 @@ function pintarInfoRespaldo() {
   $('#respaldo-info').textContent = ultimo
     ? `Último respaldo: ${new Date(ultimo).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}`
     : 'Todavía no has guardado un respaldo.';
+  $('#respaldo-resumen').textContent = ultimo ? new Date(ultimo).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'Sin respaldo';
 }
 $('#btn-respaldo').addEventListener('click', guardarRespaldo);
 $('#btn-restaurar').addEventListener('click', () => $('#in-restaurar').click());
