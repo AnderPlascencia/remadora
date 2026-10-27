@@ -454,3 +454,6 @@ details.seccion[open] { padding-bottom: 8px; }
   .modo-remo.vista-grafica .mr-grid > div:nth-child(5),
   .modo-remo.vista-grafica .mr-grid > div:nth-child(6) { display: none; }
 }
+.barra h1 { display: flex; align-items: center; gap: 10px; }
+.barra h1 .version { margin-left: -4px; }
+.barra h1 .logo { width: 32px; height: 32px; border-radius: 8px; flex: none; }

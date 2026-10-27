@@ -10,7 +10,7 @@ import * as E from './estadisticas.js';
 import { configurarVoz, hablar, tiempoHablado } from './voz.js';
 import * as P from './programa.js';
 
-const VERSION = '0.6.1';
+const VERSION = '0.6.2';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -1730,12 +1730,12 @@ async function guardarRespaldo() {
     programa: leerPrograma(),
     ajustes: Object.fromEntries(CLAVES_AJUSTES.map((k) => [k, ajustes.leer(k, null)]).filter(([, v]) => v != null)),
   };
-  const nombre = `remadora-respaldo-${E.claveDia(Date.now())}.json`;
+  const nombre = `rw200-respaldo-${E.claveDia(Date.now())}.json`;
   const texto = JSON.stringify(datos);
   const archivo = new File([texto], nombre, { type: 'application/json' });
   try {
     if (navigator.canShare?.({ files: [archivo] })) {
-      await navigator.share({ files: [archivo], title: 'Respaldo de Remadora' });
+      await navigator.share({ files: [archivo], title: 'Respaldo de RW200' });
     } else {
       descargar(nombre, texto, 'application/json');
     }
@@ -1752,7 +1752,7 @@ async function guardarRespaldo() {
 async function restaurarRespaldo(archivo) {
   let datos;
   try { datos = JSON.parse(await archivo.text()); } catch { toast('Ese archivo no es un respaldo válido'); return; }
-  if (datos?.app !== 'remadora' || !Array.isArray(datos.sesiones)) { toast('Ese archivo no es un respaldo de Remadora'); return; }
+  if (datos?.app !== 'remadora' || !Array.isArray(datos.sesiones)) { toast('Ese archivo no es un respaldo de RW200'); return; }
   const fechas = new Set((await db.listar('sesiones')).map((s) => s.fecha));
   let nS = 0;
   for (const s of datos.sesiones) {
