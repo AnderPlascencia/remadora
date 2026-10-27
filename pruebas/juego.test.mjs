@@ -52,9 +52,16 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.ok(d.every((x) => x.xp >= 15 && x.xp <= 60), 'diarias moderadas');
   assert.ok(d[0].texto.startsWith('Completa una sesión de al menos') && d[1].texto.includes('min activos'), 'una de distancia y una de duración');
   assert.deepEqual(d.map((x) => x.texto), J.misionesDelDia('2026-01-05').map((x) => x.texto), 'misiones repetibles');
-  assert.equal(J.misionesDelDia('2026-01-05', true).length, 6);
   const sem = J.misionesDeSemana('2026-01-05', 'pirata');
-  assert.equal(sem.length, 3);
+  assert.equal(sem.length, 4);
+  assert.ok(sem.some((x) => x.nombre === 'Rival de la semana'));
+  // Rivales: nunca de tu clase, el primero es el de la semana, rango relativo al tuyo
+  const rv = J.rivalesPara(['igual', 'superior', 'inferior'], { miClase: 'vikingo', nivel: 35, ftp: 200, lunes: '2026-01-05' });
+  assert.equal(rv[0].clase, J.rivalDeLaSemana('2026-01-05', 'vikingo'));
+  assert.ok(rv.every((x) => x.clase !== 'vikingo'));
+  assert.equal(new Set(rv.map((x) => x.clase)).size, 3);
+  assert.deepEqual(rv.map((x) => x.rango), ['guerrero', 'veterano', 'combatiente']);
+  assert.deepEqual(rv.map((x) => x.ftp), [200, 210, 186]);
   assert.ok(sem.some((x) => x.nombre === 'Rumbo pirata'), 'misión temática de la clase');
   assert.ok(sem.every((x) => x.xp >= 150 && x.xp <= 250), 'semanales moderadas');
   assert.equal(J.lunesDe(Date.UTC(2026, 0, 8, 12)), '2026-01-05');
@@ -76,16 +83,27 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   const ps = e.porSesion.get(s1.fecha);
   assert.ok(ps.xpExtra >= 140, `xp extra ${ps.xpExtra}`);
 
-  // Talentos: requisitos y puntos
-  const est = { atributos: { fuerza: 20 }, talentosLibres: 3 };
-  assert.equal(J.motivoBloqueo('brazos-hierro', est, {}), null);
-  assert.match(J.motivoBloqueo('turbo', est, {}), /Primero/);
-  assert.equal(J.motivoBloqueo('turbo', est, { 'brazos-hierro': 1 }), null);
-  assert.match(J.motivoBloqueo('critico', est, { 'brazos-hierro': 1, turbo: 1 }), /Fuerza 40/);
-  // Talento aplicado solo desde que se aprende
-  const conTal = J.estadoJuego([s1], { ftp: 200, per: { talentos: { pulmones: 0, 'pies-ligeros': 0 } } });
-  assert.ok(conTal.porSesion.get(s1.fecha).detalle.some(([t]) => t === 'Pies ligeros') === false);
-  assert.ok(conTal.talentosLibres <= conTal.talentos);
+  // Talentos por clase: puntos cada 3 niveles, requisitos por rango, rama favorita con grado gratis
+  assert.equal(J.puntosDeNivel(90), 30);
+  assert.equal(J.talentosDe('vikingo').length, 9);
+  assert.equal(J.talentosDe('samurai').find((t) => t.slot === 'disciplina-2').nombre, 'Kata');
+  assert.equal(J.grado({}, 'vikingo', 'potencia-1'), 1, 'la favorita trae un grado gratis');
+  assert.equal(J.grado({}, 'vikingo', 'fondo-1'), 0);
+  const est = { nivel: 10, libres: 3 };
+  assert.equal(J.motivoBloqueo('fondo-1', est, {}, 'vikingo'), null);
+  assert.match(J.motivoBloqueo('fondo-2', est, {}, 'vikingo'), /Primero/);
+  assert.match(J.motivoBloqueo('potencia-2', est, {}, 'vikingo'), /nivel 20/);
+  assert.equal(J.motivoBloqueo('potencia-2', { nivel: 20, libres: 3 }, {}, 'vikingo'), null);
+  assert.match(J.motivoBloqueo('potencia-2', { nivel: 20, libres: 2 }, {}, 'vikingo'), /3 puntos/);
+  assert.equal(J.puntosGastados({ 'fondo-1': [1, 2], 'potencia-2': [3] }), 5);
+  // Un talento aplica solo desde que se aprende
+  const largo = sesion(7, 150, 1900);
+  const antes = J.estadoJuego([largo], { ftp: 200, per: { clase: 'vikingo', arbol: { vikingo: { 'fondo-1': [largo.fecha + 1] } } } });
+  assert.ok(!antes.porSesion.get(largo.fecha).detalle.some(([t]) => t === 'Remo largo'));
+  const despues = J.estadoJuego([largo], { ftp: 200, per: { clase: 'vikingo', arbol: { vikingo: { 'fondo-1': [0, 0] } } } });
+  const remo = despues.porSesion.get(largo.fecha).detalle.find(([t]) => t === 'Remo largo');
+  assert.equal(remo[1], Math.round(despues.porSesion.get(largo.fecha).detalle[0][1] * 0.08), '+4 % por grado');
+  assert.equal(despues.talentosLibres, despues.talentos - 2);
 
   const tienda = J.tiendaSemana('2026-01-05', new Set());
   assert.equal(tienda.length, 4);

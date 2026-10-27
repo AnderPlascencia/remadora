@@ -26,17 +26,33 @@ function intensidad(b, ftpUsuario) {
   return 0.6;
 }
 
-// Perfil del fantasma: un nivel por nombre o uno a la medida { ftp, nombre }.
+// Estilo de remo de cada clase rival: multiplica la potencia según el segundo t de una sesión de T segundos.
+// Todos promedian cerca de 1, así que el FTP del rival marca su nivel y el estilo, cómo lo reparte.
+export const ESTILOS = {
+  vikingo: { texto: 'Sale muy fuerte y se cansa al final', f: (t, T) => 1.06 - 0.12 * (t / T) },
+  pirata: { texto: 'Ritmo irregular, con acelerones por sorpresa', f: (t) => ((t + 40) % 150 < 20 ? 1.09 : 0.985) },
+  samurai: { texto: 'Ritmo muy constante y un remate final controlado', f: (t, T) => (t / T > 0.92 ? 1.05 : 0.996) },
+  polinesio: { texto: 'Empieza suave y termina más rápido de lo que empezó', f: (t, T) => 0.95 + 0.1 * (t / T) },
+  romano: { texto: 'Ritmo de metrónomo con un ataque corto cada 5 min', f: (t) => (t % 300 >= 270 ? 1.07 : 0.993) },
+};
+
+// Perfil del fantasma: un nivel por nombre o uno a la medida { ftp, nombre, estilo? }.
 function perfil(nivel) {
   if (typeof nivel === 'string') return { clave: nivel, ...NIVELES[nivel] };
   const ftp = nivel.ftp;
   const cercano = ftp < 140 ? NIVELES.principiante : ftp < 210 ? NIVELES.intermedio : NIVELES.avanzado;
-  return { ...cercano, clave: 'personalizado', nombre: nivel.nombre || `${ftp} W`, ftp };
+  const estilo = ESTILOS[nivel.estilo] || null;
+  // El samurái apenas varía; el pirata, mucho.
+  const variacion = nivel.estilo === 'samurai' ? cercano.variacion / 2 : nivel.estilo === 'pirata' ? cercano.variacion * 1.6 : cercano.variacion;
+  return { ...cercano, variacion, clave: 'personalizado', nombre: nivel.nombre || `${ftp} W`, ftp, estilo };
 }
 
 // Sesión simulada: { nivel, nombre, muestras: [{ t, dist, w, spm }] }.
 export function simular(ent, nivel, ftpUsuario = 0) {
   const p = perfil(nivel);
+  // Con estilo, primero se mide cuánto dura la sesión sin él para repartir el esfuerzo.
+  const T = p.estilo ? simular(ent, { ...nivel, estilo: null }, ftpUsuario).muestras.length || 1 : 1;
+  const estilo = p.estilo ? (tt) => p.estilo.f(tt, T) : () => 1;
   const muestras = [];
   let t = 0;
   let dist = 0;
@@ -51,7 +67,7 @@ export function simular(ent, nivel, ftpUsuario = 0) {
     const spm = Math.round(Math.min(36, Math.max(18, p.spm + (rel - 0.75) * 20)));
     while (!hasta(t, dist) && t < 4 * 3600) {
       const avance = Math.min(1, (t - t0) / durEstimada);
-      const w = w0 * (1 + ruido(t) - (cansa ? p.fatiga * avance ** 1.5 : 0));
+      const w = w0 * (1 + ruido(t) - (cansa ? p.fatiga * avance ** 1.5 : 0)) * estilo(t);
       t += 1;
       dist += velocidad(w);
       muestras.push({ t, dist: Math.round(dist * 10) / 10, w: Math.round(w), spm });

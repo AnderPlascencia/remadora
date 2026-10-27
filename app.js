@@ -13,7 +13,7 @@ import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
 import * as O from './objetos.js';
 
-const VERSION = '0.12.0';
+const VERSION = '0.12.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -122,7 +122,8 @@ const MAX_RIVALES = 3;
 function rivalesElegidos() {
   try {
     const v = JSON.parse(ajustes.leer('rivales', '[]'));
-    return Array.isArray(v) ? v.slice(0, MAX_RIVALES) : [];
+    // Las opciones antiguas (principiante, intermedio, avanzado) pasan a los retos contra otras clases.
+    return Array.isArray(v) ? [...new Set(v.map((k) => J.RETO_ANTIGUO[k] || k))].slice(0, MAX_RIVALES) : [];
   } catch { return []; }
 }
 function perso() {
@@ -146,6 +147,8 @@ function pintarChips() {
     b.style.setProperty('--chip', i >= 0 ? COLORES_RIVAL[i] : '');
     b.disabled = !!sesion || (i < 0 && sel.length >= MAX_RIVALES);
   }
+  const semana = J.rivalDeLaSemana(J.lunesDe(Date.now()), leerPersonaje().clase);
+  $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}. Los rivales tienen tu rango, uno más o uno menos.`;
   // Durante la sesión los fantasmas ya están en el agua: se ocultan las opciones.
   $('.fantasmas').hidden = !!sesion;
   const panel = $('#perso-panel');
@@ -181,9 +184,22 @@ async function crearRivales(ent) {
   const lista = [];
   let guardadas = null;
   const sesiones = async () => (guardadas ??= await db.listar('sesiones'));
-  for (const clave of rivalesElegidos()) {
+  const elegidos = rivalesElegidos();
+  // Rivales de otras clases: su rango sale de tu nivel y su FTP del tuyo.
+  const retos = elegidos.filter((k) => J.RETOS[k]);
+  let deClase = [];
+  if (retos.length) {
+    const per = leerPersonaje();
+    const h = J.estadoJuego(await sesiones(), { ftp: ftp(), per });
+    const base = ftp() || estimarFtp(await sesiones()) || 150;
+    deClase = J.rivalesPara(retos, { miClase: per.clase, nivel: h.nivel, ftp: base, lunes: J.lunesDe(Date.now()), semilla: String(Date.now()) });
+  }
+  for (const clave of elegidos) {
     let r = null;
-    if (F.NIVELES[clave]) r = F.simular(ent, clave, ftp());
+    if (J.RETOS[clave]) {
+      const d = deClase.shift();
+      r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, reto: d.reto };
+    } else if (F.NIVELES[clave]) r = F.simular(ent, clave, ftp());
     else if (clave === 'anterior' || clave === 'mejor') {
       r = E.elegirRival(await sesiones(), ent?.nombre, clave);
       if (r) r = { ...r, nombre: clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior' };
@@ -192,6 +208,12 @@ async function crearRivales(ent) {
     if (r) lista.push({ ...r, clave, color: COLORES_RIVAL[lista.length] });
   }
   return lista;
+}
+
+// FTP aproximado sin prueba: el 80 % de la mejor media de watts de tus últimas 20 sesiones.
+function estimarFtp(sesiones) {
+  const w = sesiones.slice(-20).map((s) => s.wattsProm || 0).filter((x) => x > 0);
+  return w.length ? Math.round(Math.max(...w) * 0.95) : 0;
 }
 
 async function fantasmaPerso(ent, sesiones) {
@@ -525,7 +547,8 @@ async function detenerSesion() {
   }
   if (s.rival) {
     const resumen = (r) => ({
-      fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)),
+      fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, clase: r.clase ?? null, rango: r.rango ?? null,
+      diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)),
     });
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
@@ -1677,28 +1700,33 @@ function pintarFicha(h, per, clase, sesiones) {
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
 
-function pintarTalentos(h, per) {
-  const apr = per.talentos || {};
-  $('#talentos-libres').textContent = h.talentosLibres > 0
-    ? `Tienes ${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento. Cada nivel de héroe te da uno.`
-    : 'Sin puntos libres: sube de nivel para ganar más.';
-  $('#arbol').innerHTML = J.ATRIBUTOS.map((a) => {
-    const ts = J.TALENTOS.filter((t) => t.atributo === a.clave);
-    const elegido = ts.find((t) => t.id === talentoElegido);
-    const nodos = ts.map((t) => {
-      const estado = apr[t.id] != null ? 'aprendido' : J.motivoBloqueo(t.id, h, apr) ? 'bloqueado' : 'disponible';
-      return `<button type="button" class="nodo ${estado}${t.id === talentoElegido ? ' elegido' : ''}" data-talento="${t.id}">
-        <span class="nodo-nivel">${['I', 'II', 'III'][t.nivel - 1]}</span><b>${t.nombre}</b><small>${t.activa ? 'Activa' : 'Pasiva'} · ${J.COSTO_TALENTO[t.nivel]} pt</small></button>`;
+function pintarTalentos(h, per, clase) {
+  const arbol = per.arbol?.[clase.clave] || {};
+  const est = { nivel: h.nivel, libres: h.talentosLibres };
+  $('#talentos-libres').textContent = `${h.talentosLibres > 0
+    ? `Tienes ${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento.`
+    : 'Sin puntos libres.'} Ganas 1 punto cada 3 niveles. Los talentos II se abren en el nivel 20 y los III en el 40.`;
+  const ts = J.talentosDe(clase.clave);
+  $('#arbol').innerHTML = J.RAMAS.map((r) => {
+    const deRama = ts.filter((t) => t.rama === r.clave);
+    const elegido = deRama.find((t) => t.slot === talentoElegido);
+    const nodos = deRama.map((t) => {
+      const g = J.grado(arbol, clase.clave, t.slot);
+      const estado = g >= 1 ? 'aprendido' : J.motivoBloqueo(t.slot, est, arbol, clase.clave) ? 'bloqueado' : 'disponible';
+      return `<button type="button" class="nodo ${estado}${t.slot === talentoElegido ? ' elegido' : ''}" data-talento="${t.slot}">
+        <span class="nodo-nivel">${J.NOMBRE_TIER[t.tier]}</span><b>${t.nombre}</b><small>${t.activa ? 'En la carrera' : 'Pasivo'} · ${g}/${t.max}</small></button>`;
     }).join('<span class="enlace" aria-hidden="true"></span>');
     let detalle = '';
     if (elegido) {
-      const motivo = apr[elegido.id] != null ? null : J.motivoBloqueo(elegido.id, h, apr);
-      detalle = `<div class="nodo-detalle"><p>${elegido.texto}${elegido.activa ? ' <em>Se activa cuando llegue la carrera de tu héroe.</em>' : ''}</p>${
-        apr[elegido.id] != null ? '<span class="ok-texto">Aprendido</span>'
-          : motivo ? `<span class="suave">${motivo}</span>`
-            : `<button type="button" class="boton primario" data-aprender="${elegido.id}">Aprender (${J.COSTO_TALENTO[elegido.nivel]} ${J.COSTO_TALENTO[elegido.nivel] === 1 ? 'punto' : 'puntos'})</button>`}</div>`;
+      const g = J.grado(arbol, clase.clave, elegido.slot);
+      const motivo = J.motivoBloqueo(elegido.slot, est, arbol, clase.clave);
+      const accion = g >= 1 ? 'Subir de grado' : 'Aprender';
+      detalle = `<div class="nodo-detalle"><p>${elegido.texto}</p>${
+        motivo ? `<span class="${g >= elegido.max ? 'ok-texto' : 'suave'}">${motivo}</span>`
+          : `<button type="button" class="boton primario" data-aprender="${elegido.slot}">${accion} (${elegido.coste} ${elegido.coste === 1 ? 'punto' : 'puntos'})</button>`}</div>`;
     }
-    return `<div class="rama"><div class="rama-titulo"><b>${a.nombre}</b><span>${h.atributos[a.clave]}</span></div><div class="nodos">${nodos}</div>${detalle}</div>`;
+    const fav = J.ramaFavorita(clase.clave) === r.clave;
+    return `<div class="rama"><div class="rama-titulo"><b>${J.nombreRama(clase.clave, r.clave)}${fav ? ' ★' : ''}</b><span>${r.nombre}</span></div><div class="nodos">${nodos}</div>${detalle}</div>`;
   }).join('');
 }
 
@@ -1770,9 +1798,13 @@ $('#arbol').addEventListener('click', async (e) => {
   const ap = e.target.closest('[data-aprender]');
   if (ap) {
     const { per, h } = await estadoHeroe();
-    if (J.motivoBloqueo(ap.dataset.aprender, h, per.talentos || {})) return;
-    guardarPersonaje({ talentos: { ...(per.talentos || {}), [ap.dataset.aprender]: Date.now() } });
-    toast(`Aprendiste ${J.talento(ap.dataset.aprender).nombre}`);
+    const clave = J.claseDe(per.clase).clave;
+    const slot = ap.dataset.aprender;
+    const arbolClase = per.arbol?.[clave] || {};
+    if (J.motivoBloqueo(slot, { nivel: h.nivel, libres: h.talentosLibres }, arbolClase, clave)) return;
+    guardarPersonaje({ arbol: { ...(per.arbol || {}), [clave]: { ...arbolClase, [slot]: [...(arbolClase[slot] || []), Date.now()] } } });
+    const t = J.talentosDe(clave).find((x) => x.slot === slot);
+    toast(`${t.nombre}: grado ${J.grado({ ...arbolClase, [slot]: [...(arbolClase[slot] || []), 0] }, clave, slot)}`);
     vibrar(80);
     pintarHeroe();
     return;

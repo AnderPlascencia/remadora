@@ -1,6 +1,7 @@
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
+import { gradosEn, puntosDeNivel, puntosGastados, talentosDe } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo } from './estadisticas.js';
 import { objeto, OBJETOS, precioDe } from './objetos.js';
 
@@ -53,42 +54,47 @@ export const RANGOS = [
 export const rangoDe = (nivel) => RANGOS.filter((r) => nivel >= r.nivel).at(-1);
 export const tituloDe = (nivel) => rangoDe(nivel).nombre;
 
-// ---------- Talentos: 3 por atributo. El 1 y el 3 son pasivos; el 2 es una habilidad activa para la carrera. ----------
-export const TALENTOS = [
-  { id: 'brazos-hierro', atributo: 'fuerza', nivel: 1, nombre: 'Brazos de hierro', texto: '+10 % de XP en sesiones con 10 min o más en zona 4.' },
-  { id: 'turbo', atributo: 'fuerza', nivel: 2, activa: true, nombre: 'Turbo', texto: 'En la carrera: 20 s sobre tu FTP encienden un turbo que empuja a tu héroe.' },
-  { id: 'critico', atributo: 'fuerza', nivel: 3, nombre: 'Golpe crítico', texto: 'El bono de récord personal da +50 XP más.' },
-  { id: 'pies-ligeros', atributo: 'agilidad', nivel: 1, nombre: 'Pies ligeros', texto: '+10 % de XP en sesiones de menos de 20 min.' },
-  { id: 'esquivar', atributo: 'agilidad', nivel: 2, activa: true, nombre: 'Esquivar', texto: 'En la carrera: subir el ritmo cuando un fantasma ataca anula su ataque.' },
-  { id: 'remate', atributo: 'agilidad', nivel: 3, nombre: 'Remate', texto: '+50 XP si le ganas a un fantasma por menos de 5 m.' },
-  { id: 'pulmones', atributo: 'resistencia', nivel: 1, nombre: 'Pulmones de acero', texto: '+10 % de XP en sesiones de 30 min o más.' },
-  { id: 'segundo-aire', atributo: 'resistencia', nivel: 2, activa: true, nombre: 'Segundo aire', texto: 'En la carrera: después de 10 min parejos, tu héroe recupera energía.' },
-  { id: 'incansable', atributo: 'resistencia', nivel: 3, nombre: 'Incansable', texto: '+20 XP por cada kilómetro después del quinto.' },
-  { id: 'respiro', atributo: 'recuperacion', nivel: 1, nombre: 'Respiro', texto: '+20 monedas cuando descansas después de un día duro.' },
-  { id: 'curacion', atributo: 'recuperacion', nivel: 2, activa: true, nombre: 'Curación', texto: 'En la carrera: los descansos de los intervalos curan a tu héroe.' },
-  { id: 'sabiduria', atributo: 'recuperacion', nivel: 3, nombre: 'Sabiduría', texto: 'La misión diaria que más paga da el doble de monedas.' },
-  { id: 'precision', atributo: 'tecnica', nivel: 1, nombre: 'Precisión', texto: '+10 % de XP si estás 80 % o más en rango.' },
-  { id: 'combo', atributo: 'tecnica', nivel: 2, activa: true, nombre: 'Combo', texto: 'En la carrera: 30 s seguidos en rango encadenan un combo.' },
-  { id: 'maestria', atributo: 'tecnica', nivel: 3, nombre: 'Maestría', texto: 'Una misión diaria extra: 6 en vez de 5.' },
-  { id: 'bolsa-llena', atributo: 'voluntad', nivel: 1, nombre: 'Bolsa llena', texto: '+10 % de monedas por sesiones y misiones diarias.' },
-  { id: 'ultimo-aliento', atributo: 'voluntad', nivel: 2, activa: true, nombre: 'Último aliento', texto: 'En la carrera: en los últimos 250 m tu héroe saca fuerzas extra.' },
-  { id: 'imparable', atributo: 'voluntad', nivel: 3, nombre: 'Imparable', texto: 'El bono de racha sigue creciendo hasta 14 días.' },
-];
-export const talento = (id) => TALENTOS.find((t) => t.id === id) || null;
-export const COSTO_TALENTO = { 1: 1, 2: 2, 3: 3 };
-export const REQUISITO_TALENTO = { 1: 0, 2: 15, 3: 40 };
-
-// ¿Se puede aprender? Devuelve null si sí, o el motivo si no.
-export function motivoBloqueo(id, estado, aprendidos = {}) {
-  const t = talento(id);
-  if (!t || aprendidos[id]) return 'Ya lo tienes';
-  const previo = TALENTOS.find((x) => x.atributo === t.atributo && x.nivel === t.nivel - 1);
-  if (previo && !aprendidos[previo.id]) return `Primero aprende ${previo.nombre}`;
-  const nombre = ATRIBUTOS.find((a) => a.clave === t.atributo).nombre;
-  if (estado.atributos[t.atributo] < REQUISITO_TALENTO[t.nivel]) return `Necesitas ${nombre} ${REQUISITO_TALENTO[t.nivel]}`;
-  if (estado.talentosLibres < COSTO_TALENTO[t.nivel]) return `Necesitas ${COSTO_TALENTO[t.nivel]} puntos`;
-  return null;
+// ---------- Rivales: héroes de las otras clases, con el rango que te toca ----------
+const NOMBRES_RIVAL = {
+  vikingo: ['Björn', 'Eirik', 'Halvar', 'Sigrun'],
+  pirata: ['Tess Marlow', 'Silas Crane', 'Rojo Calloway', 'Nell Duarte'],
+  samurai: ['Kenji', 'Haruto', 'Takeshi', 'Ren'],
+  polinesio: ['Kalani', 'Makoa', 'Keoni', 'Nalu'],
+  romano: ['Marco Varo', 'Tito Galo', 'Lucio Brenno', 'Cayo Severo'],
+};
+// Retos: el rango del rival respecto al tuyo y su FTP respecto al tuyo.
+export const RETOS = {
+  igual: { nombre: 'Rival de tu rango', rango: 0, ftp: 1 },
+  superior: { nombre: 'Rival superior', rango: 1, ftp: 1.05 },
+  inferior: { nombre: 'Rival inferior', rango: -1, ftp: 0.93 },
+};
+// Las opciones antiguas de fantasma pasan al reto equivalente.
+export const RETO_ANTIGUO = { principiante: 'inferior', intermedio: 'igual', avanzado: 'superior' };
+const otrasClases = (miClase) => CLASES.map((c) => c.clave).filter((k) => k !== claseDe(miClase)?.clave);
+// La clase rival de la semana: la misma toda la semana, nunca la tuya.
+export function rivalDeLaSemana(lunes, miClase) {
+  const otras = otrasClases(miClase);
+  return otras[Math.floor(azar(`r${lunes}`)() * otras.length)];
 }
+// Rivales para una sesión: el primero es siempre de la clase de la semana; el resto, de otras clases.
+export function rivalesPara(retos, { miClase = null, nivel = 1, ftp = 150, lunes, semilla = '' } = {}) {
+  const semana = rivalDeLaSemana(lunes, miClase);
+  const r = azar(`n${lunes}${semilla}`);
+  const resto = otrasClases(miClase).filter((k) => k !== semana).sort(() => r() - 0.5);
+  const clases = [semana, ...resto];
+  const mio = RANGOS.indexOf(rangoDe(nivel));
+  return retos.map((reto, i) => {
+    const def = RETOS[reto];
+    const clase = clases[i % clases.length];
+    const rango = RANGOS[Math.max(0, Math.min(RANGOS.length - 1, mio + def.rango))];
+    const nombres = NOMBRES_RIVAL[clase];
+    const nombre = nombres[Math.floor(r() * nombres.length)];
+    return { reto, clase, rango: rango.id, ftp: Math.round(ftp * def.ftp), nombre: `${nombre} (${claseDe(clase).nombre} ${rango.nombre})` };
+  });
+}
+
+// ---------- Talentos: por clase, en talentos.js ----------
+export { talentosDe, motivoBloqueo, puntosDeNivel, puntosGastados, nombreRama, ramaFavorita, grado, RAMAS, NOMBRE_TIER, NIVEL_REQUERIDO } from './talentos.js';
 
 // ---------- Misiones ----------
 // La distancia es la fuente principal de XP; las misiones dan variedad con recompensas moderadas:
@@ -147,16 +153,18 @@ export const lunesDe = (ms) => {
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return claveDia(d.getTime());
 };
-export function misionesDelDia(dia, extra = false) {
+export function misionesDelDia(dia) {
   const semilla = `d${dia}`;
   const r = azar(semilla);
-  return [crear(DIARIA_DIST, r, semilla), crear(DIARIA_DUR, r, semilla), ...elegir(DIARIAS, extra ? 4 : 3, semilla, r)];
+  return [crear(DIARIA_DIST, r, semilla), crear(DIARIA_DUR, r, semilla), ...elegir(DIARIAS, 3, semilla, r)];
 }
 export function misionesDeSemana(lunes, clase = null) {
   const semilla = `s${lunes}`;
   const r = azar(semilla);
   const tema = MISION_CLASE[claseDe(clase)?.clave];
-  return [crear(SEMANAL_RUTA, r, semilla), ...(tema ? [crear(tema, r, semilla)] : []), ...elegir(SEMANALES, tema ? 1 : 2, semilla, r)];
+  const rival = rivalDeLaSemana(lunes, clase);
+  const reto = { id: 'rival', nombre: 'Rival de la semana', texto: () => `Gánale una carrera a un rival ${claseDe(rival).nombre.toLowerCase()}`, metas: [1], xp: [150], valor: (d) => d.vencidas.filter((k) => k === rival).length };
+  return [crear(SEMANAL_RUTA, r, semilla), ...(tema ? [crear(tema, r, semilla)] : []), ...elegir(SEMANALES, tema ? 1 : 2, semilla, r), crear(reto, r, semilla)];
 }
 
 // Bonos de constancia: premian volver, nunca castigan descansar, y tienen tope.
@@ -195,6 +203,7 @@ export const HAZANAS = [
   { id: 'racha14', nombre: 'Dos semanas sin parar', texto: '14 días seguidos', meta: 14, valor: (g) => g.rachaMax, monedas: 250, objeto: 'capa-leyenda' },
   { id: 'sub8', nombre: 'Bajo 8 minutos', texto: '2000 m en menos de 8:00', meta: 1, valor: (g) => (g.mejor2000 && g.mejor2000 < 480 ? 1 : 0), monedas: 200, objeto: 'aura-hielo' },
   { id: 'nivel10', nombre: 'Aprendiz', texto: 'Llega al nivel 10', meta: 10, valor: (g) => g.nivel, xp: 250, monedas: 100 },
+  { id: 'clases4', nombre: 'Vence a las 4 clases', texto: 'Gánale una carrera a rivales de 4 clases distintas', meta: 4, valor: (g) => g.clasesVencidas.size, xp: 300, monedas: 100 },
   { id: 'km100', nombre: 'Cien kilómetros', texto: '100 km en total', meta: 100, valor: (g) => g.kmTotal, xp: 600, monedas: 300, objeto: 'bote-dorado' },
   { id: 'nivel25', nombre: 'Héroe de nivel 25', texto: 'Llega al nivel 25', meta: 25, valor: (g) => g.nivel, monedas: 300, objeto: 'aura-dorada' },
 ];
@@ -248,6 +257,7 @@ export function medidas(s, ftpActual) {
     automatica: !!s.muestras?.length,
     z2min: z2 / 60, z4min: z4 / 60, sobreSeg: sobre, spm24min: spm24 / 60,
     pct: s.pctEnRango, ganados: rivales.filter((r) => r.diferencia > 0).length,
+    clasesVencidas: rivales.filter((r) => r.diferencia > 0 && r.clase).map((r) => r.clase),
     margenMin: Math.min(Infinity, ...rivales.filter((r) => r.diferencia > 0).map((r) => r.diferencia)),
     t500: s.muestras?.length ? mejorTiempo(s.muestras, 500) : null,
     t2000: s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null,
@@ -256,7 +266,8 @@ export function medidas(s, ftpActual) {
 
 // Ganancia de una sesión: XP con detalle y puntos por atributo (antes del bono de clase).
 function gananciaSesion(s, m, ctx) {
-  const tiene = (id) => ctx.tal.has(id);
+  const gr = ctx.grados || {};
+  const nombre = (slot) => ctx.nombres?.[slot] || slot;
   const at = { fuerza: 0, agilidad: 0, resistencia: 0, recuperacion: 0, tecnica: 0, voluntad: 0 };
   at.fuerza += m.z4min * 1.2;
   at.agilidad += (s.muestras || []).filter((x) => x.w / m.f >= 1.06).length / 20;
@@ -280,17 +291,17 @@ function gananciaSesion(s, m, ctx) {
   const detalle = [['Distancia', base]];
   // Bonos ordinarios entre 25 y 150 XP, sin multiplicadores de toda la sesión.
   if (completo) detalle.push(['Entrenamiento completo', 50]);
-  if (ctx.records) detalle.push(['Récord personal', 100 + (tiene('critico') ? 50 : 0)]);
+  if (ctx.records) detalle.push(['Récord personal', 100]);
   if (m.ganados) detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, 25 * Math.min(m.ganados, 3)]);
-  const topeRacha = tiene('imparable') ? 14 : 7;
-  if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, topeRacha)]);
-  const extra = (id, cond, texto, xp) => { if (tiene(id) && cond) detalle.push([texto, xp]); };
-  extra('brazos-hierro', m.z4min >= 10, 'Brazos de hierro', Math.round(base * 0.1));
-  extra('pies-ligeros', s.duracion < 1200, 'Pies ligeros', Math.round(base * 0.1));
-  extra('pulmones', s.duracion >= 1800, 'Pulmones de acero', Math.round(base * 0.1));
-  extra('precision', (s.pctEnRango ?? 0) >= 80, 'Precisión', Math.round(base * 0.1));
-  extra('remate', m.margenMin < 5, 'Remate', 50);
-  extra('incansable', m.metros > 5000, 'Incansable', 20 * Math.floor((m.metros - 5000) / 1000));
+  if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
+  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', 25]);
+  // Talentos de la clase (solo los grados aprendidos antes de esta sesión). Entre todos, como mucho +12 % de la distancia.
+  const talento = (slot, cond, xp) => { if (gr[slot] && cond && xp > 0) detalle.push([nombre(slot), xp]); };
+  talento('potencia-1', m.z4min >= 5, Math.round(base * 0.04 * gr['potencia-1']));
+  talento('fondo-1', m.min >= 30, Math.round(base * 0.04 * gr['fondo-1']));
+  talento('disciplina-1', m.estable, Math.round(base * 0.04 * gr['disciplina-1']));
+  talento('potencia-3', ctx.records > 0, 25 * (gr['potencia-3'] || 0));
+  talento('fondo-3', m.metros > 5000, 5 * (gr['fondo-3'] || 0) * Math.floor((m.metros - 5000) / 1000));
   return { xp: detalle.reduce((a, [, v]) => a + v, 0), detalle, atributos: at, carga };
 }
 
@@ -299,7 +310,9 @@ function gananciaSesion(s, m, ctx) {
 export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
   const fav = claseDe(per.clase)?.favorito;
-  const aprendidos = per.talentos || {};
+  const claveClase = claseDe(per.clase)?.clave || null;
+  const arbol = (claveClase && per.arbol?.[claveClase]) || {};
+  const nombresTal = claveClase ? Object.fromEntries(talentosDe(claveClase).map((t) => [t.slot, t.nombre])) : {};
   const atributos = Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0]));
   const mejores = {};
   const cargaDia = new Map();
@@ -311,18 +324,17 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   let monedas = 0;
   let mppSuma = 0;
   let mppN = 0;
-  const g = { kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, mejor2000: null, nivel: 1, sesiones: 0, misiones: 0 };
+  const g = { clasesVencidas: new Set(), kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, mejor2000: null, nivel: 1, sesiones: 0, misiones: 0 };
   const cons = { semana: null, sesSemana: 0, mes: null, sesMes: 0, pagadoMes: false, semanasSeguidas: 0, ultimaSemanaOk: null };
   let xpSesion = 0; // XP de misiones, constancia y logros ganada en la sesión que se está procesando
   const dia = { clave: null, misiones: [], hechas: new Set(), d: null };
   const semana = { clave: null, misiones: [], hechas: new Set(), d: null };
   const nuevoAgg = () => ({ metros: 0, min: 0, kcal: 0, z2min: 0, z4min: 0, sobreSeg: 0, spm24min: 0, mejorPct: 0, ganados: 0, sesiones: 0, dias: new Set(),
-    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0 });
+    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0, vencidas: [] });
   let cap = 0;
   let capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
   let capMejores = {};
   const hazanas = new Set();
-  const tiene = (id, fecha) => aprendidos[id] != null && fecha >= aprendidos[id];
 
   const lograr = (fecha, tipo, texto, m, obj, xpExtra = 0) => {
     monedas += m;
@@ -331,15 +343,13 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     if (obj) premios.add(obj);
     logros.push({ fecha, tipo, texto, monedas: m, xp: xpExtra, objeto: obj || null });
   };
-  const revisar = (fecha, grupo, extraBolsa, sabio) => {
-    const mayor = sabio ? Math.max(...grupo.misiones.map((x) => x.monedas)) : null;
+  const revisar = (fecha, grupo) => {
     for (const mi of grupo.misiones) {
       if (grupo.hechas.has(mi.id) || mi.valor(grupo.d) < mi.meta) continue;
       grupo.hechas.add(mi.id);
       g.misiones++;
       if (grupo === dia) semana.d.diariasHechas++;
-      let pago = mi.monedas * (sabio && mi.monedas === mayor ? 2 : 1);
-      if (extraBolsa) pago = Math.round(pago * 1.1);
+      const pago = mi.monedas;
       lograr(fecha, grupo === dia ? 'diaria' : 'semanal', `${mi.nombre}: ${mi.texto}`, pago, null, mi.xp);
     }
   };
@@ -366,9 +376,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
         if (mejor) mejores[r.clave] = v;
       }
     }
-    const tal = new Set(Object.keys(aprendidos).filter((id) => tiene(id, s.fecha)));
+    const grados = claveClase ? gradosEn(arbol, claveClase, s.fecha) : {};
     const descansoATiempo = !dias.has(ayer) && (cargaDia.get(anteayer) || 0) >= 60;
-    const gan = gananciaSesion(s, m, { tal, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0 });
+    const gan = gananciaSesion(s, m, { grados, nombres: nombresTal, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0 });
     cargaDia.set(hoy, (cargaDia.get(hoy) || 0) + gan.carga);
     if (s.paladas) { mppSuma += s.distancia / s.paladas; mppN++; }
     const nivelAntes = nivelDe(xp);
@@ -380,13 +390,11 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
       atributos[k] += total;
       if (total >= 0.5) ganancias[k] = Math.round(total);
     }
-    const bolsa = tal.has('bolsa-llena');
-    const monedasSesion = Math.round(Math.floor(gan.xp / 50) * (bolsa ? 1.1 : 1));
+    const monedasSesion = Math.floor(gan.xp / 50);
     monedas += monedasSesion;
-    if (nuevoDia && descansoATiempo && tal.has('respiro')) lograr(s.fecha, 'talento', 'Respiro: descansaste a tiempo', 20);
 
     // Misiones del día y de la semana
-    if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy, tal.has('maestria')), hechas: new Set(), d: nuevoAgg() });
+    if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy), hechas: new Set(), d: nuevoAgg() });
     const lunes = lunesDe(s.fecha);
     if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes, per.clase), hechas: new Set(), d: nuevoAgg() });
     for (const agg of [dia.d, semana.d]) {
@@ -395,35 +403,38 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
       agg.mejorPct = Math.max(agg.mejorPct, m.pct ?? 0);
       agg.maxMetros = Math.max(agg.maxMetros, m.metros); agg.maxMin = Math.max(agg.maxMin, m.min);
       if (m.estable) agg.estables++;
+      agg.vencidas.push(...m.clasesVencidas);
       agg.dias.add(hoy);
     }
-    revisar(s.fecha, dia, bolsa, tal.has('sabiduria'));
-    revisar(s.fecha, semana, false, false);
+    revisar(s.fecha, dia);
+    revisar(s.fecha, semana);
 
     // Constancia: semana, mes y bloques de 4 semanas
     const C = CONSTANCIA;
+    const xpCons = (x) => Math.round(x * (1 + 0.1 * (grados['disciplina-3'] || 0)));
     if (cons.semana !== lunes) {
       const anterior = cons.semana;
       const ok = cons.sesSemana >= 2;
       cons.semanasSeguidas = ok && anterior && claveDia(new Date(anterior + 'T12:00').getTime() + 7 * 864e5) === lunes ? cons.semanasSeguidas : 0;
       Object.assign(cons, { semana: lunes, sesSemana: 0 });
-      lograr(s.fecha, 'constancia', C.primeraSemana.texto, 10, null, C.primeraSemana.xp);
+      lograr(s.fecha, 'constancia', C.primeraSemana.texto, 10, null, xpCons(C.primeraSemana.xp));
     }
     cons.sesSemana++;
     if (cons.sesSemana === 2) {
       cons.semanasSeguidas++;
-      if (cons.semanasSeguidas === 4) { lograr(s.fecha, 'constancia', C.bloque4.texto, 80, null, C.bloque4.xp); cons.semanasSeguidas = 0; }
+      if (cons.semanasSeguidas === 4) { lograr(s.fecha, 'constancia', C.bloque4.texto, 80, null, xpCons(C.bloque4.xp)); cons.semanasSeguidas = 0; }
     }
-    if (cons.sesSemana === 3) lograr(s.fecha, 'constancia', C.semana3.texto, 30, null, C.semana3.xp);
-    if (cons.sesSemana === 5) lograr(s.fecha, 'constancia', C.semana5.texto, 20, null, C.semana5.xp);
+    if (cons.sesSemana === 3) lograr(s.fecha, 'constancia', C.semana3.texto, 30, null, xpCons(C.semana3.xp));
+    if (cons.sesSemana === 5) lograr(s.fecha, 'constancia', C.semana5.texto, 20, null, xpCons(C.semana5.xp));
     const mes = hoy.slice(0, 7);
     if (cons.mes !== mes) Object.assign(cons, { mes, sesMes: 0, pagadoMes: false });
-    if (++cons.sesMes >= 12 && !cons.pagadoMes) { cons.pagadoMes = true; lograr(s.fecha, 'constancia', C.mes12.texto, 60, null, C.mes12.xp); }
+    if (++cons.sesMes >= 12 && !cons.pagadoMes) { cons.pagadoMes = true; lograr(s.fecha, 'constancia', C.mes12.texto, 60, null, xpCons(C.mes12.xp)); }
 
     // Capítulo de la historia
     g.kmTotal += m.metros / 1000;
     g.kmMax = Math.max(g.kmMax, m.metros / 1000);
     g.sesiones++;
+    for (const k of m.clasesVencidas) g.clasesVencidas.add(k);
     g.minMax = Math.max(g.minMax, m.min);
     g.rachaMax = Math.max(g.rachaMax, racha);
     if (m.t2000) g.mejor2000 = g.mejor2000 == null ? m.t2000 : Math.min(g.mejor2000, m.t2000);
@@ -466,13 +477,12 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   // Misiones de hoy y de esta semana aunque todavía no hayas remado.
   const hoy = claveDia(ahora);
   const lunes = lunesDe(ahora);
-  const maestria = aprendidos.maestria != null;
-  const diaHoy = dia.clave === hoy ? dia : { misiones: misionesDelDia(hoy, maestria), hechas: new Set(), d: nuevoAgg() };
+  const diaHoy = dia.clave === hoy ? dia : { misiones: misionesDelDia(hoy), hechas: new Set(), d: nuevoAgg() };
   const semanaHoy = semana.clave === lunes ? semana : { misiones: misionesDeSemana(lunes, per.clase), hechas: new Set(), d: nuevoAgg() };
   const vista = (gr) => gr.misiones.map((mi) => ({ id: mi.id, nombre: mi.nombre, texto: mi.texto, meta: mi.meta, monedas: mi.monedas, xp: mi.xp, hecha: gr.hechas.has(mi.id), valor: Math.min(mi.meta, mi.valor(gr.d)) }));
 
   const nivel = nivelDe(xp);
-  const gastados = Object.keys(aprendidos).reduce((a, id) => a + (COSTO_TALENTO[talento(id)?.nivel] || 0), 0);
+  const gastados = puntosGastados(arbol);
   const compras = per.compras || [];
   const poseidos = new Set([...premios, ...compras]);
   const capitulo = cap < CAPITULOS.length ? {
@@ -485,8 +495,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     titulo: tituloDe(nivel),
     desde: xpParaNivel(nivel),
     hasta: nivel >= NIVEL_MAX ? null : xpParaNivel(nivel + 1),
-    talentos: nivel - 1,
-    talentosLibres: nivel - 1 - gastados,
+    talentos: puntosDeNivel(nivel),
+    talentosLibres: puntosDeNivel(nivel) - gastados,
     atributos: Object.fromEntries(Object.entries(atributos).map(([k, v]) => [k, Math.round(v)])),
     porSesion,
     logros,
