@@ -963,3 +963,9 @@ details.seccion[open] { padding-bottom: 8px; }
 .rpe-auto .rpe-valor { font-size: 34px; font-weight: 900; color: var(--acento); line-height: 1; }
 .rpe-auto > span { flex: 1; font-weight: 600; }
 .rpe-auto small { display: block; color: var(--texto-tenue); font-weight: 500; font-size: 13px; }
+.leyenda .ll::before { background: rgba(34, 197, 94, .3); }
+.leyenda .ld::before { background: repeating-linear-gradient(-45deg, rgba(148, 163, 184, .55) 0 2px, transparent 2px 5px); border: 1px solid rgba(148, 163, 184, .4); }
+.leyenda[hidden] { display: none; }
+.hoy-detalle-caja { margin-top: 4px; }
+.hoy-detalle-caja[hidden] { display: none; }
+.hoy-detalle-caja .he-bloques { margin: 8px 0 4px; }

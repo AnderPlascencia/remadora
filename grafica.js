@@ -160,8 +160,11 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
   const X = (t) => m.izq + (t / tFin) * w;
   const Y = (v) => m.arr + h - (Math.min(v, yMax) / yMax) * h;
 
-  // Intervalos: rojo fuera del rango, verde dentro, gris si es libre.
+  // Intervalos: con rango de potencia, verde dentro y rojo fuera; sin rango, todo verde (cualquier potencia vale)
+  // con una etiqueta de lo que pide. Los que terminan por distancia o paladas llevan rayas: su duración es estimada.
   let desde = 0;
+  ctx.font = '600 11px system-ui, sans-serif';
+  ctx.textAlign = 'center';
   for (const b of bloques) {
     const x0 = X(desde);
     const x1 = X(desde + b.duracion);
@@ -173,10 +176,30 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
       ctx.fillStyle = activo ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.5)';
       ctx.fillRect(x0, Y(max), x1 - x0, Y(b.min) - Y(max));
     } else {
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.12)';
+      ctx.fillStyle = activo ? 'rgba(34, 197, 94, 0.5)' : 'rgba(34, 197, 94, 0.3)';
       ctx.fillRect(x0, m.arr, x1 - x0, h);
+      const etq = b.metrica === 'spm' ? `${b.min}–${b.max} g/min` : b.metrica === 'fc' ? `${b.min}–${b.max} lpm` : 'Libre';
+      if (x1 - x0 >= ctx.measureText(etq).width + 6) {
+        ctx.fillStyle = colorTexto;
+        ctx.fillText(etq, (x0 + x1) / 2, m.arr + h - 8);
+      }
+    }
+    const sinTiempo = b.fin && b.fin !== 'tiempo' && !(ahora != null && ahora >= desde + b.duracion);
+    if (sinTiempo) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x0, m.arr, x1 - x0, h); ctx.clip();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 2;
+      for (let x = x0 - h; x < x1; x += 9) { ctx.beginPath(); ctx.moveTo(x, m.arr + h); ctx.lineTo(x + h, m.arr); ctx.stroke(); }
+      ctx.restore();
+      const etq = `≈ ${b.cantidad} ${b.fin === 'distancia' ? 'm' : 'pal.'}`;
+      if (x1 - x0 >= ctx.measureText(etq).width + 6) {
+        ctx.fillStyle = colorTexto;
+        ctx.fillText(etq, (x0 + x1) / 2, m.arr + 13);
+      }
     }
     ctx.strokeStyle = colorRejilla;
+    ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(x1, m.arr); ctx.lineTo(x1, m.arr + h); ctx.stroke();
     desde += b.duracion;
   }

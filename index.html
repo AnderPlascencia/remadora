@@ -73,7 +73,12 @@
         </div>
         <b id="hoy-nombre" class="hoy-nombre">Remo libre</b>
         <span id="hoy-resumen" class="hoy-resumen"></span>
-        <button type="button" id="btn-hoy-detalle" class="enlace-boton hoy-detalle" hidden>Ver detalles</button>
+        <button type="button" id="btn-hoy-detalle" class="enlace-boton hoy-detalle" aria-controls="hoy-detalle-caja" aria-expanded="false" hidden>Ver detalles</button>
+        <div id="hoy-detalle-caja" class="hoy-detalle-caja" hidden>
+          <div id="hoy-leyenda" class="leyenda"></div>
+          <canvas id="hoy-perfil" class="grafica baja" role="img" aria-label="Perfil del entrenamiento"></canvas>
+          <ol id="hoy-bloques" class="he-bloques"></ol>
+        </div>
         <div id="hoy-sugerencia" class="hoy-sugerencia" hidden><span></span><button type="button" class="boton chico"></button></div>
       </div>
 
@@ -147,7 +152,7 @@
       </div>
 
       <div id="perfil-vivo" hidden>
-        <div class="leyenda"><span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia</span></div>
+        <div id="vivo-leyenda" class="leyenda"><span class="lr">Rango de potencia</span><span class="lf">Fuera de rango</span><span class="ll">Cualquier potencia</span><span class="ld">Sin tiempo fijo (≈)</span><span class="lp">Tu potencia</span></div>
         <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
       </div>
 
@@ -664,6 +669,7 @@
       </div>
       <p id="he-sub" class="he-sub"></p>
       <p id="he-para" class="he-para"></p>
+      <div id="he-leyenda" class="leyenda" hidden></div>
       <canvas id="he-perfil" class="grafica baja" role="img" aria-label="Perfil de potencia del entrenamiento" hidden></canvas>
       <ol id="he-bloques" class="he-bloques"></ol>
       <div class="fila-botones">

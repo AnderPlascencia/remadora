@@ -15,7 +15,7 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 
-const VERSION = '0.21.1';
+const VERSION = '0.21.2';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -712,6 +712,7 @@ async function iniciarSesion() {
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
   const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftp(), fcMaxima()) : null;
   $('#perfil-vivo').hidden = !plan;
+  if (plan) $('#vivo-leyenda').innerHTML = leyendaPerfil(entrenamientoActivo.bloques, true);
   const rivales = await crearRivales(entrenamientoActivo);
   const referencias = await crearReferencias(entrenamientoActivo);
   const rival = rivales[0] || null;
@@ -3021,6 +3022,11 @@ async function pintarHoy(ent = entrenamientoPrevio) {
   $('#hoy-resumen').textContent = ent ? [B.resumenEnt(ent), ent.proposito].filter(Boolean).join(' · ')
     : libreConFantasmas() ? 'Rema a tu aire: la carrera cuenta desde los 5 min.' : 'Rema a tu aire, sin meta.';
   $('#btn-hoy-detalle').hidden = !ent;
+  const abierto = !!ent && ajustes.si('hoyDetalle', false);
+  $('#btn-hoy-detalle').textContent = abierto ? 'Ocultar detalles' : 'Ver detalles';
+  $('#btn-hoy-detalle').setAttribute('aria-expanded', String(abierto));
+  $('#hoy-detalle-caja').hidden = !abierto;
+  if (abierto) pintarBloquesEnt(ent, $('#hoy-perfil'), $('#hoy-bloques'), $('#hoy-leyenda'));
   // Sugerencia: lo del programa, afinar el FTP o crear un plan.
   const caja = $('#hoy-sugerencia');
   const [texto, boton] = [caja.querySelector('span'), caja.querySelector('button')];
@@ -3058,7 +3064,10 @@ $('#btn-cambiar').addEventListener('click', () => {
   $('#btn-cambiar').setAttribute('aria-expanded', String(abierto));
   $('#btn-cambiar').textContent = abierto ? 'Listo' : 'Cambiar';
 });
-$('#btn-hoy-detalle').addEventListener('click', () => { if (entrenamientoPrevio) abrirDetalleEnt(entrenamientoPrevio); });
+$('#btn-hoy-detalle').addEventListener('click', () => {
+  ajustes.escribir('hoyDetalle', ajustes.si('hoyDetalle', false) ? '0' : '1');
+  pintarHoy();
+});
 
 // ---------- Respaldo ----------
 const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'edad', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje'];
@@ -3188,19 +3197,31 @@ function abrirDetalleEnt(ent) {
   $('#he-sub').innerHTML = [ent.dificultad ? `<span class="dif ${ent.dificultad}">${B.nombreDificultad(ent.dificultad)}</span>` : '', secc?.nombre, B.resumenEnt(ent), base ? '' : 'Tuyo'].filter(Boolean).join(' · ');
   $('#he-para').textContent = ent.proposito || (base ? '' : 'Entrenamiento que creaste tú.');
   $('#he-para').hidden = !$('#he-para').textContent;
-  const intervalos = Ent.tipoDe(ent) === 'intervalos';
-  if (intervalos) $('#he-bloques').innerHTML = filasBloques(ent.bloques, ftp(), fcMaxima());
-  else {
-    const m = Ent.METRICAS_OBJETIVO[ent.objetivo.metrica];
-    $('#he-bloques').innerHTML = `<li>Meta: <b>${miles(ent.objetivo.valor)} ${m.unidad}</b> <span class="suave">al ritmo que quieras; termina al llegar.</span></li>`;
-  }
   $('#he-editar').textContent = base ? 'Copiar y editar' : 'Editar';
   $('#hoja-ent').hidden = false;
-  // El perfil solo tiene sentido si algún bloque pide watts o split.
-  const conPerfil = intervalos && ent.bloques.some((b) => ['ftp', 'watts', 'split'].includes(b.metrica));
-  $('#he-perfil').hidden = !conPerfil;
-  if (conPerfil) dibujarPerfil($('#he-perfil'), paraPerfil(ent.bloques));
+  pintarBloquesEnt(ent, $('#he-perfil'), $('#he-bloques'), $('#he-leyenda'));
   $('#hoja-ent .hoja').focus();
+}
+// Leyenda del perfil: solo lo que aparece en este entrenamiento.
+function leyendaPerfil(bloques, conPotencia = false) {
+  const conRango = bloques.some((b) => ['ftp', 'watts', 'split'].includes(b.metrica));
+  const libres = bloques.some((b) => !['ftp', 'watts', 'split'].includes(b.metrica));
+  const sinTiempo = bloques.some((b) => Ent.finDe(b) !== 'tiempo');
+  return `${conRango ? '<span class="lr">Rango de potencia</span><span class="lf">Fuera de rango</span>' : ''}${libres ? '<span class="ll">Cualquier potencia</span>' : ''}${sinTiempo ? '<span class="ld">Sin tiempo fijo (≈)</span>' : ''}${conPotencia ? '<span class="lp">Tu potencia</span>' : ''}`;
+}
+// Perfil y bloques de un entrenamiento (en la hoja de detalle y en la tarjeta «Hoy»). El lienzo debe estar visible.
+function pintarBloquesEnt(ent, canvas, lista, leyenda) {
+  const intervalos = Ent.tipoDe(ent) === 'intervalos';
+  if (intervalos) lista.innerHTML = filasBloques(ent.bloques, ftp(), fcMaxima());
+  else {
+    const m = Ent.METRICAS_OBJETIVO[ent.objetivo.metrica];
+    lista.innerHTML = `<li>Meta: <b>${miles(ent.objetivo.valor)} ${m.unidad}</b> <span class="suave">al ritmo que quieras; termina al llegar.</span></li>`;
+  }
+  canvas.hidden = !intervalos;
+  leyenda.hidden = !intervalos;
+  if (!intervalos) return;
+  leyenda.innerHTML = leyendaPerfil(ent.bloques);
+  dibujarPerfil(canvas, paraPerfil(ent.bloques));
 }
 function cerrarDetalleEnt() { $('#hoja-ent').hidden = true; entDetalle = null; }
 $('#he-cerrar').addEventListener('click', cerrarDetalleEnt);
