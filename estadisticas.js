@@ -150,6 +150,20 @@ export function racha(sesiones, ahora = Date.now()) {
   return n;
 }
 
+// Semanas seguidas (de lunes a domingo) con al menos una sesión. La semana actual cuenta si ya remaste;
+// si aún no, la racha sigue viva desde la semana pasada. Sirve a quien rema en días alternos.
+export function rachaSemanas(sesiones, ahora = Date.now()) {
+  const semanas = new Set(sesiones.map((s) => inicioPeriodo(s.fecha, 'semana')));
+  const d = new Date(inicioPeriodo(ahora, 'semana'));
+  if (!semanas.has(d.getTime())) d.setDate(d.getDate() - 7);
+  let n = 0;
+  while (semanas.has(d.getTime())) {
+    n++;
+    d.setDate(d.getDate() - 7);
+  }
+  return n;
+}
+
 // ---------- Resumen por intervalo y parciales ----------
 
 // Una fila por intervalo con promedios y % del tiempo en rango. bloques ya con duración real en segundos.

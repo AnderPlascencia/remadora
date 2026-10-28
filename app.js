@@ -15,7 +15,7 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 
-const VERSION = '0.21.2';
+const VERSION = '0.22.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -33,6 +33,9 @@ const ajustes = {
 };
 const ftp = () => ajustes.num('ftp', 0);
 const fcMaxima = () => ajustes.num('fcMax', 0);
+
+// Los nombres los escribe el usuario: siempre escapados al meterlos en HTML.
+function escaparHtml(t) { return String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // ---------- Navegación ----------
 const vistaActiva = (v) => $(`#vista-${v}`).classList.contains('activa');
@@ -86,7 +89,23 @@ selVariante.addEventListener('change', () => ajustes.escribir('variante', selVar
 function campoNumero(sel, clave, defecto, alCambiar) {
   const el = $(sel);
   el.value = ajustes.leer(clave, defecto);
-  el.addEventListener('change', () => { ajustes.escribir(clave, el.value); alCambiar?.(); });
+  // Respeta el min y max del campo: un valor fuera de rango no se guarda y el campo vuelve a lo que tenía.
+  el.addEventListener('change', () => {
+    const texto = el.value.trim();
+    const v = Number(texto);
+    const min = Number(el.min);
+    const max = Number(el.max);
+    if (texto === '' ? defecto !== '' : !Number.isFinite(v) || v < min || v > max) {
+      el.value = ajustes.leer(clave, defecto);
+      const primero = el.closest('label')?.firstChild;
+      const nombre = (primero?.firstChild ?? primero)?.textContent.trim() || 'El valor';
+      toast(`${nombre}: escribe un número de ${min} a ${max}`);
+      return;
+    }
+    ajustes.escribir(clave, texto === '' ? '' : String(Math.round(v)));
+    el.value = ajustes.leer(clave, defecto);
+    alCambiar?.();
+  });
 }
 campoNumero('#in-peso', 'peso', '75', () => { pintarClasificacion(); vistaPrevia(); });
 campoNumero('#in-ftp', 'ftp', '', () => { ajustes.escribir('ftpEstimado', '0'); pintarFtpEstado(); pintarZonas(); pintarClasificacion(); vistaPrevia(); });
@@ -331,7 +350,7 @@ function tarjetaRival(r) {
     const c = J.claseDe(r.clase);
     const rango = J.RANGOS.find((x) => x.id === r.rango);
     return `<div class="rival-tarjeta" style="--chip:${r.color}"><img src="${srcRetratoRango(r.clase, r.rango)}" width="56" height="56" alt="">
-      <div><b>${r.nombre.split(' (')[0]}</b><small>${c.nombre} ${rango?.nombre || ''} · ${J.DIFICULTADES[r.dificultad]?.nombre || ''} · ${r.clasificacion} · ${r.ftp} W</small>
+      <div><b>${escaparHtml(r.nombre.split(' (')[0])}</b><small>${c.nombre} ${rango?.nombre || ''} · ${J.DIFICULTADES[r.dificultad]?.nombre || ''} · ${r.clasificacion} · ${r.ftp} W</small>
       <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
   }
   let detalle = '';
@@ -339,7 +358,7 @@ function tarjetaRival(r) {
   else if (r.fecha) detalle = `${fechaMini(r.fecha)} · ${miles(r.distancia ?? r.muestras.at(-1)?.dist ?? 0)} m en ${formatoTiempo(r.duracion ?? r.muestras.at(-1)?.t ?? 0)}`;
   else if (r.ftp) detalle = `Rema a ${r.ftp} W de FTP, sin estilo propio.`;
   return `<div class="rival-tarjeta${r.falta ? ' falta' : ''}" style="--chip:${r.color || 'var(--borde)'}"><span class="rival-ico">${ico('i-fantasma')}</span>
-    <div><b>${r.nombre.replace(/^Fantasma /, '')}</b><span>${detalle}</span></div></div>`;
+    <div><b>${escaparHtml(r.nombre.replace(/^Fantasma /, ''))}</b><span>${escaparHtml(detalle)}</span></div></div>`;
 }
 
 // Sesión que remarías si completas el plan a tu FTP: sirve para estimar la XP.
@@ -377,7 +396,7 @@ async function pintarPreparar() {
   const reales = rivales.filter((r) => !r.falta);
   const hip = sesionHipotetica(ent, reales, sesiones);
   const est = J.estimarXp(sesiones, hip, { ftp: ftp(), per: leerPersonaje() });
-  const condicion = [ent ? `completas «${ent.nombre}»` : `remas unos ${miles(hip.distancia)} m`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
+  const condicion = [ent ? `completas «${escaparHtml(ent.nombre)}»` : `remas unos ${miles(hip.distancia)} m`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
   const partes = [...est.detalle.map(([k, v]) => [k, v]), ...(est.extra ? [['Misiones y logros', est.extra]] : [])].filter(([, v]) => v > 0);
   caja.innerHTML = `<div class="xp-cabecera">${ico('i-trofeo')}<div><b>≈ ${miles(est.total)} XP</b> <span class="monedas">${icoMoneda}${est.monedas}</span>
     <small>si ${condicion}${est.subeNivel ? ` · subirías al nivel ${est.subeNivel}` : ''}</small></div></div>
@@ -409,9 +428,10 @@ function pintarFtpEstado() {
   $('#ftp-estimado').hidden = !(ftp() && ajustes.si('ftpEstimado', false));
 }
 
-// FTP aproximado sin prueba: el 80 % de la mejor media de watts de tus últimas 20 sesiones.
+// FTP aproximado sin prueba: el 95 % de la mejor media de watts de tus últimas 20 sesiones (por fecha,
+// sin importar en qué orden venga la lista).
 function estimarFtp(sesiones) {
-  const w = sesiones.slice(-20).map((s) => s.wattsProm || 0).filter((x) => x > 0);
+  const w = [...sesiones].sort((a, b) => a.fecha - b.fecha).slice(-20).map((s) => s.wattsProm || 0).filter((x) => x > 0);
   return w.length ? Math.round(Math.max(...w) * 0.95) : 0;
 }
 
@@ -462,7 +482,7 @@ function pintarClasificacion(sesiones = null) {
   const w = ftp() || (sesiones ? estimarFtp(sesiones) : 0);
   const caja = $('#clasificacion-ftp');
   if (!w) {
-    caja.textContent = 'Pon tu FTP para conocer tu puesto en la tripulación: Grumete, Marinero, Contramaestre, Primer oficial o Capitán.';
+    caja.textContent = 'Tu FTP se calcula solo después de unas sesiones (o escríbelo arriba si lo conoces). Con él sabrás tu puesto en la tripulación: Grumete, Marinero, Contramaestre, Primer oficial o Capitán.';
     $('#heroe-aguas').textContent = '';
     return;
   }
@@ -555,11 +575,12 @@ remadora.addEventListener('datos', (e) => {
   if (d.tipo === 'metricas') {
     actual.watts = d.watts; actual.distancia = d.distancia; actual.nivel = d.resistencia;
     // En modo demo, sin banda conectada, simula el pulso para poder probar las zonas.
-    if (remadora.demoTimer && !bandaConectada) actual.fc = Math.round(actual.fc ? actual.fc + (95 + d.watts / 3 - actual.fc) * 0.05 : 100);
+    if (remadora.demoTimer && !bandaConectada) actual.fc = Math.round(actual.fc ? actual.fc + (Math.min(190, 95 + d.watts / 3) - actual.fc) * 0.05 : 100);
   }
 });
 let bandaConectada = false;
-banda.addEventListener('fc', (e) => { bandaConectada = true; actual.fc = e.detail; });
+// Un pulso fuera de 30–240 lpm es un error de lectura de la banda: se ignora.
+banda.addEventListener('fc', (e) => { bandaConectada = true; if (e.detail >= 30 && e.detail <= 240) actual.fc = e.detail; });
 
 $('#btn-conectar').addEventListener('click', async () => {
   if (remadora.conectada || remadora.reconectando) { remadora.desconectar(); return; }
@@ -633,7 +654,7 @@ function actualizarBotones() {
   if ($('#en-vivo').hidden === vivo) { $('#en-vivo').hidden = !vivo; if (vivo) requestAnimationFrame(dibujarVivo); }
   $('#resumen-sesion').hidden = !sesion;
   if (sesion) {
-    const contra = sesion.rivales.length ? ` · contra ${sesion.rivales.map((r) => r.nombre.replace(/^Fantasma /, '')).join(', ')}` : '';
+    const contra = sesion.rivales.length ? ` · contra ${sesion.rivales.map((r) => corto(r.nombre)).join(', ')}` : '';
     $('#resumen-sesion').textContent = `${sesion.entrenamiento || 'Remo libre'}${contra}`;
   }
   pintarChips();
@@ -787,7 +808,63 @@ async function detenerSesion() {
   vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
+  borrarSesionEnCurso();
   if (!s || s.muestras.length < 10) { toast('Sesión muy corta: no se guardó'); return; }
+  await guardarSesionTerminada(s, ent);
+}
+
+// ---------- Sesión en curso a salvo ----------
+// Android puede cerrar la app en segundo plano o con el gesto de atrás: cada 10 s remados (y al ocultarse)
+// se copia lo remado para ofrecer guardarlo al volver a abrir.
+const CLAVE_EN_CURSO = 'sesionEnCurso';
+function guardarSesionEnCurso() {
+  const s = sesion;
+  if (!s || s.muestras.length < 10) return;
+  const ent = entrenamientoActivo;
+  const copia = {
+    inicio: s.inicio, t: s.t, dist: s.dist, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
+    segConMeta: s.segConMeta, segEnRango: s.segEnRango, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
+    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, guardada: Date.now(),
+    ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
+  };
+  try { localStorage.setItem(CLAVE_EN_CURSO, JSON.stringify(copia)); } catch { /* sin espacio: se reintenta en 10 s */ }
+}
+function borrarSesionEnCurso() {
+  try { localStorage.removeItem(CLAVE_EN_CURSO); } catch { /* nada */ }
+}
+function leerSesionEnCurso() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_EN_CURSO) || 'null'); } catch { return null; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') guardarSesionEnCurso(); });
+window.addEventListener('pagehide', guardarSesionEnCurso);
+
+// Al abrir la app con una sesión que quedó a medias, se ofrece guardarla (sin carrera: los fantasmas no se guardan).
+function ofrecerRecuperar() {
+  const s = leerSesionEnCurso();
+  if (!s || sesion) return;
+  if (!Array.isArray(s.muestras) || s.muestras.length < 10) { borrarSesionEnCurso(); return; }
+  const fin = s.muestras.at(-1);
+  const f = new Date(s.inicio);
+  const cuando = `${f.toLocaleDateString('es-MX', { weekday: 'long' })} a las ${f.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })}`;
+  $('#recuperar-texto').textContent = `${s.entrenamiento || 'Remo libre'} del ${cuando}: ${formatoTiempo(fin.t)} y ${miles(fin.dist)} m. La app se cerró antes de terminarla.`;
+  $('#recuperar-dialogo').hidden = false;
+  $('#recuperar-guardar').focus();
+}
+$('#recuperar-guardar').addEventListener('click', async () => {
+  const s = leerSesionEnCurso();
+  $('#recuperar-dialogo').hidden = true;
+  borrarSesionEnCurso();
+  if (s) await guardarSesionTerminada(s, s.ent, { recuperada: true });
+});
+$('#recuperar-descartar').addEventListener('click', () => {
+  if (!confirm('¿Descartar la sesión sin guardar? No se puede deshacer.')) return;
+  $('#recuperar-dialogo').hidden = true;
+  borrarSesionEnCurso();
+  toast('Sesión descartada');
+});
+
+// Arma el registro de una sesión terminada (o recuperada tras cerrar la app), lo guarda y abre su resumen.
+async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   const m = s.muestras;
   const prom = (k) => Math.round(m.reduce((a, x) => a + x[k], 0) / m.length);
   const conSplit = m.filter((x) => x.split > 0);
@@ -798,11 +875,11 @@ async function detenerSesion() {
     kcal: Math.round(s.kcal),
     paladas: Math.round(s.paladas),
     wattsProm: prom('w'),
-    wattsMax: Math.max(...m.map((x) => x.w)),
+    wattsMax: m.reduce((a, x) => Math.max(a, x.w), 0),
     spmProm: prom('spm'),
     splitProm: conSplit.length ? Math.round(conSplit.reduce((a, x) => a + x.split, 0) / conSplit.length) : 0,
     fcProm: m.some((x) => x.fc) ? Math.round(m.filter((x) => x.fc).reduce((a, x) => a + x.fc, 0) / m.filter((x) => x.fc).length) : 0,
-    fcMax: Math.max(0, ...m.map((x) => x.fc || 0)),
+    fcMax: m.reduce((a, x) => Math.max(a, x.fc || 0), 0),
     entrenamiento: s.entrenamiento,
     tiempoMeta: s.tiempoMeta,
     delPrograma: delProgramaHoy(s),
@@ -828,7 +905,10 @@ async function detenerSesion() {
     const metaCarrera = ent?.objetivo?.metrica === 'distancia' ? ent.objetivo.valor : null;
     // En una carrera a distancia manda quién cruzó primero: lo remado después de la meta («Seguir remando»)
     // no adelanta a fantasmas que ya llegaron y se detuvieron.
+    // Sin meta de distancia (intervalos o tiempo), la carrera se cierra al completar el plan: los fantasmas
+    // se detienen ahí, así que los metros de «Seguir remando» tampoco cuentan.
     const metrosVs = (r) => {
+      if (metaCarrera == null && s.tiempoMeta != null) return E.distanciaEn(m, s.tiempoMeta) - E.distanciaEn(r.muestras, s.tiempoMeta);
       if (metaCarrera == null || s.tiempoMeta == null) return s.dist - E.distanciaEn(r.muestras, s.t);
       const tr = F.tiempoA(r, metaCarrera);
       if (tr != null && tr < s.tiempoMeta) return E.distanciaEn(m, tr) - metaCarrera;
@@ -868,7 +948,7 @@ async function detenerSesion() {
   if (porPulso) Object.assign(registro, { rpe: porPulso.rpe, rpeFuente: 'pulso', rpePct: porPulso.pct });
   if (porPulso) await db.guardar('sesiones', registro);
   const recs = E.nuevosRecords(registro, previas);
-  hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
+  if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
   pintarHoy();
   pintarLineaNivel();
@@ -926,6 +1006,7 @@ function avanzarSesion() {
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
   coachRitmo(t);
+  if (t % 10 === 0) guardarSesionEnCurso();
   if (sesion.ventaja) {
     const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
     const detras = sesion.rivales.some((r) => E.distanciaEn(r.muestras, t) > miDist);
@@ -1061,7 +1142,7 @@ function avanceObjetivo(t) {
 
 // Al completar el entrenamiento se pregunta si seguir remando o terminar y guardar.
 function mostrarFin() {
-  const partes = [formatoTiempo(sesion.tiempoMeta ?? sesion.t), `${Math.round(sesion.dist)} m`];
+  const partes = [formatoTiempo(sesion.tiempoMeta ?? sesion.t), `${miles(sesion.dist)} m`];
   if (sesion.rival) partes.push(carreraActual().texto.replace(/^Vas /, ''));
   $('#fin-texto').textContent = partes.join(' · ');
   $('#fin-dialogo').hidden = false;
@@ -1224,7 +1305,10 @@ function carreraActual() {
   const miDist = sesion.dist + extra;
   // Después de cruzar la meta el puesto queda fijo: cuenta quién llegó primero, no lo remado de más.
   const tm = meta != null ? sesion.tiempoMeta : null;
+  // Sin meta de distancia, el plan completo cierra la carrera: lo que remes después no cuenta.
+  const cierre = meta == null && entrenamientoActivo ? sesion.tiempoMeta : null;
   const difs = rs.map((r) => {
+    if (cierre != null) return E.distanciaEn(sesion.muestras, cierre) + extra - E.distanciaEn(r.muestras, cierre);
     if (tm == null) return miDist - E.distanciaEn(r.muestras, t);
     const tr = F.tiempoA(r, meta);
     return tr != null && tr < tm ? E.distanciaEn(sesion.muestras, tr) + extra - meta : meta + extra - E.distanciaEn(r.muestras, tm);
@@ -1414,7 +1498,7 @@ function pintarGraficaRemo(t) {
   const canvas = $('#mr-grafica');
   if (vistaRemo() === 'carrera') {
     const clases = ['lcar', 'lcar2', 'lcar3'];
-    leyenda(`<span class="lw">Tú</span>${sesion.rivales.map((r, i) => `<span class="${clases[i]}">${r.nombre.replace(/^Fantasma /, '')}</span>`).join('')}`);
+    leyenda(`<span class="lw">Tú</span>${sesion.rivales.map((r, i) => `<span class="${clases[i]}">${escaparHtml(r.nombre.replace(/^Fantasma /, ''))}</span>`).join('')}`);
     canvas.setAttribute('aria-label', $('#mr-rival-texto').textContent);
     carreraRemo.actualizar(carreraActual().estado);
     return;
@@ -1458,8 +1542,12 @@ function aplicarVistaRemo() {
   const sig = siguienteVista();
   const b = $('#mr-vista');
   b.classList.toggle('activo', v !== 'numeros');
-  b.innerHTML = { numeros: '<span class="num" aria-hidden="true">123</span>', grafica: ico('i-grafica'), carrera: ico('i-fantasma') }[sig];
-  b.setAttribute('aria-label', { numeros: 'Cambiar a números grandes', grafica: 'Cambiar a vista de gráfica', carrera: 'Cambiar a vista de carrera' }[sig]);
+  // El botón muestra la vista actual y unos puntos con su lugar en la vuelta; tocarlo pasa a la siguiente.
+  const vistas = hayCarrera() ? ['numeros', 'grafica', 'carrera'] : ['numeros', 'grafica'];
+  const icono = { numeros: '<span class="num" aria-hidden="true">123</span>', grafica: ico('i-grafica'), carrera: ico('i-fantasma') };
+  const nombre = { numeros: 'números grandes', grafica: 'gráfica', carrera: 'carrera' };
+  b.innerHTML = `${icono[v]}<span class="vista-puntos" aria-hidden="true">${vistas.map((x) => (x === v ? '●' : '○')).join('')}</span>`;
+  b.setAttribute('aria-label', `Vista: ${nombre[v]}. Toca para cambiar a ${nombre[sig]}`);
 }
 $('#mr-vista').addEventListener('click', () => {
   ajustes.escribir('vistaRemo', siguienteVista());
@@ -1620,8 +1708,7 @@ $('#btn-modo-remo').addEventListener('click', abrirModoRemo);
 $('#mr-salir').addEventListener('click', cerrarModoRemo);
 
 function abrirModoRemo() {
-  const mr = $('#modo-remo');
-  mr.hidden = false;
+  $('#modo-remo').hidden = false;
   const intervalos = !!sesion?.bloques || (!sesion && !!entrenamientoPrevio && Ent.tipoDe(entrenamientoPrevio) === 'intervalos');
   $('#mr-perfil').hidden = !intervalos;
   if (!sesion) {
@@ -1634,7 +1721,8 @@ function abrirModoRemo() {
   actualizarBotones();
   const vistas = ajustes.num('ayudaGestos', 0);
   if (vistas < 3) { ajustes.escribir('ayudaGestos', vistas + 1); toast('Doble toque: pausa · Desliza: cambia la vista'); }
-  try { mr.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {}); } catch { /* opcional */ }
+  // Pantalla completa sobre todo el documento: así el aviso de fin, los mensajes y el confeti siguen viéndose encima.
+  try { document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {}); } catch { /* opcional */ }
   pintar();
 }
 
@@ -1720,6 +1808,7 @@ function copiarBase(ent) {
   abrirEditor(copia);
 }
 
+let verDelPlan = false;
 async function pintarEntrenamientos() {
   pintarPrograma();
   const pestana = ajustes.leer('pestanaPlanes', 'entrenamientos');
@@ -1735,23 +1824,29 @@ async function pintarEntrenamientos() {
   $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
   $('#base-nivel').textContent = `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`;
   $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
-      ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${x.nombre}">${x.nombre}<span aria-hidden="true">›</span></button>
+      ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}">${escaparHtml(x.nombre)}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
       <div class="base-acciones"><button type="button" class="boton primario" data-usar="${x.id}">Entrenar</button>
       <button type="button" class="boton chico enlace-boton" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
   // Tus entrenamientos: los de la sección, o todos en «Míos»
   const mios = seccion === 'mios' ? lista : lista.filter((x) => P.enfoqueDe(x) === seccion);
   $('#mios-titulo').textContent = seccion === 'mios' ? 'Tus entrenamientos' : `Tus entrenamientos de ${SECCIONES_ENT.find((x) => x.clave === seccion).nombre.toLowerCase()}`;
+  // Los del plan van al final y plegados: son muchos y ya se ven en la pestaña Plan.
+  const prog = leerPrograma();
+  const delPlan = mios.filter((x) => esDePlan(x, prog));
+  const tuyos = mios.filter((x) => !esDePlan(x, prog));
   const ul = $('#lista-ent');
-  ul.innerHTML = mios.length ? mios.map((x) => `<li data-id="${x.id}">
+  const fila = (x) => `<li data-id="${x.id}"${esDePlan(x, prog) ? ` class="de-plan"${verDelPlan ? '' : ' hidden'}` : ''}>
       <div class="info clic" role="button" tabindex="0" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${B.resumenEnt(x)}</div></div>
       <details class="menu-fila"><summary class="boton icono chico" aria-label="Opciones de ${escaparHtml(x.nombre)}">⋯</summary>
         <div class="menu-fila-caja"><button type="button" data-a="editar">${ico('i-editar')} Editar</button><button type="button" data-a="duplicar">${ico('i-copiar')} Duplicar</button>
-        <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`).join('')
-    : `<li class="vacio">${seccion === 'mios' ? 'Aún no has creado entrenamientos.' : 'Aún no tienes entrenamientos propios aquí.'} Toca «+ Nuevo» o «Copiar y editar» en uno base.</li>`;
+        <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`;
+  const vacio = `<li class="vacio">${seccion === 'mios' ? 'Aún no has creado entrenamientos.' : 'Aún no tienes entrenamientos propios aquí.'} Toca «+ Nuevo» o «Copiar y editar» en uno base.</li>`;
+  ul.innerHTML = mios.length ? (tuyos.length ? tuyos.map(fila).join('') : vacio)
+    + (delPlan.length ? `<li class="separador-plan"><button type="button" class="enlace-boton" id="btn-ver-del-plan" aria-expanded="${verDelPlan}">${verDelPlan ? 'Ocultar' : 'Ver'} los ${delPlan.length} de tu plan</button></li>${delPlan.map(fila).join('')}` : '')
+    : vacio;
   await llenarSelectorEntrenamientos();
 }
-const escaparHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 document.querySelector('.planes-pestanas').addEventListener('click', (e) => {
   const b = e.target.closest('[data-pt]');
@@ -1779,7 +1874,8 @@ $('#pt-entrenamientos').addEventListener('click', async (e) => {
     if (accion.dataset.a === 'duplicar') {
       const copia = structuredClone(ent);
       delete copia.id;
-      copia.nombre = `${ent.nombre} (copia)`;
+      copia.nombre = await nombreLibre(ent.nombre);
+      delete copia.dePlan;
       await db.guardar('entrenamientos', copia);
       toast('Entrenamiento duplicado');
       pintarEntrenamientos();
@@ -1798,6 +1894,11 @@ $('#pt-entrenamientos').addEventListener('click', async (e) => {
     const ent = await obtenerEnt(ver.dataset.ver);
     if (ent) abrirDetalleEnt(ent);
   }
+});
+$('#lista-ent').addEventListener('click', (e) => {
+  if (!e.target.closest('#btn-ver-del-plan')) return;
+  verDelPlan = !verDelPlan;
+  pintarEntrenamientos();
 });
 $('#lista-ent').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ver]')) { e.preventDefault(); e.target.click(); } });
 // Un solo menú «⋯» abierto a la vez.
@@ -1845,6 +1946,17 @@ $('#btn-cancelar-ent').addEventListener('click', () => { form.hidden = true; });
 let enEdicion = null;
 const form = $('#editor-ent');
 
+// El nombre identifica al entrenamiento en tus sesiones y récords: no se repite.
+// «Remo (copia)» → «Remo (copia 2)», sin encadenar «(copia) (copia)».
+async function nombreLibre(nombre) {
+  const usados = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
+  const base = nombre.replace(/ \((copia|mío)( \d+)?\)$/, '');
+  for (let n = 1; ; n++) {
+    const candidato = `${base} (copia${n > 1 ? ` ${n}` : ''})`;
+    if (!usados.has(candidato)) return candidato;
+  }
+}
+
 function abrirEditor(ent) {
   enEdicion = structuredClone(ent);
   enEdicion.tipo = Ent.tipoDe(enEdicion);
@@ -1875,6 +1987,10 @@ function mostrarTipo() {
 form.tipo.addEventListener('change', mostrarTipo);
 form.obj_metrica.addEventListener('change', resumenEditor);
 form.obj_valor.addEventListener('input', resumenEditor);
+
+// Rangos razonables para lo que se escribe en un intervalo; fuera de ellos el valor no se acepta.
+const LIMITES_META = { watts: [1, 2000], ftp: [1, 300], split: [60, 600], spm: [10, 60], fc: [40, 230], fcpct: [30, 110] };
+const LIMITES_CANTIDAD = { tiempo: [5, 10800], distancia: [10, 100000], paladas: [1, 10000] };
 
 function pintarBloques() {
   const cont = $('#bloques');
@@ -1940,9 +2056,17 @@ function pintarBloques() {
     fila.addEventListener('change', (e) => {
       const k = e.target.dataset.k;
       if (!k) return;
+      const rechazar = (txt) => { $('#ent-error').textContent = `Intervalo ${i + 1}: ${txt}`; toast($('#ent-error').textContent, 4500); pintarBloques(); };
       if (k === 'cantidad') {
-        if (Ent.finDe(b) === 'tiempo') b.duracion = Math.max(5, Ent.deMmss(e.target.value));
-        else b.cantidad = Math.max(1, Math.round(Number(e.target.value)) || 0);
+        const fin = Ent.finDe(b);
+        const texto = e.target.value.trim();
+        const v = fin === 'tiempo' ? (/^\d+(:\d{1,2})?$/.test(texto) ? Ent.deMmss(texto) : NaN) : Math.round(Number(texto));
+        const [lo, hi] = LIMITES_CANTIDAD[fin];
+        if (!(v >= lo && v <= hi)) {
+          rechazar(fin === 'tiempo' ? `escribe el tiempo como mm:ss, de ${formatoTiempo(lo)} a ${formatoTiempo(hi)}.` : `escribe de ${miles(lo)} a ${miles(hi)} ${fin === 'distancia' ? 'metros' : 'paladas'}.`);
+          return;
+        }
+        if (fin === 'tiempo') b.duracion = v; else b.cantidad = v;
       } else if (k === 'fin') {
         b.fin = e.target.value;
         if (b.fin === 'tiempo') { delete b.fin; delete b.cantidad; b.duracion = b.duracion || 60; } else {
@@ -1951,8 +2075,16 @@ function pintarBloques() {
         }
         pintarBloques();
         return;
-      } else if (k === 'min' || k === 'max') b[k] = b.metrica === 'split' ? Ent.deMmss(e.target.value) : (Number(e.target.value) || 0);
-      else if (k === 'nivel') {
+      } else if (k === 'min' || k === 'max') {
+        const texto = e.target.value.trim();
+        const v = texto === '' ? 0 : b.metrica === 'split' ? (/^\d+:\d{1,2}$/.test(texto) ? Ent.deMmss(texto) : NaN) : Number(texto);
+        const [lo, hi] = LIMITES_META[b.metrica] || [0, Infinity];
+        if (v !== 0 && !(v >= lo && v <= hi)) {
+          rechazar(b.metrica === 'split' ? `el split va de ${Ent.formatoMmss(lo)} a ${Ent.formatoMmss(hi)} (mm:ss).` : `el ${k === 'min' ? 'mínimo' : 'máximo'} va de ${lo} a ${hi}.`);
+          return;
+        }
+        b[k] = Math.round(v);
+      } else if (k === 'nivel') {
         const n = Math.round(Number(e.target.value));
         if (n >= 1 && n <= 24) b.nivel = n; else delete b.nivel;
       } else b[k] = e.target.value;
@@ -1966,6 +2098,7 @@ function pintarBloques() {
         return;
       }
       if (k === 'min' || k === 'max') unidadYZonas();
+      $('#ent-error').textContent = '';
       resumenEditor();
     });
     fila.querySelector('[data-a=subir]').onclick = () => { [bloques[i - 1], bloques[i]] = [bloques[i], bloques[i - 1]]; pintarBloques(); };
@@ -2018,6 +2151,15 @@ form.addEventListener('submit', async (e) => {
   const error = (txt, foco) => { $('#ent-error').textContent = txt; foco?.focus(); };
   enEdicion.nombre = form.nombre.value.trim();
   if (!enEdicion.nombre) { error('Ponle un nombre al entrenamiento.', form.nombre); return; }
+  const todos = await db.listar('entrenamientos');
+  if (todos.some((e) => e.nombre === enEdicion.nombre && e.id !== enEdicion.id) || B.NOMBRES_PRUEBA.has(enEdicion.nombre)) {
+    error('Ya tienes un entrenamiento con ese nombre: elige otro para no mezclar sus sesiones y récords.', form.nombre);
+    return;
+  }
+  // Al renombrar, las sesiones y el plan pasan al nombre nuevo (si quieres) para no partir tu historial en dos.
+  const anterior = enEdicion.id != null ? todos.find((e) => e.id === enEdicion.id)?.nombre : null;
+  const renombrar = anterior && anterior !== enEdicion.nombre
+    ? (await db.listar('sesiones')).filter((x) => x.entrenamiento === anterior) : [];
   enEdicion.tipo = form.tipo.value;
   if (enEdicion.tipo === 'objetivo') {
     const valor = Number(form.obj_valor.value);
@@ -2033,6 +2175,11 @@ form.addEventListener('submit', async (e) => {
     delete enEdicion.objetivo;
   }
   $('#ent-error').textContent = '';
+  if (renombrar.length && confirm(`Tienes ${renombrar.length} ${renombrar.length === 1 ? 'sesión' : 'sesiones'} de «${anterior}». ¿Pasarlas a «${enEdicion.nombre}» para que sigan juntas en tus récords y comparaciones?`)) {
+    for (const x of renombrar) await db.guardar('sesiones', { ...x, entrenamiento: enEdicion.nombre });
+  }
+  const prog = anterior && leerPrograma();
+  if (prog?.dias.some((d) => d.ent === anterior)) guardarPrograma({ ...prog, dias: prog.dias.map((d) => (d.ent === anterior ? { ...d, ent: enEdicion.nombre } : d)) });
   await db.guardar('entrenamientos', enEdicion);
   form.hidden = true;
   toast('Entrenamiento guardado');
@@ -2054,7 +2201,7 @@ document.querySelectorAll('.segmentado button').forEach((b) => b.addEventListene
 
 function formatoRecord(r, v) {
   if (r.tipo === 'tiempo') return formatoTiempo(v);
-  return r.unidad === 'm' ? `${(v / 1000).toFixed(2)} km` : `${v} ${r.unidad}`;
+  return r.unidad === 'm' ? `${(v / 1000).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` : `${miles(v)} ${r.unidad}`;
 }
 const fechaCorta = (ms) => new Date(ms).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 
@@ -2155,19 +2302,24 @@ function pintarAvisoRespaldo(total) {
   }
 }
 
+let sesionesVisibles = 50;
 async function pintarHistorial() {
   const lista = (await db.listar('sesiones')).sort((a, b) => b.fecha - a.fecha);
   cacheSesiones = lista;
   $('#progreso-vacio').hidden = lista.length > 0;
   $('#progreso-contenido').hidden = !lista.length;
 
+  // Racha por semanas (una sesión por semana basta); si además llevas varios días seguidos, se menciona.
+  const semanas = E.rachaSemanas(lista);
   const dias = E.racha(lista);
-  $('#racha').textContent = dias;
-  $('#racha-etq').textContent = dias === 1 ? 'día seguido' : 'días seguidos';
+  $('#racha').textContent = semanas;
+  $('#racha-etq').textContent = semanas === 1 ? 'semana seguida' : 'semanas seguidas';
+  $('#racha-dias').textContent = dias >= 2 ? `y ${dias} días seguidos` : '';
+  $('#racha-dias').hidden = dias < 2;
   const semana = E.resumenPeriodos(lista, 'semana', 1)[0];
   const meta = ajustes.num('metaSemana', 10);
   const km = semana.metros / 1000;
-  $('#semana-texto').textContent = `${km.toFixed(1)} de ${meta} km${km >= meta ? ' ✓' : ''} · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
+  $('#semana-texto').textContent = `${km.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de ${miles(meta)} km${km >= meta ? ' ✓' : ''} · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
   $('#semana-barra').style.width = `${Math.min(100, (100 * km) / meta)}%`;
   pintarAvisoRespaldo(lista.length);
   pintarPeriodos();
@@ -2197,10 +2349,11 @@ async function pintarHistorial() {
   const totalM = visibles.reduce((a, s) => a + s.distancia, 0);
   const totalT = visibles.reduce((a, s) => a + s.duracion, 0);
   $('#resumen-historial').textContent = visibles.length
-    ? `${visibles.length} ${visibles.length === 1 ? 'sesión' : 'sesiones'} · ${(totalM / 1000).toFixed(1)} km · ${formatoTiempo(totalT)} en total`
+    ? `${visibles.length} ${visibles.length === 1 ? 'sesión' : 'sesiones'} · ${(totalM / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} km · ${horasYMin(totalT)} en total`
     : '';
   if (!visibles.length) ul.innerHTML = '<li class="vacio">Todavía no hay sesiones. Tu primera sesión aparecerá aquí.</li>';
-  for (const s of visibles) {
+  // Con cientos de sesiones se pintan de 50 en 50 para que Progreso abra rápido.
+  for (const s of visibles.slice(0, sesionesVisibles)) {
     const li = document.createElement('li');
     li.className = 'clic';
     li.tabIndex = 0;
@@ -2210,9 +2363,17 @@ async function pintarHistorial() {
     li.querySelector('.ico').style.transform = 'rotate(-90deg)';
     li.querySelector('.titulo').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${s.entrenamiento || 'Remo libre'}`;
     if (s.rpe) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip">Esfuerzo ${s.rpe}</span>`);
-    li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${s.distancia} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoTiempo(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
+    li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoTiempo(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
     li.addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') li.click(); });
+    ul.append(li);
+  }
+  const quedan = visibles.length - sesionesVisibles;
+  if (quedan > 0) {
+    const li = document.createElement('li');
+    li.className = 'separador-plan';
+    li.innerHTML = `<button type="button" class="boton">Ver ${Math.min(50, quedan)} más (quedan ${miles(quedan)})</button>`;
+    li.querySelector('button').addEventListener('click', () => { sesionesVisibles += 50; pintarHistorial(); });
     ul.append(li);
   }
 }
@@ -2266,23 +2427,24 @@ function radarAtributos(at, fav) {
 $('#heroe-recomienda').addEventListener('click', async (e) => {
   const b = e.target.closest('#btn-preparar-rec');
   if (!b) return;
-  let ent = b.dataset.ent ? (await db.listar('entrenamientos')).find((x) => x.nombre === b.dataset.ent) : null;
-  // Si no lo tienes guardado, se agrega desde los ejemplos.
-  const ejemplo = !ent && Ent.EJEMPLOS.find((x) => x.nombre === b.dataset.ent);
-  if (ejemplo) {
-    const id = await db.guardar('entrenamientos', structuredClone(ejemplo));
-    ent = { ...ejemplo, id };
-    await llenarSelectorEntrenamientos();
-  }
-  ajustes.escribir('ultimoEnt', ent ? String(ent.id) : '');
-  $('#sel-entrenamiento').value = ent ? String(ent.id) : '';
+  // Usa el entrenamiento base (no agrega copias a tu lista) y pone la dificultad de los rivales según el reto.
+  const ent = b.dataset.base ? await obtenerEnt(b.dataset.base) : null;
+  ajustes.escribir('ultimoEnt', ent ? ent.id : '');
   ajustes.escribir('modoEnt', ent ? 'objetivo' : 'libre');
-  ajustes.escribir('rivales', JSON.stringify([b.dataset.reto]));
+  if (!ent) ajustes.escribir('libreFantasmas', '1');
+  ajustes.escribir('dificultad', J.DIFICULTAD_RETO[b.dataset.reto] || 'costa');
+  await llenarSelectorEntrenamientos();
+  $('#sel-entrenamiento').value = ent ? ent.id : '';
   irA('entrenar');
+  pintarModoEnt();
+  vistaPrevia();
   pintarChips();
+  toast(`Listo: ${ent ? ent.nombre : 'Remo libre'} con rivales en ${J.DIFICULTADES[ajustes.leer('dificultad', 'costa')].nombre}`);
 });
 const nombreAtributo = (k) => J.ATRIBUTOS.find((a) => a.clave === k)?.nombre || k;
 const miles = (n) => Math.round(n).toLocaleString('es-MX');
+// Duraciones largas (totales): «174 h 55 min» en vez de «174:55:00».
+const horasYMin = (seg) => { const h = Math.floor(seg / 3600); const m = Math.round((seg % 3600) / 60); return h ? `${miles(h)} h ${m} min` : `${m} min`; };
 const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
 let claseElegida = null;
 let seccionHeroe = 'ficha';
@@ -2354,8 +2516,8 @@ function pintarFicha(h, per, clase, sesiones) {
   $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''} · ${h.atributos[a.clave]}</b><small>${a.detalle}</small></div>`).join('');
   const rec = J.recomendarPorAtributos(h.atributos);
   $('#heroe-recomienda').innerHTML = rec ? `<p>Tu atributo más bajo es <b>${rec.atributo.nombre}</b>. ${rec.texto}</p>
-    <div class="fila-botones"><button type="button" class="boton primario" id="btn-preparar-rec" data-ent="${rec.entrenamiento || ''}" data-reto="${rec.reto}">
-    Preparar: ${rec.entrenamiento || 'Remo libre'} contra ${({ igual: 'un rival de tu rango', superior: 'un rival superior', inferior: 'un rival inferior' })[rec.reto]}</button></div>`
+    <div class="fila-botones"><button type="button" class="boton primario" id="btn-preparar-rec" data-base="${rec.base || ''}" data-reto="${rec.reto}">
+    Preparar: ${escaparHtml(rec.entrenamiento || 'Remo libre')} en ${J.DIFICULTADES[J.DIFICULTAD_RETO[rec.reto]].nombre}</button></div>`
     : '<p class="suave">Rema tu primera sesión y te diré qué te conviene trabajar.</p>';
   // Los premios de capítulos y logros son insignias.
   const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
@@ -2364,7 +2526,7 @@ function pintarFicha(h, per, clase, sesiones) {
   const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 5);
   $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
     const g = h.porSesion.get(x.fecha);
-    return `<li><div><b>${fechaCorta(x.fecha)} · ${x.entrenamiento || 'Remo libre'}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
+    return `<li><div><b>${fechaCorta(x.fecha)} · ${escaparHtml(x.entrenamiento || 'Remo libre')}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
       <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
@@ -2579,17 +2741,17 @@ async function pintarPodio(s) {
   ].sort((a, b) => b.pos - a.pos || (a.yo ? -1 : 1));
   const xp = s.carreraSinTerminar ? 0 : rivales.filter((r) => r.diferencia > 0 && r.clase).slice(0, 3).reduce((a, r) => a + J.xpPorFantasma(r.dificultad), 0);
   const lugar = filas.findIndex((f) => f.yo) + 1;
-  const dato = (f) => (f.tiempo != null ? formatoTiempo(Math.round(f.tiempo)) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${Math.abs(f.dif)} m`);
+  const dato = (f) => (f.tiempo != null ? formatoTiempo(Math.round(f.tiempo)) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${miles(Math.abs(f.dif))} m`);
   const bloque = (f, i) => `<div class="podio-puesto p${i + 1}${f.yo ? ' yo' : ''}">
       ${f.img ? `<img src="${f.img}" width="48" height="48" alt="">` : `<span class="podio-ico">${ico('i-fantasma')}</span>`}
-      <b>${f.nombre}</b><small>${dato(f)}</small>
+      <b>${escaparHtml(f.nombre)}</b><small>${dato(f)}</small>
       <div class="podio-escalon">${i + 1}º</div></div>`;
   const top = filas.slice(0, 3);
   const orden = [top[1], top[0], top[2]].map((f) => (f ? bloque(f, filas.indexOf(f)) : '<div></div>')).join('');
   const titulo = s.carreraSinTerminar ? `Carrera sin terminar: ibas ${lugar}º de ${filas.length}` : lugar === 1 ? '¡Ganaste la carrera!' : `Llegaste ${lugar}º de ${filas.length}`;
   caja.innerHTML = `<h2>${titulo}</h2>
     <div class="podio-escena">${orden}</div>
-    ${filas.slice(3).map((f, i) => `<p class="podio-resto">${i + 4}º ${f.nombre} · ${dato(f)}</p>`).join('')}
+    ${filas.slice(3).map((f, i) => `<p class="podio-resto">${i + 4}º ${escaparHtml(f.nombre)} · ${dato(f)}</p>`).join('')}
     ${xp ? `<p class="podio-xp">+${xp} XP por fantasmas vencidos</p>` : ''}`;
 }
 
@@ -2640,7 +2802,7 @@ function tablaIntervalos(s) {
   const filas = E.resumenIntervalos(s);
   if (filas.length) {
     return `<h2>Por intervalo</h2><div class="desliza"><table class="tabla"><thead><tr><th>Intervalo</th><th>Tiempo</th><th>m</th><th>W</th><th>Split</th><th>g/min</th><th>Rango</th></tr></thead><tbody>${
-      filas.map((f) => `<tr><td>${f.nombre}${f.bloque.metrica ? `<br><span class="sub ayuda" style="margin:0">${Ent.textoMeta(f.bloque)}</span>` : ''}</td><td>${formatoTiempo(f.segundos)}</td><td>${f.metros}</td><td>${f.w}</td><td>${formatoSplit(f.split)}</td><td>${f.spm}</td><td class="${f.pctRango == null ? '' : f.pctRango >= 70 ? 'ok' : f.pctRango < 40 ? 'mal' : ''}">${f.pctRango == null ? '-' : `${f.pctRango}%`}</td></tr>`).join('')
+      filas.map((f) => `<tr><td>${escaparHtml(f.nombre)}${f.bloque.metrica ? `<br><span class="sub ayuda" style="margin:0">${Ent.textoMeta(f.bloque)}</span>` : ''}</td><td>${formatoTiempo(f.segundos)}</td><td>${f.metros}</td><td>${f.w}</td><td>${formatoSplit(f.split)}</td><td>${f.spm}</td><td class="${f.pctRango == null ? '' : f.pctRango >= 70 ? 'ok' : f.pctRango < 40 ? 'mal' : ''}">${f.pctRango == null ? '-' : `${f.pctRango}%`}</td></tr>`).join('')
     }</tbody></table></div>`;
   }
   const par = E.parciales(s.muestras, 500);
@@ -2660,7 +2822,7 @@ function tablaPrediccion(s) {
     const t = Ent.predecir(metros, seg, d);
     return `<tr><td>${d === 21097 ? 'Medio maratón' : `${d} m`}</td><td>${formatoTiempo(t)}</td><td>${formatoSplit(Math.round((t * 500) / d))}</td></tr>`;
   }).join('');
-  return `<div class="prediccion"><h2>Predicción con este esfuerzo</h2><p class="ayuda">A partir de ${metros} m en ${formatoTiempo(seg)}.</p>
+  return `<div class="prediccion"><h2>Predicción con este esfuerzo</h2><p class="ayuda">A partir de ${miles(metros)} m en ${formatoTiempo(seg)}.</p>
     <table><thead><tr><th>Distancia</th><th>Tiempo</th><th>Split</th></tr></thead><tbody>${filas}</tbody></table></div>`;
 }
 
@@ -2707,7 +2869,7 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   const tec = E.tecnica(s);
   const estres = s.estres ?? E.estres(s, s.ftp || ftp());
   const stats = [
-    ['Duración', formatoTiempo(s.duracion)], ['Distancia', `${s.distancia} m`],
+    ['Duración', formatoTiempo(s.duracion)], ['Distancia', `${miles(s.distancia)} m`],
     ['Watts prom', s.wattsProm], ['Watts máx', s.wattsMax],
     ['Split prom', formatoSplit(s.splitProm)], ['Golpes/min', s.spmProm],
     ['Calorías', s.kcal], ['Paladas', s.paladas ?? '-'],
@@ -2725,9 +2887,9 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   for (const r of s.referencias || []) stats.push([`Vs. ${r.nombre.replace(/^Tu /, 'tu ')}`, `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m`]);
   if (s.ventaja) {
     const obj = V.objetoVentaja(s.ventaja.objeto);
-    stats.push(['Ventaja ⚑', `${s.ventaja.metros} m${obj ? ` · ${obj.nombre}` : ''}`]);
+    stats.push(['Ventaja ⚑', `${miles(s.ventaja.metros)} m${obj ? ` · ${obj.nombre}` : ''}`]);
   }
-  $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${k}</span><span class="valor">${v}</span></div>`).join('');
+  $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${escaparHtml(k)}</span><span class="valor">${v}</span></div>`).join('');
 
   corregirRpe = false;
   pintarRpe();
@@ -2797,6 +2959,22 @@ function guardarPrograma(p) {
   else { try { localStorage.removeItem('programa'); } catch { /* nada */ } }
 }
 
+// Guarda los entrenamientos de un plan nuevo: los del mismo nombre se actualizan (así un plan nuevo no usa
+// los objetivos viejos) y los de un plan anterior que ya no se usan se borran para no llenar tu lista.
+async function guardarEntrenamientosDePlan(entrenamientos) {
+  const anterior = new Set((leerPrograma()?.dias || []).map((d) => d.ent));
+  const nuevos = new Set(entrenamientos.map((x) => x.nombre));
+  const todos = await db.listar('entrenamientos');
+  for (const x of entrenamientos) {
+    const previo = todos.find((e) => e.nombre === x.nombre);
+    await db.guardar('entrenamientos', { ...x, dePlan: true, ...(previo ? { id: previo.id } : {}) });
+  }
+  for (const e of todos) {
+    if (!nuevos.has(e.nombre) && (e.dePlan || anterior.has(e.nombre)) && !B.NOMBRES_PRUEBA.has(e.nombre)) await db.borrar('entrenamientos', e.id);
+  }
+}
+const esDePlan = (e, prog = leerPrograma()) => !!e.dePlan || !!prog?.dias.some((d) => d.ent === e.nombre);
+
 // Agrega los entrenamientos de ejemplo que el programa necesita y aún no existen.
 async function asegurarEntrenamientos(nombres) {
   const existentes = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
@@ -2828,7 +3006,7 @@ async function pintarPrograma() {
     const nombresDia = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const previos = [...$('#p-dias').querySelectorAll('select')].map((x) => x.value);
     $('#p-dias').innerHTML = nombresDia.map((d, i) => `<label>${d}<select data-dia="${i}"><option value="">Descanso</option>${
-      ents.map((e) => `<option>${e.nombre.replace(/</g, '&lt;')}</option>`).join('')}</select></label>`).join('');
+      ents.map((e) => `<option>${escaparHtml(e.nombre)}</option>`).join('')}</select></label>`).join('');
     $('#p-dias').querySelectorAll('select').forEach((x, i) => { x.value = previos[i] || ''; });
     return;
   }
@@ -2850,7 +3028,7 @@ async function pintarPrograma() {
     const hoy = k === E.claveDia(Date.now());
     const clase = dia ? dia.estado : `libre${hoy ? ' hoy' : ''}`;
     const marca = dia?.estado === 'hecho' ? ico('i-check') : '';
-    celdas.push(`<button type="button" class="${clase}" data-k="${k}" aria-label="${new Date(d).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}${dia ? `: ${dia.ent}` : ''}">${d.getDate()}${marca}</button>`);
+    celdas.push(`<button type="button" class="${clase}" data-k="${k}" aria-label="${new Date(d).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}${dia ? `: ${escaparHtml(dia.ent)}` : ''}">${d.getDate()}${marca}</button>`);
   }
   $('#calendario').innerHTML = celdas.join('');
   const describirDia = (k) => {
@@ -2922,8 +3100,7 @@ $('#btn-asistente').addEventListener('click', async () => {
   if (!asistente.objetivo) return;
   if (asistente.objetivo === 'meta') { crearPlanMeta(); return; }
   const { programa, entrenamientos } = P.planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx: await contextoPlan() });
-  const existentes = new Set((await db.listar('entrenamientos')).map((x) => x.nombre));
-  for (const x of entrenamientos) if (!existentes.has(x.nombre)) await db.guardar('entrenamientos', x);
+  await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
   elegirLoDeHoy = true;
   confeti(1500);
@@ -2949,7 +3126,7 @@ async function pintarPlanMeta() {
     }
   }
   $('#pm-info').textContent = mejor
-    ? `${mejor.real ? 'Tu mejor' : 'Tu predicción para'} ${dist} m: ${Ent.formatoMmss(mejor.t)}. Una meta realista en 8 semanas: ${Ent.formatoMmss(Math.round(mejor.t * 0.96))}.`
+    ? `${mejor.real ? 'Tu mejor' : 'Tu predicción para'} ${miles(dist)} m: ${Ent.formatoMmss(mejor.t)}. Una meta realista en 8 semanas: ${Ent.formatoMmss(Math.round(mejor.t * 0.96))}.`
     : 'Aún no hay sesiones para sugerirte una meta: elige una que te rete.';
   $('#pm-tiempo').placeholder = mejor ? Ent.formatoMmss(Math.round(mejor.t * 0.96)) : '8:00';
 }
@@ -2965,8 +3142,7 @@ async function crearPlanMeta() {
   if (split < 80 || split > 200) { $('#pm-error').textContent = 'Ese tiempo da un ritmo fuera de lo posible: revisa la distancia y el tiempo.'; return; }
   $('#pm-error').textContent = '';
   const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio });
-  const existentes = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
-  for (const e of entrenamientos) if (!existentes.has(e.nombre)) await db.guardar('entrenamientos', e);
+  await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
   elegirLoDeHoy = true;
   toast(`Plan creado: ${programa.dias.length} sesiones en ${semanas} semanas`);
@@ -3123,11 +3299,20 @@ async function restaurarRespaldo(archivo) {
     await db.guardar('entrenamientos', copia);
     nE++;
   }
-  if (datos.programa && !leerPrograma()) guardarPrograma(datos.programa);
-  for (const [k, v] of Object.entries(datos.ajustes || {})) {
-    if (CLAVES_AJUSTES.includes(k) && ajustes.leer(k, null) == null) ajustes.escribir(k, v);
+  // Lo que falta se toma del respaldo; si el héroe, el plan o los ajustes ya existen y son otros, se pregunta.
+  const ajustesResp = Object.entries(datos.ajustes || {}).filter(([k]) => CLAVES_AJUSTES.includes(k));
+  const distintos = [];
+  if (datos.programa && leerPrograma() && JSON.stringify(leerPrograma()) !== JSON.stringify(datos.programa)) distintos.push('el plan');
+  if (ajustesResp.some(([k, v]) => k === 'personaje' && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('el héroe');
+  if (ajustesResp.some(([k, v]) => ['peso', 'ftp', 'edad', 'fcMax', 'metaSemana'].includes(k) && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('tus ajustes');
+  const reemplazar = distintos.length > 0 && confirm(`El respaldo trae ${distintos.join(', ').replace(/, ([^,]*)$/, ' y $1')} distintos a los de ahora. ¿Usar los del respaldo?`);
+  if (datos.programa && (reemplazar || !leerPrograma())) guardarPrograma(datos.programa);
+  for (const [k, v] of ajustesResp) {
+    if (reemplazar || ajustes.leer(k, null) == null) ajustes.escribir(k, v);
   }
-  toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos`);
+  toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos${reemplazar ? ', con el héroe, el plan y los ajustes del respaldo' : ''}`);
+  // Con el héroe y los ajustes cambiados, lo más simple y seguro es volver a cargar la app.
+  if (reemplazar) setTimeout(() => location.reload(), 1500);
   llenarSelectorEntrenamientos();
   pintarHoy();
 }
@@ -3239,12 +3424,34 @@ function cerrarHoja() {
 }
 $('#hoja-cerrar').addEventListener('click', cerrarHoja);
 $('#hoja').addEventListener('click', (e) => { if (e.target === $('#hoja')) cerrarHoja(); });
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
-  if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
+// Cierra lo que esté encima (detalle, hoja, modo remo). Devuelve false si no había nada abierto.
+function cerrarLoDeEncima() {
+  if (!$('#fin-dialogo').hidden) cerrarFin();
+  else if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
   else if (!$('#hoja').hidden) cerrarHoja();
   else if (!$('#modo-remo').hidden) cerrarModoRemo();
-});
+  else return false;
+  return true;
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarLoDeEncima(); });
+
+// Botón Atrás de Android: cierra lo de encima o vuelve a Entrenar en vez de salir de la app.
+// Con una sesión en marcha nunca sale; sin ella, sale al pulsar Atrás dos veces seguidas.
+{
+  let avisoSalir = 0;
+  history.replaceState({ remadora: 'base' }, '');
+  history.pushState({ remadora: 'guarda' }, '');
+  window.addEventListener('popstate', () => {
+    const bloqueo = !$('#inicio').hidden || !$('#recuperar-dialogo').hidden;
+    if (!bloqueo && !cerrarLoDeEncima()) {
+      if (!vistaActiva('entrenar')) irA('entrenar');
+      else if (sesion) toast('Sesión en marcha: termínala antes de salir');
+      else if (Date.now() - avisoSalir > 2500) { avisoSalir = Date.now(); toast('Pulsa Atrás otra vez para salir', 2500); }
+      else { history.back(); return; }
+    }
+    history.pushState({ remadora: 'guarda' }, '');
+  });
+}
 
 $('#btn-borrar').addEventListener('click', async () => {
   if (sesionAbierta && confirm('¿Borrar esta sesión?')) {
@@ -3259,7 +3466,7 @@ $('#btn-compartir-img').addEventListener('click', async (ev) => {
   const boton = ev.currentTarget;
   boton.disabled = true;
   const f = new Date(s.fecha);
-  const stats = [['Distancia', `${s.distancia} m`], ['Tiempo', formatoTiempo(s.duracion)], ['Split prom', formatoSplit(s.splitProm)],
+  const stats = [['Distancia', `${miles(s.distancia)} m`], ['Tiempo', formatoTiempo(s.duracion)], ['Split prom', formatoSplit(s.splitProm)],
     ['Watts prom', `${s.wattsProm} W`], ['Golpes/min', s.spmProm], [s.fcProm ? 'Pulso prom' : 'Calorías', s.fcProm ? `${s.fcProm} lpm` : s.kcal]];
   const rivales = s.rivales || (s.rival ? [s.rival] : []);
   const recs = E.nuevosRecords(s, (cacheSesiones || []).filter((x) => x.id !== s.id && x.fecha < s.fecha));
@@ -3335,13 +3542,7 @@ document.addEventListener('visibilitychange', async () => {
 
 // ---------- Primer inicio: héroe, objetivo y conexión en 3 pasos ----------
 const inicio = { paso: 1, clase: null, objetivo: null, dias: 3 };
-const OBJETIVOS_INICIO = [
-  { clave: 'distancia', nombre: 'Ponerme en forma', texto: 'Remar más tiempo y más lejos sin parar.' },
-  { clave: 'ritmo', nombre: 'Bajar mi tiempo en 2000 m', texto: 'Ir más rápido a ritmo de carrera.' },
-  { clave: 'potencia', nombre: 'Más fuerza y potencia', texto: 'Sacar más watts con series cortas y fuertes.' },
-  { clave: 'tecnica', nombre: 'Mejorar mi técnica', texto: 'Más metros por palada y un ritmo parejo.' },
-  { clave: 'libre', nombre: 'Solo remar', texto: 'Sin plan: remo libre contra fantasmas.' },
-];
+const OBJETIVOS_INICIO = [...P.OBJETIVOS_PLAN, { clave: 'libre', nombre: 'Solo remar', texto: 'Sin plan: remo libre contra fantasmas.' }];
 function pintarInicio() {
   const p = inicio.paso;
   document.querySelectorAll('.inicio-paso').forEach((x) => { x.hidden = Number(x.dataset.paso) !== p; });
@@ -3371,6 +3572,8 @@ $('#inicio').addEventListener('click', (e) => {
   if (o) inicio.objetivo = o.dataset.obj;
   if (d) inicio.dias = Number(d.dataset.dias);
   if (c || o || d) pintarInicio();
+  // Al elegir objetivo aparece la pregunta de los días: se trae a la vista (en horizontal quedaba oculta abajo).
+  if (o && !$('#inicio-dias-campo').hidden) $('#inicio-dias-campo').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 });
 $('#inicio-siguiente').addEventListener('click', () => {
   if (inicio.paso < 3) { inicio.paso++; pintarInicio(); $('#inicio .inicio-cuerpo').scrollTop = 0; } else terminarInicio();
@@ -3399,8 +3602,7 @@ async function terminarInicio({ saltar = false } = {}) {
   if (!saltar && inicio.objetivo && inicio.objetivo !== 'libre') {
     const ctx = await contextoPlan();
     const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: inicio.objetivo, nivel: ctx.nivelSugerido, dias: inicio.dias, semanas: 6, inicio: E.claveDia(Date.now()), ctx });
-    const existentes = new Set((await db.listar('entrenamientos')).map((x) => x.nombre));
-    for (const x of entrenamientos) if (!existentes.has(x.nombre)) await db.guardar('entrenamientos', x);
+    await guardarEntrenamientosDePlan(entrenamientos);
     guardarPrograma(programa);
     elegirLoDeHoy = true;
     texto = `Tu plan está listo: ${programa.dias.length} sesiones en 6 semanas`;
@@ -3412,7 +3614,7 @@ async function terminarInicio({ saltar = false } = {}) {
   if (texto) toast(texto, 4000);
 }
 (async () => {
-  if (ajustes.si('inicioHecho', false)) return;
+  if (ajustes.si('inicioHecho', false)) { ofrecerRecuperar(); return; }
   // Solo para quien empieza de cero: con héroe o sesiones guardadas, ya pasó por aquí.
   if (leerPersonaje().clase || (await db.listar('sesiones')).length) { ajustes.escribir('inicioHecho', '1'); return; }
   pintarInicio();

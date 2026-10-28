@@ -61,7 +61,9 @@ export function dibujar(canvas, series, opciones = {}) {
   for (let i = 0; i <= pasos; i++) {
     const t = tMin + ((tMax - tMin) * i) / pasos;
     const seg = Math.round(t);
-    ctx.fillText(opciones.formatoX ? opciones.formatoX(t) : `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`, X(t), alto - 6);
+    const hh = Math.floor(seg / 3600);
+    const mmss = `${Math.floor((seg % 3600) / 60)}:${String(seg % 60).padStart(2, '0')}`;
+    ctx.fillText(opciones.formatoX ? opciones.formatoX(t) : hh ? `${hh}:${mmss.padStart(5, '0')}` : mmss, X(t), alto - 6);
   }
 
   // Zonas de fondo en el eje izquierdo (opcional): [{ min, max, color, etiqueta }]
@@ -154,7 +156,9 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
   for (const [, v] of puntos) maxW = Math.max(maxW, v);
   const yMax = Math.max(50, Math.ceil((maxW * 1.25) / 50) * 50);
 
-  const m = { izq: 40, der: 12, arr: 10, aba: 22 };
+  // El margen izquierdo crece con el número más ancho del eje para que nunca se corte.
+  ctx.font = '11px system-ui, sans-serif';
+  const m = { izq: Math.max(32, Math.ceil(ctx.measureText(String(yMax)).width) + 10), der: 12, arr: 10, aba: 22 };
   const w = ancho - m.izq - m.der;
   const h = alto - m.arr - m.aba;
   const X = (t) => m.izq + (t / tFin) * w;
@@ -208,15 +212,23 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
   ctx.font = '11px system-ui, sans-serif';
   ctx.fillStyle = colorTexto;
   ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const v = (yMax * i) / 4;
+  // En una gráfica baja (horizontal) caben menos marcas sin que se encimen.
+  const marcasY = h >= 80 ? 4 : h >= 36 ? 2 : 1;
+  for (let i = 0; i <= marcasY; i++) {
+    const v = (yMax * i) / marcasY;
     ctx.fillText(Math.round(v), m.izq - 6, Y(v) + 4);
   }
 
-  // Eje X en minutos
-  ctx.textAlign = 'center';
-  const paso = [60, 120, 300, 600, 900, 1800].find((p) => tFin / p <= 6) || 3600;
-  for (let t = 0; t <= tFin; t += paso) ctx.fillText(`${Math.round(t / 60)} min`, X(t), alto - 6);
+  // Eje X en minutos (u horas): tantas marcas como quepan, y la última nunca se sale por la derecha.
+  const caben = Math.max(1, Math.min(6, Math.floor(w / 56)));
+  const paso = [60, 120, 300, 600, 900, 1800, 3600, 7200].find((p) => tFin / p <= caben) || 14400;
+  const textoX = (t) => (t < 3600 ? `${Math.round(t / 60)} min` : `${Math.floor(t / 3600)} h${t % 3600 ? ` ${Math.round((t % 3600) / 60)}` : ''}`);
+  for (let t = 0; t <= tFin; t += paso) {
+    const etq = textoX(t);
+    const media = ctx.measureText(etq).width / 2;
+    ctx.textAlign = X(t) + media > ancho ? 'right' : 'center';
+    ctx.fillText(etq, ctx.textAlign === 'right' ? ancho - 1 : X(t), alto - 6);
+  }
 
   // Potencia real
   if (puntos.length) {

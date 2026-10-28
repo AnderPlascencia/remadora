@@ -208,7 +208,7 @@
             <span class="etq-campo">2. ¿Qué distancia y en qué tiempo?</span>
             <div class="fila-dos">
               <label class="campo">Distancia
-                <select id="pm-dist"><option value="500">500 m</option><option value="1000">1000 m</option><option value="2000" selected>2000 m</option><option value="5000">5000 m</option><option value="6000">6000 m</option><option value="10000">10 000 m</option></select>
+                <select id="pm-dist"><option value="500">500 m</option><option value="1000">1,000 m</option><option value="2000" selected>2,000 m</option><option value="5000">5,000 m</option><option value="6000">6,000 m</option><option value="10000">10,000 m</option></select>
               </label>
               <label class="campo">Tiempo meta (mm:ss) <input id="pm-tiempo" inputmode="numeric" autocomplete="off" placeholder="7:45"></label>
               <label class="campo">Semanas <input id="pm-semanas" type="number" min="2" max="16" value="8" inputmode="numeric"></label>
@@ -382,7 +382,7 @@
       </div>
       <div id="progreso-contenido">
       <div class="resumen-semana">
-        <div class="rs-dato"><svg class="ico" aria-hidden="true"><use href="#i-fuego"/></svg><span><b id="racha">0</b> <span id="racha-etq">días seguidos</span></span></div>
+        <div class="rs-dato"><svg class="ico" aria-hidden="true"><use href="#i-fuego"/></svg><span><b id="racha">0</b> <span id="racha-etq">semanas seguidas</span><small id="racha-dias" class="racha-dias" hidden></small></span></div>
         <div class="rs-meta">
           <div class="tm-fila"><span>Esta semana</span><span id="semana-texto">0 de 10 km</span></div>
           <div class="progreso" role="progressbar" aria-label="Meta semanal"><div id="semana-barra"></div></div>
@@ -689,6 +689,16 @@
         <button type="button" id="fin-terminar" class="boton primario grande">Terminar y guardar</button>
       </div>
       <p class="fin-nota">Si sigues, todo lo que reme se suma a esta sesión.</p>
+    </div>
+  </div>
+  <div id="recuperar-dialogo" class="fin-fondo" hidden role="alertdialog" aria-modal="true" aria-labelledby="recuperar-titulo" aria-describedby="recuperar-texto">
+    <div class="fin-caja">
+      <h3 id="recuperar-titulo">Tienes una sesión sin guardar</h3>
+      <p id="recuperar-texto"></p>
+      <div class="fin-botones">
+        <button type="button" id="recuperar-descartar" class="boton grande">Descartar</button>
+        <button type="button" id="recuperar-guardar" class="boton primario grande">Guardar sesión</button>
+      </div>
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

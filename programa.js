@@ -123,11 +123,12 @@ export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana =
 
 // ---------- Plan por objetivo: la app decide intensidades, ritmos y volúmenes ----------
 // Las intensidades van en % de tu FTP (o en tu ritmo actual), así el plan se ajusta solo cuando mejoras.
+// Los mismos nombres en el inicio guiado y en el asistente de Planes; «tema» es lo que va en el nombre del plan.
 export const OBJETIVOS_PLAN = [
-  { clave: 'potencia', nombre: 'Potencia', texto: 'Sacar más watts: series cortas y fuertes, umbral y sprints.', prueba: 'Prueba FTP 20 min' },
-  { clave: 'ritmo', nombre: 'Ritmo', texto: 'Ir más rápido en 2000 m: series a ritmo de carrera y umbral.', prueba: 'Prueba 2000 m' },
-  { clave: 'distancia', nombre: 'Distancia', texto: 'Remar más lejos sin parar: fondo largo y tempo.', prueba: null },
-  { clave: 'tecnica', nombre: 'Paladas y técnica', texto: 'Más metros por palada: control de paladas y ritmo parejo.', prueba: 'Prueba 500 m' },
+  { clave: 'distancia', nombre: 'Remar más lejos', tema: 'distancia', texto: 'Aguantar más tiempo sin parar: fondo largo y tempo.', prueba: null },
+  { clave: 'ritmo', nombre: 'Bajar mi tiempo en 2000 m', tema: 'ritmo', texto: 'Ir más rápido: series a ritmo de carrera y umbral.', prueba: 'Prueba 2000 m' },
+  { clave: 'potencia', nombre: 'Más fuerza y potencia', tema: 'potencia', texto: 'Sacar más watts: series cortas y fuertes, umbral y sprints.', prueba: 'Prueba FTP 20 min' },
+  { clave: 'tecnica', nombre: 'Mejorar mi técnica', tema: 'técnica', texto: 'Más metros por palada y un ritmo parejo.', prueba: 'Prueba 500 m' },
 ];
 export const NIVELES_PLAN = [
   { clave: 'inicio', nombre: 'Estoy empezando', volumen: 0.7 },
@@ -193,7 +194,7 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     if (objetivo === 'distancia' && s === semanas - 1) lista[0] = crear('largo', vol * 1.9);
     return lista;
   });
-  const programa = desdePlantilla({ nombre: `Plan de ${obj.nombre.toLowerCase()} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
+  const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
   return { programa, entrenamientos };
 }
 const EJEMPLO_PRUEBA = {

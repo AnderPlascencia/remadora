@@ -307,6 +307,12 @@ export function sinPausas(s) {
   return true;
 }
 
+// Desde v0.22.0 se sube de nivel más despacio: las sesiones (y sus misiones) desde esta fecha dan la mitad de XP.
+// Las anteriores cuentan igual que antes, así nadie pierde el nivel que ya tenía. Las monedas no cambian.
+export const XP_LENTA_DESDE = new Date(2026, 9, 29).getTime();
+export const FACTOR_XP_LENTA = 0.5;
+export const factorXp = (fecha) => (fecha >= XP_LENTA_DESDE ? FACTOR_XP_LENTA : 1);
+
 // Ganancia de una sesión: XP con detalle y puntos por atributo (antes del bono de clase).
 function gananciaSesion(s, m, ctx) {
   const gr = ctx.grados || {};
@@ -349,7 +355,9 @@ function gananciaSesion(s, m, ctx) {
       sinPausas: sinPausas(s), delPrograma: !!s.delPrograma && s.tiempoMeta != null, racha: ctx.racha, sesSemana: ctx.sesSemana || 0,
     }));
   }
-  return { xp: detalle.reduce((a, [, v]) => a + v, 0), detalle, atributos: at, carga };
+  const f = factorXp(s.fecha);
+  const detalleXp = f === 1 ? detalle : detalle.map(([k, v]) => [k, Math.round(v * f)]);
+  return { xp: detalleXp.reduce((a, [, v]) => a + v, 0), xpBase: detalle.reduce((a, [, v]) => a + v, 0), detalle: detalleXp, atributos: at, carga };
 }
 
 // ---------- Estado completo del juego ----------
@@ -387,6 +395,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   const lograr = (fecha, tipo, texto, m0, obj, xpExtra = 0) => {
     const m = m0 + (obj ? PREMIO_INSIGNIA : 0);
     monedas += m;
+    xpExtra = Math.round(xpExtra * factorXp(fecha));
     xp += xpExtra;
     xpSesion += xpExtra;
     if (obj) premios.add(obj);
@@ -441,7 +450,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
       atributos[k] += total;
       if (total >= 0.5) ganancias[k] = Math.round(total);
     }
-    const monedasSesion = Math.floor(gan.xp / 50);
+    const monedasSesion = Math.floor(gan.xpBase / 50);
     monedas += monedasSesion;
 
     // Misiones del día y de la semana
@@ -583,15 +592,17 @@ export function estimarXp(sesiones, hipotetica, opts = {}) {
   };
 }
 
-// Qué entrenar según el atributo más flojo: un entrenamiento de la lista y un reto contra rivales.
+// Qué entrenar según el atributo más flojo: un entrenamiento base (se adapta a tu nivel) y un reto contra rivales.
+// El reto elige la dificultad de los rivales: inferior = Bahía, igual = Costa, superior = Alta mar.
 export const RECOMENDACION_ATRIBUTO = {
-  fuerza: { entrenamiento: 'Umbral 3 × 8 min (zona 4)', reto: 'superior', texto: 'Series en zona 4. Un rival superior te obliga a apretar en cada bloque.' },
-  agilidad: { entrenamiento: '4 × 500 m', reto: 'igual', texto: 'Series cortas por encima de tu FTP. Si te toca un vikingo, aguanta su salida fuerte.' },
-  resistencia: { entrenamiento: '5000 m', reto: 'igual', texto: 'Distancia larga en zona 2. Un polinesio acelera al final: guarda fuerzas para el último tramo.' },
-  recuperacion: { entrenamiento: null, reto: 'inferior', texto: 'Remo libre suave en zona 1 y 2, o un día de descanso. Un rival inferior para remar sin presión.' },
-  tecnica: { entrenamiento: 'Ritmo 2:10 × 20 min', reto: 'igual', texto: 'Ritmo parejo y buena distancia por palada. Rema como un samurái: constante de principio a fin.' },
-  voluntad: { entrenamiento: 'Pirámide de paladas', reto: 'superior', texto: 'Termina el entrenamiento completo y cuida tu racha. Un rival superior pone a prueba tu voluntad.' },
+  fuerza: { base: 'base:pot-mant', entrenamiento: 'Umbral', reto: 'superior', texto: 'Series en zona 4. Un rival superior te obliga a apretar en cada bloque.' },
+  agilidad: { base: 'base:pot-mejora', entrenamiento: 'VO2 máx', reto: 'igual', texto: 'Series cortas por encima de tu FTP. Si te toca un vikingo, aguanta su salida fuerte.' },
+  resistencia: { base: 'base:dis-mant', entrenamiento: 'Fondo', reto: 'igual', texto: 'Distancia larga en zona 2. Un polinesio acelera al final: guarda fuerzas para el último tramo.' },
+  recuperacion: { base: null, entrenamiento: null, reto: 'inferior', texto: 'Remo libre suave en zona 1 y 2, o un día de descanso. Un rival inferior para remar sin presión.' },
+  tecnica: { base: 'base:rit-mant', entrenamiento: 'Ritmo de crucero', reto: 'igual', texto: 'Ritmo parejo y buena distancia por palada. Rema como un samurái: constante de principio a fin.' },
+  voluntad: { base: 'base:pal-mejora', entrenamiento: 'Paladas en pirámide', reto: 'superior', texto: 'Termina el entrenamiento completo y cuida tu racha. Un rival superior pone a prueba tu voluntad.' },
 };
+export const DIFICULTAD_RETO = { inferior: 'bahia', igual: 'costa', superior: 'altamar' };
 export function recomendarPorAtributos(atributos) {
   const lista = ATRIBUTOS.map((a) => ({ ...a, valor: atributos[a.clave] || 0 }));
   if (!lista.some((a) => a.valor > 0)) return null;

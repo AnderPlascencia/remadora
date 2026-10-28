@@ -58,6 +58,17 @@ const cargarImagen = (src) => new Promise((ok) => {
 });
 
 // Tarjeta 1080×1350 con el resumen de la sesión. datos = { titulo, fecha, stats: [[etq, valor]], extra, puntos: [[t, w]] }
+// Escribe una línea que quepa en «ancho»: primero baja el tamaño de letra (hasta «minimo») y si aún no cabe,
+// recorta con «…». Así un nombre largo no sale aplastado.
+function textoQueCabe(ctx, texto, x, y, ancho, peso, tamano, minimo) {
+  let t = tamano;
+  ctx.font = `${peso} ${t}px Inter, system-ui, sans-serif`;
+  while (t > minimo && ctx.measureText(texto).width > ancho) { t -= 2; ctx.font = `${peso} ${t}px Inter, system-ui, sans-serif`; }
+  let corto = texto;
+  while (corto.length > 1 && ctx.measureText(corto).width > ancho) corto = corto.slice(0, -2) + '…';
+  ctx.fillText(corto, x, y);
+}
+
 export async function tarjetaSesion(datos) {
   const W = 1080;
   const H = 1350;
@@ -94,8 +105,7 @@ export async function tarjetaSesion(datos) {
   ctx.fillText(datos.fecha, 222, 190);
 
   ctx.fillStyle = '#F8FAFC';
-  ctx.font = '800 58px Inter, system-ui, sans-serif';
-  ctx.fillText(datos.titulo, 72, 310, W - 144);
+  textoQueCabe(ctx, datos.titulo, 72, 310, W - 144, 800, 58, 40);
   ctx.fillStyle = fuego;
   ctx.fillRect(72, 336, 160, 10);
 
@@ -149,8 +159,7 @@ export async function tarjetaSesion(datos) {
 
   if (datos.extra) {
     ctx.fillStyle = '#FDBA74';
-    ctx.font = '700 34px Inter, system-ui, sans-serif';
-    ctx.fillText(datos.extra, 72, 1250, W - 144);
+    textoQueCabe(ctx, datos.extra, 72, 1250, W - 144, 700, 34, 26);
   }
   ctx.fillStyle = '#64748B';
   ctx.font = '500 24px Inter, system-ui, sans-serif';

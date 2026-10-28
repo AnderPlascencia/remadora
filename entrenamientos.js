@@ -81,7 +81,7 @@ export function duracionEstimada(b, ritmo = {}) {
 
 export function textoCantidad(b) {
   const fin = finDe(b);
-  if (fin === 'distancia') return `${b.cantidad} m`;
+  if (fin === 'distancia') return `${Number(b.cantidad).toLocaleString('es-MX')} m`;
   if (fin === 'paladas') return `${b.cantidad} paladas`;
   return formatoMmss(b.duracion);
 }
@@ -252,7 +252,7 @@ export function bloquesConDuracion(estado, bloques, m) {
 // Texto de lo que falta en el bloque, en su unidad.
 export function textoResta(info) {
   const fin = finDe(info.bloque);
-  if (fin === 'distancia') return `${Math.ceil(info.resta)} m`;
+  if (fin === 'distancia') return `${Math.ceil(info.resta).toLocaleString('es-MX')} m`;
   if (fin === 'paladas') return `${Math.ceil(info.resta)} pal.`;
   return formatoMmss(info.resta);
 }
