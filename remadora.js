@@ -176,7 +176,6 @@ export class Remadora extends EventTarget {
   iniciarDemo() {
     this.conectada = true;
     this.cierreManual = false;
-    this.estado('Modo demo');
     let t = 0;
     let distancia = 0;
     this.demoTimer = setInterval(() => {
@@ -191,6 +190,8 @@ export class Remadora extends EventTarget {
         this.alRecibir(new DataView(p.buffer), '1535');
       }
     }, 500);
+    // El aviso de estado va después de crear el temporizador: así el botón de Ajustes ya dice «Detener demo».
+    this.estado('Modo demo');
   }
 }
 

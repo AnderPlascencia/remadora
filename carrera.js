@@ -1051,7 +1051,8 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
       const grande = z % 250 === 0;
       if (!grande && q.s < 2) continue;
       ctx.fillStyle = grande ? '#F2A33A' : z % 25 === 0 ? '#EF4444' : 'rgba(255,255,255,0.8)';
-      const r = Math.max(0.8, q.s * (grande ? 0.35 : 0.12));
+      // Tope de tamaño: las boyas que pasan junto a la cámara no deben tapar la parte baja de la pista.
+      const r = Math.min(grande ? 9 : 4, Math.max(0.8, q.s * (grande ? 0.35 : 0.12)));
       ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
     }
   }

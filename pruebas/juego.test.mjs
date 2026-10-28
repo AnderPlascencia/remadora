@@ -141,3 +141,12 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.equal(J.recomendarPorAtributos({}), null);
   console.log('estimar OK', est.total);
 }
+
+// Terminar la carrera antes de completar el entrenamiento no cuenta como victoria.
+{
+  const base = { fecha: Date.now(), duracion: 90, distancia: 360, rival: { nombre: 'Eirik', clase: 'vikingo', diferencia: 56 } };
+  assert.equal(J.medidas(base, 200).ganados, 1);
+  const sinTerminar = J.medidas({ ...base, carreraSinTerminar: true }, 200);
+  assert.equal(sinTerminar.ganados, 0);
+  assert.deepEqual(sinTerminar.clasesVencidas, []);
+}
