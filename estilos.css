@@ -748,3 +748,9 @@ details.seccion[open] { padding-bottom: 8px; }
 @media (orientation: landscape) and (max-height: 520px) {
   .grafica.carrera { height: max(200px, calc(100dvh - var(--nav) - 64px)); }
 }
+
+/* Textos que cambian cada segundo: siempre en una línea para que las tarjetas no cambien de alto. */
+.tm-fila { flex-wrap: nowrap; }
+.tm-fila > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tm-fila > span:last-child { flex-shrink: 0; }
+.mr-parcial, .metrica .parcial { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

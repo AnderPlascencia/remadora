@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.19.1';
+const VERSION = '0.19.2';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -911,10 +911,10 @@ function coachRitmo(t) {
 // Último parcial de 500 m: verde si va al ritmo objetivo (o mejor que tu promedio), rojo si no.
 function textoParcial() {
   const p = sesion?.parcial;
-  if (!p) return { texto: sesion?.ritmo ? `Objetivo ${formatoSplit(sesion.ritmo)}` : '', clase: '' };
+  if (!p) return { texto: sesion?.ritmo ? `Objetivo ${formatoSplit(sesion.ritmo)}` : '', corto: sesion?.ritmo ? `Obj. ${formatoSplit(sesion.ritmo)}` : '', clase: '' };
   const ref = sesion.ritmo || (sesion.t500 * 500) / Math.max(1, p.n * 500);
   const clase = sesion.ritmo ? (p.seg <= ref ? 'ok' : 'mal') : (p.seg <= ref + 0.5 ? 'ok' : 'mal');
-  return { texto: `Último 500 m ${formatoSplit(p.seg)}`, clase };
+  return { texto: `Último 500 m ${formatoSplit(p.seg)}`, corto: `Últ. 500 ${formatoSplit(p.seg)}`, clase };
 }
 
 function avanceObjetivo(t) {
@@ -1215,7 +1215,8 @@ function pintar() {
   $('#m-mpp').textContent = sesion && sesion.paladas >= 5 ? (sesion.dist / sesion.paladas).toFixed(1) : '-';
   const par = textoParcial();
   for (const id of ['#m-parcial', '#mr-parcial']) {
-    $(id).textContent = par.texto;
+    // En modo remo la casilla es angosta: texto corto en una línea para que no crezca ni mueva lo demás.
+    $(id).textContent = id === '#mr-parcial' ? par.corto : par.texto;
     $(id).classList.toggle('ok', par.clase === 'ok');
     $(id).classList.toggle('mal', par.clase === 'mal');
   }
@@ -1348,8 +1349,8 @@ function pintarObjetivo(t) {
     return;
   }
   $('#bloque-resta').textContent = `Faltan ${Math.ceil(p.falta)}`;
-  $('#bloque-meta').textContent = `Llevas ${Math.floor(p.hecho)} de ${p.meta} ${unidad} · ${Math.floor(100 * p.fraccion)}%`;
-  $('#bloque-siguiente').textContent = p.estimadoSeg != null ? `≈ ${formatoTiempo(p.estimadoSeg)} a este ritmo` : '';
+  $('#bloque-meta').textContent = `${Math.floor(p.hecho)} de ${p.meta} ${unidad} · ${Math.floor(100 * p.fraccion)}%`;
+  $('#bloque-siguiente').textContent = p.estimadoSeg != null ? `≈ ${formatoTiempo(p.estimadoSeg)} para terminar` : '';
   $('#mr-resta').textContent = Math.ceil(p.falta);
   $('#mr-resta-etq').textContent = `${unidad} faltan`;
   $('#mr-meta-texto').textContent = `${Math.floor(p.hecho)} de ${p.meta} ${unidad}${p.estimadoSeg != null ? ` · ≈ ${formatoTiempo(p.estimadoSeg)}` : ''}`;

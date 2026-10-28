@@ -597,13 +597,17 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
 
   // Referencias (tu anterior, tu mejor): línea amarilla solo en tu carril, el de abajo.
   const xsRef = referencias.map((r) => X(r.dist));
+  const ocupados = [];
   referencias.forEach((r, k) => {
     const yA = y0 + carril * (n - 1) + 3;
     const yB = y0 + pista - 3;
     const x = X(r.dist);
     // Si dos líneas quedan juntas, cada etiqueta va de un lado para no encimarse.
-    const otra = xsRef.find((ox, j) => j !== k && Math.abs(ox - x) < 70);
-    const aLaIzq = otra != null ? x < otra : x > ancho - 60;
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    const wEtq = ctx.measureText(r.etiqueta).width + 16;
+    const chocaDer = xsRef.some((ox, j) => j !== k && ox > x && ox < x + wEtq);
+    const chocaIzq = xsRef.some((ox, j) => j !== k && ox < x && ox > x - wEtq);
+    const aLaIzq = x > ancho - wEtq || (chocaDer && !chocaIzq);
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.fillStyle = COLOR_RITMO;
     if (x > -10 && x < ancho + 10) {
@@ -615,13 +619,26 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
       ctx.textAlign = aLaIzq ? 'right' : 'left';
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(2,6,23,0.7)';
-      ctx.strokeText(r.etiqueta, x + (aLaIzq ? -5 : 5), yB - 4);
-      ctx.fillText(r.etiqueta, x + (aLaIzq ? -5 : 5), yB - 4);
+      // Si aun así choca con otra etiqueta, sube un renglón.
+      const x0 = aLaIzq ? x - 5 - (wEtq - 16) : x + 5;
+      let ty = yB - 4;
+      while (ocupados.some((o) => o.y === ty && x0 < o.x1 + 4 && x0 + wEtq - 16 > o.x0 - 4)) ty -= 13;
+      ocupados.push({ x0, x1: x0 + wEtq - 16, y: ty });
+      ctx.strokeText(r.etiqueta, x + (aLaIzq ? -5 : 5), ty);
+      ctx.fillText(r.etiqueta, x + (aLaIzq ? -5 : 5), ty);
     } else {
       const der = x > ancho;
       const dif = Math.round(r.dist - yo.dist);
       ctx.textAlign = der ? 'right' : 'left';
-      ctx.fillText(`${der ? '' : '◀ '}${r.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 90 : 60, yB - 4 - k * 13);
+      // Fuera de la ventana: aviso en el borde con fondo, para leerse aunque pase tu bote.
+      const txt = `${der ? '' : '◀ '}${r.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`;
+      const w = ctx.measureText(txt).width;
+      const tx = der ? ancho - 6 : 6;
+      const ty = yB - 4 - k * 14;
+      ctx.fillStyle = 'rgba(2,6,23,0.7)';
+      ctx.fillRect(der ? tx - w - 3 : tx - 3, ty - 10, w + 6, 13);
+      ctx.fillStyle = COLOR_RITMO;
+      ctx.fillText(txt, tx, ty);
     }
   });
 
@@ -631,26 +648,17 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     const y = y0 + carril * (fila + 0.58);
     const largo = Math.max(44, Math.min(120, ppm * 8));
     const x = X(b.dist);
-    etiqueta2d(ctx, b, yo, y0 + carril * fila, carril, ancho, c.estado);
-    if (x > ancho + largo * 0.2 || x < -largo * 0.2) {
-      // Fuera de la ventana: flecha en el borde
-      const der = x > ancho;
-      const ax = der ? ancho - 10 : 10;
-      ctx.fillStyle = b.color;
-      ctx.beginPath();
-      ctx.moveTo(ax + (der ? 8 : -8), y);
-      ctx.lineTo(ax - (der ? 6 : -6), y - 8);
-      ctx.lineTo(ax - (der ? 6 : -6), y + 8);
-      ctx.fill();
-      return;
-    }
+    // Fuera de la ventana: la flecha va dentro de la pastilla de la diferencia, sin tapar el nombre.
+    const fuera = x > ancho + largo * 0.2 ? 1 : x < -largo * 0.2 ? -1 : 0;
+    etiqueta2d(ctx, b, yo, y0 + carril * fila, carril, ancho, c.estado, fuera);
+    if (fuera) return;
     bote2d(ctx, x, y, largo, Math.min(carril * 0.4, 34), b, ppm, t);
     if (b.yo) c.yoPantalla = { x: x - largo * 0.5, y: y - carril * 0.2 };
   });
 }
 
 // Etiqueta del carril: retrato y nombre corto a la izquierda, diferencia a la derecha.
-function etiqueta2d(ctx, b, yo, yCarril, carril, ancho, e) {
+function etiqueta2d(ctx, b, yo, yCarril, carril, ancho, e, fuera = 0) {
   const r = Math.max(6, Math.min(10, carril * 0.17));
   const y = yCarril + r + 3;
   let x = 6;
@@ -686,14 +694,14 @@ function etiqueta2d(ctx, b, yo, yCarril, carril, ancho, e) {
     if ((e.ventajaM || 0) >= 1) { txt = `⚑ +${Math.round(e.ventajaM)} m`; color = '#FDE047'; }
   } else {
     const d = Math.round(b.dist - yo.dist);
-    txt = d === 0 ? 'parejos' : `${d > 0 ? '+' : '−'}${Math.abs(d)} m`;
+    txt = d === 0 ? 'parejos' : `${fuera < 0 ? '◀ ' : ''}${d > 0 ? '+' : '−'}${Math.abs(d)} m${fuera > 0 ? ' ▶' : ''}`;
     color = d > 0 ? '#FCA5A5' : d < 0 ? '#86EFAC' : '#F8FAFC';
   }
   if (!txt) return;
   ctx.font = '800 12px system-ui, sans-serif';
   const w = ctx.measureText(txt).width + 12;
   const px = ancho - w - 6;
-  const py = b.yo ? yCarril + carril - 22 : yCarril + 3;
+  const py = yCarril + 3;
   ctx.fillStyle = 'rgba(2,6,23,0.6)';
   ctx.beginPath();
   ctx.roundRect ? ctx.roundRect(px, py, w, 17, 8) : ctx.rect(px, py, w, 17);
