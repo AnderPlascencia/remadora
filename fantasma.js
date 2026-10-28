@@ -100,7 +100,7 @@ export function simular(ent, nivel, ftpUsuario = 0) {
       remar(rel, (tt) => tt >= dur, dur);
     }
   } else {
-    remar(0.8, (tt) => tt >= 3600, 3600);
+    remar(0.8, (tt) => tt >= 7200, 7200);
   }
   return { nivel: p.clave, nombre: `Fantasma ${p.nombre.toLowerCase()}`, sintetico: true, ftp: p.ftp, muestras };
 }

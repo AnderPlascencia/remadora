@@ -850,3 +850,24 @@ details.seccion[open] { padding-bottom: 8px; }
 .menu-fila-caja button:hover { background: var(--fondo); }
 .menu-fila-caja button.peligro { color: #F87171; }
 .menu-fila-caja .ico { width: 18px; height: 18px; }
+
+/* Detalle de un entrenamiento */
+.base-tarjeta[data-ver] { cursor: pointer; }
+.base-nombre { all: unset; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 16px; font-weight: 700; color: var(--texto); cursor: pointer; }
+.base-nombre span { color: var(--texto-tenue); font-size: 20px; line-height: 1; }
+.base-nombre:focus-visible { outline: 2px solid var(--primario-claro); outline-offset: 3px; border-radius: 4px; }
+.he-sub { margin: 0 0 6px; color: var(--texto-tenue); font-size: 14px; }
+.he-sub .dif { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.he-sub .dif.suave { color: #38BDF8; }
+.he-sub .dif.mant { color: var(--primario-claro); }
+.he-sub .dif.mejora { color: #F2A33A; }
+.he-para { margin: 0 0 10px; font-size: 15px; }
+.he-bloques { list-style: none; margin: 10px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.he-bloques li { background: var(--panel); border-radius: 12px; padding: 10px 12px; font-size: 15px; line-height: 1.35; }
+.he-bloques .suave { color: var(--texto-tenue); font-size: 13px; display: block; }
+.he-bloques small .suave { display: inline; }
+.he-bloques small { color: var(--texto-tenue); }
+.he-bloques .veces { color: var(--primario-claro); }
+.ayuda.bloque { display: block; margin: 2px 0 0; }
+.he-bloques small.entre { display: block; margin-top: 4px; }
+#hoja-ent .hoja:focus { outline: none; }

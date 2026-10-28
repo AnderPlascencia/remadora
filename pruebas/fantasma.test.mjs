@@ -12,7 +12,7 @@ const s = F.simular(umbral, 'intermedio', 200);
 assert.equal(s.muestras.length, umbral.bloques.reduce((a, b) => a + b.duracion, 0));
 const quinientos = EJEMPLOS.find((e) => e.nombre === '4 × 500 m');
 assert.ok(F.simular(quinientos, 'principiante').muestras.at(-1).dist > 2000);
-assert.equal(F.simular(null, 'intermedio').muestras.length, 3600);
+assert.equal(F.simular(null, 'intermedio').muestras.length, 7200); // en remo libre el fantasma rema hasta 2 h
 assert.equal(F.splitDeWatts(203), 120);
 console.log('fantasma OK');
 

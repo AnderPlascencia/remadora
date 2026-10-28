@@ -15,7 +15,7 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 
-const VERSION = '0.19.9';
+const VERSION = '0.20.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -124,9 +124,11 @@ setTimeout(() => $('#bienvenida')?.remove(), 1400);
 const MAX_RIVALES = 3;
 // Respuestas del asistente de plan por objetivo (en Planes).
 const asistente = { objetivo: null, nivel: null, dias: 3, semanas: 6 };
-// En «Por objetivo» siempre se compite contra 3 rivales de otras clases; en Remo libre, contra ninguno.
+// En «Por objetivo» siempre se compite contra 3 rivales de otras clases; en Remo libre, solo si lo activas.
+const libreConFantasmas = () => modoEnt() === 'libre' && ajustes.leer('libreFantasmas', '0') === '1';
+const conRivales = () => modoEnt() === 'objetivo' || libreConFantasmas();
 function rivalesElegidos() {
-  return modoEnt() === 'objetivo' ? ['clase', 'clase', 'clase'] : [];
+  return conRivales() ? ['clase', 'clase', 'clase'] : [];
 }
 // Mi anterior y Mi mejor ya no son rivales: son líneas amarillas de referencia en tu carril.
 function referenciasElegidas() {
@@ -137,16 +139,24 @@ function referenciasElegidas() {
   } catch { return []; }
 }
 const hayCarrera = () => !!(sesion && (sesion.rival || sesion.referencias?.length));
-// Dificultad de los rivales de clase: solo se elige en «Por objetivo»; en Remo libre van a tu nivel.
-const dificultadActual = () => (modoEnt() === 'objetivo' ? ajustes.leer('dificultad', 'costa') : 'costa');
+// Dificultad de los rivales de clase: se elige cuando hay rivales.
+const dificultadActual = () => (conRivales() ? ajustes.leer('dificultad', 'costa') : 'costa');
 function pintarDificultad() {
   const caja = $('#dificultad');
-  $('#bloque-rivales').hidden = modoEnt() !== 'objetivo';
-  if (modoEnt() !== 'objetivo') return;
+  $('#libre-fantasmas').hidden = modoEnt() !== 'libre';
+  $('#in-libre-fantasmas').checked = libreConFantasmas();
+  $('#in-libre-fantasmas').disabled = !!sesion;
+  $('#bloque-rivales').hidden = !conRivales();
+  if (!conRivales()) return;
   const actual = dificultadActual();
   caja.innerHTML = Object.entries(J.DIFICULTADES).map(([k, d]) => `<button type="button" role="radio" data-dif="${k}" aria-checked="${k === actual}" ${sesion ? 'disabled' : ''}>
     <b>${d.nombre}</b><small>${d.texto.split(': ')[0]} · ${d.xp} XP por rival vencido</small></button>`).join('');
 }
+$('#in-libre-fantasmas').addEventListener('change', (e) => {
+  if (sesion) return;
+  ajustes.escribir('libreFantasmas', e.target.checked ? '1' : '0');
+  pintarChips();
+});
 $('#dificultad').addEventListener('click', (e) => {
   const b = e.target.closest('[data-dif]');
   if (!b || sesion) return;
@@ -179,7 +189,7 @@ function pintarChips() {
   }
   const semana = J.rivalDeLaSemana(J.lunesDe(Date.now()), leerPersonaje().clase);
   const dif = J.DIFICULTADES[dificultadActual()];
-  $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}.${nClase ? ` ${dif.nombre}: ${dif.texto.split(': ')[1]}.` : ' En Remo libre no hay rivales: elige «Por objetivo» para competir.'}`;
+  $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}.${nClase ? ` ${dif.nombre}: ${dif.texto.split(': ')[1]}.` : ''}${libreConFantasmas() ? ' Rema al menos 5 min para que cuente la carrera.' : ''}`;
   pintarSelVentaja(sel);
   if (!sesion) prepararPronto();
   // Durante la sesión los fantasmas ya están en el agua: se ocultan las opciones.
@@ -758,7 +768,8 @@ async function detenerSesion() {
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
     // Terminar antes de completar el entrenamiento no gana la carrera: se guarda la diferencia, pero no cuenta como victoria.
-    if (s.tiempoMeta == null) registro.carreraSinTerminar = true;
+    // En Remo libre no hay meta: cuenta si remaste al menos 5 minutos.
+    if (ent ? s.tiempoMeta == null : s.t < 300) registro.carreraSinTerminar = true;
   }
   if (s.referencias?.length) {
     registro.referencias = s.referencias.map((r) => ({ nombre: r.nombre, fecha: r.fecha ?? null, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)) }));
@@ -1638,8 +1649,8 @@ async function pintarEntrenamientos() {
   const bases = baseActual.filter((x) => x.enfoque === seccion);
   $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
   $('#base-nivel').textContent = `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`;
-  $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}">
-      ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<b>${x.nombre}</b>
+  $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
+      ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${x.nombre}">${x.nombre}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
       <div class="base-acciones"><button type="button" class="boton primario" data-usar="${x.id}">Entrenar</button>
       <button type="button" class="boton chico enlace-boton" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
@@ -1648,7 +1659,7 @@ async function pintarEntrenamientos() {
   $('#mios-titulo').textContent = seccion === 'mios' ? 'Tus entrenamientos' : `Tus entrenamientos de ${SECCIONES_ENT.find((x) => x.clave === seccion).nombre.toLowerCase()}`;
   const ul = $('#lista-ent');
   ul.innerHTML = mios.length ? mios.map((x) => `<li data-id="${x.id}">
-      <div class="info clic" role="button" tabindex="0" data-usar="${x.id}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${B.resumenEnt(x)}</div></div>
+      <div class="info clic" role="button" tabindex="0" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${B.resumenEnt(x)}</div></div>
       <details class="menu-fila"><summary class="boton icono chico" aria-label="Opciones de ${escaparHtml(x.nombre)}">⋯</summary>
         <div class="menu-fila-caja"><button type="button" data-a="editar">${ico('i-editar')} Editar</button><button type="button" data-a="duplicar">${ico('i-copiar')} Duplicar</button>
         <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`).join('')
@@ -1695,9 +1706,15 @@ $('#pt-entrenamientos').addEventListener('click', async (e) => {
     const v = usar.dataset.usar;
     const ent = await obtenerEnt(v);
     if (ent) usarEnt(ent);
+    return;
+  }
+  const ver = e.target.closest('[data-ver]');
+  if (ver) {
+    const ent = await obtenerEnt(ver.dataset.ver);
+    if (ent) abrirDetalleEnt(ent);
   }
 });
-$('#lista-ent').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-usar]')) e.target.click(); });
+$('#lista-ent').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ver]')) { e.preventDefault(); e.target.click(); } });
 // Un solo menú «⋯» abierto a la vez.
 $('#lista-ent').addEventListener('toggle', (e) => {
   if (e.target.open) $('#lista-ent').querySelectorAll('details[open]').forEach((d) => { if (d !== e.target) d.open = false; });
@@ -2950,6 +2967,63 @@ async function repararSesiones() {
   if (vistaActiva('historial')) pintarHistorial();
 }
 
+// ---------- Detalle de un entrenamiento: qué es, para qué sirve y sus bloques ----------
+let entDetalle = null;
+// Bloques en filas cortas: las series repetidas («Umbral 1/3», «Suave», «Umbral 2/3»…) se juntan en «3 × …».
+function filasBloques(bloques, f, fc) {
+  const firma = (b) => b && [b.nombre?.replace(/\s*\d+\/\d+$/, ''), Ent.finDe(b), Ent.cantidadDe(b), b.metrica, b.min, b.max].join('|');
+  const nombre = (b) => b.nombre?.replace(/\s*\d+\/\d+$/, '') || 'Intervalo';
+  const texto = (b) => `${Ent.textoCantidad(b)}${nombre(b) === Ent.textoCantidad(b) ? '' : ` · ${escaparHtml(nombre(b))}`} <span class="suave">${b.metrica ? Ent.textoMeta(b, f, fc) : 'libre'}</span>`;
+  const filas = [];
+  for (let i = 0; i < bloques.length;) {
+    const [a, d] = [bloques[i], bloques[i + 1]];
+    // Patrón trabajo + descanso repetido; la última serie va sin descanso.
+    let n = 1;
+    if (d && firma(d) !== firma(a) && !/^(suave|descanso|recupera)/i.test(nombre(a))) while (firma(bloques[i + n * 2 - 1]) === firma(d) && firma(bloques[i + n * 2]) === firma(a)) n++;
+    if (n > 1) {
+      filas.push(`<li><b class="veces">${n} ×</b> ${texto(a)}<small class="entre">con ${texto(d)} entre series</small></li>`);
+      i += n * 2 - 1;
+      continue;
+    }
+    let k = 1;
+    while (firma(bloques[i + k]) === firma(a)) k++;
+    filas.push(`<li>${k > 1 ? `<b class="veces">${k} ×</b> ` : ''}${texto(a)}</li>`);
+    i += k;
+  }
+  return filas.join('');
+}
+function abrirDetalleEnt(ent) {
+  entDetalle = ent;
+  const base = B.esBase(ent.id);
+  const secc = SECCIONES_ENT.find((x) => x.clave === (ent.enfoque || P.enfoqueDe(ent)));
+  $('#he-titulo').textContent = ent.nombre;
+  $('#he-sub').innerHTML = [ent.dificultad ? `<span class="dif ${ent.dificultad}">${B.nombreDificultad(ent.dificultad)}</span>` : '', secc?.nombre, B.resumenEnt(ent), base ? '' : 'Tuyo'].filter(Boolean).join(' · ');
+  $('#he-para').textContent = ent.proposito || (base ? '' : 'Entrenamiento que creaste tú.');
+  $('#he-para').hidden = !$('#he-para').textContent;
+  const intervalos = Ent.tipoDe(ent) === 'intervalos';
+  if (intervalos) $('#he-bloques').innerHTML = filasBloques(ent.bloques, ftp(), fcMaxima());
+  else {
+    const m = Ent.METRICAS_OBJETIVO[ent.objetivo.metrica];
+    $('#he-bloques').innerHTML = `<li>Meta: <b>${miles(ent.objetivo.valor)} ${m.unidad}</b> <span class="suave">al ritmo que quieras; termina al llegar.</span></li>`;
+  }
+  $('#he-editar').textContent = base ? 'Copiar y editar' : 'Editar';
+  $('#hoja-ent').hidden = false;
+  // El perfil solo tiene sentido si algún bloque pide watts o split.
+  const conPerfil = intervalos && ent.bloques.some((b) => ['ftp', 'watts', 'split'].includes(b.metrica));
+  $('#he-perfil').hidden = !conPerfil;
+  if (conPerfil) dibujarPerfil($('#he-perfil'), paraPerfil(ent.bloques));
+  $('#hoja-ent .hoja').focus();
+}
+function cerrarDetalleEnt() { $('#hoja-ent').hidden = true; entDetalle = null; }
+$('#he-cerrar').addEventListener('click', cerrarDetalleEnt);
+$('#hoja-ent').addEventListener('click', (e) => { if (e.target === $('#hoja-ent')) cerrarDetalleEnt(); });
+$('#he-entrenar').addEventListener('click', () => { const ent = entDetalle; cerrarDetalleEnt(); usarEnt(ent); });
+$('#he-editar').addEventListener('click', () => {
+  const ent = entDetalle;
+  cerrarDetalleEnt();
+  if (B.esBase(ent.id)) copiarBase(ent); else abrirEditor(ent);
+});
+
 function cerrarHoja() {
   $('#hoja').hidden = true;
   if (vistaActiva('historial')) pintarHistorial();
@@ -2958,7 +3032,8 @@ $('#hoja-cerrar').addEventListener('click', cerrarHoja);
 $('#hoja').addEventListener('click', (e) => { if (e.target === $('#hoja')) cerrarHoja(); });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (!$('#hoja').hidden) cerrarHoja();
+  if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
+  else if (!$('#hoja').hidden) cerrarHoja();
   else if (!$('#modo-remo').hidden) cerrarModoRemo();
 });
 

@@ -78,6 +78,7 @@
         <select id="sel-entrenamiento"><option value="">Elige un entrenamiento</option></select>
       </label>
       <div class="campo fantasmas">
+        <label id="libre-fantasmas" class="interruptor" hidden><input type="checkbox" id="in-libre-fantasmas"><span>Competir contra 3 fantasmas<small class="ayuda bloque">Reman a tu nivel mientras tú remas libre</small></span></label>
         <div id="bloque-rivales" hidden>
           <span class="etq-campo">Rivales <small>(3 de otras clases)</small></span>
           <div id="dificultad" class="modo-ent tres" role="radiogroup" aria-label="Dificultad de los rivales"></div>
@@ -587,6 +588,24 @@
         <button id="btn-csv" class="boton">Exportar CSV</button>
         <button id="btn-tcx" class="boton">Exportar TCX</button>
         <button id="btn-borrar" class="boton peligro">Borrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETALLE DE UN ENTRENAMIENTO -->
+  <div id="hoja-ent" class="hoja-fondo" hidden>
+    <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="he-titulo" tabindex="-1">
+      <div class="hoja-cabecera">
+        <h2 id="he-titulo">Entrenamiento</h2>
+        <button id="he-cerrar" class="boton icono" aria-label="Cerrar"><svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
+      </div>
+      <p id="he-sub" class="he-sub"></p>
+      <p id="he-para" class="he-para"></p>
+      <canvas id="he-perfil" class="grafica baja" role="img" aria-label="Perfil de potencia del entrenamiento" hidden></canvas>
+      <ol id="he-bloques" class="he-bloques"></ol>
+      <div class="fila-botones">
+        <button id="he-entrenar" class="boton primario">Entrenar</button>
+        <button id="he-editar" class="boton">Editar</button>
       </div>
     </div>
   </div>
