@@ -13,8 +13,9 @@ import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
+import * as B from './base.js';
 
-const VERSION = '0.19.8';
+const VERSION = '0.19.9';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -620,8 +621,7 @@ async function rachaConHoy() {
 }
 
 async function iniciarSesion() {
-  const idEnt = Number($('#sel-entrenamiento').value) || null;
-  entrenamientoActivo = idEnt ? await db.obtener('entrenamientos', idEnt) : null;
+  entrenamientoActivo = await obtenerEnt($('#sel-entrenamiento').value);
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
   const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftp(), fcMaxima()) : null;
@@ -1326,7 +1326,7 @@ function pintarGraficaRemo(t) {
   }
   carreraRemo.detener();
   const ent = sesion ? entrenamientoActivo : null;
-  const previa = !sesion && Number($('#sel-entrenamiento').value) ? entrenamientoPrevio : null;
+  const previa = !sesion && $('#sel-entrenamiento').value ? entrenamientoPrevio : null;
   const plan = ent || previa;
   if (plan && Ent.tipoDe(plan) === 'intervalos') {
     leyenda('<span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia</span>');
@@ -1459,8 +1459,7 @@ function dibujarVivo() {
 // Muestra la meta del entrenamiento elegido antes de iniciar la sesión.
 async function vistaPrevia() {
   if (sesion) return;
-  const id = Number($('#sel-entrenamiento').value) || null;
-  const ent = id ? await db.obtener('entrenamientos', id) : null;
+  const ent = await obtenerEnt($('#sel-entrenamiento').value);
   if (sesion) return;
   entrenamientoPrevio = ent;
   actualizarBotones();
@@ -1587,82 +1586,138 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // ---------- Editor de entrenamientos ----------
+// ---------- Planes: entrenamientos base (según tu nivel) y los tuyos ----------
+let baseActual = [];
+// Recalcula los base para tu nivel y tu FTP de ahora.
+async function actualizarBase() {
+  const { h } = await estadoHeroe();
+  baseActual = B.entrenamientosBase(h.nivel, ftp());
+  return h;
+}
+// Entrenamiento por el valor del selector: «base:…» se genera, un número se lee de la base de datos.
+async function obtenerEnt(valor) {
+  if (!valor) return null;
+  if (B.esBase(valor)) {
+    if (!baseActual.length) await actualizarBase();
+    return baseActual.find((x) => x.id === valor) || null;
+  }
+  return (await db.obtener('entrenamientos', Number(valor))) || null;
+}
+// Tus entrenamientos guardados, sin las copias de las pruebas (las pruebas ya están entre los base).
+const propios = (lista) => lista.filter((x) => !B.NOMBRES_PRUEBA.has(x.nombre));
+
+const SECCIONES_ENT = [...P.GRUPOS_ENT.map((g) => ({ clave: g.clave, nombre: g.clave === 'distancia' ? 'Distancia' : g.clave === 'tecnica' ? 'Paladas' : g.nombre })), { clave: 'mios', nombre: 'Míos' }];
+
+function usarEnt(ent) {
+  $('#sel-entrenamiento').value = String(ent.id);
+  ajustes.escribir('ultimoEnt', String(ent.id));
+  ajustes.escribir('modoEnt', 'objetivo');
+  irA('entrenar');
+  vistaPrevia();
+  toast(`${ent.nombre} listo para entrenar`);
+}
+// Copia editable de un entrenamiento base.
+function copiarBase(ent) {
+  const copia = structuredClone(ent);
+  for (const k of ['id', 'base', 'escalon', 'resumen', 'proposito', 'dificultad', 'prueba', 'pruebaFtp']) delete copia[k];
+  copia.nombre = `${ent.nombre} (mío)`;
+  abrirEditor(copia);
+}
+
 async function pintarEntrenamientos() {
   pintarPrograma();
-  const lista = await db.listar('entrenamientos');
+  const pestana = ajustes.leer('pestanaPlanes', 'entrenamientos');
+  document.querySelectorAll('[data-pt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pt === pestana)));
+  $('#pt-entrenamientos').hidden = pestana !== 'entrenamientos';
+  $('#pt-programa').hidden = pestana !== 'programa';
+  const h = await actualizarBase();
+  const lista = propios(await db.listar('entrenamientos'));
+  const seccion = ajustes.leer('seccionEnt', 'potencia');
+  $('#secciones-ent').innerHTML = SECCIONES_ENT.map((x) => `<button type="button" class="chip" data-sec="${x.clave}" aria-pressed="${x.clave === seccion}">${x.nombre}</button>`).join('');
+  // Tarjetas base de la sección
+  const bases = baseActual.filter((x) => x.enfoque === seccion);
+  $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
+  $('#base-nivel').textContent = `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`;
+  $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}">
+      ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<b>${x.nombre}</b>
+      <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
+      <div class="base-acciones"><button type="button" class="boton primario" data-usar="${x.id}">Entrenar</button>
+      <button type="button" class="boton chico enlace-boton" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
+  // Tus entrenamientos: los de la sección, o todos en «Míos»
+  const mios = seccion === 'mios' ? lista : lista.filter((x) => P.enfoqueDe(x) === seccion);
+  $('#mios-titulo').textContent = seccion === 'mios' ? 'Tus entrenamientos' : `Tus entrenamientos de ${SECCIONES_ENT.find((x) => x.clave === seccion).nombre.toLowerCase()}`;
   const ul = $('#lista-ent');
-  ul.innerHTML = '';
-  if (!lista.length) {
-    ul.innerHTML = `<li class="vacio vacio-grande">${ico('i-lista')}<h3>Aún no tienes entrenamientos</h3>
-      <p>Empieza con los ejemplos (2000 m, intervalos, prueba FTP…) y luego ajústalos a tu gusto.</p>
-      <button type="button" class="boton primario" data-ejemplos>Agregar ejemplos</button></li>`;
-    ul.querySelector('[data-ejemplos]').addEventListener('click', () => $('#btn-plantillas').click());
-  }
-  // Agrupados por objetivo, cada grupo plegable para que la lista no crezca sin orden.
-  const abiertos = new Set(JSON.parse(ajustes.leer('gruposAbiertos', '[]')));
-  const grupos = new Map(P.GRUPOS_ENT.map((g) => [g.clave, []]));
-  for (const ent of lista) grupos.get(P.enfoqueDe(ent))?.push(ent);
-  const contenedor = {};
-  for (const g of P.GRUPOS_ENT) {
-    const ents = grupos.get(g.clave);
-    if (!ents.length) continue;
-    const det = document.createElement('li');
-    det.className = 'grupo-ent';
-    det.innerHTML = `<details${abiertos.has(g.clave) ? ' open' : ''}><summary><b>${g.nombre}</b><span class="suave">${ents.length}</span></summary><ul class="lista"></ul></details>`;
-    det.querySelector('details').addEventListener('toggle', (ev) => {
-      if (ev.target.open) abiertos.add(g.clave); else abiertos.delete(g.clave);
-      ajustes.escribir('gruposAbiertos', JSON.stringify([...abiertos]));
-    });
-    ul.append(det);
-    contenedor[g.clave] = det.querySelector('ul');
-  }
-  for (const ent of lista) {
-    const li = document.createElement('li');
-    li.innerHTML = `<div class="info clic" role="button" tabindex="0"><div class="titulo"></div><div class="suave"></div></div>
-      <div class="acciones">
-        <button class="boton icono chico" data-a="editar" aria-label="Editar">${ico('i-editar')}</button>
-        <button class="boton icono chico" data-a="duplicar" aria-label="Duplicar">${ico('i-copiar')}</button>
-        <button class="boton icono chico peligro" data-a="borrar" aria-label="Borrar">${ico('i-borrar')}</button>
-      </div>`;
-    li.querySelector('.titulo').textContent = ent.nombre;
-    if (ent.pruebaFtp) li.querySelector('.titulo').insertAdjacentHTML('beforeend', '<span class="etiqueta">FTP</span>');
-    li.querySelector('.suave').textContent = Ent.describir(ent);
-    const usar = () => {
-      $('#sel-entrenamiento').value = ent.id;
-      ajustes.escribir('ultimoEnt', ent.id);
-      irA('entrenar');
-      toast(`${ent.nombre} listo para entrenar`);
-    };
-    li.querySelector('.info').addEventListener('click', usar);
-    li.querySelector('.info').addEventListener('keydown', (e) => { if (e.key === 'Enter') usar(); });
-    li.querySelector('[data-a=editar]').onclick = () => abrirEditor(ent);
-    li.querySelector('[data-a=duplicar]').onclick = async () => {
+  ul.innerHTML = mios.length ? mios.map((x) => `<li data-id="${x.id}">
+      <div class="info clic" role="button" tabindex="0" data-usar="${x.id}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${B.resumenEnt(x)}</div></div>
+      <details class="menu-fila"><summary class="boton icono chico" aria-label="Opciones de ${escaparHtml(x.nombre)}">⋯</summary>
+        <div class="menu-fila-caja"><button type="button" data-a="editar">${ico('i-editar')} Editar</button><button type="button" data-a="duplicar">${ico('i-copiar')} Duplicar</button>
+        <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`).join('')
+    : `<li class="vacio">${seccion === 'mios' ? 'Aún no has creado entrenamientos.' : 'Aún no tienes entrenamientos propios aquí.'} Toca «+ Nuevo» o «Copiar y editar» en uno base.</li>`;
+  await llenarSelectorEntrenamientos();
+}
+const escaparHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+document.querySelector('.planes-pestanas').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-pt]');
+  if (!b) return;
+  ajustes.escribir('pestanaPlanes', b.dataset.pt);
+  $('#editor-ent').hidden = true;
+  pintarEntrenamientos();
+});
+$('#secciones-ent').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-sec]');
+  if (!b) return;
+  ajustes.escribir('seccionEnt', b.dataset.sec);
+  pintarEntrenamientos();
+});
+$('#pt-entrenamientos').addEventListener('click', async (e) => {
+  const usar = e.target.closest('[data-usar]');
+  const copiar = e.target.closest('[data-copiar]');
+  const accion = e.target.closest('[data-a]');
+  if (copiar) { copiarBase(baseActual.find((x) => x.id === copiar.dataset.copiar)); return; }
+  if (accion) {
+    const id = Number(accion.closest('li').dataset.id);
+    const ent = await db.obtener('entrenamientos', id);
+    accion.closest('details').open = false;
+    if (accion.dataset.a === 'editar') abrirEditor(ent);
+    if (accion.dataset.a === 'duplicar') {
       const copia = structuredClone(ent);
       delete copia.id;
       copia.nombre = `${ent.nombre} (copia)`;
       await db.guardar('entrenamientos', copia);
       toast('Entrenamiento duplicado');
       pintarEntrenamientos();
-    };
-    li.querySelector('[data-a=borrar]').onclick = async () => {
-      if (confirm(`¿Borrar "${ent.nombre}"?`)) { await db.borrar('entrenamientos', ent.id); pintarEntrenamientos(); }
-    };
-    contenedor[P.enfoqueDe(ent)].append(li);
+    }
+    if (accion.dataset.a === 'borrar' && confirm(`¿Borrar «${ent.nombre}»?`)) { await db.borrar('entrenamientos', id); toast('Entrenamiento borrado'); pintarEntrenamientos(); }
+    return;
   }
-  await llenarSelectorEntrenamientos(lista);
-}
+  if (usar) {
+    const v = usar.dataset.usar;
+    const ent = await obtenerEnt(v);
+    if (ent) usarEnt(ent);
+  }
+});
+$('#lista-ent').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-usar]')) e.target.click(); });
+// Un solo menú «⋯» abierto a la vez.
+$('#lista-ent').addEventListener('toggle', (e) => {
+  if (e.target.open) $('#lista-ent').querySelectorAll('details[open]').forEach((d) => { if (d !== e.target) d.open = false; });
+}, true);
 
 async function llenarSelectorEntrenamientos(lista) {
-  lista = lista || (await db.listar('entrenamientos'));
+  lista = propios(lista || (await db.listar('entrenamientos')));
+  if (!baseActual.length) await actualizarBase();
   const sel = $('#sel-entrenamiento');
   const previo = sel.value || ajustes.leer('ultimoEnt', '');
   sel.length = 1;
   sel.querySelectorAll('optgroup').forEach((g) => g.remove());
+  // Por sección: primero los base de tu nivel y luego los tuyos.
   for (const g of P.GRUPOS_ENT) {
+    const bases = baseActual.filter((x) => x.enfoque === g.clave);
     const ents = lista.filter((ent) => P.enfoqueDe(ent) === g.clave);
-    if (!ents.length) continue;
+    if (!bases.length && !ents.length) continue;
     const og = document.createElement('optgroup');
     og.label = g.nombre;
+    for (const x of bases) og.append(new Option(x.dificultad ? `${x.nombre} · ${B.nombreDificultad(x.dificultad)}` : x.nombre, x.id));
     for (const ent of ents) og.append(new Option(ent.nombre, ent.id));
     sel.append(og);
   }
@@ -1672,13 +1727,6 @@ async function llenarSelectorEntrenamientos(lista) {
   pintarHoyToca();
 }
 
-$('#btn-plantillas').addEventListener('click', async () => {
-  const existentes = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
-  let n = 0;
-  for (const e of Ent.EJEMPLOS) if (!existentes.has(e.nombre)) { await db.guardar('entrenamientos', structuredClone(e)); n++; }
-  toast(n ? `${n} ejemplos agregados` : 'Los ejemplos ya estaban');
-  pintarEntrenamientos();
-});
 $('#btn-nuevo-ent').addEventListener('click', () => abrirEditor({
   tipo: 'objetivo', nombre: '', objetivo: { metrica: 'distancia', valor: 2000 }, bloques: [],
 }));

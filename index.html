@@ -164,7 +164,18 @@
 
     <!-- PLANES -->
     <section id="vista-entrenamientos" class="vista" aria-labelledby="tab-entrenamientos">
-      <h2>Programa</h2>
+      <div class="planes-pestanas" aria-label="Secciones de Planes">
+        <button type="button" data-pt="entrenamientos" aria-pressed="true">Entrenamientos</button>
+        <button type="button" data-pt="programa" aria-pressed="false">Programa</button>
+      </div>
+      <div id="pt-entrenamientos">
+        <div id="secciones-ent" class="chips secciones-ent" aria-label="Secciones"></div>
+        <p id="base-nivel" class="ayuda"></p>
+        <div id="base-tarjetas" class="base-tarjetas"></div>
+        <div class="mios-cabecera"><h2 id="mios-titulo">Tus entrenamientos</h2><button id="btn-nuevo-ent" class="boton chico">+ Nuevo</button></div>
+        <ul id="lista-ent" class="lista lista-mios"></ul>
+      </div>
+      <div id="pt-programa" hidden>
       <div id="programa-vacio">
         <p class="ayuda">Responde 4 preguntas y la app arma tu plan: elige las sesiones, la intensidad y cómo subir la carga cada semana.</p>
         <div id="asistente" class="asistente">
@@ -211,13 +222,7 @@
         <div class="leyenda cal-leyenda"><span class="c-hecho">Hecho</span><span class="c-perdido">No hecho</span><span class="c-hoy">Hoy</span><span class="c-pendiente">Próximo</span></div>
         <button type="button" id="btn-quitar-programa" class="boton peligro">Quitar programa</button>
       </div>
-
-      <h2>Entrenamientos</h2>
-      <div class="fila-botones">
-        <button id="btn-nuevo-ent" class="boton primario">Nuevo entrenamiento</button>
-        <button id="btn-plantillas" class="boton">Agregar ejemplos</button>
       </div>
-      <ul id="lista-ent" class="lista"></ul>
 
       <form id="editor-ent" class="editor" hidden novalidate>
         <h2 id="editor-titulo">Nuevo entrenamiento</h2>
