@@ -84,6 +84,10 @@
           <button type="button" class="chip" data-rival="perso" aria-pressed="false">A mi medida</button>
         </div>
         <p id="rival-semana" class="ayuda"></p>
+        <label id="ventaja-campo" class="campo" hidden>Ventaja para la carrera
+          <select id="sel-ventaja"></select>
+          <small id="ventaja-ayuda" class="ayuda"></small>
+        </label>
         <div id="perso-panel" class="perso-panel" hidden>
           <label class="campo">Fantasma a mi medida
             <select id="perso-modo">
@@ -283,6 +287,8 @@
           <div id="ficha-figura" class="armario-vista"></div>
           <h2>Atributos</h2>
           <div id="heroe-atributos" class="atributos"></div>
+          <h2>Insignias de la historia</h2>
+          <div id="ficha-insignias" class="insignias"></div>
           <h2>Últimas sesiones</h2>
           <ul id="heroe-sesiones" class="lista heroe-sesiones"></ul>
           <div class="fila-botones"><button id="btn-cambiar-clase" class="boton">Cambiar de clase</button></div>
@@ -304,6 +310,8 @@
         <div id="hp-tienda" class="hp" hidden>
           <p id="tienda-info" class="ayuda"></p>
           <div id="tienda" class="tienda"></div>
+          <h2>Tu bolsa</h2>
+          <ul id="inventario" class="lista misiones"></ul>
         </div>
       </div>
     </section>

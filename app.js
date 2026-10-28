@@ -12,8 +12,9 @@ import * as P from './programa.js';
 import { confeti, tarjetaSesion } from './efectos.js';
 import * as J from './juego.js';
 import * as O from './objetos.js';
+import * as V from './ventajas.js';
 
-const VERSION = '0.12.1';
+const VERSION = '0.13.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -149,6 +150,7 @@ function pintarChips() {
   }
   const semana = J.rivalDeLaSemana(J.lunesDe(Date.now()), leerPersonaje().clase);
   $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}. Los rivales tienen tu rango, uno más o uno menos.`;
+  pintarSelVentaja(sel);
   // Durante la sesión los fantasmas ya están en el agua: se ocultan las opciones.
   $('.fantasmas').hidden = !!sesion;
   const panel = $('#perso-panel');
@@ -162,6 +164,22 @@ function pintarChips() {
   $('#perso-ayuda').textContent = info.ayuda();
   for (const el of panel.querySelectorAll('select, input')) el.disabled = !!sesion;
 }
+// Selector de la ventaja de la tienda: solo con fantasmas, fuera de las pruebas y si tienes alguna.
+function pintarSelVentaja(sel = rivalesElegidos()) {
+  const inv = inventario();
+  const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
+  const campo = $('#ventaja-campo');
+  campo.hidden = !sel.length || !tengo.length;
+  if (campo.hidden) return;
+  const prueba = V.esPrueba(entrenamientoPrevio);
+  const actual = $('#sel-ventaja').value;
+  $('#sel-ventaja').innerHTML = `<option value="">Sin ventaja</option>${tengo.map((x) => `<option value="${x.id}">${x.nombre} (tienes ${inv[x.id]})</option>`).join('')}`;
+  $('#sel-ventaja').value = tengo.some((x) => x.id === actual) ? actual : '';
+  $('#sel-ventaja').disabled = prueba || !!sesion;
+  const x = V.objetoVentaja($('#sel-ventaja').value);
+  $('#ventaja-ayuda').textContent = prueba ? 'En las pruebas y contra los jefes se rema sin ventajas.' : x ? `${x.texto} Se gasta al guardar la sesión.` : 'Una por carrera. Se gasta al guardar la sesión.';
+}
+$('#sel-ventaja').addEventListener('change', () => pintarSelVentaja());
 $('#chips-rival').addEventListener('click', (ev) => {
   const b = ev.target.closest('.chip');
   if (!b || b.disabled) return;
@@ -440,6 +458,21 @@ function medidas() {
   return { t: sesion.t, dist: sesion.dist, paladas: sesion.paladas, split: actual.split, spm: actual.spm };
 }
 
+// Talentos II de tu clase y la ventaja elegida de la bolsa para esta carrera.
+function crearVentaja(ent) {
+  const per = leerPersonaje();
+  const clave = per.clase ? J.claseDe(per.clase).clave : null;
+  const grados = clave ? J.gradosEn(per.arbol?.[clave] || {}, clave, Date.now()) : {};
+  const nombres = clave ? Object.fromEntries(J.talentosDe(clave).map((t) => [t.slot, t.nombre])) : {};
+  let objeto = $('#sel-ventaja').value || null;
+  if (objeto && (V.esPrueba(ent) || !(inventario()[objeto] > 0))) objeto = null;
+  const meta = ent?.objetivo?.metrica === 'distancia' ? ent.objetivo.valor : null;
+  const dur = meta ? null : duracionCarrera();
+  const final = meta ? { meta } : dur ? { duracion: dur } : null;
+  if (objeto === 'ancla' && !final) { toast('El Ancla al rival solo sirve en carreras con final: no se gastará'); objeto = null; }
+  return V.nuevaVentaja({ grados, nombres, ftp: ftp(), objeto, final });
+}
+
 async function iniciarSesion() {
   const idEnt = Number($('#sel-entrenamiento').value) || null;
   entrenamientoActivo = idEnt ? await db.obtener('entrenamientos', idEnt) : null;
@@ -483,6 +516,7 @@ async function iniciarSesion() {
     lento: 0,
   };
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
+  if (rival) sesion.ventaja = crearVentaja(entrenamientoActivo);
   actualizarBotones();
   $('#bloque-actual').hidden = !entrenamientoActivo;
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* opcional */ }
@@ -548,12 +582,20 @@ async function detenerSesion() {
   if (s.rival) {
     const resumen = (r) => ({
       fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, clase: r.clase ?? null, rango: r.rango ?? null,
-      diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)),
+      diferencia: V.diferenciaFinal(s.dist - E.distanciaEn(r.muestras, s.t), s.ventaja),
     });
+    if (s.ventaja && (V.metrosVentaja(s.ventaja) >= 0.5 || s.ventaja.objeto)) {
+      registro.ventaja = { metros: Math.round(V.metrosVentaja(s.ventaja)), talentos: Math.round(s.ventaja.talentos), objeto: s.ventaja.objeto };
+    }
+    if (s.ventaja?.objeto) registro.ventajaUsada = s.ventaja.objeto;
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
   }
   registro.marcas = E.marcasDeSesion(registro);
+  if (registro.ventajaUsada) {
+    const inv = inventario();
+    guardarPersonaje({ inventario: { ...inv, [registro.ventajaUsada]: Math.max(0, (inv[registro.ventajaUsada] || 0) - 1) } });
+  }
   const previas = await db.listar('sesiones');
   const id = await db.guardar('sesiones', registro);
   if (registro.id == null && id != null) registro.id = id;
@@ -616,8 +658,17 @@ function avanzarSesion() {
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
   coachRitmo(t);
+  if (sesion.ventaja) {
+    const n = sesion.ventaja.eventos.length;
+    V.avanzarVentaja(sesion.ventaja, { t, w: actual.watts, dist: sesion.dist });
+    for (const ev of sesion.ventaja.eventos.slice(n)) {
+      const texto = ev.m ? `${ev.nombre}: +${Math.round(ev.m)} m` : `${ev.nombre}: los fantasmas van más lentos 60 s`;
+      toast(texto);
+      hablar(texto, { clave: 'talento', cadaSeg: 15 });
+    }
+  }
   if (sesion.rival && t % 60 === 0) {
-    const dif = Math.round(sesion.dist - E.distanciaEn(sesion.rival.muestras, t));
+    const dif = Math.round(sesion.dist + V.metrosVentaja(sesion.ventaja) - E.distanciaEn(sesion.rival.muestras, t));
     if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
   }
   if (!entrenamientoActivo) return;
@@ -814,7 +865,9 @@ function carreraActual() {
   const rs = sesion.rivales;
   const obj = entrenamientoActivo?.objetivo;
   const meta = obj?.metrica === 'distancia' ? obj.valor : null;
-  const difs = rs.map((r) => sesion.dist - E.distanciaEn(r.muestras, t));
+  const extra = V.metrosVentaja(sesion.ventaja);
+  const miDist = sesion.dist + extra;
+  const difs = rs.map((r) => miDist - E.distanciaEn(r.muestras, t));
   const lugar = 1 + difs.filter((d) => d < -0.5).length;
   const dif = Math.round(difs[0]);
   const r = rs[0];
@@ -826,7 +879,7 @@ function carreraActual() {
 
   // Diferencia en segundos con el primer fantasma: cuánto tardó él en llegar a donde estás tú.
   let l1 = texto;
-  const tr = F.tiempoA(r, sesion.dist);
+  const tr = F.tiempoA(r, miDist);
   if (rs.length === 1 && sesion.dist > 20 && tr != null && Math.abs(dif) >= 1) {
     const seg = Math.round(t - tr);
     if (seg !== 0) l1 = `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} · ${Math.abs(seg)} s`;
@@ -834,17 +887,22 @@ function carreraActual() {
   else if (rs.length > 1) l1 = `${lugar}º de ${rs.length + 1} · ${dif > 0 ? '+' : ''}${dif} m vs. ${quien.replace(/^fantasma /, '')}`;
 
   const v = velocidadReciente();
-  const p = sesion.empezo && t >= 10 ? F.proyectar({ t, dist: sesion.dist, v }, rs, { meta, duracion: duracionCarrera() }) : null;
+  const p = sesion.empezo && t >= 10 ? F.proyectar({ t, dist: miDist, v }, rs, { meta, duracion: duracionCarrera() }) : null;
   let l2 = '';
   if (p?.tipo === 'meta') l2 = `A este ritmo llegas en ${formatoTiempo(Math.round(p.miTiempo))} · ${p.lugar}º de ${p.total}`;
   else if (p?.tipo === 'duracion') {
     const d = Math.round(p.filas[0].diferencia);
     l2 = `Al final: ${Math.round(p.miDist)} m · ${d >= 0 ? '+' : ''}${d} m vs. ${rs.length > 1 ? quien.replace(/^fantasma /, '') : 'fantasma'} · ${p.lugar}º de ${p.total}`;
   }
+  if (extra >= 1) l2 = `${l2 ? `${l2} · ` : ''}Ventaja +${Math.round(extra)} m`;
+  if (sesion.ventaja?.objeto === 'mapa') {
+    const k = V.proximoAceleron(r, t);
+    if (k) l2 = `${l2 ? `${l2} · ` : ''}${(r.nombre || 'Fantasma').split(' (')[0]} acelera en ${k} s`;
+  }
   const estado = {
     t,
     pausa: !!enPausa() || !sesion.empezo,
-    yo: { dist: sesion.dist, v: actual.split > 0 ? 500 / actual.split : 0, spm: actual.spm },
+    yo: { dist: miDist, v: actual.split > 0 ? 500 / actual.split : 0, spm: actual.spm },
     rivales: rs.map((x) => ({ nombre: x.nombre.replace(/^Fantasma /, ''), color: x.color, muestras: x.muestras, spmEn: (tt) => F.spmEn(x, tt) })),
     meta,
     cabecera: [l1, l2],
@@ -1088,6 +1146,7 @@ async function vistaPrevia() {
   const ent = id ? await db.obtener('entrenamientos', id) : null;
   if (sesion) return;
   entrenamientoPrevio = ent;
+  pintarSelVentaja();
   $('#bloque-actual').hidden = !ent;
   const conPerfil = !!ent && Ent.tipoDe(ent) === 'intervalos';
   $('#perfil-vivo').hidden = !conPerfil;
@@ -1632,6 +1691,15 @@ async function pintarHistorial() {
 function leerPersonaje() {
   try { return JSON.parse(ajustes.leer('personaje', 'null')) || {}; } catch { return {}; }
 }
+// La ropa dejó de venderse: se retira y se devuelven las monedas gastadas. El bote de la carrera se queda.
+{
+  const per = leerPersonaje();
+  if (per.clase && !per.tiendaVentajas) {
+    const bote = per.equipo?.bote;
+    ajustes.escribir('personaje', JSON.stringify({ ...per, compras: [], gastado: 0, inventario: {}, equipo: bote ? { bote } : {}, tiendaVentajas: true }));
+  }
+}
+function inventario() { return leerPersonaje().inventario || {}; }
 function guardarPersonaje(cambios) {
   ajustes.escribir('personaje', JSON.stringify({ ...leerPersonaje(), ...cambios }));
 }
@@ -1692,6 +1760,10 @@ function pintarFicha(h, per, clase, sesiones) {
   $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div class="atributo${a.clave === clase.favorito ? ' fav' : ''}">
     <div class="fila"><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''}</b><span class="valor">${h.atributos[a.clave]}</span></div>
     <div class="at-barra"><div style="width:${(100 * h.atributos[a.clave]) / max}%"></div></div><small>${a.detalle}</small></div>`).join('');
+  // Los premios de capítulos y logros son insignias.
+  const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
+  $('#ficha-insignias').innerHTML = premios.map(([id, de]) => `<div class="insignia${h.insignias.has(id) ? '' : ' bloqueada'}"><span class="medalla">${ico('i-trofeo')}</span>
+    <b>${O.objeto(id).nombre}</b><small>${de}</small></div>`).join('');
   const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 5);
   $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
     const g = h.porSesion.get(x.fecha);
@@ -1746,28 +1818,25 @@ function pintarMisiones(h) {
     <ul class="lista misiones">${c.progreso.map((r) => filaMision({ texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
     <div class="jefe ${c.progreso.every((r) => r.valor >= r.meta) ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}${
       c.progreso.every((r) => r.valor >= r.meta) ? ' · ¡ya puedes enfrentarlo!' : ' · se desbloquea al cumplir lo de arriba'}</small></div>
-      <span class="premio">${icoMoneda}${c.monedas} + ${O.objeto(c.objeto).nombre}</span></div>`
+      <span class="premio">${icoMoneda}${c.monedas + J.PREMIO_INSIGNIA} + insignia</span></div>`
     : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
-  $('#mis-hazanas').innerHTML = h.hazanas.map((x) => filaMision({ nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas, premio: x.objeto ? O.objeto(x.objeto).nombre : '', hecha: x.hecha })).join('');
+  $('#mis-hazanas').innerHTML = h.hazanas.map((x) => filaMision({ nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas + (x.objeto ? J.PREMIO_INSIGNIA : 0), premio: x.objeto ? `insignia ${O.objeto(x.objeto).nombre}` : '', hecha: x.hecha })).join('');
 }
 
-function tarjetaObjeto(x, per, { accion = '', extra = '' } = {}) {
-  const prueba = { ...per, equipo: { ...(per.equipo || {}), [x.ranura]: x.id } };
-  const vista = x.ranura === 'bote' ? `<span class="bote-muestra" style="background:${x.color}"></span>` : O.dibujarHeroe(prueba, { tam: 72 });
-  const r = O.RAREZAS[x.rareza];
-  return `<div class="objeto" style="--rareza:${r.color}">${vista}<b>${x.nombre}</b><small>${r.nombre}</small>${extra}${accion}</div>`;
-}
-
+const ICONO_VENTAJA = { salida: 'i-play', viento: 'i-sube', ancla: 'i-baja', segunda: 'i-corazon', estandarte: 'i-trofeo', mapa: 'i-fantasma' };
 function pintarTienda(h, per) {
   const lunes = J.lunesDe(Date.now());
-  const items = J.tiendaSemana(lunes, h.poseidos);
+  const items = J.tiendaSemana(lunes);
+  const inv = per.inventario || {};
   const sig = new Date(`${lunes}T12:00`);
   sig.setDate(sig.getDate() + 7);
-  $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}. Ganas monedas con cada sesión y con las misiones.`;
-  $('#tienda').innerHTML = items.length ? items.map((x) => tarjetaObjeto(x, per, {
-    extra: `<span class="monedas">${icoMoneda}${x.precio}</span>`,
-    accion: `<button type="button" class="boton chico primario" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button>`,
-  })).join('') : '<p class="suave">Ya tienes todo lo de la tienda. ¡Vuelve el lunes!</p>';
+  $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. Ventajas de un solo uso para tus carreras contra fantasmas: una por carrera y nunca en las pruebas. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.`;
+  $('#tienda').innerHTML = items.map((x) => `<div class="objeto ventaja"><span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b><small>${x.texto}</small>
+    <span class="monedas">${icoMoneda}${x.precio}</span>
+    <button type="button" class="boton chico primario" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button></div>`).join('');
+  const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
+  $('#inventario').innerHTML = tengo.length ? tengo.map((x) => `<li><div class="mision-fila"><span><b>${x.nombre}</b> · ${x.texto}</span><span class="recompensa"><span class="xp">×${inv[x.id]}</span></span></div></li>`).join('')
+    : '<li class="vacio">Aún no tienes ventajas. Cómpralas aquí y elígelas en Entrenar antes de la carrera.</li>';
 }
 
 $('#clases').addEventListener('click', (e) => {
@@ -1816,12 +1885,14 @@ $('#tienda').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-comprar]');
   if (!b) return;
   const { per, h } = await estadoHeroe();
-  const x = J.tiendaSemana(J.lunesDe(Date.now()), h.poseidos).find((y) => y.id === b.dataset.comprar);
+  const x = J.tiendaSemana(J.lunesDe(Date.now())).find((y) => y.id === b.dataset.comprar);
   if (!x || h.monedas < x.precio) return;
-  guardarPersonaje({ compras: [...(per.compras || []), x.id], gastado: (per.gastado || 0) + x.precio, equipo: { ...(per.equipo || {}), [x.ranura]: x.id } });
-  confeti(1500);
-  toast(`${x.nombre}: ¡ya es tuyo y te lo pusiste!`);
+  const inv = per.inventario || {};
+  guardarPersonaje({ inventario: { ...inv, [x.id]: (inv[x.id] || 0) + 1 }, gastado: (per.gastado || 0) + x.precio });
+  vibrar(60);
+  toast(`${x.nombre} a tu bolsa. Elígela en Entrenar antes de la carrera.`);
   pintarHeroe();
+  pintarChips();
 });
 
 // XP, monedas y logros que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel o venciste a un jefe.
@@ -1839,7 +1910,7 @@ function pintarXpSesion(s, previas, resumen) {
   const ascenso = subio && J.rangoDe(g.nivelDespues).id !== J.rangoDe(g.nivelAntes).id;
   caja.innerHTML = `<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
     ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.rangoDe(g.nivelDespues).nombre}.` : ''}</span>` : ''}
-    ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(l.tipo === 'jefe' || l.tipo === 'hazana' ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · ganaste <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="recompensa">${l.xp ? `<span class="xp">+${miles(l.xp)} XP</span>` : ''}<span class="monedas">${icoMoneda}${l.monedas}</span></span></div>`).join('')}
+    ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(l.tipo === 'jefe' || l.tipo === 'hazana' ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · insignia <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="recompensa">${l.xp ? `<span class="xp">+${miles(l.xp)} XP</span>` : ''}<span class="monedas">${icoMoneda}${l.monedas}</span></span></div>`).join('')}
     <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
     <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul>
     ${clase ? '' : '<p class="ayuda">Crea tu héroe en la pestaña Héroe para darle vida a esta experiencia.</p>'}`;
@@ -1957,7 +2028,11 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   if (s.tiempoMeta != null) stats.push(['Meta en', formatoTiempo(s.tiempoMeta)]);
   if (s.pctEnRango != null) stats.push(['En rango', `${s.pctEnRango}%`]);
   for (const r of s.rivales || (s.rival ? [s.rival] : [])) {
-    stats.push([s.rivales ? `Vs. ${r.nombre.replace(/^Fantasma /, '')}` : 'Vs. fantasma', `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m`]);
+    stats.push([s.rivales ? `Vs. ${r.nombre.replace(/^Fantasma /, '')}` : 'Vs. fantasma', `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m${s.ventaja ? ' ⚑' : ''}`]);
+  }
+  if (s.ventaja) {
+    const obj = V.objetoVentaja(s.ventaja.objeto);
+    stats.push(['Ventaja ⚑', `${s.ventaja.metros} m${obj ? ` · ${obj.nombre}` : ''}`]);
   }
   $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${k}</span><span class="valor">${v}</span></div>`).join('');
 

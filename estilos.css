@@ -654,3 +654,9 @@ details.seccion[open] { padding-bottom: 8px; }
 
 .recompensa { display: inline-flex; gap: 8px; align-items: center; flex: none; }
 .recompensa .xp { color: var(--acento); font-weight: 700; font-size: 13px; white-space: nowrap; }
+/* Tienda de ventajas */
+.objeto.ventaja { --rareza: var(--borde); border-width: 1px; padding: 12px 10px; gap: 6px; }
+.objeto.ventaja small { color: var(--texto-tenue); font-weight: 500; line-height: 1.3; }
+.objeto.ventaja b { font-size: 14px; }
+.ventaja-ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); color: var(--acento); }
+.ventaja-ico .ico { width: 22px; height: 22px; }

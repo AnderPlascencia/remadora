@@ -71,7 +71,8 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   const prueba = sesion(6, 260, 110, { entrenamiento: 'Prueba 500 m', tiempoMeta: 110, distancia: 500 });
   const e = J.estadoJuego([s1, prueba], { ftp: 200, per: { clase: 'vikingo' }, ahora: Date.UTC(2026, 0, 6, 20) });
   assert.equal(e.capitulosHechos, 1, 'jefe del capítulo 1 vencido');
-  assert.ok(e.poseidos.has('casco-cuernos-oro'));
+  assert.ok(e.insignias.has('casco-cuernos-oro'), 'el premio del capítulo es una insignia');
+  assert.ok(e.logros.find((l) => l.tipo === 'jefe').monedas === 100 + J.PREMIO_INSIGNIA);
   assert.ok(e.logros.some((l) => l.tipo === 'jefe'));
   assert.equal(e.capitulo.n, 2);
   assert.ok(e.monedas >= 100);
@@ -105,8 +106,9 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.equal(remo[1], Math.round(despues.porSesion.get(largo.fecha).detalle[0][1] * 0.08), '+4 % por grado');
   assert.equal(despues.talentosLibres, despues.talentos - 2);
 
-  const tienda = J.tiendaSemana('2026-01-05', new Set());
+  const tienda = J.tiendaSemana('2026-01-05');
   assert.equal(tienda.length, 4);
-  assert.deepEqual(tienda.map((x) => x.rareza), ['rara', 'rara', 'comun', 'comun']);
+  assert.equal(new Set(tienda.map((x) => x.id)).size, 4);
+  assert.deepEqual(tienda, J.tiendaSemana('2026-01-05'), 'igual toda la semana');
   console.log('juego extra OK', e.monedas, e.logros.map((l) => l.texto));
 }

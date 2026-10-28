@@ -3,7 +3,9 @@
 // Nada de esto cambia tus métricas reales: solo el juego.
 import { gradosEn, puntosDeNivel, puntosGastados, talentosDe } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo } from './estadisticas.js';
-import { objeto, OBJETOS, precioDe } from './objetos.js';
+import { objeto } from './objetos.js';
+import { tiendaVentajas } from './ventajas.js';
+export const PREMIO_INSIGNIA = 50;
 
 export const ATRIBUTOS = [
   { clave: 'fuerza', nombre: 'Fuerza', detalle: 'Minutos en zona 4 o más y récords de potencia' },
@@ -94,7 +96,7 @@ export function rivalesPara(retos, { miClase = null, nivel = 1, ftp = 150, lunes
 }
 
 // ---------- Talentos: por clase, en talentos.js ----------
-export { talentosDe, motivoBloqueo, puntosDeNivel, puntosGastados, nombreRama, ramaFavorita, grado, RAMAS, NOMBRE_TIER, NIVEL_REQUERIDO } from './talentos.js';
+export { talentosDe, gradosEn, motivoBloqueo, puntosDeNivel, puntosGastados, nombreRama, ramaFavorita, grado, RAMAS, NOMBRE_TIER, NIVEL_REQUERIDO } from './talentos.js';
 
 // ---------- Misiones ----------
 // La distancia es la fuente principal de XP; las misiones dan variedad con recompensas moderadas:
@@ -306,7 +308,7 @@ function gananciaSesion(s, m, ctx) {
 }
 
 // ---------- Estado completo del juego ----------
-// per = { clase, talentos: { id: fecha }, compras: [id], gastado, equipo, piel }
+// per = { clase, nombre, arbol: { clase: { slot: [fechas] } }, inventario: { id: n }, gastado, equipo }
 export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
   const fav = claseDe(per.clase)?.favorito;
@@ -336,7 +338,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   let capMejores = {};
   const hazanas = new Set();
 
-  const lograr = (fecha, tipo, texto, m, obj, xpExtra = 0) => {
+  // Los premios que antes eran ropa dan ahora una insignia y 50 monedas más.
+  const lograr = (fecha, tipo, texto, m0, obj, xpExtra = 0) => {
+    const m = m0 + (obj ? PREMIO_INSIGNIA : 0);
     monedas += m;
     xp += xpExtra;
     xpSesion += xpExtra;
@@ -483,8 +487,6 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
 
   const nivel = nivelDe(xp);
   const gastados = puntosGastados(arbol);
-  const compras = per.compras || [];
-  const poseidos = new Set([...premios, ...compras]);
   const capitulo = cap < CAPITULOS.length ? {
     n: cap + 1, ...CAPITULOS[cap],
     progreso: CAPITULOS[cap].req.map(([k, v]) => ({ clave: k, texto: REQ_TEXTO[k], meta: v, valor: Math.min(v, Math.round(capAgg[k] * 10) / 10) })),
@@ -502,7 +504,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     logros,
     monedas: monedas - (per.gastado || 0),
     monedasGanadas: monedas,
-    poseidos,
+    insignias: premios,
     diarias: vista(diaHoy),
     semanales: vista(semanaHoy),
     capitulo,
@@ -512,15 +514,6 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
 }
 export const progresoHeroe = (sesiones, { ftp = 0, clase = null } = {}) => estadoJuego(sesiones, { ftp, per: { clase } });
 
-// Tienda de la semana: 2 raras y 2 comunes que aún no tienes, iguales toda la semana.
-export function tiendaSemana(lunes, poseidos) {
-  const r = azar(`t${lunes}`);
-  const toma = (rareza, n) => {
-    const lista = OBJETOS.filter((x) => x.rareza === rareza && !poseidos.has(x.id));
-    const salida = [];
-    while (salida.length < n && lista.length) salida.push(lista.splice(Math.floor(r() * lista.length), 1)[0]);
-    return salida;
-  };
-  return [...toma('rara', 2), ...toma('comun', 2)].map((x) => ({ ...x, precio: precioDe(x) }));
-}
+// Tienda de la semana: 4 de las 6 ventajas, iguales toda la semana.
+export const tiendaSemana = (lunes) => tiendaVentajas(azar(`t${lunes}`));
 export { objeto };
