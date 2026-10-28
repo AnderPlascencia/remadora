@@ -70,8 +70,12 @@
       </div>
 
       <p id="recomendacion" class="recomendacion" hidden></p>
-      <label class="campo">Entrenamiento
-        <select id="sel-entrenamiento"><option value="">Remo libre</option></select>
+      <div id="modo-ent" class="modo-ent" role="radiogroup" aria-label="Tipo de entrenamiento">
+        <button type="button" role="radio" data-modo="libre" aria-checked="true"><b>Remo libre</b><small>Rema a tu aire, sin meta</small></button>
+        <button type="button" role="radio" data-modo="objetivo" aria-checked="false"><b>Por objetivo</b><small>Potencia, ritmo, distancia…</small></button>
+      </div>
+      <label id="campo-ent" class="campo" hidden>Entrenamiento
+        <select id="sel-entrenamiento"><option value="">Elige un entrenamiento</option></select>
       </label>
       <div class="campo fantasmas">
         <span class="etq-campo">Fantasmas <small>(hasta 3)</small></span>

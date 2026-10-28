@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.15.0';
+const VERSION = '0.16.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -472,7 +472,9 @@ pintarChips();
 
 function actualizarBotones() {
   const g = $('#btn-grabar');
-  g.disabled = !sesion && !remadora.conectada;
+  pintarModoEnt();
+  // En «Por objetivo» hay que elegir el entrenamiento antes de empezar.
+  g.disabled = !sesion && (!remadora.conectada || (modoEnt() === 'objetivo' && !$('#sel-entrenamiento').value));
   g.classList.toggle('primario', !sesion);
   g.classList.toggle('peligro', !!sesion);
   g.classList.toggle('lleno', !!sesion);
@@ -1218,6 +1220,7 @@ async function vistaPrevia() {
   const ent = id ? await db.obtener('entrenamientos', id) : null;
   if (sesion) return;
   entrenamientoPrevio = ent;
+  actualizarBotones();
   pintarSelVentaja();
   prepararPronto();
   $('#bloque-actual').hidden = !ent;
@@ -1247,6 +1250,33 @@ async function vistaPrevia() {
 }
 $('#sel-entrenamiento').addEventListener('change', () => { ajustes.escribir('ultimoEnt', $('#sel-entrenamiento').value); vistaPrevia(); });
 
+// Dos modos: Remo libre (sin entrenamiento) o Por objetivo (eliges un entrenamiento de tus planes).
+const modoEnt = () => ($('#sel-entrenamiento').value ? 'objetivo' : ajustes.leer('modoEnt', 'libre'));
+function pintarModoEnt() {
+  const modo = modoEnt();
+  for (const b of $('#modo-ent').querySelectorAll('button')) {
+    b.setAttribute('aria-checked', String(b.dataset.modo === modo));
+    b.disabled = !!sesion;
+  }
+  $('#campo-ent').hidden = modo !== 'objetivo';
+}
+$('#modo-ent').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-modo]');
+  if (!b || sesion) return;
+  const sel = $('#sel-entrenamiento');
+  ajustes.escribir('modoEnt', b.dataset.modo);
+  if (b.dataset.modo === 'libre') {
+    if (sel.value) ajustes.escribir('ultimoEntObjetivo', sel.value);
+    sel.value = '';
+  } else if (!sel.value) {
+    sel.value = ajustes.leer('ultimoEntObjetivo', '');
+    if (!sel.value) sel.value = '';
+  }
+  ajustes.escribir('ultimoEnt', sel.value);
+  vistaPrevia();
+  actualizarBotones();
+});
+
 // ---------- Modo remo ----------
 $('#btn-modo-remo').addEventListener('click', abrirModoRemo);
 $('#mr-salir').addEventListener('click', cerrarModoRemo);
@@ -1257,7 +1287,7 @@ function abrirModoRemo() {
   const intervalos = !!sesion?.bloques || (!sesion && !$('#perfil-vivo').hidden);
   $('#mr-perfil').hidden = !intervalos;
   if (!sesion) {
-    $('#mr-nombre').textContent = $('#sel-entrenamiento').selectedOptions[0]?.textContent || 'Remo libre';
+    $('#mr-nombre').textContent = ($('#sel-entrenamiento').value && $('#sel-entrenamiento').selectedOptions[0]?.textContent) || 'Remo libre';
     $('#mr-meta-texto').textContent = 'Pulsa Iniciar sesión fuera de este modo';
     $('#mr-resta').textContent = '';
     $('#mr-resta-etq').textContent = '';
@@ -1384,7 +1414,15 @@ async function llenarSelectorEntrenamientos(lista) {
   const sel = $('#sel-entrenamiento');
   const previo = sel.value || ajustes.leer('ultimoEnt', '');
   sel.length = 1;
-  for (const ent of lista) sel.add(new Option(ent.nombre, ent.id));
+  sel.querySelectorAll('optgroup').forEach((g) => g.remove());
+  for (const g of P.GRUPOS_ENT) {
+    const ents = lista.filter((ent) => P.enfoqueDe(ent) === g.clave);
+    if (!ents.length) continue;
+    const og = document.createElement('optgroup');
+    og.label = g.nombre;
+    for (const ent of ents) og.append(new Option(ent.nombre, ent.id));
+    sel.append(og);
+  }
   sel.value = previo;
   if (sel.value !== String(previo)) sel.value = '';
   vistaPrevia();
@@ -1837,6 +1875,7 @@ $('#heroe-recomienda').addEventListener('click', async (e) => {
   }
   ajustes.escribir('ultimoEnt', ent ? String(ent.id) : '');
   $('#sel-entrenamiento').value = ent ? String(ent.id) : '';
+  ajustes.escribir('modoEnt', ent ? 'objetivo' : 'libre');
   ajustes.escribir('rivales', JSON.stringify([b.dataset.reto]));
   irA('entrenar');
   pintarChips();
