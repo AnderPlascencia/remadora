@@ -15,7 +15,7 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 
-const VERSION = '0.22.0';
+const VERSION = '0.23.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
