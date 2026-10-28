@@ -10,12 +10,12 @@
 
 // Zonas de potencia como % del FTP.
 export const ZONAS = [
-  { n: 1, nombre: 'Recuperación', min: 40, max: 55 },
-  { n: 2, nombre: 'Resistencia', min: 56, max: 75 },
-  { n: 3, nombre: 'Tempo', min: 76, max: 90 },
-  { n: 4, nombre: 'Umbral', min: 91, max: 105 },
-  { n: 5, nombre: 'VO2 máx', min: 106, max: 120 },
-  { n: 6, nombre: 'Anaeróbica', min: 121, max: 150 },
+  { n: 1, nombre: 'Recuperación', simple: 'Muy suave', min: 40, max: 55 },
+  { n: 2, nombre: 'Resistencia', simple: 'Suave', min: 56, max: 75 },
+  { n: 3, nombre: 'Tempo', simple: 'Moderado', min: 76, max: 90 },
+  { n: 4, nombre: 'Umbral', simple: 'Fuerte', min: 91, max: 105 },
+  { n: 5, nombre: 'VO2 máx', simple: 'Muy fuerte', min: 106, max: 120 },
+  { n: 6, nombre: 'Anaeróbica', simple: 'Máximo', min: 121, max: 150 },
 ];
 
 export function zonaDe(watts, ftp) {

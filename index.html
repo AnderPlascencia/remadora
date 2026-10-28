@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111410">
+  <meta name="theme-color" content="#0B1217">
   <title>Rower</title>
   <link rel="apple-touch-icon" href="rower-192.png">
   <link rel="manifest" href="manifest.webmanifest">
@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
-  <div id="bienvenida" class="bienvenida" aria-hidden="true"><img src="rower-logo.svg" alt="" width="128" height="128"><img class="marca" src="rower-marca.svg" alt="Rower" height="40"><span>Para la remadora NordicTrack RW200</span></div>
+  <div id="bienvenida" class="bienvenida" aria-hidden="true"><svg class="sello" viewBox="0 0 512 512" width="132" height="132"><defs><linearGradient id="bv-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6C978"/><stop offset="1" stop-color="#E9A23B"/></linearGradient><linearGradient id="bv-m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E8FA8"/><stop offset="1" stop-color="#103445"/></linearGradient><clipPath id="bv-c"><circle cx="256" cy="256" r="176"/></clipPath></defs><g clip-path="url(#bv-c)"><circle cx="256" cy="256" r="176" fill="#0B1217"/><circle class="sol" cx="256" cy="262" r="112" fill="url(#bv-s)"/><path d="M60 300 Q120 284 180 300 T300 300 T420 300 T540 300 V460 H60 Z" fill="url(#bv-m)"/><path d="M60 300 Q120 284 180 300 T300 300 T420 300 T540 300" fill="none" stroke="#9AD8E6" stroke-width="8" stroke-linecap="round"/><g fill="#0B1217"><g class="remo r1"><rect x="-13" y="-200" width="26" height="58" rx="13"/><rect x="-9" y="-150" width="18" height="236" rx="5"/><rect x="-14" y="-64" width="28" height="16" rx="4"/><path d="M-9 76 C-36 104 -40 152 -32 198 C-24 218 24 218 32 198 C40 152 36 104 9 76 Z"/></g><g class="remo r2"><rect x="-13" y="-200" width="26" height="58" rx="13"/><rect x="-9" y="-150" width="18" height="236" rx="5"/><rect x="-14" y="-64" width="28" height="16" rx="4"/><path d="M-9 76 C-36 104 -40 152 -32 198 C-24 218 24 218 32 198 C40 152 36 104 9 76 Z"/></g></g></g><circle cx="256" cy="256" r="172" fill="none" stroke="#E9A23B" stroke-width="8"/></svg><img class="marca" src="rower-marca.svg" alt="Rower" height="40"><span>Para la remadora NordicTrack RW200</span></div>
   <!-- Iconos (trazos estilo Lucide, 24×24, línea de 2 px) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
@@ -46,8 +46,12 @@
   </svg>
 
   <header class="barra">
-    <h1><img src="rower-marca.svg" alt="Rower" class="marca" height="24"> <span id="version-barra" class="version"></span></h1>
-    <span id="estado" class="pastilla" role="status" aria-live="polite">Desconectada</span>
+    <h1><img src="rower-marca.svg" alt="Rower" class="marca" height="24"></h1>
+    <div class="barra-acciones">
+      <span id="estado" class="pastilla" role="status" aria-live="polite">Desconectada</span>
+      <button id="btn-banda" class="boton icono barra-boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span class="solo-lector">Pulso</span></button>
+      <button id="btn-conectar" class="boton icono barra-boton"><svg class="ico" aria-hidden="true"><use href="#i-bt"/></svg><span class="solo-lector">Conectar remadora</span></button>
+    </div>
   </header>
 
   <main>
@@ -56,11 +60,6 @@
       <div id="aviso-bt" class="aviso aviso-bt" hidden>
         <span>Este navegador no tiene Bluetooth web: abre la app en Chrome para Android.</span>
         <button type="button" id="btn-demo-aviso" class="boton chico">Probar en modo demo</button>
-      </div>
-
-      <div class="fila-botones">
-        <button id="btn-conectar" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-bt"/></svg><span>Conectar remadora</span></button>
-        <button id="btn-banda" class="boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span>Pulso</span></button>
       </div>
 
       <button type="button" id="linea-nivel" class="linea-nivel" hidden></button>
@@ -156,7 +155,7 @@
         <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
       </div>
 
-      <div class="fila-botones">
+      <div class="fila-botones barra-accion">
         <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
         <button id="btn-pausa" class="boton grande" hidden aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
         <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
@@ -168,13 +167,12 @@
       <div class="metricas">
         <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span><span id="m-zona" class="sub"></span></div>
         <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span><span id="m-parcial" class="sub parcial"></span></div>
-        <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span></div>
+        <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span><span class="sub"><span id="m-mpp">-</span> m/palada</span></div>
         <div class="metrica"><span class="etq">Tiempo</span><span id="m-tiempo" class="valor">0:00</span></div>
         <div class="metrica"><span class="etq">Distancia</span><span id="m-dist" class="valor">0</span><span class="sub">m</span></div>
         <div class="metrica"><span class="etq">Paladas</span><span id="m-paladas" class="valor">0</span></div>
         <div class="metrica"><span class="etq">Calorías</span><span id="m-kcal" class="valor">0</span><span class="sub">kcal est.</span></div>
         <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span><span id="m-fc-zona" class="sub">lpm</span></div>
-        <div class="metrica"><span class="etq">Metros/palada</span><span id="m-mpp" class="valor">-</span><span class="sub">m</span></div>
       </div>
 
       <h2>Últimos 5 minutos</h2>
@@ -399,8 +397,10 @@
 
       <details class="seccion" data-seccion="forma">
       <summary><h2>Forma</h2><span id="forma-resumen" class="seccion-resumen"></span></summary>
+      <div class="solo-avanzado">
       <div class="leyenda"><span class="lcond">Condición</span><span class="lfat">Fatiga</span><span class="lfres">Frescura</span></div>
       <canvas id="grafica-forma" class="grafica baja" role="img" aria-label="Condición, fatiga y frescura de los últimos 60 días"></canvas>
+      </div>
       <p id="forma-texto" class="ayuda"></p>
       </details>
 
@@ -409,7 +409,7 @@
       <div class="segmentado" role="group" aria-label="Tendencia" id="seg-tendencia">
         <button class="activo" data-tend="potencia" aria-pressed="true">Potencia</button>
         <button data-tend="eficiencia" aria-pressed="false">Pulso</button>
-        <button data-tend="tecnica" aria-pressed="false">Técnica</button>
+        <button data-tend="tecnica" aria-pressed="false" class="solo-avanzado">Técnica</button>
       </div>
       <div id="leyenda-tendencia" class="leyenda"></div>
       <canvas id="grafica-tendencia" class="grafica baja" role="img" aria-label="Tendencia por sesión"></canvas>
@@ -433,7 +433,6 @@
 
     <!-- AJUSTES -->
     <section id="vista-ajustes" class="vista" aria-labelledby="tab-ajustes">
-      <div class="tarjeta-version"><span>Versión instalada</span><b id="version-ajustes"></b></div>
       <details class="seccion" data-seccion="perfil" open>
       <summary><h2>Tú</h2></summary>
       <div class="fila-dos">
@@ -446,14 +445,17 @@
       </details>
 
       <details class="seccion" data-seccion="avanzado">
-      <summary><h2>Avanzado</h2></summary>
-      <h3 class="sub-ajustes">Zonas de potencia</h3>
-      <table id="tabla-zonas" class="tabla"></table>
+      <summary><h2>Pulso y zonas</h2></summary>
       <div class="fila-dos">
         <label class="campo">Edad <input id="in-edad" type="number" min="10" max="99" inputmode="numeric" placeholder="ej. 35"></label>
         <label class="campo">Pulso máximo (lpm) <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
       </div>
       <p class="ayuda">Con tu edad se calcula el pulso máximo (220 menos la edad). Solo hace falta si usas banda de pulso.</p>
+      <p class="ayuda">Pulso: sirve cualquier banda o reloj que transmita la frecuencia cardíaca por Bluetooth. En un Huawei Watch activa "Compartir datos de frecuencia cardíaca" en Ajustes del entrenamiento del reloj, empieza un entrenamiento en el reloj y luego toca el corazón de la barra de arriba.</p>
+      <div class="solo-avanzado">
+        <h3 class="sub-ajustes">Zonas de potencia</h3>
+        <table id="tabla-zonas" class="tabla"></table>
+      </div>
       </details>
 
       <details class="seccion" data-seccion="durante">
@@ -477,14 +479,6 @@
       </label>
       <p class="ayuda">Se agregan a los entrenamientos por intervalos que no los traen.</p>
       <label class="interruptor"><input type="checkbox" id="in-pausa-auto"><span>Pausa automática al dejar de remar</span></label>
-      <label class="interruptor"><input type="checkbox" id="in-res-auto"><span>Resistencia automática (experimental)</span></label>
-      <p class="ayuda">Con la resistencia automática, la app cambia el nivel de la consola cuando un intervalo tiene "Nivel" definido. Pruébala primero sin remar fuerte.</p>
-      <div class="fila-botones">
-        <label class="campo crece">Probar nivel
-          <select id="sel-nivel-prueba"></select>
-        </label>
-        <button id="btn-nivel-prueba" class="boton alinear-abajo">Enviar</button>
-      </div>
       </details>
 
       <details class="seccion" data-seccion="apariencia">
@@ -496,6 +490,7 @@
           <option value="contraste">Alto contraste</option>
         </select>
       </label>
+      <label class="interruptor"><input type="checkbox" id="in-avanzado"><span>Datos avanzados<small class="ayuda bloque">Zonas por nombre técnico, carga, W/kg, predicciones, gráfica de forma y tablas por tramo</small></span></label>
       </details>
 
       <details class="seccion" data-seccion="respaldo">
@@ -510,8 +505,15 @@
       </details>
 
       <details class="seccion" data-seccion="conexion">
-      <summary><h2>Conexión y pulso</h2></summary>
-      <p class="ayuda">Pulso: sirve cualquier banda o reloj que transmita la frecuencia cardíaca por Bluetooth. En un Huawei Watch activa "Compartir datos de frecuencia cardíaca" en Ajustes del entrenamiento del reloj, empieza un entrenamiento en el reloj y luego pulsa "Pulso" en Entrenar.</p>
+      <summary><h2>Diagnóstico</h2><span class="seccion-resumen">Si algo no conecta</span></summary>
+      <label class="interruptor"><input type="checkbox" id="in-res-auto"><span>Resistencia automática (experimental)</span></label>
+      <p class="ayuda">Con la resistencia automática, la app cambia el nivel de la consola cuando un intervalo tiene "Nivel" definido. Pruébala primero sin remar fuerte.</p>
+      <div class="fila-botones">
+        <label class="campo crece">Probar nivel
+          <select id="sel-nivel-prueba"></select>
+        </label>
+        <button id="btn-nivel-prueba" class="boton alinear-abajo">Enviar</button>
+      </div>
       <label class="campo">Variante del protocolo <select id="sel-variante"></select></label>
       <p class="ayuda">Si al conectar no aparecen datos, desconecta, cambia la variante y vuelve a conectar.</p>
       <div class="fila-botones">
@@ -524,6 +526,7 @@
         <pre id="log" class="log"></pre>
       </details>
       </details>
+      <p class="pie-version">Rower <b id="version-ajustes"></b> · para la NordicTrack RW200</p>
     </section>
   </main>
 

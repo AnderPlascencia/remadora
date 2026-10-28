@@ -1,7 +1,7 @@
 // Guarda la app en caché para que abra sin conexión. Cambia VERSION al publicar cambios.
-const VERSION = 'remadora-0.22.0';
+const VERSION = 'remadora-0.23.0';
 const ARCHIVOS = ['./', 'index.html', 'estilos.css', 'app.js', 'remadora.js', 'protocolo.js', 'variantes.js',
-  'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'efectos.js', 'juego.js', 'talentos.js', 'ventajas.js', 'base.js', 'objetos.js', 'manifest.webmanifest', 'rower-logo.svg', 'rower-marca.svg', 'rower-marca-clara.svg', 'rower-192.png', 'rower-512.png'];
+  'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'efectos.js', 'juego.js', 'talentos.js', 'ventajas.js', 'base.js', 'objetos.js', 'manifest.webmanifest', 'rower-logo.svg', 'rower-marca.svg', 'rower-marca-clara.svg', 'rower-192.png', 'rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
 
 // Ilustraciones de los héroes (5 clases × 9 rangos, figura y retrato): ~1.7 MB. Se guardan aparte para que,
 // si alguna falla, la app igual quede instalada; así los rangos que aún no has visto también salen sin conexión.
