@@ -787,7 +787,63 @@ async function detenerSesion() {
   vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
+  borrarSesionEnCurso();
   if (!s || s.muestras.length < 10) { toast('Sesión muy corta: no se guardó'); return; }
+  await guardarSesionTerminada(s, ent);
+}
+
+// ---------- Sesión en curso a salvo ----------
+// Android puede cerrar la app en segundo plano o con el gesto de atrás: cada 10 s remados (y al ocultarse)
+// se copia lo remado para ofrecer guardarlo al volver a abrir.
+const CLAVE_EN_CURSO = 'sesionEnCurso';
+function guardarSesionEnCurso() {
+  const s = sesion;
+  if (!s || s.muestras.length < 10) return;
+  const ent = entrenamientoActivo;
+  const copia = {
+    inicio: s.inicio, t: s.t, dist: s.dist, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
+    segConMeta: s.segConMeta, segEnRango: s.segEnRango, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
+    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, guardada: Date.now(),
+    ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
+  };
+  try { localStorage.setItem(CLAVE_EN_CURSO, JSON.stringify(copia)); } catch { /* sin espacio: se reintenta en 10 s */ }
+}
+function borrarSesionEnCurso() {
+  try { localStorage.removeItem(CLAVE_EN_CURSO); } catch { /* nada */ }
+}
+function leerSesionEnCurso() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_EN_CURSO) || 'null'); } catch { return null; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') guardarSesionEnCurso(); });
+window.addEventListener('pagehide', guardarSesionEnCurso);
+
+// Al abrir la app con una sesión que quedó a medias, se ofrece guardarla (sin carrera: los fantasmas no se guardan).
+function ofrecerRecuperar() {
+  const s = leerSesionEnCurso();
+  if (!s || sesion) return;
+  if (!Array.isArray(s.muestras) || s.muestras.length < 10) { borrarSesionEnCurso(); return; }
+  const fin = s.muestras.at(-1);
+  const f = new Date(s.inicio);
+  const cuando = `${f.toLocaleDateString('es-MX', { weekday: 'long' })} a las ${f.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })}`;
+  $('#recuperar-texto').textContent = `${s.entrenamiento || 'Remo libre'} del ${cuando}: ${formatoTiempo(fin.t)} y ${miles(fin.dist)} m. La app se cerró antes de terminarla.`;
+  $('#recuperar-dialogo').hidden = false;
+  $('#recuperar-guardar').focus();
+}
+$('#recuperar-guardar').addEventListener('click', async () => {
+  const s = leerSesionEnCurso();
+  $('#recuperar-dialogo').hidden = true;
+  borrarSesionEnCurso();
+  if (s) await guardarSesionTerminada(s, s.ent, { recuperada: true });
+});
+$('#recuperar-descartar').addEventListener('click', () => {
+  if (!confirm('¿Descartar la sesión sin guardar? No se puede deshacer.')) return;
+  $('#recuperar-dialogo').hidden = true;
+  borrarSesionEnCurso();
+  toast('Sesión descartada');
+});
+
+// Arma el registro de una sesión terminada (o recuperada tras cerrar la app), lo guarda y abre su resumen.
+async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   const m = s.muestras;
   const prom = (k) => Math.round(m.reduce((a, x) => a + x[k], 0) / m.length);
   const conSplit = m.filter((x) => x.split > 0);
@@ -798,11 +854,11 @@ async function detenerSesion() {
     kcal: Math.round(s.kcal),
     paladas: Math.round(s.paladas),
     wattsProm: prom('w'),
-    wattsMax: Math.max(...m.map((x) => x.w)),
+    wattsMax: m.reduce((a, x) => Math.max(a, x.w), 0),
     spmProm: prom('spm'),
     splitProm: conSplit.length ? Math.round(conSplit.reduce((a, x) => a + x.split, 0) / conSplit.length) : 0,
     fcProm: m.some((x) => x.fc) ? Math.round(m.filter((x) => x.fc).reduce((a, x) => a + x.fc, 0) / m.filter((x) => x.fc).length) : 0,
-    fcMax: Math.max(0, ...m.map((x) => x.fc || 0)),
+    fcMax: m.reduce((a, x) => Math.max(a, x.fc || 0), 0),
     entrenamiento: s.entrenamiento,
     tiempoMeta: s.tiempoMeta,
     delPrograma: delProgramaHoy(s),
@@ -828,7 +884,10 @@ async function detenerSesion() {
     const metaCarrera = ent?.objetivo?.metrica === 'distancia' ? ent.objetivo.valor : null;
     // En una carrera a distancia manda quién cruzó primero: lo remado después de la meta («Seguir remando»)
     // no adelanta a fantasmas que ya llegaron y se detuvieron.
+    // Sin meta de distancia (intervalos o tiempo), la carrera se cierra al completar el plan: los fantasmas
+    // se detienen ahí, así que los metros de «Seguir remando» tampoco cuentan.
     const metrosVs = (r) => {
+      if (metaCarrera == null && s.tiempoMeta != null) return E.distanciaEn(m, s.tiempoMeta) - E.distanciaEn(r.muestras, s.tiempoMeta);
       if (metaCarrera == null || s.tiempoMeta == null) return s.dist - E.distanciaEn(r.muestras, s.t);
       const tr = F.tiempoA(r, metaCarrera);
       if (tr != null && tr < s.tiempoMeta) return E.distanciaEn(m, tr) - metaCarrera;
@@ -868,7 +927,7 @@ async function detenerSesion() {
   if (porPulso) Object.assign(registro, { rpe: porPulso.rpe, rpeFuente: 'pulso', rpePct: porPulso.pct });
   if (porPulso) await db.guardar('sesiones', registro);
   const recs = E.nuevosRecords(registro, previas);
-  hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
+  if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
   pintarHoy();
   pintarLineaNivel();
@@ -926,6 +985,7 @@ function avanzarSesion() {
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
   coachRitmo(t);
+  if (t % 10 === 0) guardarSesionEnCurso();
   if (sesion.ventaja) {
     const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
     const detras = sesion.rivales.some((r) => E.distanciaEn(r.muestras, t) > miDist);
@@ -1224,7 +1284,10 @@ function carreraActual() {
   const miDist = sesion.dist + extra;
   // Después de cruzar la meta el puesto queda fijo: cuenta quién llegó primero, no lo remado de más.
   const tm = meta != null ? sesion.tiempoMeta : null;
+  // Sin meta de distancia, el plan completo cierra la carrera: lo que remes después no cuenta.
+  const cierre = meta == null && entrenamientoActivo ? sesion.tiempoMeta : null;
   const difs = rs.map((r) => {
+    if (cierre != null) return E.distanciaEn(sesion.muestras, cierre) + extra - E.distanciaEn(r.muestras, cierre);
     if (tm == null) return miDist - E.distanciaEn(r.muestras, t);
     const tr = F.tiempoA(r, meta);
     return tr != null && tr < tm ? E.distanciaEn(sesion.muestras, tr) + extra - meta : meta + extra - E.distanciaEn(r.muestras, tm);
@@ -1620,8 +1683,7 @@ $('#btn-modo-remo').addEventListener('click', abrirModoRemo);
 $('#mr-salir').addEventListener('click', cerrarModoRemo);
 
 function abrirModoRemo() {
-  const mr = $('#modo-remo');
-  mr.hidden = false;
+  $('#modo-remo').hidden = false;
   const intervalos = !!sesion?.bloques || (!sesion && !!entrenamientoPrevio && Ent.tipoDe(entrenamientoPrevio) === 'intervalos');
   $('#mr-perfil').hidden = !intervalos;
   if (!sesion) {
@@ -1634,7 +1696,8 @@ function abrirModoRemo() {
   actualizarBotones();
   const vistas = ajustes.num('ayudaGestos', 0);
   if (vistas < 3) { ajustes.escribir('ayudaGestos', vistas + 1); toast('Doble toque: pausa · Desliza: cambia la vista'); }
-  try { mr.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {}); } catch { /* opcional */ }
+  // Pantalla completa sobre todo el documento: así el aviso de fin, los mensajes y el confeti siguen viéndose encima.
+  try { document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {}); } catch { /* opcional */ }
   pintar();
 }
 
@@ -3239,12 +3302,34 @@ function cerrarHoja() {
 }
 $('#hoja-cerrar').addEventListener('click', cerrarHoja);
 $('#hoja').addEventListener('click', (e) => { if (e.target === $('#hoja')) cerrarHoja(); });
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
-  if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
+// Cierra lo que esté encima (detalle, hoja, modo remo). Devuelve false si no había nada abierto.
+function cerrarLoDeEncima() {
+  if (!$('#fin-dialogo').hidden) cerrarFin();
+  else if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
   else if (!$('#hoja').hidden) cerrarHoja();
   else if (!$('#modo-remo').hidden) cerrarModoRemo();
-});
+  else return false;
+  return true;
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarLoDeEncima(); });
+
+// Botón Atrás de Android: cierra lo de encima o vuelve a Entrenar en vez de salir de la app.
+// Con una sesión en marcha nunca sale; sin ella, sale al pulsar Atrás dos veces seguidas.
+{
+  let avisoSalir = 0;
+  history.replaceState({ remadora: 'base' }, '');
+  history.pushState({ remadora: 'guarda' }, '');
+  window.addEventListener('popstate', () => {
+    const bloqueo = !$('#inicio').hidden || !$('#recuperar-dialogo').hidden;
+    if (!bloqueo && !cerrarLoDeEncima()) {
+      if (!vistaActiva('entrenar')) irA('entrenar');
+      else if (sesion) toast('Sesión en marcha: termínala antes de salir');
+      else if (Date.now() - avisoSalir > 2500) { avisoSalir = Date.now(); toast('Pulsa Atrás otra vez para salir', 2500); }
+      else { history.back(); return; }
+    }
+    history.pushState({ remadora: 'guarda' }, '');
+  });
+}
 
 $('#btn-borrar').addEventListener('click', async () => {
   if (sesionAbierta && confirm('¿Borrar esta sesión?')) {
@@ -3412,7 +3497,7 @@ async function terminarInicio({ saltar = false } = {}) {
   if (texto) toast(texto, 4000);
 }
 (async () => {
-  if (ajustes.si('inicioHecho', false)) return;
+  if (ajustes.si('inicioHecho', false)) { ofrecerRecuperar(); return; }
   // Solo para quien empieza de cero: con héroe o sesiones guardadas, ya pasó por aquí.
   if (leerPersonaje().clase || (await db.listar('sesiones')).length) { ajustes.escribir('inicioHecho', '1'); return; }
   pintarInicio();
