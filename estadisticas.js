@@ -391,3 +391,16 @@ export function ftpSugerido(sesion) {
   const p20 = mejorPotencia(sesion.muestras || [], 1200);
   return p20 ? Math.round(p20 * 0.95) : null;
 }
+
+// Metros nuevos según el contador de distancia de la consola, leído una vez por segundo.
+// Se protege de lecturas falsas (por ejemplo al pausar, la consola puede mandar 0 y luego volver a su cifra):
+//  - si el contador baja a casi 0, la consola se reinició y se cuenta desde ahí;
+//  - si baja a otra cifra, o sube más de lo que se puede remar en un segundo, no suma nada y solo se resincroniza.
+export const MAX_M_POR_SEGUNDO = 25;
+export function metrosNuevos(previa, lectura) {
+  if (lectura == null) return 0;
+  if (previa == null) return 0;
+  const d = lectura - previa;
+  if (d >= 0) return d <= MAX_M_POR_SEGUNDO ? d : 0;
+  return lectura <= MAX_M_POR_SEGUNDO ? lectura : 0;
+}

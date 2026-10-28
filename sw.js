@@ -1,5 +1,5 @@
 // Guarda la app en caché para que abra sin conexión. Cambia VERSION al publicar cambios.
-const VERSION = 'remadora-0.19.0';
+const VERSION = 'remadora-0.19.1';
 const ARCHIVOS = ['./', 'index.html', 'estilos.css', 'app.js', 'remadora.js', 'protocolo.js', 'variantes.js',
   'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'efectos.js', 'juego.js', 'talentos.js', 'ventajas.js', 'objetos.js', 'manifest.webmanifest', 'rower-logo.svg', 'rower-marca.svg', 'rower-192.png', 'rower-512.png'];
 

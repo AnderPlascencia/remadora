@@ -411,7 +411,7 @@ textarea { font: inherit; color: var(--texto); background: var(--panel); border:
 .tabla td.ok { color: var(--exito); font-weight: 700; }
 .tabla td.mal { color: var(--mal-texto); font-weight: 700; }
 .lista .rpe-chip { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 0 8px; background: var(--panel-2); color: var(--texto-suave); margin-left: 6px; }
-.grafica.carrera { height: 280px; margin-bottom: 4px; cursor: pointer; background: #0C0F0A; touch-action: manipulation; }
+.grafica.carrera { height: 320px; scroll-margin-top: 58px; margin-bottom: 4px; cursor: pointer; background: #0C0F0A; touch-action: manipulation; }
 .grafica.carrera[hidden] { display: none; }
 #mr-vista .ico-txt { font-weight: 800; font-size: 13px; }
 .modo-remo.vista-carrera .mr-rival { display: none; }
@@ -743,3 +743,8 @@ details.seccion[open] { padding-bottom: 8px; }
 .p3 .podio-escalon { height: 34px; background: #9A3412; color: #FFEDD5; }
 .podio-resto { margin: 6px 0 0; color: var(--texto-suave); font-size: .9rem; }
 .podio-xp { margin: 8px 0 0; font-weight: 700; color: var(--primario-claro); }
+
+/* Horizontal en teléfono: la carrera ocupa el alto libre entre la barra de arriba y la de abajo. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .grafica.carrera { height: max(200px, calc(100dvh - var(--nav) - 64px)); }
+}

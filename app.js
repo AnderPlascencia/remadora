@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.19.0';
+const VERSION = '0.19.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -668,6 +668,10 @@ async function iniciarSesion() {
   else hablar(`Sesión iniciada${contra}`);
   if (ajustes.si('modoAuto', false)) abrirModoRemo();
   pintar();
+  // En horizontal la carrera no cabe junto a los botones: se lleva a la vista al empezar.
+  if (hayCarrera() && matchMedia('(orientation: landscape) and (max-height: 520px)').matches) {
+    requestAnimationFrame(() => $('#carrera').scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  }
 }
 
 async function detenerSesion() {
@@ -783,8 +787,9 @@ function avanzarSesion() {
   // Distancia acumulada aunque la consola reinicie su contador (por ejemplo tras reconectar).
   if (actual.distancia != null) {
     if (sesion.distPrevia == null) sesion.distPrevia = actual.distancia;
-    const d = actual.distancia - sesion.distPrevia;
-    sesion.dist += d >= 0 ? d : actual.distancia;
+    const m = E.metrosNuevos(sesion.distPrevia, actual.distancia);
+    if (m === 0 && actual.distancia !== sesion.distPrevia) agregarLog(`distancia ignorada: ${sesion.distPrevia} → ${actual.distancia} m`);
+    sesion.dist += m;
     sesion.distPrevia = actual.distancia;
   }
 
@@ -1079,6 +1084,7 @@ function carreraActual() {
         t, pausa: !!enPausa() || !sesion.empezo, yo: { dist: sesion.dist, v: actual.split > 0 ? 500 / actual.split : 0, spm: actual.spm },
         rivales: [], referencias: refs, meta: entrenamientoActivo?.objetivo?.metrica === 'distancia' ? entrenamientoActivo.objetivo.valor : null,
         cabecera: [texto, refs.length > 1 ? vsRef : ''], tono,
+        reloj: relojCarrera(entrenamientoActivo?.objetivo?.metrica === 'distancia' ? entrenamientoActivo.objetivo.valor : null, velocidadReciente(), null),
         ritmo: sesion.ritmo ? { v: 500 / sesion.ritmo, etiqueta: `Ritmo ${formatoSplit(sesion.ritmo)}` } : null,
         yoColor: O.objeto(leerPersonaje().equipo?.bote)?.color || null,
       },
@@ -1110,11 +1116,7 @@ function carreraActual() {
   const v = velocidadReciente();
   const p = sesion.empezo && t >= 10 ? F.proyectar({ t, dist: miDist, v }, rs, { meta, duracion: duracionCarrera() }) : null;
   let l2 = '';
-  if (p?.tipo === 'meta') l2 = `A este ritmo llegas en ${formatoTiempo(Math.round(p.miTiempo))} · ${p.lugar}º de ${p.total}`;
-  else if (p?.tipo === 'duracion') {
-    const d = Math.round(p.filas[0].diferencia);
-    l2 = `Al final: ${Math.round(p.miDist)} m · ${d >= 0 ? '+' : ''}${d} m vs. ${rs.length > 1 ? quien.replace(/^fantasma /, '') : 'fantasma'} · ${p.lugar}º de ${p.total}`;
-  }
+  if (p?.tipo === 'duracion') l2 = `Al final ≈ ${miles(Math.round(p.miDist))} m`;
   if (extra >= 1) l2 = `${l2 ? `${l2} · ` : ''}Ventaja +${Math.round(extra)} m`;
   if (vsRef) l2 = `${l2 ? `${l2} · ` : ''}${vsRef}`;
   const estado = {
@@ -1130,6 +1132,7 @@ function carreraActual() {
     meta,
     cabecera: [l1, l2],
     lugar, total: rs.length + 1, cercanos: cercanos(rs, difs, miDist, t),
+    reloj: relojCarrera(meta, v, p),
     yoClase: J.claseDe(leerPersonaje().clase)?.clave || null,
     yoRetrato: sesion.retrato,
     ventajaM: extra,
@@ -1139,6 +1142,20 @@ function carreraActual() {
     yoColor: O.objeto(leerPersonaje().equipo?.bote)?.color || null,
   };
   return { texto, tono, estado, proyeccion: p };
+}
+
+// Tiempo que llevas y el que falta a tu ritmo actual (con tus metros reales, sin la ventaja).
+function relojCarrera(meta, v, p) {
+  const t = sesion.t;
+  let falta = null;
+  if (meta) {
+    if (sesion.dist >= meta) falta = 0;
+    else if (sesion.empezo && t >= 10 && v > 0) falta = Math.round((meta - sesion.dist) / v);
+  } else {
+    const dur = duracionCarrera();
+    if (dur && entrenamientoActivo) falta = Math.max(0, dur - t);
+  }
+  return { lleva: t, falta, lugar: p?.lugar ?? null, total: p?.total ?? null, porRitmo: !!meta };
 }
 
 // Rival justo delante y justo detrás de ti, con la diferencia en metros y en segundos.

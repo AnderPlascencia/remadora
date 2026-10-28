@@ -182,7 +182,7 @@ export function pintarCarrera(c, ahora = performance.now()) {
   if (!p) return;
   const datos = interpolar(c, ahora);
   const arriba = altoCabecera(c);
-  if (c.modo === '3d') pintar3d(c, p, datos);
+  if (c.modo === '3d') pintar3d(c, p, datos, arriba);
   else pintar2d(c, p, datos, arriba);
   sprintFinal(c, p, datos, arriba);
   avisos(c, p, datos, arriba);
@@ -209,27 +209,87 @@ function insignia(c, { ctx, ancho }) {
 
 // Alto de la cabecera más el minimapa: la pista empieza debajo.
 const MINIMAPA = 16;
+const ancha = (c) => (c.canvas.clientWidth || 0) >= 480;
 function altoCaja(c) {
   const e = c.estado;
-  if (e.lugar) return e.cabecera?.[1] ? 60 : 46;
-  return e.cabecera?.[1] ? 48 : 34;
+  // En pantallas anchas (horizontal) el reloj y la línea extra van a la derecha: la cabecera queda en dos filas.
+  if (ancha(c)) return e.lugar || e.cabecera?.[1] ? 48 : 30;
+  const extra = e.cabecera?.[1] ? 15 : 0;
+  const reloj = e.reloj ? 20 : 0;
+  return (e.lugar ? 48 : 30) + reloj + extra;
 }
 const altoCabecera = (c) => altoCaja(c) + MINIMAPA;
 
 // Recorta un texto para que quepa en el ancho dado.
 function cabe(ctx, txt, max) {
+  if (max <= 0) return '';
   if (ctx.measureText(txt).width <= max) return txt;
-  while (txt.length > 4 && ctx.measureText(`${txt}…`).width > max) txt = txt.slice(0, -1);
+  while (txt.length > 1 && ctx.measureText(`${txt}…`).width > max) txt = txt.slice(0, -1);
   return `${txt}…`;
+}
+
+const reloj = (s) => {
+  const seg = Math.max(0, Math.round(s));
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  const ss = String(seg % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+};
+
+// Escribe trozos de texto con su propio estilo uno tras otro; devuelve el ancho total.
+function trozos(ctx, partes, x, y, medir = false) {
+  let w = 0;
+  for (const [txt, fuente, color] of partes) {
+    ctx.font = fuente;
+    if (!medir) { ctx.fillStyle = color; ctx.fillText(txt, x + w, y); }
+    w += ctx.measureText(txt).width;
+  }
+  return w;
+}
+
+function partesReloj(r) {
+  const p = [['⏱ ', '700 13px system-ui, sans-serif', '#CBD5E1'], [reloj(r.lleva), '800 15px system-ui, sans-serif', '#F8FAFC']];
+  if (r.falta != null) {
+    p.push(['   faltan ', '600 12px system-ui, sans-serif', '#CBD5E1']);
+    p.push([`${r.porRitmo ? '≈' : ''}${reloj(r.falta)}`, '800 15px system-ui, sans-serif', '#FDE047']);
+  }
+  if (r.lugar && r.falta) p.push([`  · llegas ${r.lugar}º`, '600 12px system-ui, sans-serif', '#CBD5E1']);
+  return p;
+}
+
+// En horizontal: reloj y línea extra alineados a la derecha. Devuelve hasta dónde puede llegar lo de la izquierda.
+function ladoDerecho(c, ctx, ancho, l2) {
+  const e = c.estado;
+  let izq = ancho - 82;
+  if (e.reloj) {
+    const partes = partesReloj(e.reloj);
+    const w = trozos(ctx, partes, 0, 0, true);
+    izq = Math.min(izq, ancho - 82 - w - 10);
+    trozos(ctx, partes, ancho - 82 - w, 20);
+  }
+  if (l2) {
+    ctx.font = '600 11px system-ui, sans-serif';
+    const max = Math.max(120, ancho * 0.45);
+    const txt = cabe(ctx, l2, max);
+    const w = ctx.measureText(txt).width;
+    ctx.fillStyle = '#E2E8F0';
+    ctx.textAlign = 'left';
+    ctx.fillText(txt, ancho - 10 - w, 40);
+    izq = Math.min(izq, ancho - 10 - w - 10);
+  }
+  return izq;
 }
 
 function cabecera(c, { ctx, ancho }) {
   const e = c.estado;
   const [l1, l2] = e.cabecera || [];
   const alto = altoCaja(c);
-  ctx.fillStyle = 'rgba(2, 6, 23, 0.72)';
+  ctx.fillStyle = 'rgba(2, 6, 23, 0.78)';
   ctx.fillRect(0, 0, ancho, alto + MINIMAPA);
   const color = { adelante: '#4ADE80', atras: '#FCA5A5' }[e.tono] || '#F8FAFC';
+  const insigniaW = 74;
+  let y = 0;
+  ctx.textAlign = 'left';
   if (e.lugar) {
     // Lugar en grande a la izquierda; a la derecha, el rival de delante y el de detrás.
     ctx.textAlign = 'center';
@@ -239,45 +299,56 @@ function cabecera(c, { ctx, ancho }) {
     ctx.font = '600 11px system-ui, sans-serif';
     ctx.fillStyle = '#CBD5E1';
     ctx.fillText(`de ${e.total}`, 30, 42);
-    const filas = e.cercanos || [];
     ctx.textAlign = 'left';
+    const filas = e.cercanos || [];
+    // Las filas llegan como mucho hasta la pastilla de la esquina (o hasta el reloj en horizontal).
+    let derecha = ancho - insigniaW - 8;
+    if (ancha(c)) derecha = ladoDerecho(c, ctx, ancho, l2);
     filas.forEach((f, i) => {
-      const y = filas.length === 1 ? 27 : 19 + i * 17;
-      let x = 64;
-      ctx.font = '700 12px system-ui, sans-serif';
-      ctx.fillStyle = f.delante ? '#FCA5A5' : '#4ADE80';
-      const flecha = f.delante ? '▲' : '▼';
-      ctx.fillText(flecha, x, y);
-      x += ctx.measureText(flecha).width + 5;
-      ctx.fillStyle = f.color;
-      ctx.fillText(f.nombre, x, y);
-      x += ctx.measureText(f.nombre).width + 6;
+      const fy = filas.length === 1 ? 27 : 19 + i * 18;
+      const num = `${f.m ? (f.delante ? '−' : '+') : ''}${f.m} m${f.seg != null && f.m >= 1 ? ` · ${f.seg} s` : ''}`;
+      const flecha = f.delante ? '▲ ' : '▼ ';
       ctx.font = '800 13px system-ui, sans-serif';
-      ctx.fillStyle = '#F8FAFC';
-      const num = `${f.delante ? '−' : '+'}${f.m} m${f.seg != null && f.m >= 1 ? ` · ${f.seg} s` : ''}`;
-      ctx.fillText(num, x, y);
-      x += ctx.measureText(num).width + 6;
+      const wNum = ctx.measureText(num).width;
       ctx.font = '600 11px system-ui, sans-serif';
-      ctx.fillStyle = '#94A3B8';
-      ctx.fillText(f.delante ? 'delante' : 'detrás', x, y);
+      const palabra = f.delante ? ' delante' : ' detrás';
+      const wPal = ctx.measureText(palabra).width;
+      ctx.font = '700 12px system-ui, sans-serif';
+      const wFl = ctx.measureText(flecha).width;
+      const libre = derecha - 64 - wFl - wNum - 6;
+      const conPalabra = ctx.measureText(f.nombre).width + wPal <= libre;
+      const nombre = cabe(ctx, f.nombre, conPalabra ? libre - wPal : libre);
+      trozos(ctx, [
+        [flecha, '700 12px system-ui, sans-serif', f.delante ? '#FCA5A5' : '#4ADE80'],
+        [`${nombre} `, '700 12px system-ui, sans-serif', f.color],
+        [` ${num}`, '800 13px system-ui, sans-serif', '#F8FAFC'],
+        [conPalabra ? palabra : '', '600 11px system-ui, sans-serif', '#94A3B8'],
+      ], 64, fy);
     });
-    if (l2) {
-      ctx.font = '600 11px system-ui, sans-serif';
-      ctx.fillStyle = '#E2E8F0';
-      ctx.textAlign = 'center';
-      ctx.fillText(cabe(ctx, l2, ancho - 16), ancho / 2, 55);
-    }
+    y = 48;
+  } else if (l1) {
+    ctx.textAlign = 'center';
+    ctx.font = '800 16px system-ui, sans-serif';
+    ctx.fillStyle = color;
+    ctx.fillText(cabe(ctx, l1, ancho - 2 * insigniaW - 16), ancho / 2, 21);
+    y = 30;
+  }
+  ctx.textAlign = 'left';
+  if (ancha(c)) {
+    if (!e.lugar) ladoDerecho(c, ctx, ancho, l2);
     return;
   }
-  const grande = 18;
-  ctx.textAlign = 'center';
-  ctx.font = `800 ${grande}px system-ui, sans-serif`;
-  ctx.fillStyle = color;
-  if (l1) ctx.fillText(cabe(ctx, l1, ancho - 150), ancho / 2, grande + 6);
+  if (e.reloj) {
+    const partes = partesReloj(e.reloj);
+    const w = trozos(ctx, partes, 0, 0, true);
+    trozos(ctx, partes, Math.max(8, (ancho - w) / 2), y + 14);
+    y += 20;
+  }
   if (l2) {
-    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.font = '600 11px system-ui, sans-serif';
     ctx.fillStyle = '#E2E8F0';
-    ctx.fillText(cabe(ctx, l2, ancho - 16), ancho / 2, grande + 23);
+    ctx.textAlign = 'center';
+    ctx.fillText(cabe(ctx, l2, ancho - 16), ancho / 2, y + 10);
   }
 }
 
@@ -324,16 +395,25 @@ function sprintFinal(c, { ctx, ancho, alto }, { falta, sprint, t }, arriba) {
   if (sprint) {
     const late = sinMovimiento ? 0.5 : 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
     ctx.strokeStyle = `rgba(239,68,68,${0.35 + 0.35 * late})`;
-    ctx.lineWidth = 5;
-    ctx.strokeRect(2.5, arriba + 2.5, ancho - 5, alto - arriba - 5);
-    ctx.textAlign = 'center';
-    ctx.font = `900 ${Math.round(Math.min(72, alto * 0.24))}px system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.30)';
-    const y = arriba + (alto - arriba) * 0.55;
-    ctx.fillText(`${Math.ceil(falta)} m`, ancho / 2, y);
-    ctx.font = '800 12px system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(252,165,165,0.9)';
-    ctx.fillText('SPRINT FINAL', ancho / 2, y - Math.min(72, alto * 0.24) * 0.85);
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, arriba + 2, ancho - 4, alto - arriba - 4);
+    // Contador del sprint en una pastilla arriba al centro, sin tapar los botes.
+    const txt = `${Math.ceil(falta)} m`;
+    ctx.font = '900 22px system-ui, sans-serif';
+    const w = ctx.measureText(txt).width + 64;
+    const y = arriba + 8;
+    ctx.fillStyle = `rgba(127,29,29,${0.82 + 0.1 * late})`;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(ancho / 2 - w / 2, y, w, 30, 15) : ctx.rect(ancho / 2 - w / 2, y, w, 30);
+    ctx.fill();
+    ctx.textAlign = 'left';
+    ctx.font = '800 10px system-ui, sans-serif';
+    ctx.fillStyle = '#FECACA';
+    ctx.fillText('SPRINT', ancho / 2 - w / 2 + 12, y + 19);
+    ctx.font = '900 22px system-ui, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'right';
+    ctx.fillText(txt, ancho / 2 + w / 2 - 12, y + 23);
   } else if (falta != null && falta <= 0 && e.lugar) {
     const txt = `🏁 Llegaste ${e.lugar}º de ${e.total}`;
     ctx.font = '800 18px system-ui, sans-serif';
@@ -384,7 +464,7 @@ function avisos(c, { ctx, ancho, alto }, { eventos }, arriba) {
     ctx.font = '800 15px system-ui, sans-serif';
     ctx.textAlign = 'center';
     const w = ctx.measureText(ev.texto).width + 24;
-    const y = arriba + 26 + fila * 32;
+    const y = arriba + (c.estado.meta != null && c.estado.meta - c.yoVista <= SPRINT_M ? 64 : 26) + fila * 32;
     ctx.fillStyle = bueno ? 'rgba(20,83,45,0.92)' : 'rgba(127,29,29,0.92)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(ancho / 2 - w / 2, y - 18, w, 27, 13) : ctx.rect(ancho / 2 - w / 2, y - 18, w, 27);
@@ -516,10 +596,14 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   }
 
   // Referencias (tu anterior, tu mejor): línea amarilla solo en tu carril, el de abajo.
+  const xsRef = referencias.map((r) => X(r.dist));
   referencias.forEach((r, k) => {
     const yA = y0 + carril * (n - 1) + 3;
     const yB = y0 + pista - 3;
     const x = X(r.dist);
+    // Si dos líneas quedan juntas, cada etiqueta va de un lado para no encimarse.
+    const otra = xsRef.find((ox, j) => j !== k && Math.abs(ox - x) < 70);
+    const aLaIzq = otra != null ? x < otra : x > ancho - 60;
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.fillStyle = COLOR_RITMO;
     if (x > -10 && x < ancho + 10) {
@@ -528,13 +612,16 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
       ctx.setLineDash(r.discontinua ? [5, 4] : []);
       ctx.beginPath(); ctx.moveTo(x, yA); ctx.lineTo(x, yB); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.textAlign = x > ancho - 60 ? 'right' : 'left';
-      ctx.fillText(r.etiqueta, x + (x > ancho - 60 ? -5 : 5), yB - 4 - k * 13);
+      ctx.textAlign = aLaIzq ? 'right' : 'left';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(2,6,23,0.7)';
+      ctx.strokeText(r.etiqueta, x + (aLaIzq ? -5 : 5), yB - 4);
+      ctx.fillText(r.etiqueta, x + (aLaIzq ? -5 : 5), yB - 4);
     } else {
       const der = x > ancho;
       const dif = Math.round(r.dist - yo.dist);
       ctx.textAlign = der ? 'right' : 'left';
-      ctx.fillText(`${der ? '' : '◀ '}${r.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 6 : 6, yB - 4 - k * 13);
+      ctx.fillText(`${der ? '' : '◀ '}${r.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 90 : 60, yB - 4 - k * 13);
     }
   });
 
@@ -571,21 +658,26 @@ function etiqueta2d(ctx, b, yo, yCarril, carril, ancho, e) {
     retrato(ctx, b.retrato, x + r, y, r, b.color);
     x += r * 2 + 5;
   }
-  ctx.font = 'bold 12px system-ui, sans-serif';
   ctx.textAlign = 'left';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(2,6,23,0.6)';
-  ctx.strokeText(b.nombre, x, y + 4);
+  const extra = b.acelera ? ' ⚡ acelera' : b.aviso ? ` ⚡ en ${b.aviso} s` : '';
+  ctx.font = 'bold 12px system-ui, sans-serif';
+  const wNombre = ctx.measureText(b.nombre).width;
+  ctx.font = '700 11px system-ui, sans-serif';
+  const wExtra = extra ? ctx.measureText(extra).width : 0;
+  // Fondo oscuro para que el nombre se lea aunque pase un bote por debajo.
+  ctx.fillStyle = 'rgba(2,6,23,0.55)';
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(x - 3, y - 8, wNombre + wExtra + 8, 16, 8) : ctx.rect(x - 3, y - 8, wNombre + wExtra + 8, 16);
+  ctx.fill();
+  ctx.font = 'bold 12px system-ui, sans-serif';
   ctx.fillStyle = b.color;
   ctx.fillText(b.nombre, x, y + 4);
-  x += ctx.measureText(b.nombre).width + 6;
+  x += wNombre;
   // Acelerón en curso o anunciado por el Mapa del rival
-  if (b.acelera || b.aviso) {
+  if (extra) {
     ctx.font = '700 11px system-ui, sans-serif';
-    const txt = b.acelera ? '⚡ acelera' : `⚡ en ${b.aviso} s`;
-    ctx.strokeText(txt, x, y + 4);
     ctx.fillStyle = '#FDE047';
-    ctx.fillText(txt, x, y + 4);
+    ctx.fillText(extra, x, y + 4);
   }
   // Diferencia a la derecha del carril, en una pastilla
   let txt = '';
@@ -760,15 +852,17 @@ const ruido = (n) => {
   return x - Math.floor(x);
 };
 
-function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], sprint, dt }) {
+function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], sprint, dt }, arriba) {
   const yo = botes[0];
   // En el sprint la cámara se acerca y baja.
   c.zoom += ((sprint ? 1 : 0) - c.zoom) * Math.min(1, (dt || 0) * 1.5);
   if (sinMovimiento) c.zoom = sprint ? 1 : 0;
   const camZ = yo.dist - 13 + c.zoom * 3.5;
   const camH = 4.6 - c.zoom * 1;
-  const horizonte = alto * 0.3;
-  const f = alto * 0.95;
+  // El horizonte y la escala se calculan con el alto que queda bajo la cabecera.
+  const util = alto - arriba;
+  const horizonte = arriba + util * 0.2;
+  const f = Math.min(util * 1.05, ancho * 1.15);
   const cx = ancho / 2;
   const carril = 3;
   // Tú en el centro; rivales a los lados
@@ -917,22 +1011,27 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     }
   }
 
-  // Referencias: línea amarilla de lado a lado de tu carril (el del centro).
-  for (const r of referencias) {
-    if (!(r.dist - camZ < 300 && r.dist > camZ + 0.5)) continue;
+  // Referencias: línea amarilla de lado a lado de tu carril (el del centro). Etiquetas alternadas a izquierda y derecha.
+  referencias.forEach((r, k) => {
+    if (!(r.dist - camZ < 300 && r.dist > camZ + 0.5)) return;
     const a = P(-carril / 2 + 0.2, r.dist);
     const b = P(carril / 2 - 0.2, r.dist);
-    if (!a || !b) continue;
+    if (!a || !b) return;
     ctx.strokeStyle = COLOR_RITMO;
     ctx.lineWidth = Math.max(3, a.s * 0.12);
     ctx.setLineDash(r.discontinua ? [8, 6] : []);
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = 'bold 12px system-ui, sans-serif';
-    ctx.textAlign = 'center';
+    const izq = k % 2 === 0;
+    ctx.textAlign = izq ? 'right' : 'left';
     ctx.fillStyle = COLOR_RITMO;
-    ctx.fillText(r.etiqueta, (a.x + b.x) / 2, a.y - 6);
-  }
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(2,6,23,0.7)';
+    const x = izq ? a.x - 4 : b.x + 4;
+    ctx.strokeText(r.etiqueta, x, a.y + 4);
+    ctx.fillText(r.etiqueta, x, a.y + 4);
+  });
 
   // Cuerdas de boyas entre carriles
   for (let k = 0; k <= botes.length; k++) {
@@ -1002,8 +1101,10 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   const lista = botes.map((b, i) => ({ ...b, x: lateral[i] })).sort((a, b) => b.dist - a.dist);
   const etiquetas = [];
   for (const b of lista) {
-    if (b.dist - camZ < 4.5) { atras.push(b); continue; }
-    bote3d(ctx, P, b, etiquetas, yo.dist, alto * 0.24, t);
+    // Los rivales que van justo detrás de ti se verían enormes y deformados: van a la barra de abajo.
+    if (!b.yo && b.dist - camZ < 9) { atras.push(b); continue; }
+    if (b.yo && b.dist - camZ < 4.5) continue;
+    bote3d(ctx, P, b, etiquetas, yo.dist, arriba + 4, t);
     if (b.yo) {
       const q = P(b.x, b.dist, 0.8);
       if (q) c.yoPantalla = { x: q.x, y: q.y };
@@ -1020,7 +1121,9 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     ctx.roundRect ? ctx.roundRect(x - hueco / 2 + 3, alto - 28, hueco - 6, 22, 11) : ctx.rect(x - hueco / 2 + 3, alto - 28, hueco - 6, 22);
     ctx.fill();
     ctx.fillStyle = b.color;
-    ctx.fillText(cabe(ctx, `▼ ${b.nombre} −${Math.round(yo.dist - b.dist)} m`, hueco - 12), x, alto - 12);
+    const m = ` −${Math.round(yo.dist - b.dist)} m`;
+    const nombre = cabe(ctx, `▼ ${b.nombre}`, hueco - 14 - ctx.measureText(m).width);
+    ctx.fillText(nombre + m, x, alto - 12);
   });
 }
 
@@ -1054,10 +1157,11 @@ function adornos3d(ctx, P, b, largo, t) {
   const deco = BOTES[b.clase];
   const cerca = P(b.x, b.dist);
   if (!deco || !cerca) return;
-  // Las velas de los botes que pasan junto a la cámara se desvanecen para no tapar la pista.
-  const lejania = b.yo ? 1 : Math.max(0.15, Math.min(1, (cerca.d - 9) / 12));
-  const alfa = (b.yo ? 0.55 : 0.9) * lejania;
-  ctx.globalAlpha = lejania;
+  // Velas, mástiles y estandartes no se dibujan en tu bote (taparían la pista) y se desvanecen en los rivales cercanos.
+  const lejania = b.yo ? 0 : Math.max(0, Math.min(1, (cerca.d - 14) / 10));
+  const alfa = 0.9 * lejania;
+  const altos = lejania > 0.05;
+  ctx.globalAlpha = 1;
   const onda = sinMovimiento ? 0 : Math.sin(t * 5 + b.dist) * 0.12;
   if (b.clase === 'vikingo') {
     // Cuello y cabeza de dragón en la proa, escudos a los lados y vela a rayas
@@ -1078,10 +1182,14 @@ function adornos3d(ctx, P, b, largo, t) {
         ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1, q.s * 0.1), 0, Math.PI * 2); ctx.fill();
       }
     }
-    palo3d(ctx, P, b.x, b.dist + 1, 0.15, 2.4);
-    for (let i = 0; i < 4; i++) vela3d(ctx, P, b.x, b.dist + 1, 0.85, 1.0 + i * 0.32, 1.32 + i * 0.32, i % 2 ? '#F8FAFC' : deco.tela, alfa);
-  } else if (b.clase === 'pirata') {
+    if (altos) {
+      ctx.globalAlpha = lejania;
+      palo3d(ctx, P, b.x, b.dist + 1, 0.15, 2.4);
+      for (let i = 0; i < 4; i++) vela3d(ctx, P, b.x, b.dist + 1, 0.85, 1.0 + i * 0.32, 1.32 + i * 0.32, i % 2 ? '#F8FAFC' : deco.tela, alfa);
+    }
+  } else if (b.clase === 'pirata' && altos) {
     // Mástil, vela triangular y bandera negra
+    ctx.globalAlpha = lejania;
     const tope = palo3d(ctx, P, b.x, b.dist + 0.8, 0.15, 3.0);
     const q = [P(b.x, b.dist + 0.8, 2.8), P(b.x, b.dist + 0.8, 0.6), P(b.x + 0.1, b.dist - 2.4, 0.6)];
     if (!q.some((p) => !p)) {
@@ -1091,8 +1199,9 @@ function adornos3d(ctx, P, b, largo, t) {
       ctx.globalAlpha = lejania;
     }
     if (tope) bandera3d(ctx, tope, deco, onda);
-  } else if (b.clase === 'samurai') {
+  } else if (b.clase === 'samurai' && altos) {
     // Nobori: estandarte alto en la popa
+    ctx.globalAlpha = lejania;
     const tope = palo3d(ctx, P, b.x, b.dist - largo * 0.45, 0.15, 2.6);
     if (tope) {
       const w = Math.max(3, tope.s * 0.35);
@@ -1116,8 +1225,11 @@ function adornos3d(ctx, P, b, largo, t) {
         if (a && z) { ctx.lineWidth = Math.max(1, a.s * 0.04); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke(); }
       }
     }
-    const tope = palo3d(ctx, P, b.x, b.dist - largo * 0.42, 0.15, 1.8);
-    if (tope) bandera3d(ctx, tope, deco, onda);
+    if (altos) {
+      ctx.globalAlpha = lejania;
+      const tope = palo3d(ctx, P, b.x, b.dist - largo * 0.42, 0.15, 1.8);
+      if (tope) bandera3d(ctx, tope, deco, onda);
+    }
   } else if (b.clase === 'romano') {
     // Espolón y vela cuadrada púrpura
     const a = P(b.x, b.dist + largo * 0.5, 0.05);
@@ -1127,16 +1239,22 @@ function adornos3d(ctx, P, b, largo, t) {
       ctx.lineWidth = Math.max(1.5, a.s * 0.12);
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke();
     }
-    palo3d(ctx, P, b.x, b.dist + 0.6, 0.15, 2.5);
-    const q = vela3d(ctx, P, b.x, b.dist + 0.6, 0.9, 1.1, 2.3, deco.tela, alfa);
+    const q = altos ? vela3d(ctx, P, b.x, b.dist + 0.6, 0.9, 1.1, 2.3, deco.tela, alfa) : null;
     if (q) {
+      ctx.globalAlpha = lejania;
+      palo3d(ctx, P, b.x, b.dist + 0.6, 0.15, 2.5);
       ctx.globalAlpha = alfa;
       ctx.fillStyle = deco.marca;
       const m = { x: (q[0].x + q[2].x) / 2, y: (q[0].y + q[2].y) / 2 };
       ctx.beginPath(); ctx.arc(m.x, m.y, Math.max(1.5, q[0].s * 0.18), 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = lejania;
     }
   }
+  // En tu bote, en lugar de mástil, un banderín bajo en la popa.
+  if (b.yo) {
+    const tope = palo3d(ctx, P, b.x, b.dist - largo * 0.48, 0.15, 0.9);
+    if (tope) bandera3d(ctx, tope, deco, onda);
+  }
+  ctx.globalAlpha = 1;
 }
 
 function bandera3d(ctx, tope, deco, onda) {
