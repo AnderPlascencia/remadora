@@ -1146,3 +1146,47 @@ body:has(#modo-remo:not([hidden])) .toast { bottom: auto; top: calc(12px + env(s
 }
 .mr-rival { justify-content: flex-start; font-weight: 700; font-size: 16px; line-height: 1.3; text-align: left; }
 #clasificacion-ftp { text-align: left; font-weight: 500; font-size: 14px; }
+
+/* Datos avanzados (apagado por defecto): lo técnico solo aparece si se activa en Ajustes › Apariencia. */
+:root:not([data-avanzado]) .solo-avanzado { display: none !important; }
+.ayuda.bloque { display: block; margin: 2px 0 0; font-weight: 400; }
+.prediccion-corta { margin: 16px 0 4px; padding: 12px 14px; border-radius: var(--radio); background: var(--panel); color: var(--texto-suave); }
+.prediccion-corta b { font-family: var(--num); font-size: 22px; color: var(--texto); }
+
+/* ---------- Animaciones 0.23: cada una dice algo; con «reducir animaciones» se apagan (regla global de arriba) ---------- */
+/* 1. Bienvenida: el sol sale del mar y los remos se cruzan */
+.bienvenida { background: radial-gradient(circle at 50% 40%, #16303E, #050B0E 70%); animation-duration: 1.6s; }
+.bienvenida .sello { width: 132px; height: 132px; filter: drop-shadow(0 12px 32px rgba(233, 162, 59, .3)); }
+.bienvenida .sol { animation: bv-sol .9s cubic-bezier(.2, .8, .2, 1) both; }
+.bienvenida .remo { transform: translate(256px, 262px) scale(.7); animation: .7s .35s cubic-bezier(.2, .8, .2, 1) both; }
+.bienvenida .r1 { animation-name: bv-r1; }
+.bienvenida .r2 { animation-name: bv-r2; }
+.bienvenida .marca { animation: bv-aparece .4s .75s ease-out both; }
+.bienvenida span { animation: bv-aparece .4s .9s ease-out both; }
+@keyframes bv-sol { from { transform: translateY(150px); } to { transform: none; } }
+@keyframes bv-r1 { from { transform: translate(256px, 262px) scale(.7) rotate(0); } to { transform: translate(256px, 262px) scale(.7) rotate(-40deg); } }
+@keyframes bv-r2 { from { transform: translate(256px, 262px) scale(.7) rotate(0); } to { transform: translate(256px, 262px) scale(.7) rotate(40deg); } }
+@keyframes bv-aparece { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* 3. Rango que se siente: el marco de watts late mientras vas fuera de rango */
+.mr-principal { transition: border-color .25s, background-color .25s; }
+.mr-principal.bajo, .mr-principal.alto { animation: rango-late 1s ease-in-out infinite; }
+.tarjeta-meta.fuera { animation: rango-late 1s ease-in-out infinite; }
+@keyframes rango-late { 50% { transform: scale(1.015); } }
+
+/* 4. Récord o insignia nueva: aparece con rebote y un destello de latón */
+.record.nuevo { position: relative; overflow: hidden; animation: pop .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+.record.nuevo::after { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .35) 50%, transparent 60%); transform: translateX(-100%); animation: brillo .9s .45s ease-out both; pointer-events: none; }
+.hoja-xp .subio { animation: pop .6s .9s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes brillo { to { transform: translateX(100%); } }
+
+/* 5. Cambio de pestaña: la pantalla entra y la píldora crece */
+.vista.activa { animation: entra-vista .2s ease-out; }
+.nav-inferior button.activa::before { animation: pildora .25s cubic-bezier(.2, .8, .2, 1); }
+@keyframes entra-vista { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pildora { from { transform: scaleX(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* 6. Números que no saltan: el split se desvanece al cambiar */
+.cambia { animation: cambia .16s ease-out; }
+@keyframes cambia { from { opacity: .35; } to { opacity: 1; } }

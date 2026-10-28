@@ -37,6 +37,27 @@ const fcMaxima = () => ajustes.num('fcMax', 0);
 // Los nombres los escribe el usuario: siempre escapados al meterlos en HTML.
 function escaparHtml(t) { return String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
+// Animaciones cortas; con «reducir animaciones» del teléfono todo queda en su estado final.
+const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function contarHasta(el, total, formato = (v) => v, ms = 1100) {
+  if (sinMovimiento()) { el.textContent = formato(total); return; }
+  const t0 = performance.now();
+  const paso = (t) => {
+    const k = Math.min(1, (t - t0) / ms);
+    el.textContent = formato(Math.round(total * (1 - (1 - k) ** 3)));
+    if (k < 1) requestAnimationFrame(paso);
+  };
+  requestAnimationFrame(paso);
+}
+// Cambia el texto con un desvanecido breve, solo si cambió (para el split, que se lee en movimiento).
+function cambiarTexto(el, texto) {
+  if (el.textContent === texto) return;
+  el.textContent = texto;
+  el.classList.remove('cambia');
+  void el.offsetWidth;
+  el.classList.add('cambia');
+}
+
 // ---------- Navegación ----------
 const vistaActiva = (v) => $(`#vista-${v}`).classList.contains('activa');
 function irA(vista) {
@@ -130,6 +151,16 @@ interruptor('#in-voz', 'voz', true, (v) => { configurarVoz(v); if (v) hablar('Av
 interruptor('#in-modo-auto', 'modoAuto', false);
 interruptor('#in-pausa-auto', 'pausaAuto', true);
 interruptor('#in-res-auto', 'resAuto', false);
+// Datos avanzados: nombres técnicos de zona, carga, W/kg, predicciones y tablas por tramo. Apagado, la app habla en sencillo.
+const avanzado = () => ajustes.si('avanzado', false);
+const aplicarAvanzado = () => document.documentElement.toggleAttribute('data-avanzado', avanzado());
+interruptor('#in-avanzado', 'avanzado', false, () => {
+  aplicarAvanzado();
+  pintarClasificacion();
+  if (!avanzado() && tendencia === 'tecnica') $('[data-tend="potencia"]').click();
+});
+aplicarAvanzado();
+const textoZona = (z) => (avanzado() ? `Z${z.n} ${z.nombre}` : `Zona ${z.n} · ${z.simple}`);
 configurarVoz(ajustes.si('voz', true));
 const selVistaRemo = $('#sel-vista-remo');
 selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
@@ -161,7 +192,7 @@ inRitmo.addEventListener('change', () => {
 const ritmoObjetivo = () => leerMmss(ajustes.leer('ritmoObjetivo', '')) || 0;
 
 // Pantalla de bienvenida: se desvanece sola.
-setTimeout(() => $('#bienvenida')?.remove(), 1400);
+setTimeout(() => $('#bienvenida')?.remove(), 1700);
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
@@ -488,8 +519,9 @@ function pintarClasificacion(sesiones = null) {
   }
   const c = J.clasificacionDe(w, peso);
   const medida = c.porPeso ? `${c.valor.toFixed(1)} W/kg` : `${w} W`;
-  caja.textContent = `Tu puesto en la tripulación: ${c.nombre} (${medida}${ftp() ? '' : ', FTP estimado'}).${c.siguiente ? ` Te faltan ${c.faltaW} W de FTP para ${c.siguiente.nombre}.` : ' Es el puesto más alto.'} Ajusta cómo reman tus rivales.`;
-  $('#heroe-aguas').textContent = `${c.nombre} · ${medida}`;
+  const detalle = avanzado() ? ` (${medida}${ftp() ? '' : ', FTP estimado'})` : '';
+  caja.textContent = `Tu puesto en la tripulación: ${c.nombre}${detalle}.${c.siguiente ? ` Te faltan ${c.faltaW} W de FTP para ${c.siguiente.nombre}.` : ' Es el puesto más alto.'} Ajusta cómo reman tus rivales.`;
+  $('#heroe-aguas').textContent = avanzado() ? `${c.nombre} · ${medida}` : c.nombre;
   const vista = Number(ajustes.leer('clasificacionVista', '-1'));
   if (c.indice > vista) {
     if (vista >= 0) { toast(`¡Ascenso en la tripulación: ${c.nombre}!`); confeti(1800); }
@@ -595,7 +627,7 @@ $('#btn-banda').addEventListener('click', async () => {
   try {
     const nombre = await banda.conectar();
     agregarLog(`banda conectada: ${nombre}`);
-    toast(fcMaxima() ? `Pulso conectado: ${nombre}` : `Pulso conectado. Pon tu edad en Ajustes › Avanzado para ver tus zonas de pulso`);
+    toast(fcMaxima() ? `Pulso conectado: ${nombre}` : `Pulso conectado. Pon tu edad en Ajustes › Pulso y zonas para ver tus zonas de pulso`);
   } catch (err) { agregarLog(`banda: ${err.message}`); }
 });
 $('#btn-demo-aviso').addEventListener('click', () => { remadora.iniciarDemo(); irA('entrenar'); });
@@ -1424,10 +1456,10 @@ function pintar() {
   const zona = Ent.zonaDe(actual.watts, f);
   const zfc = E.zonaFc(actual.fc, ajustes.num('fcMax', 0));
   $('#m-watts').textContent = actual.watts;
-  $('#m-nivel-etq').textContent = actual.nivel ? `· nivel ${actual.nivel}` : '';
-  $('#m-zona').textContent = zona ? `Z${zona.n} ${zona.nombre}` : '';
+  $('#m-nivel-etq').textContent = actual.nivel && avanzado() ? `· nivel ${actual.nivel}` : '';
+  $('#m-zona').textContent = zona ? textoZona(zona) : '';
   $('#m-zona').style.color = zona ? COLOR_ZONA[zona.n - 1] : '';
-  $('#m-split').textContent = formatoSplit(actual.split);
+  cambiarTexto($('#m-split'), formatoSplit(actual.split));
   $('#m-spm').textContent = actual.spm;
   $('#m-tiempo').textContent = formatoTiempo(t);
   $('#m-dist').textContent = dist;
@@ -1455,7 +1487,7 @@ function pintar() {
 
   // Modo remo
   $('#mr-watts').textContent = actual.watts;
-  $('#mr-split').textContent = formatoSplit(actual.split);
+  cambiarTexto($('#mr-split'), formatoSplit(actual.split));
   $('#mr-spm').textContent = actual.spm;
   $('#mr-tiempo').textContent = formatoTiempo(t);
   $('#mr-dist').textContent = dist;
@@ -1472,7 +1504,7 @@ function pintar() {
     else pintarBloque(t);
   } else if (sesion) {
     $('#mr-nombre').textContent = 'Remo libre';
-    $('#mr-meta-texto').textContent = zona ? `Z${zona.n} ${zona.nombre}` : '';
+    $('#mr-meta-texto').textContent = zona ? textoZona(zona) : '';
     $('#mr-resta').textContent = formatoTiempo(t);
     $('#mr-resta-etq').textContent = 'tiempo';
     $('#mr-barra').style.width = '0%';
@@ -1822,7 +1854,9 @@ async function pintarEntrenamientos() {
   // Tarjetas base de la sección
   const bases = baseActual.filter((x) => x.enfoque === seccion);
   $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
-  $('#base-nivel').textContent = `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`;
+  $('#base-nivel').textContent = avanzado()
+    ? `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`
+    : 'Hechos a tu nivel: crecen cuando subes de rango.';
   $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
       ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}">${escaparHtml(x.nombre)}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
@@ -2282,12 +2316,13 @@ function pintarForma() {
   if (!ftp()) $('#forma-texto').textContent = 'Define tu FTP en Ajustes para calcular la carga de cada sesión.';
   else if (!hay) $('#forma-texto').textContent = 'Aún no hay sesiones en los últimos 60 días.';
   else {
-    let consejo = 'Vas equilibrado.';
-    if (hoy.frescura < -20) consejo = 'Llevas mucha fatiga acumulada: considera un día suave o de descanso.';
-    else if (hoy.frescura > 10) consejo = 'Estás fresco: buen momento para una prueba o una sesión fuerte.';
-    $('#forma-texto').textContent = `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}`;
+    let consejo = 'Vas equilibrado: cualquier entrenamiento del plan te queda bien.';
+    if (hoy.frescura < -20) consejo = 'Vienes cansado: hoy toca algo suave o descansar.';
+    else if (hoy.frescura > 10) consejo = 'Estás fresco: buen día para una prueba o una sesión fuerte.';
+    $('#forma-texto').textContent = avanzado() ? `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}` : consejo;
   }
-  $('#forma-resumen').textContent = ftp() && hay ? `Frescura ${hoy.frescura > 0 ? '+' : ''}${hoy.frescura}` : '';
+  const estado = () => (hoy.frescura < -20 ? 'Cansado' : hoy.frescura > 10 ? 'Fresco' : 'Equilibrado');
+  $('#forma-resumen').textContent = !(ftp() && hay) ? '' : avanzado() ? `Frescura ${hoy.frescura > 0 ? '+' : ''}${hoy.frescura}` : estado();
 }
 
 function pintarAvisoRespaldo(total) {
@@ -2711,6 +2746,14 @@ function pintarXpSesion(s, previas, resumen) {
     <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
     <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul></details>
     ${clase ? '' : `<div class="xp-heroe"><p>Elige tu héroe y quédate con esta experiencia:</p><div class="clases-mini">${J.CLASES.map((c) => `<button type="button" data-clase-rapida="${c.clave}"><img src="${srcHeroe(c.clave, 1, true)}" width="48" height="48" alt=""><span>${c.nombre}</span></button>`).join('')}</div></div>`}`;
+  if (resumen) {
+    const total = g.xp + g.xpExtra;
+    contarHasta(caja.querySelector('.xp-total'), total, (v) => `+${miles(v)} XP`);
+    const barra = caja.querySelector('.heroe-xp > div');
+    const final = barra.style.width;
+    const antes = subio || !h.hasta ? 0 : Math.max(0, (100 * (h.xp - total - h.desde)) / (h.hasta - h.desde));
+    if (!sinMovimiento()) { barra.style.transition = 'none'; barra.style.width = `${antes}%`; void barra.offsetWidth; barra.style.transition = 'width 1.1s cubic-bezier(.2, .8, .2, 1)'; requestAnimationFrame(() => { barra.style.width = final; }); }
+  }
   if (subio) hablar(ascenso ? `Subiste a nivel ${g.nivelDespues}. Ahora eres ${J.rangoDe(g.nivelDespues).nombre}` : `Subiste a nivel ${g.nivelDespues}`);
   if (resumen && logros.some((l) => l.tipo === 'jefe')) hablar('¡Jefe vencido!');
   return subio || logros.some((l) => l.tipo === 'jefe' || l.tipo === 'hazana');
@@ -2773,7 +2816,7 @@ function pintarRpe() {
   $('#rpe').hidden = auto;
   $('#rpe-auto').hidden = !auto;
   if (auto) {
-    $('#rpe-auto').innerHTML = `<b class="rpe-valor">${s.rpe}</b><span>de 10 · ${TEXTO_RPE[s.rpe]}<small>Pulso medio al ${s.rpePct} % de tu máximo${fcMaxima() ? '' : ' (aproximado: pon tu edad en Ajustes › Avanzado)'}</small></span>
+    $('#rpe-auto').innerHTML = `<b class="rpe-valor">${s.rpe}</b><span>de 10 · ${TEXTO_RPE[s.rpe]}<small>Pulso medio al ${s.rpePct} % de tu máximo${fcMaxima() ? '' : ' (aproximado: pon tu edad en Ajustes › Pulso y zonas)'}</small></span>
       <button type="button" class="boton chico" id="btn-corregir-rpe">Corregir</button>`;
     $('#btn-corregir-rpe').onclick = () => { corregirRpe = true; pintarRpe(); };
     $('#rpe-texto').textContent = '';
@@ -2806,7 +2849,7 @@ function tablaIntervalos(s) {
     }</tbody></table></div>`;
   }
   const par = E.parciales(s.muestras, 500);
-  if (par.length < 2) return '';
+  if (par.length < 2 || !avanzado()) return '';
   const mejor = Math.min(...par.map((p) => p.split));
   return `<h2>Parciales de 500 m</h2><div class="desliza"><table class="tabla"><thead><tr><th>Tramo</th><th>Tiempo</th><th>Split</th><th>W</th><th>g/min</th></tr></thead><tbody>${
     par.map((p) => `<tr><td>${p.metros - 500}–${p.metros} m</td><td>${formatoTiempo(p.tiempo)}</td><td class="${p.split === mejor ? 'ok' : ''}">${formatoSplit(p.split)}</td><td>${p.w}</td><td>${p.spm}</td></tr>`).join('')
@@ -2818,6 +2861,10 @@ function tablaPrediccion(s) {
   const base = [2000, 5000, 1000, 500].map((d) => [d, E.mejorTiempo(s.muestras || [], d)]).find(([, t]) => t);
   const [metros, seg] = base || [];
   if (!metros) return '';
+  if (!avanzado()) {
+    const d = [5000, 2000, 10000].find((x) => x !== metros);
+    return `<p class="prediccion-corta">A este ritmo, tus ${d >= 1000 ? `${d / 1000} km` : `${d} m`} rondarían <b>${formatoTiempo(Ent.predecir(metros, seg, d))}</b>.</p>`;
+  }
   const filas = Ent.DISTANCIAS_PREDICCION.filter((d) => d !== metros).map((d) => {
     const t = Ent.predecir(metros, seg, d);
     return `<tr><td>${d === 21097 ? 'Medio maratón' : `${d} m`}</td><td>${formatoTiempo(t)}</td><td>${formatoSplit(Math.round((t * 500) / d))}</td></tr>`;
@@ -2873,12 +2920,13 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
     ['Watts prom', s.wattsProm], ['Watts máx', s.wattsMax],
     ['Split prom', formatoSplit(s.splitProm)], ['Golpes/min', s.spmProm],
     ['Calorías', s.kcal], ['Paladas', s.paladas ?? '-'],
-    ['Metros/palada', tec.metrosPorPalada ?? '-'], ['Trabajo/palada', tec.joulesPorPalada ? `${tec.joulesPorPalada} J` : '-'],
-    ['Pulso prom', s.fcProm || '-'],
+    ['Metros/palada', tec.metrosPorPalada ?? '-'],
   ];
+  if (avanzado()) stats.push(['Trabajo/palada', tec.joulesPorPalada ? `${tec.joulesPorPalada} J` : '-']);
+  stats.push(['Pulso prom', s.fcProm || '-']);
   if (s.fcMax) stats.push(['Pulso máx', s.fcMax]);
-  if (tec.wattsPorLatido) stats.push(['Watts/latido', tec.wattsPorLatido]);
-  if (estres != null) stats.push(['Carga', estres]);
+  if (tec.wattsPorLatido && avanzado()) stats.push(['Watts/latido', tec.wattsPorLatido]);
+  if (estres != null && avanzado()) stats.push(['Carga', estres]);
   if (s.tiempoMeta != null) stats.push(['Meta en', formatoTiempo(s.tiempoMeta)]);
   if (s.pctEnRango != null) stats.push(['En rango', `${s.pctEnRango}%`]);
   for (const r of s.rivales || (s.rival ? [s.rival] : [])) {
@@ -3246,7 +3294,7 @@ $('#btn-hoy-detalle').addEventListener('click', () => {
 });
 
 // ---------- Respaldo ----------
-const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'edad', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje'];
+const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'edad', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje', 'avanzado'];
 
 async function guardarRespaldo() {
   const datos = {
