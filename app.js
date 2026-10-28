@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.19.7';
+const VERSION = '0.19.8';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -2167,6 +2167,12 @@ async function pintarHeroe() {
 
 function pintarFicha(h, per, clase, sesiones) {
   $('#ficha-figura').innerHTML = figuraHeroe(per, h.nivel, 180);
+  // Lo que te dan ahora los talentos aprendidos, en una línea cada uno.
+  const arbol = per.arbol?.[clase.clave] || {};
+  const tal = J.talentosDe(clase.clave).map((t) => ({ t, g: J.grado(arbol, clase.clave, t.slot) })).filter((x) => x.g > 0);
+  $('#ficha-talentos').innerHTML = tal.length
+    ? tal.map(({ t, g }) => `<li><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span><span>${t.textoGrado(g)}</span></li>`).join('')
+    : `<li class="vacio">Aún no tienes talentos. ${h.talentosLibres > 0 ? `Tienes ${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} para repartir en Talentos.` : 'Ganas 1 punto cada 3 niveles.'}</li>`;
   $('#heroe-radar').innerHTML = radarAtributos(h.atributos, clase.favorito);
   $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''} · ${h.atributos[a.clave]}</b><small>${a.detalle}</small></div>`).join('');
   const rec = J.recomendarPorAtributos(h.atributos);

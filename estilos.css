@@ -808,3 +808,10 @@ details.seccion[open] { padding-bottom: 8px; }
   .nivel-panel h3 { margin-top: 0; }
   .nivel-lista { grid-column: 2; }
 }
+
+/* Ficha: mejoras de los talentos aprendidos */
+.ficha-talentos { list-style: none; margin: 0 0 8px; padding: 0; }
+.ficha-talentos li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 8px 0; border-top: 1px solid var(--borde); font-size: 14px; }
+.ficha-talentos li:first-child { border-top: 0; }
+.ficha-talentos li > span:last-child { flex-basis: 100%; color: var(--texto-suave); }
+.ficha-talentos li.vacio { color: var(--texto-suave); }
