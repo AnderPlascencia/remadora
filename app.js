@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.19.5';
+const VERSION = '0.19.6';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -597,19 +597,26 @@ function medidas() {
   return { t: sesion.t, dist: sesion.dist, paladas: sesion.paladas, split: actual.split, spm: actual.spm };
 }
 
-// Talentos II de tu clase y la ventaja elegida de la bolsa para esta carrera.
-function crearVentaja(ent) {
+// Talentos de carrera de tu clase y la ventaja elegida de la bolsa para esta carrera.
+function crearVentaja(ent, racha) {
   const per = leerPersonaje();
   const clave = per.clase ? J.claseDe(per.clase).clave : null;
   const grados = clave ? J.gradosEn(per.arbol?.[clave] || {}, clave, Date.now()) : {};
-  const nombres = clave ? Object.fromEntries(J.talentosDe(clave).map((t) => [t.slot, t.nombre])) : {};
   let objeto = $('#sel-ventaja').value || null;
   if (objeto && (V.esPrueba(ent) || !(inventario()[objeto] > 0))) objeto = null;
   const meta = ent?.objetivo?.metrica === 'distancia' ? ent.objetivo.valor : null;
   const dur = meta ? null : duracionCarrera();
   const final = meta ? { meta } : dur ? { duracion: dur } : null;
   if (objeto === 'ancla' && !final) { toast('El Ancla al rival solo sirve en carreras con final: no se gastará'); objeto = null; }
-  return V.nuevaVentaja({ grados, nombres, ftp: ftp(), objeto, final });
+  return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha });
+}
+
+// Días seguidos contando hoy (la sesión que empieza ya cuenta).
+async function rachaConHoy() {
+  const lista = await db.listar('sesiones');
+  const hoy = E.claveDia(Date.now());
+  const r = E.racha(lista);
+  return lista.some((x) => E.claveDia(x.fecha) === hoy) ? r : r + 1;
 }
 
 async function iniciarSesion() {
@@ -661,7 +668,7 @@ async function iniciarSesion() {
     retrato: rival ? await retratoPropio() : null,
   };
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
-  if (rival) sesion.ventaja = crearVentaja(entrenamientoActivo);
+  if (rival) sesion.ventaja = crearVentaja(entrenamientoActivo, await rachaConHoy());
   actualizarBotones();
   $('#bloque-actual').hidden = !entrenamientoActivo;
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* opcional */ }
@@ -710,6 +717,7 @@ async function detenerSesion() {
     fcMax: Math.max(0, ...m.map((x) => x.fc || 0)),
     entrenamiento: s.entrenamiento,
     tiempoMeta: s.tiempoMeta,
+    delPrograma: delProgramaHoy(s),
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
     bloques: s.plan ? Ent.bloquesConDuracion(s.estadoAv, s.plan, { t: s.t, dist: s.dist, paladas: s.paladas }) : null,
     muestras: m,
@@ -824,16 +832,12 @@ function avanzarSesion() {
   });
   coachRitmo(t);
   if (sesion.ventaja) {
-    const n = sesion.ventaja.eventos.length;
-    V.avanzarVentaja(sesion.ventaja, { t, w: actual.watts, dist: sesion.dist });
-    for (const ev of sesion.ventaja.eventos.slice(n)) {
-      const texto = ev.m ? `${ev.nombre}: +${Math.round(ev.m)} m` : `${ev.nombre}: los fantasmas van más lentos 60 s`;
-      toast(texto);
-      hablar(texto, { clave: 'talento', cadaSeg: 15 });
-      eventoCarrera('ventaja', ev.m ? `+${Math.round(ev.m)} m` : 'Fantasmas −1 %', ev.nombre);
-    }
+    const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
+    const detras = sesion.rivales.some((r) => E.distanciaEn(r.muestras, t) > miDist);
+    V.avanzarVentaja(sesion.ventaja, { t, dist: sesion.dist, paladas: sesion.paladas, spm: actual.spm, detras });
   }
   if (sesion.rivales.length) { vigilarAdelantos(t); tamborSprint(); }
+  avisarTalentos();
   if (sesion.rival && t % 60 === 0) {
     const dif = Math.round(sesion.dist + V.metrosVentaja(sesion.ventaja) - E.distanciaEn(sesion.rival.muestras, t));
     if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
@@ -843,6 +847,21 @@ function avanzarSesion() {
     sesion.avance.push([t, { distancia: sesion.dist, kcal: sesion.kcal, paladas: sesion.paladas }[entrenamientoActivo.objetivo.metrica]]);
     avanceObjetivo(t);
   } else avanceBloque(t);
+}
+
+// Avisos de los talentos de carrera: los frecuentes (paladas extra, cada 250 m…) solo en la pista; los grandes, también con voz.
+function avisarTalentos() {
+  const v = sesion.ventaja;
+  if (!v) return;
+  for (const ev of v.eventos.slice(v.vistos)) {
+    const m = ev.m >= 1 ? Math.round(ev.m) : ev.m.toFixed(1).replace('.', ',');
+    eventoCarrera('ventaja', `+${m} m`, ev.nombre);
+    if (!ev.discreto) {
+      toast(`${ev.nombre}: +${m} m`);
+      hablar(`${ev.nombre}: más ${m} metros`, { clave: 'talento', cadaSeg: 15 });
+    }
+  }
+  v.vistos = v.eventos.length;
 }
 
 // Avisos que la carrera dibuja un momento: adelantos, te pasan y ventajas.
@@ -867,6 +886,7 @@ function vigilarAdelantos(t) {
       const nombre = corto(sesion.rivales[i].nombre);
       if (l > 0) {
         eventoCarrera('adelanto', `¡Adelantaste a ${nombre}!`);
+        V.alAdelantar(sesion.ventaja, t);
         hablar(`Adelantaste a ${nombre}`, { clave: `adelanto-${i}`, cadaSeg: 8 });
         vibrar([60, 40, 60]);
       } else {
@@ -2108,7 +2128,6 @@ const miles = (n) => Math.round(n).toLocaleString('es-MX');
 const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
 let claseElegida = null;
 let seccionHeroe = 'ficha';
-let talentoElegido = null;
 
 async function estadoHeroe() {
   const per = leerPersonaje();
@@ -2170,31 +2189,26 @@ function pintarFicha(h, per, clase, sesiones) {
 function pintarTalentos(h, per, clase) {
   const arbol = per.arbol?.[clase.clave] || {};
   const est = { nivel: h.nivel, libres: h.talentosLibres };
+  const antiguo = J.tieneArbolAntiguo(arbol) && J.puntosGastados(arbol) === 0;
   $('#talentos-libres').textContent = `${h.talentosLibres > 0
     ? `Tienes ${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento.`
-    : 'Sin puntos libres.'} Ganas 1 punto cada 3 niveles. Los talentos II se abren en el nivel 20 y los III en el 40.`;
+    : 'Sin puntos libres.'} Ganas 1 punto cada 3 niveles.${antiguo ? ' Los talentos cambiaron: te devolvimos todos tus puntos para que los repartas de nuevo.' : ''}`;
+  const fila = (t) => {
+    const g = J.grado(arbol, clase.clave, t.slot);
+    const motivo = J.motivoBloqueo(t.slot, est, arbol, clase.clave);
+    const pips = Array.from({ length: t.max }, (_, i) => `<i class="${i < g ? 'lleno' : ''}"></i>`).join('');
+    const accion = motivo
+      ? `<span class="${g >= t.max ? 'ok-texto' : 'suave'}">${motivo}</span>`
+      : `<button type="button" class="boton ${g ? '' : 'primario'}" data-aprender="${t.slot}">${g ? 'Subir de grado' : 'Aprender'} · ${t.coste} ${t.coste === 1 ? 'punto' : 'puntos'}</button>`;
+    return `<div class="talento ${g ? 'aprendido' : motivo && g < t.max ? 'bloqueado' : 'disponible'}">
+      <div class="talento-cab"><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span><span class="pips" aria-label="Grado ${g} de ${t.max}">${pips}</span></div>
+      <p>${t.texto}</p><div class="talento-pie"><small class="suave">Desde el nivel ${t.nivel}${g && g < t.max ? ` · Ahora: ${t.textoGrado(g).replace(/\.$/, '')}` : ''}</small>${accion}</div></div>`;
+  };
   const ts = J.talentosDe(clase.clave);
-  $('#arbol').innerHTML = J.RAMAS.map((r) => {
-    const deRama = ts.filter((t) => t.rama === r.clave);
-    const elegido = deRama.find((t) => t.slot === talentoElegido);
-    const nodos = deRama.map((t) => {
-      const g = J.grado(arbol, clase.clave, t.slot);
-      const estado = g >= 1 ? 'aprendido' : J.motivoBloqueo(t.slot, est, arbol, clase.clave) ? 'bloqueado' : 'disponible';
-      return `<button type="button" class="nodo ${estado}${t.slot === talentoElegido ? ' elegido' : ''}" data-talento="${t.slot}">
-        <span class="nodo-nivel">${J.NOMBRE_TIER[t.tier]}</span><b>${t.nombre}</b><small>${t.activa ? 'En la carrera' : 'Pasivo'} · ${g}/${t.max}</small></button>`;
-    }).join('<span class="enlace" aria-hidden="true"></span>');
-    let detalle = '';
-    if (elegido) {
-      const g = J.grado(arbol, clase.clave, elegido.slot);
-      const motivo = J.motivoBloqueo(elegido.slot, est, arbol, clase.clave);
-      const accion = g >= 1 ? 'Subir de grado' : 'Aprender';
-      detalle = `<div class="nodo-detalle"><p>${elegido.texto}</p>${
-        motivo ? `<span class="${g >= elegido.max ? 'ok-texto' : 'suave'}">${motivo}</span>`
-          : `<button type="button" class="boton primario" data-aprender="${elegido.slot}">${accion} (${elegido.coste} ${elegido.coste === 1 ? 'punto' : 'puntos'})</button>`}</div>`;
-    }
-    const fav = J.ramaFavorita(clase.clave) === r.clave;
-    return `<div class="rama"><div class="rama-titulo"><b>${J.nombreRama(clase.clave, r.clave)}${fav ? ' ★' : ''}</b><span>${r.nombre}</span></div><div class="nodos">${nodos}</div>${detalle}</div>`;
-  }).join('');
+  $('#arbol').innerHTML = `<div class="rama"><div class="rama-titulo"><b>${J.cualidadDe(clase.clave)}</b><span>${clase.nombre}</span></div>
+      <p class="suave lema-tal">${J.lemaTalentos(clase.clave)} Solo cuentan en la XP y en las carreras contra fantasmas: tus métricas no cambian.</p>
+      <h4 class="sub-tal">Mejoras de nivel</h4>${ts.filter((t) => !t.maestria).map(fila).join('')}
+      <h4 class="sub-tal">Maestría</h4>${ts.filter((t) => t.maestria).map(fila).join('')}</div>`;
 }
 
 function filaMision(m) {
@@ -2271,10 +2285,7 @@ $('#arbol').addEventListener('click', async (e) => {
     toast(`${t.nombre}: grado ${J.grado({ ...arbolClase, [slot]: [...(arbolClase[slot] || []), 0] }, clave, slot)}`);
     vibrar(80);
     pintarHeroe();
-    return;
   }
-  const n = e.target.closest('[data-talento]');
-  if (n) { talentoElegido = talentoElegido === n.dataset.talento ? null : n.dataset.talento; pintarHeroe(); }
 });
 $('#tienda').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-comprar]');
@@ -2709,6 +2720,12 @@ async function pintarRecomendacion() {
   const el = $('#recomendacion');
   el.hidden = !r;
   if (r) { el.textContent = r.texto; el.className = `recomendacion ${r.tipo}`; }
+}
+
+// ¿La sesión es el entrenamiento que tocaba hoy en el programa? (para los talentos del samurái)
+function delProgramaHoy(s) {
+  const hoy = P.deHoy(leerPrograma(), s.inicio);
+  return !!(hoy && s.entrenamiento && hoy.ent === s.entrenamiento) || undefined;
 }
 
 async function pintarHoyToca() {

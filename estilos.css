@@ -592,19 +592,6 @@ details.seccion[open] { padding-bottom: 8px; }
 .rama { background: var(--panel); border-radius: var(--radio); padding: 12px; }
 .rama-titulo { display: flex; justify-content: space-between; margin-bottom: 8px; }
 .rama-titulo span { color: var(--texto-tenue); font-weight: 700; }
-.nodos { display: grid; grid-template-columns: 1fr 10px 1fr 10px 1fr; align-items: center; }
-.enlace { height: 3px; background: var(--borde); }
-.nodo { min-height: 92px; border-radius: 12px; border: 2px solid var(--borde); background: var(--fondo); color: var(--texto); font: inherit; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; text-align: center; }
-.nodo b { font-size: 12px; line-height: 1.15; }
-.nodo small { font-size: 10px; color: var(--texto-tenue); }
-.nodo-nivel { font-size: 11px; font-weight: 900; color: var(--texto-tenue); }
-.nodo.disponible { border-color: var(--primario-claro); box-shadow: 0 0 0 3px rgba(143, 174, 74, .2); }
-.nodo.aprendido { border-color: var(--primario-claro); background: linear-gradient(145deg, #F7C873, #F2A33A 55%, #B5761C); color: #0B0F19; }
-.nodo.aprendido small, .nodo.aprendido .nodo-nivel { color: #3A2508; }
-.nodo.bloqueado { opacity: .55; }
-.nodo.elegido { outline: 3px solid var(--spm); outline-offset: 2px; }
-.nodo-detalle { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borde); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; font-size: 14px; }
-.nodo-detalle p { margin: 0; color: var(--texto-suave); }
 .ok-texto { color: var(--ok-texto); font-weight: 700; }
 .misiones li { flex-direction: column; align-items: stretch; gap: 4px; }
 .misiones li.hecha { opacity: .7; }
@@ -769,3 +756,22 @@ details.seccion[open] { padding-bottom: 8px; }
 
 /* En tema claro el logotipo usa letras oscuras: las claras no se ven sobre la barra blanca. */
 :root[data-tema="claro"] .barra .marca { content: url(rower-marca-clara.svg); }
+
+/* Talentos por clase: lista de mejoras de nivel y maestría */
+.lema-tal { margin: 0 0 6px; font-size: 13px; }
+.sub-tal { margin: 12px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-tenue); }
+.talento { border: 2px solid var(--borde); border-radius: 12px; background: var(--fondo); padding: 10px 12px; margin-bottom: 8px; }
+.talento.disponible { border-color: var(--primario-claro); }
+.talento.aprendido { border-color: #F2A33A; }
+.talento.bloqueado { opacity: .6; }
+.talento-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.talento-cab b { font-size: 15px; }
+.talento p { margin: 4px 0 6px; color: var(--texto-suave); font-size: 14px; }
+.talento-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.talento-pie small { min-width: 0; }
+.etq-tal { font-size: 11px; font-weight: 700; border: 1px solid currentColor; border-radius: 999px; padding: 0 7px; }
+.etq-tal.xp { color: var(--primario-claro); }
+.etq-tal.carrera { color: var(--spm); }
+.pips { display: inline-flex; gap: 4px; margin-left: auto; }
+.pips i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #F2A33A; }
+.pips i.lleno { background: #F2A33A; }

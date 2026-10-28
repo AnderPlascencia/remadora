@@ -99,26 +99,29 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   const ps = e.porSesion.get(s1.fecha);
   assert.ok(ps.xpExtra >= 140, `xp extra ${ps.xpExtra}`);
 
-  // Talentos por clase: puntos cada 3 niveles, requisitos por rango, rama favorita con grado gratis
+  // Talentos por clase: 4 mejoras + maestría, números fijos, requisitos por nivel
   assert.equal(J.puntosDeNivel(90), 30);
-  assert.equal(J.talentosDe('vikingo').length, 9);
-  assert.equal(J.talentosDe('samurai').find((t) => t.slot === 'disciplina-2').nombre, 'Kata');
-  assert.equal(J.grado({}, 'vikingo', 'potencia-1'), 1, 'la favorita trae un grado gratis');
-  assert.equal(J.grado({}, 'vikingo', 'fondo-1'), 0);
+  assert.equal(J.talentosDe('vikingo').length, 5);
+  assert.equal(J.cualidadDe('pirata'), 'Hurto');
+  assert.equal(J.talentosDe('samurai').find((t) => t.slot === 'm2').nombre, 'Kata');
+  assert.equal(J.talentosDe('vikingo')[0].texto, 'Cada 50 / 40 / 30 paladas recibes 1 palada extra.');
+  assert.equal(J.grado({}, 'vikingo', 'm1'), 0);
+  assert.equal(J.grado({ 'potencia-1': [1] }, 'vikingo', 'potencia-1'), 0, 'el árbol anterior no cuenta');
+  assert.equal(J.puntosGastados({ 'potencia-1': [1, 2], m1: [3] }), 1, 'los puntos del árbol anterior quedan libres');
+  assert.ok(J.tieneArbolAntiguo({ 'fondo-1': [1] }));
   const est = { nivel: 10, libres: 3 };
-  assert.equal(J.motivoBloqueo('fondo-1', est, {}, 'vikingo'), null);
-  assert.match(J.motivoBloqueo('fondo-2', est, {}, 'vikingo'), /Primero/);
-  assert.match(J.motivoBloqueo('potencia-2', est, {}, 'vikingo'), /nivel 20/);
-  assert.equal(J.motivoBloqueo('potencia-2', { nivel: 20, libres: 3 }, {}, 'vikingo'), null);
-  assert.match(J.motivoBloqueo('potencia-2', { nivel: 20, libres: 2 }, {}, 'vikingo'), /3 puntos/);
-  assert.equal(J.puntosGastados({ 'fondo-1': [1, 2], 'potencia-2': [3] }), 5);
-  // Un talento aplica solo desde que se aprende
+  assert.equal(J.motivoBloqueo('m1', est, {}, 'vikingo'), null);
+  assert.match(J.motivoBloqueo('m3', est, {}, 'vikingo'), /nivel 20/);
+  assert.match(J.motivoBloqueo('maestria', { nivel: 40, libres: 1 }, {}, 'vikingo'), /2 puntos/);
+  assert.equal(J.motivoBloqueo('maestria', { nivel: 40, libres: 2 }, {}, 'vikingo'), null);
+  assert.equal(J.puntosGastados({ m1: [1, 2], maestria: [3] }), 4);
+  // Un talento aplica solo desde que se aprende (Estrella guía: +15 XP por grado en sesiones de 30 min)
   const largo = sesion(7, 150, 1900);
-  const antes = J.estadoJuego([largo], { ftp: 200, per: { clase: 'vikingo', arbol: { vikingo: { 'fondo-1': [largo.fecha + 1] } } } });
-  assert.ok(!antes.porSesion.get(largo.fecha).detalle.some(([t]) => t === 'Remo largo'));
-  const despues = J.estadoJuego([largo], { ftp: 200, per: { clase: 'vikingo', arbol: { vikingo: { 'fondo-1': [0, 0] } } } });
-  const remo = despues.porSesion.get(largo.fecha).detalle.find(([t]) => t === 'Remo largo');
-  assert.equal(remo[1], Math.round(despues.porSesion.get(largo.fecha).detalle[0][1] * 0.08), '+4 % por grado');
+  const antes = J.estadoJuego([largo], { ftp: 200, per: { clase: 'polinesio', arbol: { polinesio: { m1: [largo.fecha + 1] } } } });
+  assert.ok(!antes.porSesion.get(largo.fecha).detalle.some(([t]) => t === 'Estrella guía'));
+  const despues = J.estadoJuego([largo], { ftp: 200, per: { clase: 'polinesio', arbol: { polinesio: { m1: [0, 0] } } } });
+  const estrella = despues.porSesion.get(largo.fecha).detalle.find(([t]) => t === 'Estrella guía');
+  assert.equal(estrella[1], 30, '+15 XP por grado');
   assert.equal(despues.talentosLibres, despues.talentos - 2);
 
   const tienda = J.tiendaSemana('2026-01-05');

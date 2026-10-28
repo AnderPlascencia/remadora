@@ -1,7 +1,7 @@
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
-import { gradosEn, puntosDeNivel, puntosGastados, talentosDe } from './talentos.js';
+import { gradosEn, puntosDeNivel, puntosGastados, xpTalentos } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo } from './estadisticas.js';
 import { objeto } from './objetos.js';
 import { tiendaVentajas } from './ventajas.js';
@@ -119,7 +119,7 @@ export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0,
 }
 
 // ---------- Talentos: por clase, en talentos.js ----------
-export { talentosDe, gradosEn, motivoBloqueo, puntosDeNivel, puntosGastados, nombreRama, ramaFavorita, grado, RAMAS, NOMBRE_TIER, NIVEL_REQUERIDO } from './talentos.js';
+export { talentosDe, gradosEn, motivoBloqueo, puntosDeNivel, puntosGastados, grado, cualidadDe, lemaTalentos, tieneArbolAntiguo, valorDe } from './talentos.js';
 
 // ---------- Misiones ----------
 // La distancia es la fuente principal de XP; las misiones dan variedad con recompensas moderadas:
@@ -290,10 +290,26 @@ export function medidas(s, ftpActual) {
   };
 }
 
+// Sesión sin pausas: 10 min o más sin quedarse 5 s quieto ni saltos de tiempo entre la primera y la última palada.
+export function sinPausas(s) {
+  const ms = s.muestras || [];
+  const activa = (x) => x.w > 0 || x.spm > 0;
+  const i0 = ms.findIndex(activa);
+  let i1 = ms.length - 1;
+  while (i1 >= 0 && !activa(ms[i1])) i1--;
+  if (i0 < 0 || ms[i1].t - ms[i0].t < 600) return false;
+  let quieto = 0;
+  for (let i = i0; i <= i1; i++) {
+    if (i > i0 && ms[i].t - ms[i - 1].t > 5) return false;
+    quieto = activa(ms[i]) ? 0 : quieto + 1;
+    if (quieto >= 5) return false;
+  }
+  return true;
+}
+
 // Ganancia de una sesión: XP con detalle y puntos por atributo (antes del bono de clase).
 function gananciaSesion(s, m, ctx) {
   const gr = ctx.grados || {};
-  const nombre = (slot) => ctx.nombres?.[slot] || slot;
   const at = { fuerza: 0, agilidad: 0, resistencia: 0, recuperacion: 0, tecnica: 0, voluntad: 0 };
   at.fuerza += m.z4min * 1.2;
   at.agilidad += (s.muestras || []).filter((x) => x.w / m.f >= 1.06).length / 20;
@@ -325,13 +341,14 @@ function gananciaSesion(s, m, ctx) {
   }
   if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
   if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', 25]);
-  // Talentos de la clase (solo los grados aprendidos antes de esta sesión). Entre todos, como mucho +12 % de la distancia.
-  const talento = (slot, cond, xp) => { if (gr[slot] && cond && xp > 0) detalle.push([nombre(slot), xp]); };
-  talento('potencia-1', m.z4min >= 5, Math.round(base * 0.04 * gr['potencia-1']));
-  talento('fondo-1', m.min >= 30, Math.round(base * 0.04 * gr['fondo-1']));
-  talento('disciplina-1', m.estable, Math.round(base * 0.04 * gr['disciplina-1']));
-  talento('potencia-3', ctx.records > 0, 25 * (gr['potencia-3'] || 0));
-  talento('fondo-3', m.metros > 5000, 5 * (gr['fondo-3'] || 0) * Math.floor((m.metros - 5000) / 1000));
+  // Talentos de la clase (solo los grados aprendidos antes de esta sesión): números fijos con tope por sesión.
+  if (ctx.clase) {
+    const rivales = s.carreraSinTerminar ? 0 : (s.rivales || (s.rival ? [s.rival] : [])).length;
+    detalle.push(...xpTalentos(ctx.clase, gr, {
+      paladas: s.paladas || 0, metros: m.metros, min: m.min, ganados: m.ganados, rivales,
+      sinPausas: sinPausas(s), delPrograma: !!s.delPrograma && s.tiempoMeta != null, racha: ctx.racha, sesSemana: ctx.sesSemana || 0,
+    }));
+  }
   return { xp: detalle.reduce((a, [, v]) => a + v, 0), detalle, atributos: at, carga };
 }
 
@@ -342,7 +359,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   const fav = claseDe(per.clase)?.favorito;
   const claveClase = claseDe(per.clase)?.clave || null;
   const arbol = (claveClase && per.arbol?.[claveClase]) || {};
-  const nombresTal = claveClase ? Object.fromEntries(talentosDe(claveClase).map((t) => [t.slot, t.nombre])) : {};
+  const sesPorSemana = new Map();
   const atributos = Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0]));
   const mejores = {};
   const cargaDia = new Map();
@@ -410,7 +427,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     }
     const grados = claveClase ? gradosEn(arbol, claveClase, s.fecha) : {};
     const descansoATiempo = !dias.has(ayer) && (cargaDia.get(anteayer) || 0) >= 60;
-    const gan = gananciaSesion(s, m, { grados, nombres: nombresTal, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0 });
+    const lunesS = lunesDe(s.fecha);
+    sesPorSemana.set(lunesS, (sesPorSemana.get(lunesS) || 0) + 1);
+    const gan = gananciaSesion(s, m, { grados, clase: claveClase, sesSemana: sesPorSemana.get(lunesS), racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0 });
     cargaDia.set(hoy, (cargaDia.get(hoy) || 0) + gan.carga);
     if (s.paladas) { mppSuma += s.distancia / s.paladas; mppN++; }
     const nivelAntes = nivelDe(xp);
@@ -443,7 +462,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
 
     // Constancia: semana, mes y bloques de 4 semanas
     const C = CONSTANCIA;
-    const xpCons = (x) => Math.round(x * (1 + 0.1 * (grados['disciplina-3'] || 0)));
+    const xpCons = (x) => Math.round(x);
     if (cons.semana !== lunes) {
       const anterior = cons.semana;
       const ok = cons.sesSemana >= 2;

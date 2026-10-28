@@ -1,6 +1,6 @@
-// Ventajas en la carrera contra fantasmas: talentos II y objetos de la tienda.
-// Solo cambian el resultado de la carrera (metros de ventaja); nunca tus metros, tiempos ni récords.
-import { TOPE_TALENTOS_M } from './talentos.js';
+// Ventajas en la carrera contra fantasmas: talentos de carrera de tu clase y objetos de la tienda.
+// Solo cambian el resultado de la carrera (metros de ventaja); nunca tus metros, tiempos, paladas ni récords.
+import { TOPE_TALENTOS_M, CLASES_TALENTO, valorDe } from './talentos.js';
 
 // Objetos de un solo uso. Ninguno vale más de 25 m o un 2 % de ritmo.
 export const OBJETOS_VENTAJA = [
@@ -16,53 +16,99 @@ export const objetoVentaja = (id) => OBJETOS_VENTAJA.find((x) => x.id === id) ||
 // Las pruebas (500 m, 2000 m, FTP) y los jefes de capítulo se reman sin objetos.
 export const esPrueba = (ent) => !!ent && (ent.pruebaFtp || /^Prueba|^2000 m$/.test(ent.nombre || '') || (ent.bloques || []).some((b) => b.prueba));
 
-const VENTANA = 60; // segundos para medir el ritmo estable
-const CV_ESTABLE = 0.06;
-
-// grados = { 'potencia-2': 0|1, … }; nombres = nombres de los talentos de la clase; final = { meta } o { duracion } si la carrera tiene final.
-export function nuevaVentaja({ grados = {}, nombres = {}, ftp = 0, objeto = null, final = null } = {}) {
-  return {
-    grados, nombres, ftp, objeto, final,
+// clase y grados = { m1: 0..3, … } de tu héroe; final = { meta } o { duracion } si la carrera tiene final; racha = días seguidos contando hoy.
+export function nuevaVentaja({ clase = null, grados = {}, objeto = null, final = null, racha = 0 } = {}) {
+  const e = {
+    clase, grados, objeto, final,
     talentos: 0, objetoM: objeto === 'salida' ? 15 : 0,
-    sobreFtp: 0, ultimaCarga: -Infinity, velocidades: [], segParejo: 0, ralentiza: 0, distAnt: 0,
-    eventos: [],
+    distAnt: 0, paladasAnt: 0, hist: [], cuenta: 0, salida: 0, activoSeg: 0, quieto: 0,
+    eventos: [], vistos: 0,
   };
+  const g = (slot) => (clase ? valorDe(clase, slot, grados[slot] || 0) : 0);
+  // Marcha de la legión: con 2 días de racha o más, sales por delante.
+  if (clase === 'romano' && racha >= 2 && g('m4')) sumar(e, g('m4'), 'm4', 0);
+  return e;
 }
 
-const estable = (vs) => {
-  if (vs.length < VENTANA || vs.some((v) => v <= 0)) return false;
-  const media = vs.reduce((a, v) => a + v, 0) / vs.length;
-  const sd = Math.sqrt(vs.reduce((a, v) => a + (v - media) ** 2, 0) / vs.length);
-  return sd / media < CV_ESTABLE;
-};
+const nombreDe = (e, slot) => CLASES_TALENTO[e.clase]?.talentos[slot]?.nombre || slot;
+// Suma metros de talento con el tope por carrera. discreto: solo un aviso corto en la pista (sin voz).
+function sumar(e, m, slot, t, discreto = false) {
+  const antes = e.talentos;
+  e.talentos = Math.min(TOPE_TALENTOS_M, e.talentos + m);
+  const ganado = Math.round((e.talentos - antes) * 10) / 10;
+  if (ganado > 0) e.eventos.push({ t, slot, nombre: nombreDe(e, slot), m: ganado, discreto });
+}
+// Metros de tu última palada (media de los últimos 10 s), para las paladas extra.
+function metrosPorPalada(e, dist, paladas) {
+  const h = e.hist;
+  const viejo = h[0];
+  if (viejo && paladas - viejo.paladas >= 1) return Math.min(15, (dist - viejo.dist) / (paladas - viejo.paladas));
+  return paladas >= 1 ? Math.min(15, dist / paladas) : 0;
+}
+// Cuántas veces se cruzó un múltiplo de «cada» al pasar de «antes» a «ahora».
+const cruces = (antes, ahora, cada) => Math.max(0, Math.floor(ahora / cada) - Math.floor(antes / cada));
 
-// Un segundo de carrera: muestra = { t, w, dist }. Devuelve los metros de ventaja totales.
-export function avanzarVentaja(e, { t, w, dist }) {
+// Un segundo de carrera: muestra = { t, dist, paladas, spm, detras } (detras: algún fantasma va por delante).
+// Devuelve los metros de ventaja totales.
+export function avanzarVentaja(e, { t, dist, paladas = 0, spm = 0, detras = false }) {
   const v = Math.max(0, dist - e.distAnt);
-  e.distAnt = dist;
-  e.velocidades.push(v);
-  if (e.velocidades.length > VENTANA) e.velocidades.shift();
-  const parejo = estable(e.velocidades);
-  const sumar = (m, slot) => {
-    const antes = e.talentos;
-    e.talentos = Math.min(TOPE_TALENTOS_M, e.talentos + m);
-    if (slot && e.talentos > antes) e.eventos.push({ t, slot, nombre: e.nombres[slot] || slot, m: Math.round((e.talentos - antes) * 10) / 10 });
+  const nuevas = Math.max(0, Math.floor(paladas) - Math.floor(e.paladasAnt));
+  // «Sin detenerte»: se perdonan hasta 2 s sin palada (la consola a veces manda un 0 suelto).
+  e.quieto = spm > 0 && v > 0 ? 0 : (e.quieto || 0) + 1;
+  const activo = e.quieto < 3;
+  const g = (slot) => (e.clase ? valorDe(e.clase, slot, e.grados[slot] || 0) : 0);
+  const extra = (slot, n = 1) => sumar(e, n * metrosPorPalada(e, dist, paladas), slot, t, true);
+  // Paladas extra: cada «g» paladas que cumplen la condición, 1 palada más.
+  const contar = (slot, cumple) => {
+    if (!g(slot)) return;
+    if (!cumple) { if (slot === 'm1' && e.clase === 'samurai') e.cuenta = 0; return; }
+    e.cuenta += nuevas;
+    while (e.cuenta >= g(slot)) { e.cuenta -= g(slot); extra(slot); }
   };
-  // Potencia II: 20 s seguidos sobre el FTP → +15 m, como mucho una vez cada 2 min.
-  if (e.grados['potencia-2'] && e.ftp > 0) {
-    e.sobreFtp = w > e.ftp ? e.sobreFtp + 1 : 0;
-    if (e.sobreFtp >= 20 && t - e.ultimaCarga >= 120) { sumar(15, 'potencia-2'); e.ultimaCarga = t; e.sobreFtp = 0; }
-  }
-  // Fondo II: cada 10 min a ritmo parejo → +10 m.
-  if (e.grados['fondo-2'] && parejo && ++e.segParejo % 600 === 0) sumar(10, 'fondo-2');
-  // Disciplina II: 60 s estables → durante 60 s los fantasmas reman un 1 % más lento (≈ 1 % de tu avance).
-  if (e.grados['disciplina-2']) {
-    if (e.ralentiza > 0) { e.ralentiza--; sumar(0.01 * v); } else if (parejo) {
-      e.ralentiza = 60;
-      e.velocidades = [];
-      e.eventos.push({ t, slot: 'disciplina-2', nombre: e.nombres['disciplina-2'] || 'disciplina-2', m: 0 });
+  switch (e.clase) {
+    case 'vikingo': {
+      contar('m1', true);
+      // Salida del drakkar: metros extra en cada una de tus primeras 20 paladas; un solo aviso al terminar.
+      const k = Math.min(20, Math.floor(paladas)) - Math.min(20, Math.floor(e.paladasAnt));
+      if (g('m3') && k > 0) {
+        const antes = e.talentos;
+        e.talentos = Math.min(TOPE_TALENTOS_M, e.talentos + k * g('m3'));
+        e.salida += e.talentos - antes;
+        if (Math.floor(paladas) >= 20 && e.salida > 0) { e.eventos.push({ t, slot: 'm3', nombre: nombreDe(e, 'm3'), m: Math.round(e.salida * 10) / 10 }); e.salida = 0; }
+      }
+      break;
     }
+    case 'pirata': contar('m2', detras); break;
+    case 'samurai': {
+      contar('m1', activo);
+      // Kiai final: en los últimos 200 m, cada 50 m.
+      const meta = e.final?.meta;
+      if (g('m3') && meta) {
+        const xa = Math.max(0, e.distAnt - (meta - 200));
+        const xb = Math.min(200, dist - (meta - 200));
+        const n = xb > xa ? cruces(xa, xb, 50) : 0;
+        if (n) sumar(e, n * g('m3'), 'm3', t, true);
+      }
+      break;
+    }
+    case 'polinesio': {
+      const n = cruces(e.distAnt, dist, 250);
+      if (g('m2') && n) sumar(e, n * g('m2'), 'm2', t, true);
+      const n2 = dist > 2000 ? cruces(Math.max(2000, e.distAnt) - 2000, dist - 2000, 500) : 0;
+      if (g('m4') && n2) sumar(e, n2 * g('m4'), 'm4', t, true);
+      break;
+    }
+    case 'romano': {
+      e.activoSeg = activo ? e.activoSeg + 1 : 0;
+      if (g('m2') && e.activoSeg && e.activoSeg % 60 === 0) sumar(e, g('m2'), 'm2', t, true);
+      break;
+    }
+    default:
   }
+  e.hist.push({ dist, paladas });
+  if (e.hist.length > 10) e.hist.shift();
+  e.distAnt = dist;
+  e.paladasAnt = paladas;
   // Objetos de la tienda
   if (e.objeto === 'viento' && t <= 120) e.objetoM += 0.02 * v;
   if (e.objeto === 'ancla' && e.final) {
@@ -70,6 +116,13 @@ export function avanzarVentaja(e, { t, w, dist }) {
     if (alFinal) e.objetoM += 0.02 * v;
   }
   return metrosVentaja(e);
+}
+
+// Adelantaste a un fantasma: Mano rápida del pirata le roba metros.
+export function alAdelantar(e, t) {
+  if (e?.clase !== 'pirata') return;
+  const m = valorDe('pirata', 'm3', e.grados.m3 || 0);
+  if (m) sumar(e, m, 'm3', t);
 }
 export const metrosVentaja = (e) => (e ? e.talentos + e.objetoM : 0);
 
