@@ -140,7 +140,7 @@ function aplicarTema() {
   const tema = ajustes.leer('tema', 'oscuro');
   if (tema === 'oscuro') delete document.documentElement.dataset.tema;
   else document.documentElement.dataset.tema = tema;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color('--fondo') || '#111410');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color('--fondo') || '#0B1217');
 }
 const selTema = $('#sel-tema');
 selTema.value = ajustes.leer('tema', 'oscuro');
