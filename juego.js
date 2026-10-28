@@ -307,6 +307,12 @@ export function sinPausas(s) {
   return true;
 }
 
+// Desde v0.22.0 se sube de nivel más despacio: las sesiones (y sus misiones) desde esta fecha dan la mitad de XP.
+// Las anteriores cuentan igual que antes, así nadie pierde el nivel que ya tenía. Las monedas no cambian.
+export const XP_LENTA_DESDE = new Date(2026, 9, 29).getTime();
+export const FACTOR_XP_LENTA = 0.5;
+export const factorXp = (fecha) => (fecha >= XP_LENTA_DESDE ? FACTOR_XP_LENTA : 1);
+
 // Ganancia de una sesión: XP con detalle y puntos por atributo (antes del bono de clase).
 function gananciaSesion(s, m, ctx) {
   const gr = ctx.grados || {};
@@ -349,7 +355,9 @@ function gananciaSesion(s, m, ctx) {
       sinPausas: sinPausas(s), delPrograma: !!s.delPrograma && s.tiempoMeta != null, racha: ctx.racha, sesSemana: ctx.sesSemana || 0,
     }));
   }
-  return { xp: detalle.reduce((a, [, v]) => a + v, 0), detalle, atributos: at, carga };
+  const f = factorXp(s.fecha);
+  const detalleXp = f === 1 ? detalle : detalle.map(([k, v]) => [k, Math.round(v * f)]);
+  return { xp: detalleXp.reduce((a, [, v]) => a + v, 0), xpBase: detalle.reduce((a, [, v]) => a + v, 0), detalle: detalleXp, atributos: at, carga };
 }
 
 // ---------- Estado completo del juego ----------
@@ -387,6 +395,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   const lograr = (fecha, tipo, texto, m0, obj, xpExtra = 0) => {
     const m = m0 + (obj ? PREMIO_INSIGNIA : 0);
     monedas += m;
+    xpExtra = Math.round(xpExtra * factorXp(fecha));
     xp += xpExtra;
     xpSesion += xpExtra;
     if (obj) premios.add(obj);
@@ -441,7 +450,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
       atributos[k] += total;
       if (total >= 0.5) ganancias[k] = Math.round(total);
     }
-    const monedasSesion = Math.floor(gan.xp / 50);
+    const monedasSesion = Math.floor(gan.xpBase / 50);
     monedas += monedasSesion;
 
     // Misiones del día y de la semana

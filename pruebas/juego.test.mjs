@@ -153,3 +153,15 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.equal(sinTerminar.ganados, 0);
   assert.deepEqual(sinTerminar.clasesVencidas, []);
 }
+
+// Desde la fecha de corte las sesiones dan la mitad de XP; las anteriores no cambian.
+{
+  assert.equal(J.factorXp(J.XP_LENTA_DESDE - 1), 1);
+  assert.equal(J.factorXp(J.XP_LENTA_DESDE), J.FACTOR_XP_LENTA);
+  const ses = (fecha) => ({ fecha, duracion: 1800, distancia: 6000, paladas: 700, wattsProm: 150, splitProm: 125, spmProm: 24, muestras: [] });
+  const antes = J.estadoJuego([ses(J.XP_LENTA_DESDE - 7 * 864e5 + 36e5 * 10)]);
+  const despues = J.estadoJuego([ses(J.XP_LENTA_DESDE + 7 * 864e5 + 36e5 * 10)]);
+  assert.ok(antes.xp > 0);
+  assert.ok(Math.abs(despues.xp - antes.xp / 2) <= antes.xp * 0.02, `${despues.xp} vs ${antes.xp}`);
+  assert.equal(despues.monedas, antes.monedas);
+}
