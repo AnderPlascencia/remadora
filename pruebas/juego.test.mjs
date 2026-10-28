@@ -56,12 +56,26 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.equal(sem.length, 4);
   assert.ok(sem.some((x) => x.nombre === 'Rival de la semana'));
   // Rivales: nunca de tu clase, el primero es el de la semana, rango relativo al tuyo
-  const rv = J.rivalesPara(['igual', 'superior', 'inferior'], { miClase: 'vikingo', nivel: 35, ftp: 200, lunes: '2026-01-05' });
+  const rv = J.rivalesPara(3, { miClase: 'vikingo', nivel: 35, ftp: 200, lunes: '2026-01-05' });
   assert.equal(rv[0].clase, J.rivalDeLaSemana('2026-01-05', 'vikingo'));
   assert.ok(rv.every((x) => x.clase !== 'vikingo'));
   assert.equal(new Set(rv.map((x) => x.clase)).size, 3);
-  assert.deepEqual(rv.map((x) => x.rango), ['guerrero', 'veterano', 'combatiente']);
-  assert.deepEqual(rv.map((x) => x.ftp), [200, 210, 186]);
+  assert.ok(rv.every((x) => x.rango === 'guerrero' && x.ftp === 200), 'Costa: tu rango y tu FTP');
+  const calma = J.rivalesPara(1, { nivel: 35, ftp: 200, dificultad: 'bahia', lunes: '2026-01-05' })[0];
+  assert.deepEqual([calma.rango, calma.ftp], ['combatiente', 170]);
+  const torm = J.rivalesPara(1, { nivel: 35, ftp: 200, peso: 80, dificultad: 'altamar', lunes: '2026-01-05' })[0];
+  assert.deepEqual([torm.rango, torm.ftp], ['veterano', 206], '2.5 W/kg es Primer oficial: +3 %');
+  // Clasificación por FTP
+  assert.equal(J.clasificacionDe(100, 80).nombre, 'Grumete');
+  assert.equal(J.clasificacionDe(160, 80).nombre, 'Contramaestre');
+  assert.equal(J.clasificacionDe(160, 80).faltaW, 40);
+  assert.equal(J.clasificacionDe(260, 0).nombre, 'Capitán');
+  assert.equal(J.clasificacionDe(260, 0).siguiente, null);
+  assert.equal(J.clasificacionDe(120).nombre, 'Marinero');
+  // XP por fantasma vencido según la dificultad
+  const conDif = (dificultad) => J.progresoHeroe([sesion(20, 150, 600, { rival: { nombre: 'X', dificultad, diferencia: 5 } })], { ftp: 200 })
+    .porSesion.get(Date.UTC(2026, 0, 20, 12)).detalle.find(([t]) => t === 'Fantasma vencido')[1];
+  assert.deepEqual(['bahia', 'costa', 'altamar', undefined].map(conDif), [15, 25, 40, 25]);
   assert.ok(sem.some((x) => x.nombre === 'Rumbo pirata'), 'misión temática de la clase');
   assert.ok(sem.every((x) => x.xp >= 150 && x.xp <= 250), 'semanales moderadas');
   assert.equal(J.lunesDe(Date.UTC(2026, 0, 8, 12)), '2026-01-05');

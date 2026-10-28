@@ -720,3 +720,14 @@ details.seccion[open] { padding-bottom: 8px; }
 .modo-ent button small { color: var(--texto-tenue); font-size: 12px; }
 .modo-ent button[aria-checked="true"] { border-color: var(--primario-claro); box-shadow: inset 0 0 0 1px var(--primario-claro); background: color-mix(in srgb, var(--primario) 28%, var(--panel-2)); }
 .modo-ent button:disabled { opacity: .5; cursor: not-allowed; }
+/* Rivales de otras clases y dificultad */
+.contador-rivales { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; }
+.contador-rivales span { flex: 1; font-weight: 600; }
+.contador-rivales b { min-width: 20px; text-align: center; font-size: 18px; }
+.contador-rivales .boton { font-size: 20px; width: 40px; }
+.modo-ent.tres { grid-template-columns: repeat(3, 1fr); }
+.modo-ent.tres button { padding: 10px; }
+.modo-ent.tres button b { font-size: 14px; }
+.modo-ent.tres button small { font-size: 11px; line-height: 1.3; }
+.aguas { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--primario-claro); }
+.aguas .ico { width: 16px; height: 16px; }

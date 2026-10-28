@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.16.0';
+const VERSION = '0.17.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -47,6 +47,7 @@ function irA(vista) {
   if (vista === 'heroe') pintarHeroe();
   if (vista === 'entrenamientos') pintarEntrenamientos();
   if (vista === 'entrenar') { dibujarVivo(); vistaPrevia(); }
+  if (vista === 'ajustes') pintarClasificacion();
   if (vista === 'ajustes') $('#log').textContent = lineasLog.slice(-300).join('\n');
 }
 document.querySelectorAll('.nav-inferior button').forEach((b) => b.addEventListener('click', () => irA(b.dataset.vista)));
@@ -71,8 +72,8 @@ function campoNumero(sel, clave, defecto, alCambiar) {
   el.value = ajustes.leer(clave, defecto);
   el.addEventListener('change', () => { ajustes.escribir(clave, el.value); alCambiar?.(); });
 }
-campoNumero('#in-peso', 'peso', '75');
-campoNumero('#in-ftp', 'ftp', '', () => { pintarZonas(); vistaPrevia(); });
+campoNumero('#in-peso', 'peso', '75', () => { pintarClasificacion(); vistaPrevia(); });
+campoNumero('#in-ftp', 'ftp', '', () => { pintarZonas(); pintarClasificacion(); vistaPrevia(); });
 campoNumero('#in-meta-semana', 'metaSemana', '10');
 campoNumero('#in-fcmax', 'fcMax', '');
 
@@ -120,13 +121,45 @@ setTimeout(() => $('#bienvenida')?.remove(), 1400);
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
+// Respuestas del asistente de plan por objetivo (en Planes).
+const asistente = { objetivo: null, nivel: null, dias: 3, semanas: 6 };
 function rivalesElegidos() {
   try {
     const v = JSON.parse(ajustes.leer('rivales', '[]'));
-    // Las opciones antiguas (principiante, intermedio, avanzado) pasan a los retos contra otras clases.
-    return Array.isArray(v) ? [...new Set(v.map((k) => J.RETO_ANTIGUO[k] || k))].slice(0, MAX_RIVALES) : [];
+    if (!Array.isArray(v)) return [];
+    // Las opciones antiguas (niveles fijos y retos) pasan a ser rivales de otra clase, que van primero.
+    const otros = [...new Set(v.filter((k) => k !== 'clase' && !J.RETO_ANTIGUO[k]))];
+    const clase = v.filter((k) => k === 'clase' || J.RETO_ANTIGUO[k]).map(() => 'clase');
+    return [...clase, ...otros].slice(0, MAX_RIVALES);
   } catch { return []; }
 }
+const guardarRivales = (lista) => ajustes.escribir('rivales', JSON.stringify(lista.slice(0, MAX_RIVALES)));
+// Dificultad de los rivales de clase: solo se elige en «Por objetivo»; en Remo libre van a tu nivel.
+const dificultadActual = () => (modoEnt() === 'objetivo' ? ajustes.leer('dificultad', 'costa') : 'costa');
+function pintarDificultad(nClase) {
+  const caja = $('#dificultad');
+  caja.hidden = modoEnt() !== 'objetivo' || !nClase;
+  if (caja.hidden) return;
+  const actual = dificultadActual();
+  caja.innerHTML = Object.entries(J.DIFICULTADES).map(([k, d]) => `<button type="button" role="radio" data-dif="${k}" aria-checked="${k === actual}" ${sesion ? 'disabled' : ''}>
+    <b>${d.nombre}</b><small>${d.texto.split(': ')[0]} · ${d.xp} XP por rival vencido</small></button>`).join('');
+}
+$('#dificultad').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-dif]');
+  if (!b || sesion) return;
+  ajustes.escribir('dificultad', b.dataset.dif);
+  pintarChips();
+});
+$('#rivales-clase').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-n]');
+  if (!b || sesion) return;
+  const sel = rivalesElegidos();
+  const n = sel.filter((k) => k === 'clase').length;
+  const otros = sel.filter((k) => k !== 'clase');
+  const nuevo = Math.max(0, Math.min(MAX_RIVALES - otros.length, n + Number(b.dataset.n)));
+  guardarRivales([...Array(nuevo).fill('clase'), ...otros]);
+  pintarChips();
+});
 function perso() {
   try { return { modo: 'ftp', valor: '', ...JSON.parse(ajustes.leer('fantasmaPerso', '{}')) }; } catch { return { modo: 'ftp', valor: '' }; }
 }
@@ -142,6 +175,12 @@ const leerMmss = (v) => {
 
 function pintarChips() {
   const sel = rivalesElegidos();
+  const nClase = sel.filter((k) => k === 'clase').length;
+  $('#n-rivales-clase').textContent = nClase;
+  const [menos, mas] = $('#rivales-clase').querySelectorAll('button');
+  menos.disabled = !!sesion || !nClase;
+  mas.disabled = !!sesion || sel.length >= MAX_RIVALES;
+  pintarDificultad(nClase);
   for (const b of document.querySelectorAll('#chips-rival .chip')) {
     const i = sel.indexOf(b.dataset.rival);
     b.setAttribute('aria-pressed', String(i >= 0));
@@ -149,7 +188,8 @@ function pintarChips() {
     b.disabled = !!sesion || (i < 0 && sel.length >= MAX_RIVALES);
   }
   const semana = J.rivalDeLaSemana(J.lunesDe(Date.now()), leerPersonaje().clase);
-  $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}. Los rivales tienen tu rango, uno más o uno menos.`;
+  const dif = J.DIFICULTADES[dificultadActual()];
+  $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}.${nClase ? ` ${modoEnt() === 'objetivo' ? `${dif.nombre}: ${dif.texto.split(': ')[1]}` : 'En Remo libre los rivales reman a tu nivel'}.` : ''}`;
   pintarSelVentaja(sel);
   if (!sesion) prepararPronto();
   // Durante la sesión los fantasmas ya están en el agua: se ocultan las opciones.
@@ -186,8 +226,8 @@ $('#chips-rival').addEventListener('click', (ev) => {
   if (!b || b.disabled) return;
   const sel = rivalesElegidos();
   const i = sel.indexOf(b.dataset.rival);
-  if (i >= 0) sel.splice(i, 1); else sel.push(b.dataset.rival);
-  ajustes.escribir('rivales', JSON.stringify(sel));
+  if (i >= 0) sel.splice(i, 1); else if (sel.length < MAX_RIVALES) sel.push(b.dataset.rival);
+  guardarRivales(sel);
   pintarChips();
 });
 $('#perso-modo').addEventListener('change', () => {
@@ -206,19 +246,19 @@ async function crearRivales(ent, { vista = false } = {}) {
   const sesiones = async () => (guardadas ??= await db.listar('sesiones'));
   const elegidos = rivalesElegidos();
   // Rivales de otras clases: su rango sale de tu nivel y su FTP del tuyo.
-  const retos = elegidos.filter((k) => J.RETOS[k]);
+  const nClase = elegidos.filter((k) => k === 'clase').length;
   let deClase = [];
-  if (retos.length) {
+  if (nClase) {
     const per = leerPersonaje();
     const h = J.estadoJuego(await sesiones(), { ftp: ftp(), per });
     const base = ftp() || estimarFtp(await sesiones()) || 150;
-    deClase = J.rivalesPara(retos, { miClase: per.clase, nivel: h.nivel, ftp: base, lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString() });
+    deClase = J.rivalesPara(nClase, { miClase: per.clase, nivel: h.nivel, ftp: base, peso: ajustes.num('peso', 75), dificultad: dificultadActual(), lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString() });
   }
   for (const clave of elegidos) {
     let r = null;
-    if (J.RETOS[clave]) {
+    if (clave === 'clase') {
       const d = deClase.shift();
-      r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, reto: d.reto };
+      r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase, perfil: d.perfil }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, dificultad: d.dificultad, clasificacion: d.clasificacion };
     } else if (F.NIVELES[clave]) r = F.simular(ent, clave, ftp());
     else if (clave === 'anterior' || clave === 'mejor') {
       r = E.elegirRival(await sesiones(), ent?.nombre, clave);
@@ -246,7 +286,7 @@ function tarjetaRival(r) {
     const c = J.claseDe(r.clase);
     const rango = J.RANGOS.find((x) => x.id === r.rango);
     return `<div class="rival-tarjeta" style="--chip:${r.color}"><img src="${srcRetratoRango(r.clase, r.rango)}" width="56" height="56" alt="">
-      <div><b>${r.nombre.split(' (')[0]}</b><small>${c.nombre} · ${rango?.nombre || ''} · ${r.ftp} W</small>
+      <div><b>${r.nombre.split(' (')[0]}</b><small>${c.nombre} ${rango?.nombre || ''} · ${J.DIFICULTADES[r.dificultad]?.nombre || ''} · ${r.clasificacion} · ${r.ftp} W</small>
       <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
   }
   let detalle = '';
@@ -267,7 +307,7 @@ function sesionHipotetica(ent, rivales, sesiones) {
   }
   const m = F.simular(plan, { ftp: mio }, mio).muestras.map((x) => ({ ...x, split: F.splitDeWatts(x.w) }));
   const fin = m.at(-1);
-  const contra = rivales.map((r) => ({ nombre: r.nombre, clase: r.clase || null, diferencia: 1 }));
+  const contra = rivales.map((r) => ({ nombre: r.nombre, clase: r.clase || null, dificultad: r.dificultad || null, diferencia: 1 }));
   return {
     fecha: Date.now(), duracion: fin.t, distancia: Math.round(fin.dist), muestras: m, wattsProm: Math.round(m.reduce((a, x) => a + x.w, 0) / m.length),
     entrenamiento: ent?.nombre || null, tiempoMeta: ent ? fin.t : null,
@@ -341,6 +381,27 @@ $('#mr-grafica').addEventListener('click', () => {
   if (Date.now() - gestoHecho < 400) return;
   if (sesion?.rival && vistaRemo() === 'carrera') alternarCarrera();
 });
+
+// Clasificación de tripulación por FTP (Grumete … Capitán): en la Ficha y en Ajustes, con aviso al subir.
+function pintarClasificacion(sesiones = null) {
+  const peso = ajustes.num('peso', 75);
+  const w = ftp() || (sesiones ? estimarFtp(sesiones) : 0);
+  const caja = $('#clasificacion-ftp');
+  if (!w) {
+    caja.textContent = 'Pon tu FTP para conocer tu puesto en la tripulación: Grumete, Marinero, Contramaestre, Primer oficial o Capitán.';
+    $('#heroe-aguas').textContent = '';
+    return;
+  }
+  const c = J.clasificacionDe(w, peso);
+  const medida = c.porPeso ? `${c.valor.toFixed(1)} W/kg` : `${w} W`;
+  caja.textContent = `Tu puesto en la tripulación: ${c.nombre} (${medida}${ftp() ? '' : ', FTP estimado'}).${c.siguiente ? ` Te faltan ${c.faltaW} W de FTP para ${c.siguiente.nombre}.` : ' Es el puesto más alto.'} Ajusta cómo reman tus rivales.`;
+  $('#heroe-aguas').textContent = `${c.nombre} · ${medida}`;
+  const vista = Number(ajustes.leer('clasificacionVista', '-1'));
+  if (c.indice > vista) {
+    if (vista >= 0) { toast(`¡Ascenso en la tripulación: ${c.nombre}!`); confeti(1800); }
+    ajustes.escribir('clasificacionVista', String(c.indice));
+  }
+}
 
 function pintarZonas() {
   const f = ftp();
@@ -655,7 +716,7 @@ async function detenerSesion() {
   }
   if (s.rival) {
     const resumen = (r) => ({
-      fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, clase: r.clase ?? null, rango: r.rango ?? null,
+      fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, clase: r.clase ?? null, rango: r.rango ?? null, dificultad: r.dificultad ?? null,
       diferencia: V.diferenciaFinal(s.dist - E.distanciaEn(r.muestras, s.t), s.ventaja),
     });
     if (s.ventaja && (V.metrosVentaja(s.ventaja) >= 0.5 || s.ventaja.objeto)) {
@@ -1251,7 +1312,7 @@ async function vistaPrevia() {
 $('#sel-entrenamiento').addEventListener('change', () => { ajustes.escribir('ultimoEnt', $('#sel-entrenamiento').value); vistaPrevia(); });
 
 // Dos modos: Remo libre (sin entrenamiento) o Por objetivo (eliges un entrenamiento de tus planes).
-const modoEnt = () => ($('#sel-entrenamiento').value ? 'objetivo' : ajustes.leer('modoEnt', 'libre'));
+function modoEnt() { return $('#sel-entrenamiento').value ? 'objetivo' : ajustes.leer('modoEnt', 'libre'); }
 function pintarModoEnt() {
   const modo = modoEnt();
   for (const b of $('#modo-ent').querySelectorAll('button')) {
@@ -1909,6 +1970,7 @@ async function pintarHeroe() {
   $('#heroe-avatar').innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="84" height="84" alt="${clase.nombre} ${h.titulo}"><span class="emblema mini">${emblema(clase)}</span>`;
   $('#heroe-titulo').textContent = per.nombre || `${clase.nombre} sin nombre`;
   $('#heroe-clase').textContent = `${clase.nombre} · ${h.titulo}`;
+  pintarClasificacion(sesiones);
   $('#heroe-monedas').innerHTML = `${icoMoneda}${miles(h.monedas)}`;
   $('#heroe-nivel').textContent = h.nivel;
   const pct = h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100;
@@ -2335,7 +2397,6 @@ async function pintarPrograma() {
 }
 
 // ---------- Asistente de plan por objetivo ----------
-const asistente = { objetivo: null, nivel: null, dias: 3, semanas: 6 };
 // Ritmo actual y distancia habitual, sacados de tu historial (o de tu FTP) para que no tengas que escribirlos.
 async function contextoPlan() {
   const sesiones = await db.listar('sesiones');

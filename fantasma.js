@@ -40,7 +40,8 @@ export const ESTILOS = {
 function perfil(nivel) {
   if (typeof nivel === 'string') return { clave: nivel, ...NIVELES[nivel] };
   const ftp = nivel.ftp;
-  const cercano = ftp < 140 ? NIVELES.principiante : ftp < 210 ? NIVELES.intermedio : NIVELES.avanzado;
+  // Un perfil dado (por tu clasificación de experiencia) manda sobre el que se deduce de su FTP.
+  const cercano = nivel.perfil ? { ...NIVELES.intermedio, ...nivel.perfil } : ftp < 140 ? NIVELES.principiante : ftp < 210 ? NIVELES.intermedio : NIVELES.avanzado;
   const estilo = ESTILOS[nivel.estilo] || null;
   // El samurái apenas varía; el pirata, mucho.
   const variacion = nivel.estilo === 'samurai' ? cercano.variacion / 2 : nivel.estilo === 'pirata' ? cercano.variacion * 1.6 : cercano.variacion;

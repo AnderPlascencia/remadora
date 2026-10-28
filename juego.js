@@ -64,34 +64,56 @@ const NOMBRES_RIVAL = {
   polinesio: ['Kalani', 'Makoa', 'Keoni', 'Nalu'],
   romano: ['Marco Varo', 'Tito Galo', 'Lucio Brenno', 'Cayo Severo'],
 };
-// Retos: el rango del rival respecto al tuyo y su FTP respecto al tuyo.
-export const RETOS = {
-  igual: { nombre: 'Rival de tu rango', rango: 0, ftp: 1 },
-  superior: { nombre: 'Rival superior', rango: 1, ftp: 1.05 },
-  inferior: { nombre: 'Rival inferior', rango: -1, ftp: 0.93 },
+// Clasificación de tripulación por FTP (de Grumete a Capitán): W/kg si hay peso, vatios si no. Decide cómo de constante rema tu rival.
+export const CLASIFICACIONES = [
+  { id: 'grumete', nombre: 'Grumete', wkg: 0, w: 0, perfil: { variacion: 0.035, fatiga: 0.08, spm: 22 }, altamar: 1.05 },
+  { id: 'marinero', nombre: 'Marinero', wkg: 1.5, w: 100, perfil: { variacion: 0.028, fatiga: 0.06, spm: 24 }, altamar: 1.05 },
+  { id: 'contramaestre', nombre: 'Contramaestre', wkg: 2, w: 150, perfil: { variacion: 0.022, fatiga: 0.045, spm: 25 }, altamar: 1.04 },
+  { id: 'oficial', nombre: 'Primer oficial', wkg: 2.5, w: 200, perfil: { variacion: 0.017, fatiga: 0.035, spm: 27 }, altamar: 1.03 },
+  { id: 'capitan', nombre: 'Capitán', wkg: 3, w: 250, perfil: { variacion: 0.012, fatiga: 0.025, spm: 28 }, altamar: 1.03 },
+];
+export function clasificacionDe(ftp, peso = 0) {
+  const porPeso = peso > 0;
+  const valor = porPeso ? ftp / peso : ftp;
+  const i = CLASIFICACIONES.reduce((a, c, k) => (valor >= (porPeso ? c.wkg : c.w) ? k : a), 0);
+  const sig = CLASIFICACIONES[i + 1];
+  const falta = sig ? Math.max(0, Math.ceil((porPeso ? sig.wkg * peso : sig.w) - ftp)) : null;
+  return { ...CLASIFICACIONES[i], indice: i, valor: Math.round(valor * 100) / 100, porPeso, siguiente: sig || null, faltaW: falta };
+}
+// Dificultad de los rivales en «Por objetivo» (en Remo libre siempre es Costa).
+export const DIFICULTADES = {
+  bahia: { nombre: 'Bahía', texto: 'Fácil: el rival rema suave para ir parejos a ritmo tranquilo', rango: -1, xp: 15, ftp: () => 0.85 },
+  costa: { nombre: 'Costa', texto: 'Medio: el rival rema a tu mismo nivel', rango: 0, xp: 25, ftp: () => 1 },
+  altamar: { nombre: 'Alta mar', texto: 'Difícil: el rival rema un poco más fuerte que tú', rango: 1, xp: 40, ftp: (c) => c.altamar },
 };
-// Las opciones antiguas de fantasma pasan al reto equivalente.
-export const RETO_ANTIGUO = { principiante: 'inferior', intermedio: 'igual', avanzado: 'superior' };
+export const xpPorFantasma = (dificultad) => (DIFICULTADES[dificultad] || DIFICULTADES.costa).xp;
+// Las opciones antiguas de fantasma (niveles fijos y retos) pasan a ser rivales de otra clase.
+export const RETO_ANTIGUO = { principiante: 'bahia', intermedio: 'costa', avanzado: 'altamar', inferior: 'bahia', igual: 'costa', superior: 'altamar' };
 const otrasClases = (miClase) => CLASES.map((c) => c.clave).filter((k) => k !== claseDe(miClase)?.clave);
 // La clase rival de la semana: la misma toda la semana, nunca la tuya.
 export function rivalDeLaSemana(lunes, miClase) {
   const otras = otrasClases(miClase);
   return otras[Math.floor(azar(`r${lunes}`)() * otras.length)];
 }
-// Rivales para una sesión: el primero es siempre de la clase de la semana; el resto, de otras clases.
-export function rivalesPara(retos, { miClase = null, nivel = 1, ftp = 150, lunes, semilla = '' } = {}) {
+// n rivales de clases distintas: el primero es siempre el de la semana. Su rango sale de tu nivel y su FTP del tuyo.
+export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0, dificultad = 'costa', lunes, semilla = '' } = {}) {
   const semana = rivalDeLaSemana(lunes, miClase);
   const r = azar(`n${lunes}${semilla}`);
   const resto = otrasClases(miClase).filter((k) => k !== semana).sort(() => r() - 0.5);
   const clases = [semana, ...resto];
+  const dif = DIFICULTADES[dificultad] || DIFICULTADES.costa;
+  const cl = clasificacionDe(ftp, peso);
   const mio = RANGOS.indexOf(rangoDe(nivel));
-  return retos.map((reto, i) => {
-    const def = RETOS[reto];
+  const rango = RANGOS[Math.max(0, Math.min(RANGOS.length - 1, mio + dif.rango))];
+  return Array.from({ length: n }, (_, i) => {
     const clase = clases[i % clases.length];
-    const rango = RANGOS[Math.max(0, Math.min(RANGOS.length - 1, mio + def.rango))];
     const nombres = NOMBRES_RIVAL[clase];
     const nombre = nombres[Math.floor(r() * nombres.length)];
-    return { reto, clase, rango: rango.id, ftp: Math.round(ftp * def.ftp), nombre: `${nombre} (${claseDe(clase).nombre} ${rango.nombre})` };
+    const ftpRival = Math.round(ftp * dif.ftp(cl));
+    return {
+      dificultad, clase, rango: rango.id, ftp: ftpRival, clasificacion: clasificacionDe(ftpRival, peso).nombre, perfil: cl.perfil,
+      nombre: `${nombre} (${claseDe(clase).nombre} ${rango.nombre})`,
+    };
   });
 }
 
@@ -294,7 +316,11 @@ function gananciaSesion(s, m, ctx) {
   // Bonos ordinarios entre 25 y 150 XP, sin multiplicadores de toda la sesión.
   if (completo) detalle.push(['Entrenamiento completo', 50]);
   if (ctx.records) detalle.push(['Récord personal', 100]);
-  if (m.ganados) detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, 25 * Math.min(m.ganados, 3)]);
+  // Cada fantasma vencido vale según su dificultad: Bahía 15, Costa 25 (y los demás fantasmas), Alta mar 40. Máximo 3.
+  if (m.ganados) {
+    const vencidos = (s.rivales || (s.rival ? [s.rival] : [])).filter((r) => r.diferencia > 0).slice(0, 3);
+    detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, vencidos.reduce((a, r) => a + xpPorFantasma(r.dificultad), 0)]);
+  }
   if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
   if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', 25]);
   // Talentos de la clase (solo los grados aprendidos antes de esta sesión). Entre todos, como mucho +12 % de la distancia.

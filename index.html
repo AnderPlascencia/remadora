@@ -82,11 +82,15 @@
         <div id="chips-rival" class="chips" role="group" aria-label="Fantasmas contra los que remar">
           <button type="button" class="chip" data-rival="anterior" aria-pressed="false">Mi anterior</button>
           <button type="button" class="chip" data-rival="mejor" aria-pressed="false">Mi mejor</button>
-          <button type="button" class="chip" data-rival="igual" aria-pressed="false">Rival de tu rango</button>
-          <button type="button" class="chip" data-rival="superior" aria-pressed="false">Rival superior</button>
-          <button type="button" class="chip" data-rival="inferior" aria-pressed="false">Rival inferior</button>
           <button type="button" class="chip" data-rival="perso" aria-pressed="false">A mi medida</button>
         </div>
+        <div id="rivales-clase" class="contador-rivales">
+          <span>Rivales de otras clases</span>
+          <button type="button" class="boton icono chico" data-n="-1" aria-label="Uno menos">−</button>
+          <b id="n-rivales-clase">0</b>
+          <button type="button" class="boton icono chico" data-n="1" aria-label="Uno más">+</button>
+        </div>
+        <div id="dificultad" class="modo-ent tres" role="radiogroup" aria-label="Dificultad de los rivales" hidden></div>
         <p id="rival-semana" class="ayuda"></p>
         <div id="rivales-vista" class="rivales-vista"></div>
         <label id="ventaja-campo" class="campo" hidden>Ventaja para la carrera
@@ -287,6 +291,7 @@
           <div class="crece">
             <b id="heroe-titulo" class="heroe-nombre"></b>
             <span id="heroe-clase" class="suave"></span>
+            <span id="heroe-aguas" class="aguas"></span>
             <span id="heroe-monedas" class="monedas"></span>
           </div>
           <div class="heroe-nivel"><span class="etq">Nivel</span><b id="heroe-nivel">1</b></div>
@@ -402,6 +407,7 @@
         <label class="campo">Peso (kg) <input id="in-peso" type="number" min="30" max="200" inputmode="numeric"></label>
         <label class="campo">FTP (W) <input id="in-ftp" type="number" min="30" max="1000" inputmode="numeric"></label>
       </div>
+      <p id="clasificacion-ftp" class="aviso suave-aviso"></p>
       <p class="ayuda">El FTP es la potencia que puedes sostener cerca de una hora. Haz el entrenamiento "Prueba FTP 20 min" y la app lo calcula por ti.</p>
       <table id="tabla-zonas" class="tabla"></table>
       <label class="campo">Pulso máximo (lpm) <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
