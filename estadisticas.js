@@ -404,3 +404,39 @@ export function metrosNuevos(previa, lectura) {
   if (d >= 0) return d <= MAX_M_POR_SEGUNDO ? d : 0;
   return lectura <= MAX_M_POR_SEGUNDO ? lectura : 0;
 }
+
+// Repara una sesión guardada con saltos falsos de distancia (la consola llegó a mandar cientos de metros en un segundo).
+// Entre dos muestras seguidas no se puede avanzar más de SALTO_MAX m ni retroceder; esos tramos no suman.
+// Devuelve la sesión corregida o null si no tenía saltos.
+export const SALTO_MAX = 50;
+export function repararSaltos(s) {
+  const m = s?.muestras || [];
+  if (m.length < 2) return null;
+  let previa = 0;
+  let nueva = 0;
+  let primerSalto = null;
+  const muestras = m.map((x) => {
+    const d = x.dist - previa;
+    previa = x.dist;
+    if (d < 0 || d > SALTO_MAX) primerSalto ??= x.t;
+    else nueva += d;
+    return { ...x, dist: Math.round(nueva) };
+  });
+  const quitado = (m.at(-1).dist || 0) - muestras.at(-1).dist;
+  if (primerSalto == null || quitado < 1) return null;
+  const ajustar = (r) => (r && r.diferencia != null ? { ...r, diferencia: Math.round(r.diferencia - quitado) } : r);
+  const r = {
+    ...s,
+    muestras,
+    distancia: muestras.at(-1).dist,
+    distanciaOriginal: s.distanciaOriginal ?? s.distancia,
+    reparada: true,
+    // Si la meta se "cumplió" con el salto, no cuenta.
+    tiempoMeta: s.tiempoMeta != null && primerSalto <= s.tiempoMeta ? null : s.tiempoMeta,
+  };
+  if (s.rival) r.rival = ajustar(s.rival);
+  if (s.rivales) r.rivales = s.rivales.map(ajustar);
+  if (s.referencias) r.referencias = s.referencias.map(ajustar);
+  r.marcas = marcasDeSesion(r);
+  return r;
+}

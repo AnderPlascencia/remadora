@@ -754,3 +754,9 @@ details.seccion[open] { padding-bottom: 8px; }
 .tm-fila > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .tm-fila > span:last-child { flex-shrink: 0; }
 .mr-parcial, .metrica .parcial { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Resumen de la semana: la columna de la meta puede encogerse y su texto bajar de renglón, sin salirse de la tarjeta. */
+.resumen-semana { grid-template-columns: auto minmax(0, 1fr); }
+.rs-meta { min-width: 0; }
+.rs-meta .tm-fila { flex-wrap: wrap; column-gap: 8px; row-gap: 0; }
+.rs-meta .tm-fila > span { white-space: normal; overflow: visible; }

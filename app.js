@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.19.2';
+const VERSION = '0.19.3';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -1964,7 +1964,7 @@ async function pintarHistorial() {
   const semana = E.resumenPeriodos(lista, 'semana', 1)[0];
   const meta = ajustes.num('metaSemana', 10);
   const km = semana.metros / 1000;
-  $('#semana-texto').textContent = `${km.toFixed(1)} de ${meta} km · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
+  $('#semana-texto').textContent = `${km.toFixed(1)} de ${meta} km${km >= meta ? ' ✓' : ''} · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
   $('#semana-barra').style.width = `${Math.min(100, (100 * km) / meta)}%`;
   pintarAvisoRespaldo(lista.length);
   pintarPeriodos();
@@ -2790,9 +2790,25 @@ $('#btn-restaurar').addEventListener('click', () => $('#in-restaurar').click());
 $('#in-restaurar').addEventListener('change', async (e) => {
   const archivo = e.target.files[0];
   e.target.value = '';
-  if (archivo) await restaurarRespaldo(archivo);
+  if (archivo) { await restaurarRespaldo(archivo); await repararSesiones(); }
 });
 pintarInfoRespaldo();
+repararSesiones();
+
+// Sesiones guardadas con saltos falsos de distancia de la consola: se recortan a los metros reales una sola vez.
+async function repararSesiones() {
+  let n = 0;
+  for (const s of await db.listar('sesiones')) {
+    const r = E.repararSaltos(s);
+    if (!r) continue;
+    await db.guardar('sesiones', r);
+    agregarLog(`sesión reparada: ${s.distancia} → ${r.distancia} m`);
+    n++;
+  }
+  if (!n) return;
+  toast(n === 1 ? 'Reparé una sesión con metros falsos de la consola' : `Reparé ${n} sesiones con metros falsos de la consola`);
+  if (vistaActiva('historial')) pintarHistorial();
+}
 
 function cerrarHoja() {
   $('#hoja').hidden = true;
