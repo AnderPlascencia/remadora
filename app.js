@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.19.6';
+const VERSION = '0.19.7';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -2162,7 +2162,7 @@ async function pintarHeroe() {
     if (b.dataset.hp === 'talentos') b.dataset.aviso = h.talentosLibres > 0 ? h.talentosLibres : '';
   }
   for (const el of document.querySelectorAll('.hp')) el.hidden = el.id !== `hp-${seccionHeroe}`;
-  ({ ficha: pintarFicha, talentos: pintarTalentos, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
+  ({ ficha: pintarFicha, talentos: pintarTalentos, niveles: pintarNiveles, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
 }
 
 function pintarFicha(h, per, clase, sesiones) {
@@ -2210,6 +2210,49 @@ function pintarTalentos(h, per, clase) {
       <h4 class="sub-tal">Mejoras de nivel</h4>${ts.filter((t) => !t.maestria).map(fila).join('')}
       <h4 class="sub-tal">Maestría</h4>${ts.filter((t) => t.maestria).map(fila).join('')}</div>`;
 }
+
+// Niveles: un panel por rango (del 1 al 90) con la ilustración del héroe en ese rango y lo que trae cada nivel.
+function pintarNiveles(h, per, clase) {
+  const R = J.RANGOS;
+  const actual = R.indexOf(J.rangoDe(h.nivel));
+  const abre = { 20: 'Se abren las mejoras de nivel 3 y 4 de tus talentos', 40: 'Se abre la maestría de tus talentos' };
+  const filas = (desde, hasta) => {
+    let html = '';
+    for (let n = desde; n <= hasta; n++) {
+      const extras = [];
+      if (n > 1 && n % 3 === 0) extras.push('+1 punto de talento');
+      if (abre[n]) extras.push(abre[n]);
+      const estado = n < h.nivel ? 'hecho' : n === h.nivel ? 'actual' : '';
+      html += `<li class="${estado}"><b>Nv ${n}</b><span>${n === 1 ? 'Inicio' : `${miles(J.xpParaNivel(n))} XP`}</span>${extras.length ? `<em>${extras.join(' · ')}</em>` : ''}</li>`;
+    }
+    return html;
+  };
+  $('#niveles-carrusel').innerHTML = R.map((r, i) => {
+    const hasta = i + 1 < R.length ? R[i + 1].nivel - 1 : J.NIVEL_MAX;
+    const estado = i < actual ? 'Alcanzado' : i === actual ? `Tu rango · nivel ${h.nivel}` : `Te faltan ${miles(J.xpParaNivel(r.nivel) - h.xp)} XP`;
+    return `<section class="nivel-panel${i > actual ? ' futuro' : ''}${i === actual ? ' actual' : ''}" aria-label="${r.nombre}">
+      <div class="nivel-figura"><img src="assets/heroes/${clase.clave}_${r.id}.webp" width="216" height="252" alt="${clase.nombre} ${r.nombre}" loading="lazy"></div>
+      <h3>${r.nombre}</h3><p class="nivel-rango">Niveles ${r.nivel}–${hasta}</p><p class="nivel-estado">${i > actual ? '🔒 ' : ''}${estado}</p>
+      <ul class="nivel-lista">${filas(r.nivel, hasta)}</ul></section>`;
+  }).join('');
+  $('#niveles-puntos').innerHTML = R.map((r, i) => `<button type="button" data-rango="${i}" aria-label="Ver ${r.nombre}"${i === actual ? ' class="tuyo"' : ''}></button>`).join('');
+  const car = $('#niveles-carrusel');
+  requestAnimationFrame(() => { car.scrollLeft = actual * car.clientWidth; marcarNivel(); });
+}
+function marcarNivel() {
+  const car = $('#niveles-carrusel');
+  const i = Math.round(car.scrollLeft / Math.max(1, car.clientWidth));
+  $('#niveles-puntos').querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
+}
+$('#niveles-carrusel').addEventListener('scroll', () => requestAnimationFrame(marcarNivel), { passive: true });
+document.querySelector('#hp-niveles').addEventListener('click', (e) => {
+  const car = $('#niveles-carrusel');
+  const paso = e.target.closest('[data-niv]');
+  const ir = e.target.closest('[data-rango]');
+  const i = Math.round(car.scrollLeft / car.clientWidth);
+  if (paso) car.scrollTo({ left: (i + Number(paso.dataset.niv)) * car.clientWidth, behavior: 'smooth' });
+  if (ir) car.scrollTo({ left: Number(ir.dataset.rango) * car.clientWidth, behavior: 'smooth' });
+});
 
 function filaMision(m) {
   const pct = Math.min(100, (100 * m.valor) / m.meta);

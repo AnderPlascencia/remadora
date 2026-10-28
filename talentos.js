@@ -19,7 +19,7 @@ export const CLASES_TALENTO = {
   vikingo: {
     cualidad: 'Fuerza', bote: 'drakkar', lema: 'Cada palada es un hachazo: sus mejoras cuentan paladas.',
     talentos: {
-      m1: { nombre: 'Golpe de hacha', tipo: 'carrera', g: [50, 40, 30], texto: (g) => `Cada ${g} paladas recibes 1 palada extra.` },
+      m1: { nombre: 'Golpe de hacha', tipo: 'carrera', g: [100, 80, 60], texto: (g) => `Cada ${g} paladas recibes 1 palada extra.` },
       m2: { nombre: 'Brazos de hacha', tipo: 'xp', g: [1, 2, 3], texto: (g) => `+${g} XP cada 10 paladas.` },
       m3: { nombre: 'Salida del drakkar', tipo: 'carrera', g: [0.5, 1, 1.5], texto: (g) => `Tus primeras 20 paladas de la carrera te dan ${coma(g)} m extra cada una.` },
       m4: { nombre: 'Saga de fuerza', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP al llegar a 500 paladas en una sesión.` },

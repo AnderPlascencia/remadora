@@ -775,3 +775,36 @@ details.seccion[open] { padding-bottom: 8px; }
 .pips { display: inline-flex; gap: 4px; margin-left: auto; }
 .pips i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #F2A33A; }
 .pips i.lleno { background: #F2A33A; }
+
+/* Niveles: carrusel de rangos del héroe */
+.niveles-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+.niveles-nav .boton.icono { min-width: 44px; min-height: 44px; font-size: 24px; line-height: 1; padding: 0; }
+.niveles-puntos { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.niveles-puntos button { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--borde); background: transparent; padding: 0; cursor: pointer; }
+.niveles-puntos button.tuyo { border-color: #F2A33A; }
+.niveles-puntos button[aria-current="true"] { background: var(--primario-claro); border-color: var(--primario-claro); }
+.niveles-carrusel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.niveles-carrusel::-webkit-scrollbar { display: none; }
+.nivel-panel { flex: 0 0 100%; scroll-snap-align: start; background: var(--panel); border-radius: var(--radio); padding: 14px; text-align: center; box-sizing: border-box; border: 2px solid transparent; }
+.nivel-panel.actual { border-color: #F2A33A; }
+.nivel-figura { display: flex; justify-content: center; }
+.nivel-figura img { width: min(216px, 60vw); height: auto; aspect-ratio: 360 / 420; object-fit: contain; }
+.nivel-panel.futuro .nivel-figura img { filter: saturate(.55) brightness(.8); }
+.nivel-panel h3 { margin: 8px 0 0; font-size: 22px; }
+.nivel-rango { margin: 2px 0; color: var(--texto-tenue); font-weight: 700; }
+.nivel-estado { margin: 4px 0 10px; color: var(--texto-suave); }
+.nivel-panel.actual .nivel-estado { color: #F2A33A; font-weight: 700; }
+.nivel-lista { list-style: none; margin: 0; padding: 0; text-align: left; }
+.nivel-lista li { display: grid; grid-template-columns: 56px 1fr; gap: 2px 8px; padding: 6px 4px; border-top: 1px solid var(--borde); font-size: 14px; }
+.nivel-lista li span { color: var(--texto-suave); }
+.nivel-lista li em { grid-column: 2; font-style: normal; color: var(--primario-claro); font-size: 13px; }
+.nivel-lista li.hecho b { color: var(--primario-claro); }
+.nivel-lista li.actual { background: rgba(242, 163, 58, .12); border-radius: 8px; }
+.nivel-lista li.actual b { color: #F2A33A; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .nivel-panel { display: grid; grid-template-columns: 200px 1fr; grid-template-rows: auto auto auto 1fr; column-gap: 18px; text-align: left; }
+  .nivel-figura { grid-row: 1 / span 4; align-items: flex-start; }
+  .nivel-figura img { width: 200px; }
+  .nivel-panel h3 { margin-top: 0; }
+  .nivel-lista { grid-column: 2; }
+}

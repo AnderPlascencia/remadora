@@ -298,6 +298,7 @@
         <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
           <button type="button" data-hp="ficha" class="activa">Ficha</button>
           <button type="button" data-hp="talentos">Talentos</button>
+          <button type="button" data-hp="niveles">Niveles</button>
           <button type="button" data-hp="misiones">Misiones</button>
           <button type="button" data-hp="tienda">Tienda</button>
         </div>
@@ -317,6 +318,15 @@
         <div id="hp-talentos" class="hp" hidden>
           <p id="talentos-libres" class="aviso suave-aviso"></p>
           <div id="arbol" class="arbol"></div>
+        </div>
+        <div id="hp-niveles" class="hp" hidden>
+          <p class="ayuda">Desliza para ver cada rango, del nivel 1 al 90, y cómo cambia tu héroe.</p>
+          <div class="niveles-nav">
+            <button type="button" class="boton icono" data-niv="-1" aria-label="Rango anterior">‹</button>
+            <div id="niveles-puntos" class="niveles-puntos" aria-label="Rangos"></div>
+            <button type="button" class="boton icono" data-niv="1" aria-label="Rango siguiente">›</button>
+          </div>
+          <div id="niveles-carrusel" class="niveles-carrusel" tabindex="0" aria-label="Rangos del héroe"></div>
         </div>
         <div id="hp-misiones" class="hp" hidden>
           <h2>Hoy</h2>

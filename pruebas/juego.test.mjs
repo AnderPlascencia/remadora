@@ -104,7 +104,7 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.equal(J.talentosDe('vikingo').length, 5);
   assert.equal(J.cualidadDe('pirata'), 'Hurto');
   assert.equal(J.talentosDe('samurai').find((t) => t.slot === 'm2').nombre, 'Kata');
-  assert.equal(J.talentosDe('vikingo')[0].texto, 'Cada 50 / 40 / 30 paladas recibes 1 palada extra.');
+  assert.equal(J.talentosDe('vikingo')[0].texto, 'Cada 100 / 80 / 60 paladas recibes 1 palada extra.');
   assert.equal(J.grado({}, 'vikingo', 'm1'), 0);
   assert.equal(J.grado({ 'potencia-1': [1] }, 'vikingo', 'potencia-1'), 0, 'el árbol anterior no cuenta');
   assert.equal(J.puntosGastados({ 'potencia-1': [1, 2], m1: [3] }), 1, 'los puntos del árbol anterior quedan libres');

@@ -11,11 +11,11 @@ const cerca = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.01, `${msg}: ${a} ≠
 
 // Sin talentos ni objetos no hay ventaja
 assert.equal(remar(V.nuevaVentaja(), 1200), 0);
-// Vikingo, Golpe de hacha grado 1: cada 50 paladas, 1 palada extra (8 m)
+// Vikingo, Golpe de hacha grado 1: cada 100 paladas, 1 palada extra (8 m)
 {
   const e = V.nuevaVentaja({ clase: 'vikingo', grados: { m1: 1 } });
-  cerca(remar(e, 99), 0, 'antes de 50 paladas');
-  cerca(remar(e, 1, { desde: 99 }), 8, 'a las 50 paladas');
+  cerca(remar(e, 199), 0, 'antes de 100 paladas');
+  cerca(remar(e, 1, { desde: 199 }), 8, 'a las 100 paladas');
   assert.equal(e.eventos[0].nombre, 'Golpe de hacha');
   assert.ok(e.eventos[0].discreto);
 }
