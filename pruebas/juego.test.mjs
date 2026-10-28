@@ -165,3 +165,51 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.ok(Math.abs(despues.xp - antes.xp / 2) <= antes.xp * 0.02, `${despues.xp} vs ${antes.xp}`);
   assert.equal(despues.monedas, antes.monedas);
 }
+
+// v0.24: XP que se muestra = XP que se paga, misiones a tu medida, jefes con XP y estimaciones
+{
+  const dia = (d) => Date.UTC(2026, 10, d, 19);
+  const corta = (d) => ({ fecha: dia(d), duracion: 960, distancia: 3000, paladas: 380, wattsProm: 95, muestras: [] });
+  const ses = [2, 9, 16, 23].map(corta); // 1 vez por semana, 3 km
+  const h = J.estadoJuego(ses, { ftp: 120, per: { clase: 'polinesio' }, ahora: dia(30) });
+  // Desde el 29 de octubre todo da la mitad: lo que se muestra ya viene a la mitad
+  const sinRitmo = J.misionesDelDia(J.lunesDe(dia(30)));
+  assert.ok(h.diarias.every((m) => m.xp <= 30), 'misiones diarias a la mitad');
+  assert.equal(h.hazanas.find((x) => x.id === 'ses25').xp, 250, 'logro a la mitad');
+  assert.equal(h.factorXp, 0.5);
+  // Misiones a tu medida: nada de 5 km ni de «en tu rango» para quien rema 3 km en remo libre
+  const rit = J.ritmoReciente(ses, dia(30));
+  assert.equal(Math.round(rit.kmSemana), 3);
+  for (let k = 0; k < 20; k++) {
+    const d = J.misionesDelDia(`2026-12-${String(k + 1).padStart(2, '0')}`, rit);
+    assert.ok(d[0].meta <= 3000, `distancia a tu medida ${d[0].meta}`);
+    assert.ok(!d.some((m) => m.clave === 'rango'), 'sin «en tu rango» si no usas entrenamientos con rango');
+    assert.ok(d.every((m) => m.preparar === undefined), 'misiones crudas sin atajo');
+  }
+  assert.ok(sinRitmo.length === 5);
+  const sem = J.misionesDeSemana('2026-12-07', 'polinesio', rit);
+  assert.equal(sem[0].meta, 3, 'la ruta pide tu semana normal');
+  assert.ok(!(sem.some((m) => m.clave === 'fondo') && sem.some((m) => m.clave === 'oceano')), 'sin dos misiones de sesión larga');
+  assert.ok(h.semanales.every((m) => typeof m.preparar === 'string'), 'cada misión tiene atajo');
+  // Logro de semanas seguidas al alcance de quien rema una vez por semana
+  const ocho = Array.from({ length: 8 }, (_, i) => corta(2 + 7 * i));
+  const h8 = J.estadoJuego(ocho, { ftp: 120, ahora: dia(2) + 60 * 864e5 });
+  assert.ok(h8.hazanas.find((x) => x.id === 'racha14').hecha, '8 semanas seguidas');
+  // Capítulo listo: dice qué prueba preparar; vencer al jefe da XP
+  assert.equal(h.capitulo.listo, true);
+  assert.equal(h.capitulo.preparar, 'base:prueba-500');
+  const prueba = { fecha: dia(24), duracion: 120, distancia: 500, entrenamiento: 'Prueba 500 m', tiempoMeta: 120, muestras: [] };
+  const hj = J.estadoJuego([...ses, prueba], { ftp: 120, per: { clase: 'polinesio' }, ahora: dia(30) });
+  assert.equal(hj.logros.find((l) => l.tipo === 'jefe').xp, 75, '150 XP a la mitad');
+  // XP por sesión y estimación de talentos: el polinesio con sesiones de 16 min no gana con Estrella guía
+  assert.ok(h.xpPorSesion > 0);
+  assert.equal(J.xpTalentoEstimada(h, 'polinesio', 'm1', 1), 0);
+  const largas = [2, 9].map((d) => ({ fecha: dia(d), duracion: 2400, distancia: 8000, paladas: 900, wattsProm: 150, muestras: [] }));
+  const hl = J.estadoJuego(largas, { ftp: 200, per: { clase: 'polinesio' }, ahora: dia(12) });
+  assert.equal(J.xpTalentoEstimada(hl, 'polinesio', 'm1', 1), 8, '+15 XP a la mitad en sesiones de 40 min');
+  // Guía de atributos con tus vatios y recomendación sin pulso
+  assert.match(J.comoSubir('fuerza', 200)[0], /182 W/);
+  assert.equal(J.recomendarPorAtributos({ fuerza: 5, agilidad: 5, resistencia: 5, recuperacion: 0, tecnica: 3, voluntad: 5 }, { sinPulso: true }).atributo.clave, 'tecnica');
+  assert.ok(J.CLASES.every((c) => c.para));
+  console.log('v0.24 OK', sem.map((m) => m.texto));
+}

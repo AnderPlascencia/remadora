@@ -149,5 +149,7 @@ export function resumenEnt(ent, ritmo) {
   const dur = `${soloTiempo(ent) ? '' : '≈ '}${m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`}`;
   if (ent.resumen) return `${dur} · ${ent.resumen}`;
   const trabajo = ent.bloques.filter((b) => !/calentamiento|enfriamiento|descanso|suave/i.test(b.nombre || ''));
-  return `${dur} · ${trabajo.length} ${trabajo.length === 1 ? 'tramo' : 'tramos'} de trabajo`;
+  // Con calentamiento o enfriamiento, la duración es del total (el nombre suele decir solo el tramo de trabajo).
+  const conExtras = ent.bloques.some((b) => /calentamiento|enfriamiento/i.test(b.nombre || ''));
+  return `${dur}${conExtras ? ' en total' : ''} · ${trabajo.length} ${trabajo.length === 1 ? 'tramo' : 'tramos'} de trabajo`;
 }

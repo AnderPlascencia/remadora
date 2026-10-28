@@ -125,6 +125,7 @@ export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana =
 // Las intensidades van en % de tu FTP (o en tu ritmo actual), así el plan se ajusta solo cuando mejoras.
 // Los mismos nombres en el inicio guiado y en el asistente de Planes; «tema» es lo que va en el nombre del plan.
 export const OBJETIVOS_PLAN = [
+  { clave: 'nivel', nombre: 'Subir de nivel y ponerme en forma', tema: 'forma', texto: 'Un poco de todo: fondo, umbral y ritmo, con la prueba que abre la historia del héroe.', prueba: 'Prueba 500 m' },
   { clave: 'distancia', nombre: 'Remar más lejos', tema: 'distancia', texto: 'Aguantar más tiempo sin parar: fondo largo y tempo.', prueba: null },
   { clave: 'ritmo', nombre: 'Bajar mi tiempo en 2000 m', tema: 'ritmo', texto: 'Ir más rápido: series a ritmo de carrera y umbral.', prueba: 'Prueba 2000 m' },
   { clave: 'potencia', nombre: 'Más fuerza y potencia', tema: 'potencia', texto: 'Sacar más watts: series cortas y fuertes, umbral y sprints.', prueba: 'Prueba FTP 20 min' },
@@ -136,7 +137,7 @@ export const NIVELES_PLAN = [
   { clave: 'alto', nombre: 'Remo seguido', volumen: 1.3 },
 ];
 // Días de entreno según cuántos por semana (0 = lunes).
-export const DIAS_PLAN = { 2: [1, 4], 3: [0, 2, 5], 4: [0, 1, 3, 5], 5: [0, 1, 3, 4, 6] };
+export const DIAS_PLAN = { 1: [5], 2: [1, 4], 3: [0, 2, 5], 4: [0, 1, 3, 5], 5: [0, 1, 3, 4, 6] };
 
 const CAL = { nombre: 'Calentamiento', duracion: 480, metrica: 'ftp', min: 56, max: 70 };
 const ENF = { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 };
@@ -168,6 +169,7 @@ const SEMANA_TIPO = {
   ritmo: ['ritmo', 'umbral', 'fondo', 'tempo', 'vo2'],
   distancia: ['largo', 'fondo', 'tempo', 'fondo', 'umbral'],
   tecnica: ['paladas', 'fondo', 'cadencia', 'tempo', 'paladas'],
+  nivel: ['fondo', 'umbral', 'ritmo', 'largo', 'tempo'],
 };
 const ENFOQUE_SESION = { vo2: 'potencia', sprints: 'potencia', umbral: 'potencia', tempo: 'distancia', fondo: 'distancia', largo: 'distancia', ritmo: 'ritmo', paladas: 'tecnica', cadencia: 'tecnica' };
 
@@ -195,6 +197,8 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     return lista;
   });
   const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
+  // Lo elegido queda en el plan: sirve para armar el siguiente y para ajustarlo cuando haya historial.
+  Object.assign(programa, { objetivo, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial });
   return { programa, entrenamientos };
 }
 const EJEMPLO_PRUEBA = {

@@ -51,6 +51,9 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Árbol de talentos, misiones diarias y semanales, historia en 5 capítulos con jefes que son pruebas reales, hazañas, monedas y tienda de ventajas para la carrera.
 - Si la app se cierra a media sesión, al volver ofrece guardarla; el botón Atrás de Android cierra lo que esté abierto en vez de salir.
 - Último parcial de 500 m en pantalla (verde o rojo) y ritmo objetivo con línea en la carrera.
+- Caminos para subir de nivel: cuántas sesiones faltan para el siguiente nivel y rango, misiones a tu medida (según tus últimas 4 semanas) con botón «Hacer ahora», jefes con botón «Enfrentar» y XP, y cuánto te daría cada talento con tus sesiones.
+- Guía de atributos: qué sube cada uno con tus vatios, cuánto subió esta semana, qué atributos subirías con el entrenamiento elegido y un botón para entrenarlo.
+- Plan «Subir de nivel» y planes de 1 a 5 días por semana; al terminar un plan, el siguiente con un poco más de carga; un plan armado sin historial se ajusta cuando ya remaste.
 
 ## Archivos
 

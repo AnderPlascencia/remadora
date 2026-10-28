@@ -1190,3 +1190,47 @@ body:has(#modo-remo:not([hidden])) .toast { bottom: auto; top: calc(12px + env(s
 /* 6. Números que no saltan: el split se desvanece al cambiar */
 .cambia { animation: cambia .16s ease-out; }
 @keyframes cambia { from { opacity: .35; } to { opacity: 1; } }
+
+/* ---------- v0.24: caminos para subir de nivel y atributos ---------- */
+.linea-nivel > span:first-of-type { white-space: normal; }
+.linea-nivel small.nuevo { display: block; font-size: 13px; line-height: 1.3; }
+.heroe-avisos:empty { display: none; }
+.heroe-aviso { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 14px; line-height: 1.4; }
+.heroe-aviso span { flex: 1; }
+.heroe-aviso .boton { flex: none; }
+.sub-atr { font-size: 15px; margin: 16px 0 6px; color: var(--texto); }
+.atributos-guia { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; }
+.atributo { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; }
+.atributo[open] { border-color: var(--primario); }
+.atributo summary { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 12px; cursor: pointer; list-style: none; }
+.atributo summary::-webkit-details-marker { display: none; }
+.atr-nombre { font-weight: 700; color: var(--texto); }
+.atr-nombre .fav { font-size: 11px; font-weight: 700; color: var(--acento); margin-left: 4px; }
+.atr-valor { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.atr-valor small { font-size: 11px; color: var(--texto-tenue); }
+.atr-valor small.sube { color: var(--ok-texto); font-weight: 700; }
+.atr-barra { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--rejilla); overflow: hidden; }
+.atr-barra i { display: block; height: 100%; background: var(--primario); border-radius: 3px; }
+.atributo ul { margin: 0; padding: 0 12px 4px 30px; font-size: 14px; color: var(--texto-suave); line-height: 1.45; }
+.atributo p { margin: 4px 12px; font-size: 13px; }
+.atributo .boton { margin: 6px 12px 12px; }
+.talento-valor { margin: 0 0 6px; font-size: 13px; color: var(--ok-texto); }
+.talento-valor.nada { color: var(--texto-tenue); }
+.mision-pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.mision-pie .enlace-boton { border: 0; background: transparent; padding: 4px 0; min-height: 32px; color: var(--primario-claro); font-weight: 700; font-size: 13px; cursor: pointer; flex: none; }
+.jefe .premio .xp { color: var(--acento); margin-right: 4px; }
+.jefe-boton { flex-basis: 100%; }
+.subio-talento { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; font-weight: 700; color: var(--acento); }
+.xp-mitad { font-size: 12px; margin: 6px 0 0; }
+.xp-atributos { margin-top: 8px; }
+.xp-atributos small { color: var(--texto-tenue); font-size: 12px; }
+.progreso-heroe { display: flex; align-items: center; gap: 10px; width: 100%; margin: 12px 0 0; padding: 10px 12px; border-radius: var(--radio); background: var(--panel); border: 1px solid var(--borde); color: var(--texto-suave); text-align: left; cursor: pointer; font: inherit; }
+.progreso-heroe[hidden] { display: none; }
+.progreso-heroe img { border-radius: 50%; flex: none; }
+.ph-texto { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ph-texto b { color: var(--texto); }
+.ph-texto small { font-size: 12px; color: var(--texto-tenue); }
+.ph-barras { display: flex; align-items: flex-end; gap: 3px; height: 34px; width: 72px; flex: none; }
+.ph-barras i { flex: 1; background: var(--primario-osc); border-radius: 2px 2px 0 0; }
+.ph-barras i.actual { background: var(--primario); }
+.progreso-heroe > span[aria-hidden] { color: var(--texto-tenue); font-size: 20px; }
