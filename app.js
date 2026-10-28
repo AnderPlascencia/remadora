@@ -514,7 +514,6 @@ $('#btn-nivel-prueba').addEventListener('click', () => {
   remadora.fijarResistencia(Number(selNivel.value));
   toast(`Nivel ${selNivel.value} enviado. Revisa la consola.`);
 });
-$('#version-barra').textContent = `v${VERSION}`;
 $('#version-ajustes').textContent = VERSION;
 
 const lineasLog = [];
@@ -556,6 +555,7 @@ remadora.addEventListener('estado', (e) => {
   el.classList.toggle('ok', texto === 'Conectada' || texto === 'Modo demo');
   el.classList.toggle('espera', /…$/.test(texto));
   $('#btn-conectar span').textContent = conectada || remadora.reconectando ? 'Desconectar' : 'Conectar remadora';
+  $('#btn-conectar').classList.toggle('activo', conectada);
   $('#btn-demo').textContent = remadora.demoTimer ? 'Detener demo' : 'Modo demo';
   // El aviso de Bluetooth sobra mientras se usa el modo demo.
   if (!Remadora.soportado()) $('#aviso-bt').hidden = !!remadora.demoTimer;
@@ -3548,7 +3548,7 @@ function pintarInicio() {
   document.querySelectorAll('.inicio-paso').forEach((x) => { x.hidden = Number(x.dataset.paso) !== p; });
   document.querySelectorAll('#inicio-puntos span').forEach((x, i) => x.classList.toggle('activo', i < p));
   $('#inicio-clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase-mini" role="radio" aria-checked="${c.clave === inicio.clase}" data-clase="${c.clave}">
-    <img src="${srcHeroe(c.clave, 1, true)}" width="56" height="56" alt=""><b>${c.nombre}</b><small>+15 % ${nombreAtributo(c.favorito)}</small></button>`).join('');
+    <img src="${srcHeroe(c.clave, 1, true)}" width="56" height="56" alt=""><b>${c.nombre}</b><small>+15 % ${nombreAtributo(c.favorito)}</small><span class="lema">${c.lema}</span></button>`).join('');
   $('#inicio-objetivos').innerHTML = OBJETIVOS_INICIO.map((o) => `<button type="button" role="radio" class="opcion" data-obj="${o.clave}" aria-checked="${o.clave === inicio.objetivo}"><b>${o.nombre}</b><small>${o.texto}</small></button>`).join('');
   $('#inicio-dias').innerHTML = [2, 3, 4, 5].map((d) => `<button type="button" role="radio" class="chip" data-dias="${d}" aria-pressed="${inicio.dias === d}">${d} días</button>`).join('');
   $('#inicio-dias-campo').hidden = !inicio.objetivo || inicio.objetivo === 'libre';

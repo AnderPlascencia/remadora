@@ -46,8 +46,12 @@
   </svg>
 
   <header class="barra">
-    <h1><img src="rower-marca.svg" alt="Rower" class="marca" height="24"> <span id="version-barra" class="version"></span></h1>
-    <span id="estado" class="pastilla" role="status" aria-live="polite">Desconectada</span>
+    <h1><img src="rower-marca.svg" alt="Rower" class="marca" height="24"></h1>
+    <div class="barra-acciones">
+      <span id="estado" class="pastilla" role="status" aria-live="polite">Desconectada</span>
+      <button id="btn-banda" class="boton icono barra-boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span class="solo-lector">Pulso</span></button>
+      <button id="btn-conectar" class="boton icono barra-boton"><svg class="ico" aria-hidden="true"><use href="#i-bt"/></svg><span class="solo-lector">Conectar remadora</span></button>
+    </div>
   </header>
 
   <main>
@@ -56,11 +60,6 @@
       <div id="aviso-bt" class="aviso aviso-bt" hidden>
         <span>Este navegador no tiene Bluetooth web: abre la app en Chrome para Android.</span>
         <button type="button" id="btn-demo-aviso" class="boton chico">Probar en modo demo</button>
-      </div>
-
-      <div class="fila-botones">
-        <button id="btn-conectar" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-bt"/></svg><span>Conectar remadora</span></button>
-        <button id="btn-banda" class="boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span>Pulso</span></button>
       </div>
 
       <button type="button" id="linea-nivel" class="linea-nivel" hidden></button>
@@ -156,7 +155,7 @@
         <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
       </div>
 
-      <div class="fila-botones">
+      <div class="fila-botones barra-accion">
         <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
         <button id="btn-pausa" class="boton grande" hidden aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
         <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
@@ -168,13 +167,12 @@
       <div class="metricas">
         <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span><span id="m-zona" class="sub"></span></div>
         <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span><span id="m-parcial" class="sub parcial"></span></div>
-        <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span></div>
+        <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span><span class="sub"><span id="m-mpp">-</span> m/palada</span></div>
         <div class="metrica"><span class="etq">Tiempo</span><span id="m-tiempo" class="valor">0:00</span></div>
         <div class="metrica"><span class="etq">Distancia</span><span id="m-dist" class="valor">0</span><span class="sub">m</span></div>
         <div class="metrica"><span class="etq">Paladas</span><span id="m-paladas" class="valor">0</span></div>
         <div class="metrica"><span class="etq">Calorías</span><span id="m-kcal" class="valor">0</span><span class="sub">kcal est.</span></div>
         <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span><span id="m-fc-zona" class="sub">lpm</span></div>
-        <div class="metrica"><span class="etq">Metros/palada</span><span id="m-mpp" class="valor">-</span><span class="sub">m</span></div>
       </div>
 
       <h2>Últimos 5 minutos</h2>
@@ -433,7 +431,6 @@
 
     <!-- AJUSTES -->
     <section id="vista-ajustes" class="vista" aria-labelledby="tab-ajustes">
-      <div class="tarjeta-version"><span>Versión instalada</span><b id="version-ajustes"></b></div>
       <details class="seccion" data-seccion="perfil" open>
       <summary><h2>Tú</h2></summary>
       <div class="fila-dos">
@@ -524,6 +521,7 @@
         <pre id="log" class="log"></pre>
       </details>
       </details>
+      <p class="pie-version">Rower <b id="version-ajustes"></b> · para la NordicTrack RW200</p>
     </section>
   </main>
 

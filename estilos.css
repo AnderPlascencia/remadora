@@ -998,3 +998,151 @@ h1, h2, h3, .titulo, .tm-nombre, #heroe-titulo, .lista b, .podio b { overflow-wr
   .inicio-clases > :last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: calc(50% - 4px); }
 }
 .racha-dias { display: block; color: var(--texto-suave); font-size: 12px; }
+
+/* ==========================================================================
+   Rediseño 0.23: pensado para un teléfono grande en la remadora (OnePlus 13, 412×915 css px).
+   - Lo importante a mano: la conexión vive en la barra superior y Empezar queda fijo abajo.
+   - Números con Barlow Condensed (incluida en la app, funciona sin conexión): caben más grandes.
+   - Menos cajas dentro de cajas; en horizontal la navegación pasa a un riel lateral.
+   ========================================================================== */
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(assets/fuentes/barlow-condensed-600.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(assets/fuentes/barlow-condensed-700.woff2) format('woff2'); }
+:root { --num: 'Barlow Condensed', system-ui, sans-serif; --barra-accion: 72px; }
+
+.solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Números grandes */
+.metrica .valor, .mr-watts, .mr-valor, .mr-resta, .tm-grande, .xp-cabecera b, .heroe-nivel b, .record b, #mr-vista .num {
+  font-family: var(--num); font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums;
+}
+.metrica .valor { font-size: 34px; line-height: 1.05; }
+.metrica.destacada .valor { font-size: 60px; line-height: 1; }
+.tm-grande { font-size: 38px; }
+
+/* Barra superior: marca a la izquierda, estado y conexión a la derecha */
+.barra { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: 8px; }
+.barra-acciones { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.barra-acciones .pastilla { max-width: 40vw; }
+.barra-boton { min-height: 44px; min-width: 44px; padding: 0; border-radius: 999px; background: transparent; border-color: var(--borde); color: var(--texto-suave); }
+.barra-boton:disabled { opacity: .35; }
+#btn-conectar.activo { color: var(--exito); border-color: rgba(34, 197, 94, .5); background: rgba(34, 197, 94, .1); }
+#btn-conectar:not(.activo):not(:disabled) { color: var(--sobre-primario); background: var(--primario); border-color: var(--primario); }
+
+/* Aviso de Bluetooth: una línea discreta, no un bloque amarillo */
+.aviso-bt { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; font-size: 14px; }
+.aviso-bt span { flex: 1; }
+.aviso-bt .boton { flex: none; }
+
+/* Preparar: una sola tarjeta, sin recuadros anidados */
+.preparar { padding: 2px 16px 14px; border-radius: 18px; }
+.hoy-nombre { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.hoy-sugerencia { background: transparent; border: 0; border-top: 1px solid var(--borde); border-radius: 0; padding: 8px 0 0; margin-top: 10px; color: var(--texto-suave); }
+.recomendacion { background: transparent; padding: 2px 0 2px 12px; border-radius: 0; border-left-width: 3px; margin: 10px 0 8px; }
+.opciones-carrera > summary { min-height: 48px; align-items: center; }
+.xp-estimada { background: transparent; border: 0; border-top: 1px solid var(--borde); border-radius: 0; padding: 10px 0 0; margin-top: 4px; }
+.xp-cabecera .ico { width: 22px; height: 22px; }
+.xp-cabecera b { font-size: 22px; }
+.xp-cabecera small { font-size: 13px; }
+.xp-partes { display: none; }
+.linea-nivel { border: 0; min-height: 52px; }
+.linea-nivel > span:first-of-type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Botón principal siempre visible, sobre la navegación */
+.barra-accion {
+  position: sticky; bottom: calc(var(--nav) + env(safe-area-inset-bottom)); z-index: 5;
+  margin: 12px -16px 0; padding: 10px 16px; flex-wrap: nowrap;
+  background: linear-gradient(to bottom, transparent, var(--fondo) 14px);
+}
+.barra-accion .boton.grande { min-height: 56px; border-radius: 16px; }
+
+/* Métricas en vivo: 2 grandes + 6 en dos filas de tres, sin huérfanas */
+.metrica { border-radius: 14px; padding: 10px 12px 12px; }
+.metrica.destacada { border-left: 0; box-shadow: inset 0 3px 0 var(--watts); padding-top: 12px; }
+.metricas > .destacada + .destacada { box-shadow: inset 0 3px 0 var(--split); }
+.metrica .sub { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* Navegación inferior estilo Android: píldora detrás del icono activo */
+.nav-inferior { --nav-alto: 68px; }
+.nav-inferior button { gap: 4px; font-size: 12px; position: relative; }
+.nav-inferior button .ico { width: 24px; height: 24px; padding: 0; box-sizing: content-box; }
+.nav-inferior button::before { content: ''; position: absolute; top: 8px; left: 50%; width: 56px; height: 30px; margin-left: -28px; border-radius: 999px; background: transparent; transition: background-color .2s; }
+.nav-inferior button.activa::before { background: color-mix(in srgb, var(--primario) 45%, transparent); }
+.nav-inferior button > * { position: relative; }
+.nav-inferior button.activa { color: var(--texto); }
+.nav-inferior button.activa .ico { color: var(--primario-claro); }
+
+/* Planes: «Entrenar» compacto a la derecha y la tarjeta respira */
+.base-tarjeta { border-left: 0; box-shadow: inset 4px 0 0 var(--borde); padding: 14px 16px; border-radius: 16px; }
+.base-tarjeta.suave { box-shadow: inset 4px 0 0 #38BDF8; }
+.base-tarjeta.mant { box-shadow: inset 4px 0 0 var(--primario-claro); }
+.base-tarjeta.mejora { box-shadow: inset 4px 0 0 #F2A33A; }
+.base-acciones { justify-content: space-between; flex-direction: row-reverse; margin-top: 10px; }
+.base-acciones .boton.primario { min-height: 44px; padding: 8px 20px; border-radius: 999px; }
+.base-acciones .enlace-boton { padding-left: 0; color: var(--texto-tenue); }
+
+/* Ajustes: la versión va al pie */
+.pie-version { text-align: center; color: var(--texto-tenue); font-size: 13px; margin: 28px 0 8px; }
+.pie-version b { color: var(--texto-suave); font-weight: 600; }
+
+/* Inicio: en vertical, lista de una columna con el lema de cada clase */
+.clase-mini .lema { display: none; }
+@media (max-width: 599px) {
+  .inicio-clases { grid-template-columns: 1fr; grid-auto-rows: auto; gap: 8px; }
+  .inicio-clases > :last-child:nth-child(odd) { grid-column: auto; width: auto; justify-self: stretch; }
+  .clase-mini { grid-template-columns: 56px 1fr auto; grid-template-rows: auto auto; min-height: 72px; padding: 8px 14px 8px 8px; }
+  .clase-mini img { grid-row: 1 / 3; }
+  .clase-mini b { grid-column: 2; }
+  .clase-mini .lema { display: block; grid-column: 2; grid-row: 2; color: var(--texto-tenue); font-size: 13px; line-height: 1.3; }
+  .clase-mini small { grid-column: 3; grid-row: 1 / 3; align-self: center; font-size: 13px; text-align: right; }
+}
+.inicio-logo { display: none; }
+.inicio-pie .boton:disabled { opacity: 1; background: var(--panel-2); border-color: var(--panel-2); color: var(--texto-tenue); }
+
+/* Modo remo: watts enormes sin marco vacío, métricas más legibles a un metro */
+.mr-principal { border-width: 2px; border-color: transparent; background: var(--panel); gap: 4px; }
+.mr-principal > .mr-etq { font-size: 16px; text-transform: uppercase; letter-spacing: .08em; }
+.mr-watts { font-size: clamp(110px, 52vw, 300px); line-height: .9; }
+.mr-grid > div { background: var(--panel); padding: 8px 12px; }
+.mr-valor { font-size: 40px; line-height: 1; }
+.mr-resta { font-size: 48px; }
+.mr-rival { font-size: 17px; padding: 10px 12px; }
+.mr-botones .boton.grande { border-radius: 16px; }
+.mr-botones { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 60px 60px; }
+body:has(#modo-remo:not([hidden])) .toast { bottom: auto; top: calc(12px + env(safe-area-inset-top)); }
+.modo-remo.vista-grafica .mr-watts { font-size: 76px; }
+.modo-remo.vista-grafica .mr-valor { font-size: 32px; }
+
+/* Horizontal (teléfono en el soporte): riel de navegación a la izquierda y todo el alto para el contenido */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --riel: calc(84px + env(safe-area-inset-left)); }
+  body { padding-bottom: 0; padding-left: var(--riel); }
+  .barra { padding-top: 6px; padding-bottom: 6px; }
+  .nav-inferior {
+    top: 0; bottom: 0; right: auto; width: var(--riel); height: auto;
+    grid-template-columns: 1fr; grid-auto-rows: 64px; align-content: center; gap: 4px;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left);
+    border-top: 0; border-right: 1px solid var(--borde);
+  }
+  .nav-inferior button::before { top: 4px; }
+  .barra-accion { bottom: 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .barra-accion .boton.grande { min-height: 52px; }
+  .toast { bottom: auto; top: calc(8px + env(safe-area-inset-top)); left: calc(50% + var(--riel) / 2); }
+  .grafica.carrera { height: min(300px, calc(100vh - 150px)); }
+  .metricas { grid-template-columns: repeat(6, 1fr); }
+  .metricas .metrica { grid-column: span 1; }
+  .metricas .metrica.destacada { grid-column: span 3; }
+  .metrica.destacada .valor { font-size: 52px; }
+  .mr-watts { font-size: clamp(100px, 40vh + 4vw, 240px); }
+  .mr-valor { font-size: 30px; }
+  .mr-grid > div { padding: 4px 10px; }
+  .mr-botones { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 52px 52px; }
+  .mr-botones .boton { gap: 6px; }
+  .modo-remo.vista-grafica .mr-watts { font-size: 48px; }
+  .modo-remo.vista-grafica .mr-valor { font-size: 22px; }
+  .modo-remo.vista-grafica .mr-rival { font-size: 14px; padding: 6px 10px; }
+}
+@media (orientation: landscape) and (max-height: 560px) and (max-width: 1000px) {
+  .mr-botones .boton.grande { font-size: 15px; }
+}
+.mr-rival { justify-content: flex-start; font-weight: 700; font-size: 16px; line-height: 1.3; text-align: left; }
+#clasificacion-ftp { text-align: left; font-weight: 500; font-size: 14px; }
