@@ -82,9 +82,9 @@ export function clasificacionDe(ftp, peso = 0) {
 }
 // Dificultad de los rivales en «Por objetivo» (en Remo libre siempre es Costa).
 export const DIFICULTADES = {
-  bahia: { nombre: 'Bahía', texto: 'Fácil: el rival rema suave para ir parejos a ritmo tranquilo', rango: -1, xp: 15, ftp: () => 0.85 },
-  costa: { nombre: 'Costa', texto: 'Medio: el rival rema a tu mismo nivel', rango: 0, xp: 25, ftp: () => 1 },
-  altamar: { nombre: 'Alta mar', texto: 'Difícil: el rival rema un poco más fuerte que tú', rango: 1, xp: 40, ftp: (c) => c.altamar },
+  bahia: { nombre: 'Bahía', texto: 'Fácil: los rivales reman suave para ir parejos a ritmo tranquilo', rango: -1, xp: 15, ftp: () => 0.85, oscila: 0.03 },
+  costa: { nombre: 'Costa', texto: 'Medio: los rivales reman a tu mismo nivel', rango: 0, xp: 25, ftp: () => 1, oscila: 0.03 },
+  altamar: { nombre: 'Alta mar', texto: 'Difícil: los rivales reman un poco más fuerte que tú', rango: 1, xp: 40, ftp: (c) => c.altamar, oscila: 0.02 },
 };
 export const xpPorFantasma = (dificultad) => (DIFICULTADES[dificultad] || DIFICULTADES.costa).xp;
 // Las opciones antiguas de fantasma (niveles fijos y retos) pasan a ser rivales de otra clase.
@@ -109,7 +109,8 @@ export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0,
     const clase = clases[i % clases.length];
     const nombres = NOMBRES_RIVAL[clase];
     const nombre = nombres[Math.floor(r() * nombres.length)];
-    const ftpRival = Math.round(ftp * dif.ftp(cl));
+    // Los rivales oscilan alrededor del nivel elegido: el de la semana justo en él, otro un poco por debajo y otro un poco por encima.
+    const ftpRival = Math.round(ftp * (dif.ftp(cl) + [0, -1, 1][i % 3] * dif.oscila));
     return {
       dificultad, clase, rango: rango.id, ftp: ftpRival, clasificacion: clasificacionDe(ftpRival, peso).nombre, perfil: cl.perfil,
       nombre: `${nombre} (${claseDe(clase).nombre} ${rango.nombre})`,

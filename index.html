@@ -78,21 +78,18 @@
         <select id="sel-entrenamiento"><option value="">Elige un entrenamiento</option></select>
       </label>
       <div class="campo fantasmas">
-        <span class="etq-campo">Fantasmas <small>(hasta 3)</small></span>
-        <div id="chips-rival" class="chips" role="group" aria-label="Fantasmas contra los que remar">
-          <button type="button" class="chip" data-rival="anterior" aria-pressed="false">Mi anterior</button>
-          <button type="button" class="chip" data-rival="mejor" aria-pressed="false">Mi mejor</button>
-          <button type="button" class="chip" data-rival="perso" aria-pressed="false">A mi medida</button>
+        <div id="bloque-rivales" hidden>
+          <span class="etq-campo">Rivales <small>(3 de otras clases)</small></span>
+          <div id="dificultad" class="modo-ent tres" role="radiogroup" aria-label="Dificultad de los rivales"></div>
         </div>
-        <div id="rivales-clase" class="contador-rivales">
-          <span>Rivales de otras clases</span>
-          <button type="button" class="boton icono chico" data-n="-1" aria-label="Uno menos">−</button>
-          <b id="n-rivales-clase">0</b>
-          <button type="button" class="boton icono chico" data-n="1" aria-label="Uno más">+</button>
-        </div>
-        <div id="dificultad" class="modo-ent tres" role="radiogroup" aria-label="Dificultad de los rivales" hidden></div>
         <p id="rival-semana" class="ayuda"></p>
         <div id="rivales-vista" class="rivales-vista"></div>
+        <span class="etq-campo">Referencia en tu carril <small>(línea amarilla)</small></span>
+        <div id="chips-rival" class="chips" role="group" aria-label="Líneas de referencia en tu carril">
+          <button type="button" class="chip" data-rival="anterior" aria-pressed="false">Mi anterior</button>
+          <button type="button" class="chip" data-rival="mejor" aria-pressed="false">Mi mejor</button>
+        </div>
+        <div id="referencias-vista" class="rivales-vista"></div>
         <label id="ventaja-campo" class="campo" hidden>Ventaja para la carrera
           <select id="sel-ventaja"></select>
           <small id="ventaja-ayuda" class="ayuda"></small>

@@ -7,7 +7,7 @@ const carreras = new Set();
 let animando = false;
 const sinMovimiento = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export const COLORES_RIVAL = ['#A5B4FC', '#F9A8D4', '#FDE68A'];
+export const COLORES_RIVAL = ['#A5B4FC', '#F9A8D4', '#5EEAD4'];
 const COLOR_YO = '#F2A33A';
 
 // estado: { t, pausa, yo: { dist, v, spm }, rivales: [{ nombre, color, muestras, spm(t) }], meta, cabecera: [l1, l2], tono, ritmo?: { v, etiqueta } }
@@ -80,7 +80,8 @@ function interpolar(c, ahora) {
     if (!b.yo && b.spm && !sinMovimiento) b.dist += (b.v * 0.12 * (60 / b.spm) / (2 * Math.PI)) * Math.sin(2 * Math.PI * b.fase);
   });
   const ritmo = e.ritmo ? { dist: e.ritmo.v * t, etiqueta: e.ritmo.etiqueta } : null;
-  return { botes, dt, t: ahora / 1000, ritmo };
+  const referencias = (e.referencias || []).map((r) => ({ dist: distanciaEn(r.muestras, t), etiqueta: r.etiqueta, discontinua: r.discontinua }));
+  return { botes, dt, t: ahora / 1000, ritmo, referencias };
 }
 
 // Ángulo del remo (radianes, + hacia la proa) y posición del asiento (−1 popa, +1 proa) según la fase.
@@ -161,7 +162,7 @@ function cabecera(c, { ctx, ancho, alto }) {
 // ---------- 2D: vista desde arriba, la cámara sigue tu bote ----------
 const COLOR_RITMO = '#FACC15';
 
-function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo }) {
+function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = [] }) {
   const n = botes.length;
   const arriba = Math.max(36, Math.min(54, alto * 0.16));
   const orilla = Math.min(16, alto * 0.06);
@@ -284,6 +285,29 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo }) {
     ctx.fillText(`${der ? '' : '◀ '}${ritmo.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 6 : 6, y0 + pista - 4);
   }
 
+  // Referencias (tu anterior, tu mejor): línea amarilla solo en tu carril, el de abajo.
+  referencias.forEach((r, k) => {
+    const yA = y0 + carril * (n - 1) + 3;
+    const yB = y0 + pista - 3;
+    const x = X(r.dist);
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.fillStyle = COLOR_RITMO;
+    if (x > -10 && x < ancho + 10) {
+      ctx.strokeStyle = COLOR_RITMO;
+      ctx.lineWidth = 3;
+      ctx.setLineDash(r.discontinua ? [5, 4] : []);
+      ctx.beginPath(); ctx.moveTo(x, yA); ctx.lineTo(x, yB); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.textAlign = x > ancho - 60 ? 'right' : 'left';
+      ctx.fillText(r.etiqueta, x + (x > ancho - 60 ? -5 : 5), yA + 11 + k * 13);
+    } else {
+      const der = x > ancho;
+      const dif = Math.round(r.dist - yo.dist);
+      ctx.textAlign = der ? 'right' : 'left';
+      ctx.fillText(`${der ? '' : '◀ '}${r.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 6 : 6, yA + 11 + k * 13);
+    }
+  });
+
   // Botes: los rivales arriba, tú en el carril de abajo
   const orden = [...botes.slice(1), botes[0]];
   orden.forEach((b, fila) => {
@@ -357,7 +381,7 @@ function bote2d(ctx, x, y, largo, remo, b, ppm) {
 }
 
 // ---------- 3D: cámara detrás de tu bote ----------
-function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo }) {
+function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [] }) {
   const yo = botes[0];
   const camZ = yo.dist - 13;
   const camH = 4.6;
@@ -479,6 +503,23 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo }) {
       ctx.fillStyle = COLOR_RITMO;
       if (b.x + 70 < ancho) ctx.fillText(ritmo.etiqueta, b.x + 6, b.y - 6);
     }
+  }
+
+  // Referencias: línea amarilla de lado a lado de tu carril (el del centro).
+  for (const r of referencias) {
+    if (!(r.dist - camZ < 300 && r.dist > camZ + 0.5)) continue;
+    const a = P(-carril / 2 + 0.2, r.dist);
+    const b = P(carril / 2 - 0.2, r.dist);
+    if (!a || !b) continue;
+    ctx.strokeStyle = COLOR_RITMO;
+    ctx.lineWidth = Math.max(3, a.s * 0.12);
+    ctx.setLineDash(r.discontinua ? [8, 6] : []);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COLOR_RITMO;
+    ctx.fillText(r.etiqueta, (a.x + b.x) / 2, a.y - 6);
   }
 
   // Cuerdas de boyas entre carriles

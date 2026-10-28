@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.17.0';
+const VERSION = '0.18.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -123,23 +123,25 @@ setTimeout(() => $('#bienvenida')?.remove(), 1400);
 const MAX_RIVALES = 3;
 // Respuestas del asistente de plan por objetivo (en Planes).
 const asistente = { objetivo: null, nivel: null, dias: 3, semanas: 6 };
+// En «Por objetivo» siempre se compite contra 3 rivales de otras clases; en Remo libre, contra ninguno.
 function rivalesElegidos() {
+  return modoEnt() === 'objetivo' ? ['clase', 'clase', 'clase'] : [];
+}
+// Mi anterior y Mi mejor ya no son rivales: son líneas amarillas de referencia en tu carril.
+function referenciasElegidas() {
   try {
-    const v = JSON.parse(ajustes.leer('rivales', '[]'));
-    if (!Array.isArray(v)) return [];
-    // Las opciones antiguas (niveles fijos y retos) pasan a ser rivales de otra clase, que van primero.
-    const otros = [...new Set(v.filter((k) => k !== 'clase' && !J.RETO_ANTIGUO[k]))];
-    const clase = v.filter((k) => k === 'clase' || J.RETO_ANTIGUO[k]).map(() => 'clase');
-    return [...clase, ...otros].slice(0, MAX_RIVALES);
+    const guardadas = ajustes.leer('referencias', null);
+    const v = JSON.parse(guardadas ?? ajustes.leer('rivales', '[]'));
+    return Array.isArray(v) ? ['anterior', 'mejor'].filter((k) => v.includes(k)) : [];
   } catch { return []; }
 }
-const guardarRivales = (lista) => ajustes.escribir('rivales', JSON.stringify(lista.slice(0, MAX_RIVALES)));
+const hayCarrera = () => !!(sesion && (sesion.rival || sesion.referencias?.length));
 // Dificultad de los rivales de clase: solo se elige en «Por objetivo»; en Remo libre van a tu nivel.
 const dificultadActual = () => (modoEnt() === 'objetivo' ? ajustes.leer('dificultad', 'costa') : 'costa');
-function pintarDificultad(nClase) {
+function pintarDificultad() {
   const caja = $('#dificultad');
-  caja.hidden = modoEnt() !== 'objetivo' || !nClase;
-  if (caja.hidden) return;
+  $('#bloque-rivales').hidden = modoEnt() !== 'objetivo';
+  if (modoEnt() !== 'objetivo') return;
   const actual = dificultadActual();
   caja.innerHTML = Object.entries(J.DIFICULTADES).map(([k, d]) => `<button type="button" role="radio" data-dif="${k}" aria-checked="${k === actual}" ${sesion ? 'disabled' : ''}>
     <b>${d.nombre}</b><small>${d.texto.split(': ')[0]} · ${d.xp} XP por rival vencido</small></button>`).join('');
@@ -148,16 +150,6 @@ $('#dificultad').addEventListener('click', (e) => {
   const b = e.target.closest('[data-dif]');
   if (!b || sesion) return;
   ajustes.escribir('dificultad', b.dataset.dif);
-  pintarChips();
-});
-$('#rivales-clase').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-n]');
-  if (!b || sesion) return;
-  const sel = rivalesElegidos();
-  const n = sel.filter((k) => k === 'clase').length;
-  const otros = sel.filter((k) => k !== 'clase');
-  const nuevo = Math.max(0, Math.min(MAX_RIVALES - otros.length, n + Number(b.dataset.n)));
-  guardarRivales([...Array(nuevo).fill('clase'), ...otros]);
   pintarChips();
 });
 function perso() {
@@ -175,27 +167,24 @@ const leerMmss = (v) => {
 
 function pintarChips() {
   const sel = rivalesElegidos();
-  const nClase = sel.filter((k) => k === 'clase').length;
-  $('#n-rivales-clase').textContent = nClase;
-  const [menos, mas] = $('#rivales-clase').querySelectorAll('button');
-  menos.disabled = !!sesion || !nClase;
-  mas.disabled = !!sesion || sel.length >= MAX_RIVALES;
-  pintarDificultad(nClase);
+  const nClase = sel.length;
+  pintarDificultad();
+  const refs = referenciasElegidas();
   for (const b of document.querySelectorAll('#chips-rival .chip')) {
-    const i = sel.indexOf(b.dataset.rival);
-    b.setAttribute('aria-pressed', String(i >= 0));
-    b.style.setProperty('--chip', i >= 0 ? COLORES_RIVAL[i] : '');
-    b.disabled = !!sesion || (i < 0 && sel.length >= MAX_RIVALES);
+    const activa = refs.includes(b.dataset.rival);
+    b.setAttribute('aria-pressed', String(activa));
+    b.style.setProperty('--chip', activa ? COLOR_REFERENCIA : '');
+    b.disabled = !!sesion;
   }
   const semana = J.rivalDeLaSemana(J.lunesDe(Date.now()), leerPersonaje().clase);
   const dif = J.DIFICULTADES[dificultadActual()];
-  $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}.${nClase ? ` ${modoEnt() === 'objetivo' ? `${dif.nombre}: ${dif.texto.split(': ')[1]}` : 'En Remo libre los rivales reman a tu nivel'}.` : ''}`;
+  $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}.${nClase ? ` ${dif.nombre}: ${dif.texto.split(': ')[1]}.` : ' En Remo libre no hay rivales: elige «Por objetivo» para competir.'}`;
   pintarSelVentaja(sel);
   if (!sesion) prepararPronto();
   // Durante la sesión los fantasmas ya están en el agua: se ocultan las opciones.
   $('.fantasmas').hidden = !!sesion;
   const panel = $('#perso-panel');
-  panel.hidden = !sel.includes('perso');
+  panel.hidden = true;
   const p = perso();
   const info = PERSO[p.modo] || PERSO.ftp;
   $('#perso-modo').value = p.modo;
@@ -224,10 +213,9 @@ $('#sel-ventaja').addEventListener('change', () => { pintarSelVentaja(); prepara
 $('#chips-rival').addEventListener('click', (ev) => {
   const b = ev.target.closest('.chip');
   if (!b || b.disabled) return;
-  const sel = rivalesElegidos();
-  const i = sel.indexOf(b.dataset.rival);
-  if (i >= 0) sel.splice(i, 1); else if (sel.length < MAX_RIVALES) sel.push(b.dataset.rival);
-  guardarRivales(sel);
+  const refs = referenciasElegidas();
+  const nuevas = refs.includes(b.dataset.rival) ? refs.filter((k) => k !== b.dataset.rival) : [...refs, b.dataset.rival];
+  ajustes.escribir('referencias', JSON.stringify(nuevas));
   pintarChips();
 });
 $('#perso-modo').addEventListener('change', () => {
@@ -259,14 +247,25 @@ async function crearRivales(ent, { vista = false } = {}) {
     if (clave === 'clase') {
       const d = deClase.shift();
       r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase, perfil: d.perfil }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, dificultad: d.dificultad, clasificacion: d.clasificacion };
-    } else if (F.NIVELES[clave]) r = F.simular(ent, clave, ftp());
-    else if (clave === 'anterior' || clave === 'mejor') {
-      r = E.elegirRival(await sesiones(), ent?.nombre, clave);
-      if (r) r = { ...r, nombre: clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior' };
-      else if (vista) r = { falta: true, nombre: clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior', muestras: [] };
-      else toast(`Aún no hay ${clave === 'mejor' ? 'una marca' : 'una sesión anterior'} de este entrenamiento para el fantasma`);
-    } else if (clave === 'perso') r = vista && !perso().valor && perso().modo !== 'ftp' ? null : await fantasmaPerso(ent, sesiones);
+    }
     if (r) lista.push({ ...r, clave, color: COLORES_RIVAL[lista.length] });
+  }
+  return lista;
+}
+
+// Líneas de referencia en tu carril: tu sesión anterior y tu mejor marca de este entrenamiento.
+const COLOR_REFERENCIA = '#FACC15';
+async function crearReferencias(ent, { vista = false } = {}) {
+  const refs = referenciasElegidas();
+  if (!refs.length) return [];
+  const sesiones = await db.listar('sesiones');
+  const lista = [];
+  for (const clave of refs) {
+    const nombre = clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior';
+    const s = E.elegirRival(sesiones, ent?.nombre, clave);
+    if (s) lista.push({ ...s, clave, nombre, etiqueta: clave === 'mejor' ? 'Mejor' : 'Anterior', discontinua: clave === 'mejor', color: COLOR_REFERENCIA });
+    else if (vista) lista.push({ falta: true, clave, nombre, muestras: [], color: COLOR_REFERENCIA });
+    else toast(`Aún no hay ${clave === 'mejor' ? 'una marca' : 'una sesión anterior'} de este entrenamiento para la referencia`);
   }
   return lista;
 }
@@ -290,7 +289,7 @@ function tarjetaRival(r) {
       <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
   }
   let detalle = '';
-  if (r.falta) detalle = 'Aún no hay una sesión de este entrenamiento para usarla de fantasma.';
+  if (r.falta) detalle = 'Aún no hay una sesión de este entrenamiento para usarla de referencia.';
   else if (r.fecha) detalle = `${fechaMini(r.fecha)} · ${miles(r.distancia ?? r.muestras.at(-1)?.dist ?? 0)} m en ${formatoTiempo(r.duracion ?? r.muestras.at(-1)?.t ?? 0)}`;
   else if (r.ftp) detalle = `Rema a ${r.ftp} W de FTP, sin estilo propio.`;
   return `<div class="rival-tarjeta${r.falta ? ' falta' : ''}" style="--chip:${r.color || 'var(--borde)'}"><span class="rival-ico">${ico('i-fantasma')}</span>
@@ -321,9 +320,11 @@ async function pintarPreparar() {
   const ent = entrenamientoPrevio;
   const elegidos = rivalesElegidos();
   const rivales = elegidos.length ? await crearRivales(ent, { vista: true }) : [];
+  const refs = await crearReferencias(ent, { vista: true });
   const sesiones = await db.listar('sesiones');
   if (turno !== preparoTurno || sesion) return;
   $('#rivales-vista').innerHTML = rivales.map(tarjetaRival).join('');
+  $('#referencias-vista').innerHTML = refs.map(tarjetaRival).join('');
   const caja = $('#xp-estimada');
   caja.hidden = !ent && !rivales.length;
   if (caja.hidden) return;
@@ -373,13 +374,13 @@ function aplicarModoCarrera() {
 function alternarCarrera() {
   ajustes.escribir('vistaCarrera', carreraEnt.modo === '3d' ? '2d' : '3d');
   aplicarModoCarrera();
-  if (sesion?.rival && !$('#modo-remo').hidden && vistaRemo() === 'carrera') pintarGraficaRemo(sesion.t);
+  if (hayCarrera() && !$('#modo-remo').hidden && vistaRemo() === 'carrera') pintarGraficaRemo(sesion.t);
 }
 aplicarModoCarrera();
 $('#carrera').addEventListener('click', alternarCarrera);
 $('#mr-grafica').addEventListener('click', () => {
   if (Date.now() - gestoHecho < 400) return;
-  if (sesion?.rival && vistaRemo() === 'carrera') alternarCarrera();
+  if (hayCarrera() && vistaRemo() === 'carrera') alternarCarrera();
 });
 
 // Clasificación de tripulación por FTP (Grumete … Capitán): en la Ficha y en Ajustes, con aviso al subir.
@@ -615,6 +616,7 @@ async function iniciarSesion() {
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
   const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftp(), fcMaxima()) : null;
   const rivales = await crearRivales(entrenamientoActivo);
+  const referencias = await crearReferencias(entrenamientoActivo);
   const rival = rivales[0] || null;
   sesion = {
     inicio: Date.now(),
@@ -640,6 +642,7 @@ async function iniciarSesion() {
     avisoCerca: -1,
     rival,
     rivales,
+    referencias,
     sinRemar: 0,
     empezo: false,
     pausaManual: false,
@@ -725,6 +728,9 @@ async function detenerSesion() {
     if (s.ventaja?.objeto) registro.ventajaUsada = s.ventaja.objeto;
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
+  }
+  if (s.referencias?.length) {
+    registro.referencias = s.referencias.map((r) => ({ nombre: r.nombre, fecha: r.fecha ?? null, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)) }));
   }
   registro.marcas = E.marcasDeSesion(registro);
   if (registro.ventajaUsada) {
@@ -969,7 +975,7 @@ function marcarRango(rango, potencia = true) {
 }
 
 function pintarRival() {
-  const r = sesion?.rival;
+  const r = hayCarrera();
   // En Entrenar la carrera ya muestra la diferencia: el aviso de texto queda solo para el modo remo.
   $('#rival').hidden = true;
   $('#mr-rival').hidden = !r;
@@ -998,6 +1004,27 @@ function velocidadReciente() {
 function carreraActual() {
   const t = sesion.t;
   const rs = sesion.rivales;
+  const refs = (sesion.referencias || []).map((x) => ({ etiqueta: x.etiqueta, discontinua: x.discontinua, muestras: x.muestras, nombre: x.nombre }));
+  const vsRef = refs.map((x) => {
+    const d = Math.round(sesion.dist - E.distanciaEn(x.muestras, t));
+    return `${d > 0 ? '+' : ''}${d} m vs. ${x.etiqueta.toLowerCase()}`;
+  }).join(' · ');
+  if (!rs.length) {
+    const x = refs[0];
+    const d = Math.round(sesion.dist - E.distanciaEn(x.muestras, t));
+    const texto = d === 0 ? `Igual que ${x.nombre.toLowerCase()}` : `${Math.abs(d)} m ${d > 0 ? 'adelante' : 'atrás'} de ${x.nombre.toLowerCase()}`;
+    const tono = d > 0 ? 'adelante' : d < 0 ? 'atras' : '';
+    return {
+      texto, tono, proyeccion: null,
+      estado: {
+        t, pausa: !!enPausa() || !sesion.empezo, yo: { dist: sesion.dist, v: actual.split > 0 ? 500 / actual.split : 0, spm: actual.spm },
+        rivales: [], referencias: refs, meta: entrenamientoActivo?.objetivo?.metrica === 'distancia' ? entrenamientoActivo.objetivo.valor : null,
+        cabecera: [texto, refs.length > 1 ? vsRef : ''], tono,
+        ritmo: sesion.ritmo ? { v: 500 / sesion.ritmo, etiqueta: `Ritmo ${formatoSplit(sesion.ritmo)}` } : null,
+        yoColor: O.objeto(leerPersonaje().equipo?.bote)?.color || null,
+      },
+    };
+  }
   const obj = entrenamientoActivo?.objetivo;
   const meta = obj?.metrica === 'distancia' ? obj.valor : null;
   const extra = V.metrosVentaja(sesion.ventaja);
@@ -1030,6 +1057,7 @@ function carreraActual() {
     l2 = `Al final: ${Math.round(p.miDist)} m · ${d >= 0 ? '+' : ''}${d} m vs. ${rs.length > 1 ? quien.replace(/^fantasma /, '') : 'fantasma'} · ${p.lugar}º de ${p.total}`;
   }
   if (extra >= 1) l2 = `${l2 ? `${l2} · ` : ''}Ventaja +${Math.round(extra)} m`;
+  if (vsRef) l2 = `${l2 ? `${l2} · ` : ''}${vsRef}`;
   if (sesion.ventaja?.objeto === 'mapa') {
     const k = V.proximoAceleron(r, t);
     if (k) l2 = `${l2 ? `${l2} · ` : ''}${(r.nombre || 'Fantasma').split(' (')[0]} acelera en ${k} s`;
@@ -1039,6 +1067,7 @@ function carreraActual() {
     pausa: !!enPausa() || !sesion.empezo,
     yo: { dist: miDist, v: actual.split > 0 ? 500 / actual.split : 0, spm: actual.spm },
     rivales: rs.map((x) => ({ nombre: x.nombre.replace(/^Fantasma /, ''), color: x.color, muestras: x.muestras, spmEn: (tt) => F.spmEn(x, tt) })),
+    referencias: refs,
     meta,
     cabecera: [l1, l2],
     tono,
@@ -1124,7 +1153,7 @@ function pintar() {
 // Vista del modo remo: 'numeros', 'grafica' o 'carrera' (esta solo si hay fantasma).
 function vistaRemo() {
   const v = ajustes.leer('vistaRemo', 'numeros');
-  if (v === 'carrera' && !sesion?.rival) return 'grafica';
+  if (v === 'carrera' && !hayCarrera()) return 'grafica';
   return v;
 }
 const vistaGrafica = () => vistaRemo() !== 'numeros';
@@ -1170,7 +1199,7 @@ function pintarGraficaRemo(t) {
 function siguienteVista() {
   const v = vistaRemo();
   if (v === 'numeros') return 'grafica';
-  if (v === 'grafica' && sesion?.rival) return 'carrera';
+  if (v === 'grafica' && hayCarrera()) return 'carrera';
   return 'numeros';
 }
 
@@ -2263,6 +2292,7 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   for (const r of s.rivales || (s.rival ? [s.rival] : [])) {
     stats.push([s.rivales ? `Vs. ${r.nombre.replace(/^Fantasma /, '')}` : 'Vs. fantasma', `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m${s.ventaja ? ' ⚑' : ''}`]);
   }
+  for (const r of s.referencias || []) stats.push([`Vs. ${r.nombre.replace(/^Tu /, 'tu ')}`, `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m`]);
   if (s.ventaja) {
     const obj = V.objetoVentaja(s.ventaja.objeto);
     stats.push(['Ventaja ⚑', `${s.ventaja.metros} m${obj ? ` · ${obj.nombre}` : ''}`]);
