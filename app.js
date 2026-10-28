@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.13.0';
+const VERSION = '0.14.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -151,6 +151,7 @@ function pintarChips() {
   const semana = J.rivalDeLaSemana(J.lunesDe(Date.now()), leerPersonaje().clase);
   $('#rival-semana').textContent = `Rival de la semana: ${J.claseDe(semana).nombre}. ${F.ESTILOS[semana].texto}. Los rivales tienen tu rango, uno más o uno menos.`;
   pintarSelVentaja(sel);
+  if (!sesion) prepararPronto();
   // Durante la sesión los fantasmas ya están en el agua: se ocultan las opciones.
   $('.fantasmas').hidden = !!sesion;
   const panel = $('#perso-panel');
@@ -179,7 +180,7 @@ function pintarSelVentaja(sel = rivalesElegidos()) {
   const x = V.objetoVentaja($('#sel-ventaja').value);
   $('#ventaja-ayuda').textContent = prueba ? 'En las pruebas y contra los jefes se rema sin ventajas.' : x ? `${x.texto} Se gasta al guardar la sesión.` : 'Una por carrera. Se gasta al guardar la sesión.';
 }
-$('#sel-ventaja').addEventListener('change', () => pintarSelVentaja());
+$('#sel-ventaja').addEventListener('change', () => { pintarSelVentaja(); prepararPronto(); });
 $('#chips-rival').addEventListener('click', (ev) => {
   const b = ev.target.closest('.chip');
   if (!b || b.disabled) return;
@@ -195,10 +196,11 @@ $('#perso-modo').addEventListener('change', () => {
 });
 $('#perso-valor').addEventListener('input', () => {
   ajustes.escribir('fantasmaPerso', JSON.stringify({ modo: $('#perso-modo').value, valor: $('#perso-valor').value.trim() }));
+  prepararPronto();
 });
 
 // Crea los fantasmas elegidos para este entrenamiento, cada uno con su color.
-async function crearRivales(ent) {
+async function crearRivales(ent, { vista = false } = {}) {
   const lista = [];
   let guardadas = null;
   const sesiones = async () => (guardadas ??= await db.listar('sesiones'));
@@ -210,7 +212,7 @@ async function crearRivales(ent) {
     const per = leerPersonaje();
     const h = J.estadoJuego(await sesiones(), { ftp: ftp(), per });
     const base = ftp() || estimarFtp(await sesiones()) || 150;
-    deClase = J.rivalesPara(retos, { miClase: per.clase, nivel: h.nivel, ftp: base, lunes: J.lunesDe(Date.now()), semilla: String(Date.now()) });
+    deClase = J.rivalesPara(retos, { miClase: per.clase, nivel: h.nivel, ftp: base, lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString() });
   }
   for (const clave of elegidos) {
     let r = null;
@@ -221,11 +223,78 @@ async function crearRivales(ent) {
     else if (clave === 'anterior' || clave === 'mejor') {
       r = E.elegirRival(await sesiones(), ent?.nombre, clave);
       if (r) r = { ...r, nombre: clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior' };
+      else if (vista) r = { falta: true, nombre: clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior', muestras: [] };
       else toast(`Aún no hay ${clave === 'mejor' ? 'una marca' : 'una sesión anterior'} de este entrenamiento para el fantasma`);
-    } else if (clave === 'perso') r = await fantasmaPerso(ent, sesiones);
+    } else if (clave === 'perso') r = vista && !perso().valor && perso().modo !== 'ftp' ? null : await fantasmaPerso(ent, sesiones);
     if (r) lista.push({ ...r, clave, color: COLORES_RIVAL[lista.length] });
   }
   return lista;
+}
+
+// ---------- Vista previa antes de remar: rivales elegidos y XP estimada ----------
+let preparoTimer = null;
+let preparoTurno = 0;
+function prepararPronto() {
+  clearTimeout(preparoTimer);
+  preparoTimer = setTimeout(pintarPreparar, 150);
+}
+const srcRetratoRango = (clase, rango) => `assets/heroes/${clase}_${rango}_retrato.webp`;
+const fechaMini = (f) => new Date(f).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+
+function tarjetaRival(r) {
+  if (r.clase) {
+    const c = J.claseDe(r.clase);
+    const rango = J.RANGOS.find((x) => x.id === r.rango);
+    return `<div class="rival-tarjeta" style="--chip:${r.color}"><img src="${srcRetratoRango(r.clase, r.rango)}" width="56" height="56" alt="">
+      <div><b>${r.nombre.split(' (')[0]}</b><small>${c.nombre} · ${rango?.nombre || ''} · ${r.ftp} W</small>
+      <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
+  }
+  let detalle = '';
+  if (r.falta) detalle = 'Aún no hay una sesión de este entrenamiento para usarla de fantasma.';
+  else if (r.fecha) detalle = `${fechaMini(r.fecha)} · ${miles(r.distancia ?? r.muestras.at(-1)?.dist ?? 0)} m en ${formatoTiempo(r.duracion ?? r.muestras.at(-1)?.t ?? 0)}`;
+  else if (r.ftp) detalle = `Rema a ${r.ftp} W de FTP, sin estilo propio.`;
+  return `<div class="rival-tarjeta${r.falta ? ' falta' : ''}" style="--chip:${r.color || 'var(--borde)'}"><span class="rival-ico">${ico('i-fantasma')}</span>
+    <div><b>${r.nombre.replace(/^Fantasma /, '')}</b><span>${detalle}</span></div></div>`;
+}
+
+// Sesión que remarías si completas el plan a tu FTP: sirve para estimar la XP.
+function sesionHipotetica(ent, rivales, sesiones) {
+  const mio = ftp() || estimarFtp(sesiones) || 150;
+  let plan = ent;
+  if (!plan) {
+    const dists = sesiones.slice(-10).map((x) => x.distancia).filter((d) => d > 0).sort((a, b) => a - b);
+    plan = { tipo: 'objetivo', objetivo: { metrica: 'distancia', valor: dists[Math.floor(dists.length / 2)] || 5000 } };
+  }
+  const m = F.simular(plan, { ftp: mio }, mio).muestras.map((x) => ({ ...x, split: F.splitDeWatts(x.w) }));
+  const fin = m.at(-1);
+  const contra = rivales.map((r) => ({ nombre: r.nombre, clase: r.clase || null, diferencia: 1 }));
+  return {
+    fecha: Date.now(), duracion: fin.t, distancia: Math.round(fin.dist), muestras: m, wattsProm: Math.round(m.reduce((a, x) => a + x.w, 0) / m.length),
+    entrenamiento: ent?.nombre || null, tiempoMeta: ent ? fin.t : null,
+    rival: contra[0] || null, ...(contra.length > 1 ? { rivales: contra } : {}), ventajaUsada: $('#sel-ventaja').value || undefined,
+  };
+}
+
+async function pintarPreparar() {
+  if (sesion) return;
+  const turno = ++preparoTurno;
+  const ent = entrenamientoPrevio;
+  const elegidos = rivalesElegidos();
+  const rivales = elegidos.length ? await crearRivales(ent, { vista: true }) : [];
+  const sesiones = await db.listar('sesiones');
+  if (turno !== preparoTurno || sesion) return;
+  $('#rivales-vista').innerHTML = rivales.map(tarjetaRival).join('');
+  const caja = $('#xp-estimada');
+  caja.hidden = !ent && !rivales.length;
+  if (caja.hidden) return;
+  const reales = rivales.filter((r) => !r.falta);
+  const hip = sesionHipotetica(ent, reales, sesiones);
+  const est = J.estimarXp(sesiones, hip, { ftp: ftp(), per: leerPersonaje() });
+  const condicion = [ent ? `completas «${ent.nombre}»` : `remas unos ${miles(hip.distancia)} m`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
+  const partes = [...est.detalle.map(([k, v]) => [k, v]), ...(est.extra ? [['Misiones y logros', est.extra]] : [])].filter(([, v]) => v > 0);
+  caja.innerHTML = `<div class="xp-cabecera">${ico('i-trofeo')}<div><b>≈ ${miles(est.total)} XP</b> <span class="monedas">${icoMoneda}${est.monedas}</span>
+    <small>si ${condicion}${est.subeNivel ? ` · subirías al nivel ${est.subeNivel}` : ''}</small></div></div>
+    <div class="xp-partes">${partes.map(([k, v]) => `<span>${k} <b>+${miles(v)}</b></span>`).join('')}</div>`;
 }
 
 // FTP aproximado sin prueba: el 80 % de la mejor media de watts de tus últimas 20 sesiones.
@@ -419,6 +488,9 @@ function actualizarBotones() {
   $('#sel-entrenamiento').disabled = !!sesion;
   // Antes de remar se muestra la tarjeta Preparar; durante la sesión, solo una línea de resumen.
   $('#preparar').hidden = !!sesion;
+  // Métricas y gráfica solo con la remadora conectada o durante la sesión.
+  const vivo = !!sesion || remadora.conectada;
+  if ($('#en-vivo').hidden === vivo) { $('#en-vivo').hidden = !vivo; if (vivo) requestAnimationFrame(dibujarVivo); }
   $('#resumen-sesion').hidden = !sesion;
   if (sesion) {
     const contra = sesion.rivales.length ? ` · contra ${sesion.rivales.map((r) => r.nombre.replace(/^Fantasma /, '')).join(', ')}` : '';
@@ -1147,9 +1219,10 @@ async function vistaPrevia() {
   if (sesion) return;
   entrenamientoPrevio = ent;
   pintarSelVentaja();
+  prepararPronto();
   $('#bloque-actual').hidden = !ent;
   const conPerfil = !!ent && Ent.tipoDe(ent) === 'intervalos';
-  $('#perfil-vivo').hidden = !conPerfil;
+  $('#perfil-vivo').hidden = !conPerfil || !remadora.conectada;
   if (conPerfil) dibujarPerfil($('#grafica-perfil'), paraPerfil(ent.bloques));
   if (!ent) return;
   marcarRango(null);
@@ -1712,6 +1785,44 @@ function figuraHeroe(per, nivel, ancho) {
   return `<div class="heroe-figura" style="width:${ancho}px;height:${alto}px"><svg class="aura" viewBox="0 0 200 200" aria-hidden="true">${O.auraHeroe(per)}</svg>
     <img src="${srcHeroe(c.clave, nivel)}" width="${ancho}" height="${alto}" alt="${c.nombre} ${J.rangoDe(nivel).nombre}"></div>`;
 }
+// Gráfico de radar de los 6 atributos (SVG, se adapta al tema con currentColor y variables).
+function radarAtributos(at, fav) {
+  const A = J.ATRIBUTOS;
+  const R = 92;
+  const max = Math.max(20, ...A.map((a) => at[a.clave] || 0)) * 1.1;
+  const punto = (i, r) => {
+    const ang = -Math.PI / 2 + (i * 2 * Math.PI) / A.length;
+    return [150 + r * Math.cos(ang), 130 + r * Math.sin(ang)];
+  };
+  const poli = (f) => A.map((a, i) => punto(i, f(a)).map((v) => v.toFixed(1)).join(',')).join(' ');
+  const anillos = [0.25, 0.5, 0.75, 1].map((k) => `<polygon class="radar-anillo" points="${poli(() => R * k)}"/>`).join('');
+  const ejes = A.map((a, i) => { const [x, y] = punto(i, R); return `<line class="radar-eje" x1="150" y1="130" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
+  const etiquetas = A.map((a, i) => {
+    const [x, y] = punto(i, R + 22);
+    const ancla = Math.abs(x - 150) < 5 ? 'middle' : x > 150 ? 'start' : 'end';
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${ancla}" class="radar-etq${a.clave === fav ? ' fav' : ''}">${a.nombre}${a.clave === fav ? ' ★' : ''}<tspan x="${x.toFixed(1)}" dy="15" class="radar-valor">${at[a.clave] || 0}</tspan></text>`;
+  }).join('');
+  const valores = A.map((a, i) => { const [x, y] = punto(i, (R * (at[a.clave] || 0)) / max); return `<circle class="radar-punto" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`; }).join('');
+  return `<svg viewBox="-40 -6 380 286" role="img" aria-label="Atributos: ${A.map((a) => `${a.nombre} ${at[a.clave] || 0}`).join(', ')}">
+    ${anillos}${ejes}<polygon class="radar-area" points="${poli((a) => (R * (at[a.clave] || 0)) / max)}"/>${valores}${etiquetas}</svg>`;
+}
+$('#heroe-recomienda').addEventListener('click', async (e) => {
+  const b = e.target.closest('#btn-preparar-rec');
+  if (!b) return;
+  let ent = b.dataset.ent ? (await db.listar('entrenamientos')).find((x) => x.nombre === b.dataset.ent) : null;
+  // Si no lo tienes guardado, se agrega desde los ejemplos.
+  const ejemplo = !ent && Ent.EJEMPLOS.find((x) => x.nombre === b.dataset.ent);
+  if (ejemplo) {
+    const id = await db.guardar('entrenamientos', structuredClone(ejemplo));
+    ent = { ...ejemplo, id };
+    await llenarSelectorEntrenamientos();
+  }
+  ajustes.escribir('ultimoEnt', ent ? String(ent.id) : '');
+  $('#sel-entrenamiento').value = ent ? String(ent.id) : '';
+  ajustes.escribir('rivales', JSON.stringify([b.dataset.reto]));
+  irA('entrenar');
+  pintarChips();
+});
 const nombreAtributo = (k) => J.ATRIBUTOS.find((a) => a.clave === k)?.nombre || k;
 const miles = (n) => Math.round(n).toLocaleString('es-MX');
 const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
@@ -1756,10 +1867,13 @@ async function pintarHeroe() {
 
 function pintarFicha(h, per, clase, sesiones) {
   $('#ficha-figura').innerHTML = figuraHeroe(per, h.nivel, 180);
-  const max = Math.max(50, ...Object.values(h.atributos));
-  $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div class="atributo${a.clave === clase.favorito ? ' fav' : ''}">
-    <div class="fila"><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''}</b><span class="valor">${h.atributos[a.clave]}</span></div>
-    <div class="at-barra"><div style="width:${(100 * h.atributos[a.clave]) / max}%"></div></div><small>${a.detalle}</small></div>`).join('');
+  $('#heroe-radar').innerHTML = radarAtributos(h.atributos, clase.favorito);
+  $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''} · ${h.atributos[a.clave]}</b><small>${a.detalle}</small></div>`).join('');
+  const rec = J.recomendarPorAtributos(h.atributos);
+  $('#heroe-recomienda').innerHTML = rec ? `<p>Tu atributo más bajo es <b>${rec.atributo.nombre}</b>. ${rec.texto}</p>
+    <div class="fila-botones"><button type="button" class="boton primario" id="btn-preparar-rec" data-ent="${rec.entrenamiento || ''}" data-reto="${rec.reto}">
+    Preparar: ${rec.entrenamiento || 'Remo libre'} contra ${({ igual: 'un rival de tu rango', superior: 'un rival superior', inferior: 'un rival inferior' })[rec.reto]}</button></div>`
+    : '<p class="suave">Rema tu primera sesión y te diré qué te conviene trabajar.</p>';
   // Los premios de capítulos y logros son insignias.
   const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
   $('#ficha-insignias').innerHTML = premios.map(([id, de]) => `<div class="insignia${h.insignias.has(id) ? '' : ' bloqueada'}"><span class="medalla">${ico('i-trofeo')}</span>

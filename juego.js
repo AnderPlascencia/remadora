@@ -517,3 +517,37 @@ export const progresoHeroe = (sesiones, { ftp = 0, clase = null } = {}) => estad
 // Tienda de la semana: 4 de las 6 ventajas, iguales toda la semana.
 export const tiendaSemana = (lunes) => tiendaVentajas(azar(`t${lunes}`));
 export { objeto };
+
+// Cuándo cuesta más ganarle a cada clase rival (para la vista previa).
+export const CUANDO_DIFICIL = {
+  vikingo: 'Difícil en carreras cortas', pirata: 'Difícil cuando vas justo de margen', samurai: 'Difícil si te descontrolas al principio',
+  polinesio: 'Difícil en carreras largas', romano: 'Difícil en intervalos',
+};
+
+// XP estimada de una sesión que aún no has remado: lo que sube tu XP total al añadirla al historial
+// (incluye bonos, talentos, misiones, constancia y logros que completaría).
+export function estimarXp(sesiones, hipotetica, opts = {}) {
+  const antes = estadoJuego(sesiones, opts);
+  const despues = estadoJuego([...sesiones, hipotetica], opts);
+  const ps = despues.porSesion.get(hipotetica.fecha);
+  return {
+    total: despues.xp - antes.xp, sesion: ps.xp, extra: ps.xpExtra, detalle: ps.detalle,
+    monedas: despues.monedasGanadas - antes.monedasGanadas, subeNivel: despues.nivel > antes.nivel ? despues.nivel : null,
+  };
+}
+
+// Qué entrenar según el atributo más flojo: un entrenamiento de la lista y un reto contra rivales.
+export const RECOMENDACION_ATRIBUTO = {
+  fuerza: { entrenamiento: 'Umbral 3 × 8 min (zona 4)', reto: 'superior', texto: 'Series en zona 4. Un rival superior te obliga a apretar en cada bloque.' },
+  agilidad: { entrenamiento: '4 × 500 m', reto: 'igual', texto: 'Series cortas por encima de tu FTP. Si te toca un vikingo, aguanta su salida fuerte.' },
+  resistencia: { entrenamiento: '5000 m', reto: 'igual', texto: 'Distancia larga en zona 2. Un polinesio acelera al final: guarda fuerzas para el último tramo.' },
+  recuperacion: { entrenamiento: null, reto: 'inferior', texto: 'Remo libre suave en zona 1 y 2, o un día de descanso. Un rival inferior para remar sin presión.' },
+  tecnica: { entrenamiento: 'Ritmo 2:10 × 20 min', reto: 'igual', texto: 'Ritmo parejo y buena distancia por palada. Rema como un samurái: constante de principio a fin.' },
+  voluntad: { entrenamiento: 'Pirámide de paladas', reto: 'superior', texto: 'Termina el entrenamiento completo y cuida tu racha. Un rival superior pone a prueba tu voluntad.' },
+};
+export function recomendarPorAtributos(atributos) {
+  const lista = ATRIBUTOS.map((a) => ({ ...a, valor: atributos[a.clave] || 0 }));
+  if (!lista.some((a) => a.valor > 0)) return null;
+  const flojo = lista.reduce((m, a) => (a.valor < m.valor ? a : m));
+  return { atributo: flojo, ...RECOMENDACION_ATRIBUTO[flojo.clave] };
+}

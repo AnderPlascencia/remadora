@@ -84,6 +84,7 @@
           <button type="button" class="chip" data-rival="perso" aria-pressed="false">A mi medida</button>
         </div>
         <p id="rival-semana" class="ayuda"></p>
+        <div id="rivales-vista" class="rivales-vista"></div>
         <label id="ventaja-campo" class="campo" hidden>Ventaja para la carrera
           <select id="sel-ventaja"></select>
           <small id="ventaja-ayuda" class="ayuda"></small>
@@ -105,6 +106,7 @@
           <input id="in-ritmo" inputmode="numeric" autocomplete="off" placeholder="2:05">
         </label>
       </div>
+      <div id="xp-estimada" class="xp-estimada" hidden></div>
       </div>
       <p id="resumen-sesion" class="resumen-sesion" hidden></p>
       <div id="rival" class="rival" hidden aria-live="polite"><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="rival-texto"></span></div>
@@ -136,6 +138,7 @@
 
       <div id="pausa-aviso" class="aviso suave-aviso" hidden aria-live="polite">En pausa: empieza a remar para continuar</div>
 
+      <div id="en-vivo" hidden>
       <div class="metricas">
         <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span><span id="m-zona" class="sub"></span></div>
         <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span><span id="m-parcial" class="sub parcial"></span></div>
@@ -151,6 +154,7 @@
       <h2>Últimos 5 minutos</h2>
       <div class="leyenda"><span class="lw">Watts</span><span class="ls">Golpes/min</span></div>
       <canvas id="grafica-vivo" class="grafica" role="img" aria-label="Watts y golpes por minuto de los últimos 5 minutos"></canvas>
+      </div>
     </section>
 
     <!-- PLANES -->
@@ -286,7 +290,10 @@
         <div id="hp-ficha" class="hp">
           <div id="ficha-figura" class="armario-vista"></div>
           <h2>Atributos</h2>
-          <div id="heroe-atributos" class="atributos"></div>
+          <div id="heroe-radar" class="radar"></div>
+          <div id="heroe-atributos" class="atributos-lista"></div>
+          <h2>Qué te conviene entrenar</h2>
+          <div id="heroe-recomienda" class="recomienda"></div>
           <h2>Insignias de la historia</h2>
           <div id="ficha-insignias" class="insignias"></div>
           <h2>Últimas sesiones</h2>

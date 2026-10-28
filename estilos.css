@@ -660,3 +660,38 @@ details.seccion[open] { padding-bottom: 8px; }
 .objeto.ventaja b { font-size: 14px; }
 .ventaja-ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); color: var(--acento); }
 .ventaja-ico .ico { width: 22px; height: 22px; }
+/* Vista previa de rivales y XP estimada */
+.rivales-vista { display: grid; gap: 8px; margin: 4px 0 8px; }
+.rivales-vista:empty { display: none; }
+.rival-tarjeta { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--panel-2); border-left: 4px solid var(--chip, var(--borde)); }
+.rival-tarjeta img, .rival-tarjeta .rival-ico { width: 56px; height: 56px; border-radius: 12px; flex: none; object-fit: cover; background: var(--fondo); }
+.rival-tarjeta .rival-ico { display: grid; place-items: center; color: var(--chip, var(--texto-tenue)); }
+.rival-tarjeta div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rival-tarjeta b { font-size: 15px; }
+.rival-tarjeta small { color: var(--primario-claro); font-weight: 600; font-size: 12px; }
+.rival-tarjeta span { color: var(--texto-tenue); font-size: 13px; line-height: 1.35; }
+.rival-tarjeta.falta { opacity: .7; }
+.xp-estimada { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--acento) 10%, var(--panel)); border: 1px solid color-mix(in srgb, var(--acento) 35%, transparent); }
+.xp-cabecera { display: flex; gap: 10px; align-items: center; }
+.xp-cabecera .ico { color: var(--acento); width: 28px; height: 28px; }
+.xp-cabecera b { font-size: 20px; color: var(--acento); }
+.xp-cabecera small { display: block; color: var(--texto-tenue); font-size: 13px; }
+.xp-partes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.xp-partes span { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--panel-2); color: var(--texto-tenue); }
+.xp-partes b { color: var(--texto); }
+/* Radar de atributos */
+.radar svg { width: 100%; max-width: 360px; display: block; margin: 0 auto; overflow: visible; }
+.radar-anillo { fill: none; stroke: var(--borde); stroke-width: 1; }
+.radar-eje { stroke: var(--borde); stroke-width: 1; }
+.radar-area { fill: color-mix(in srgb, var(--primario-claro) 30%, transparent); stroke: var(--primario-claro); stroke-width: 2.5; stroke-linejoin: round; }
+.radar-punto { fill: var(--primario-claro); }
+.radar-etq { fill: var(--texto); font-size: 13px; font-weight: 700; }
+.radar-etq.fav { fill: var(--acento); }
+.radar-valor { fill: var(--texto-tenue); font-weight: 600; font-size: 12px; }
+.atributos-lista { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px; margin: 8px 0; }
+.atributos-lista div { display: flex; flex-direction: column; }
+.atributos-lista b { font-size: 13px; }
+.atributos-lista small { font-size: 11px; color: var(--texto-tenue); line-height: 1.3; }
+.recomienda { background: var(--panel); border-radius: 14px; padding: 12px 14px; }
+.recomienda p { margin: 0 0 8px; line-height: 1.45; }
+.campo[hidden] { display: none; }

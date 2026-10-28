@@ -112,3 +112,17 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.deepEqual(tienda, J.tiendaSemana('2026-01-05'), 'igual toda la semana');
   console.log('juego extra OK', e.monedas, e.logros.map((l) => l.texto));
 }
+
+// XP estimada y recomendación por atributos
+{
+  const s1 = sesion(10, 150, 1800);
+  const hip = sesion(11, 150, 1800, { tiempoMeta: 1800, rival: { nombre: 'X', clase: 'pirata', diferencia: 1 } });
+  const est = J.estimarXp([s1], hip, { ftp: 200, per: { clase: 'vikingo' } });
+  assert.ok(est.sesion >= 720 + 50 + 25, `xp de la sesión ${est.sesion}`);
+  assert.equal(est.total, est.sesion + est.extra);
+  const r = J.recomendarPorAtributos({ fuerza: 30, agilidad: 20, resistencia: 50, recuperacion: 5, tecnica: 40, voluntad: 25 });
+  assert.equal(r.atributo.clave, 'recuperacion');
+  assert.equal(r.reto, 'inferior');
+  assert.equal(J.recomendarPorAtributos({}), null);
+  console.log('estimar OK', est.total);
+}
