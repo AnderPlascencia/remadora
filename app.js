@@ -34,6 +34,9 @@ const ajustes = {
 const ftp = () => ajustes.num('ftp', 0);
 const fcMaxima = () => ajustes.num('fcMax', 0);
 
+// Los nombres los escribe el usuario: siempre escapados al meterlos en HTML.
+function escaparHtml(t) { return String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
 // ---------- Navegación ----------
 const vistaActiva = (v) => $(`#vista-${v}`).classList.contains('activa');
 function irA(vista) {
@@ -86,7 +89,23 @@ selVariante.addEventListener('change', () => ajustes.escribir('variante', selVar
 function campoNumero(sel, clave, defecto, alCambiar) {
   const el = $(sel);
   el.value = ajustes.leer(clave, defecto);
-  el.addEventListener('change', () => { ajustes.escribir(clave, el.value); alCambiar?.(); });
+  // Respeta el min y max del campo: un valor fuera de rango no se guarda y el campo vuelve a lo que tenía.
+  el.addEventListener('change', () => {
+    const texto = el.value.trim();
+    const v = Number(texto);
+    const min = Number(el.min);
+    const max = Number(el.max);
+    if (texto === '' ? defecto !== '' : !Number.isFinite(v) || v < min || v > max) {
+      el.value = ajustes.leer(clave, defecto);
+      const primero = el.closest('label')?.firstChild;
+      const nombre = (primero?.firstChild ?? primero)?.textContent.trim() || 'El valor';
+      toast(`${nombre}: escribe un número de ${min} a ${max}`);
+      return;
+    }
+    ajustes.escribir(clave, texto === '' ? '' : String(Math.round(v)));
+    el.value = ajustes.leer(clave, defecto);
+    alCambiar?.();
+  });
 }
 campoNumero('#in-peso', 'peso', '75', () => { pintarClasificacion(); vistaPrevia(); });
 campoNumero('#in-ftp', 'ftp', '', () => { ajustes.escribir('ftpEstimado', '0'); pintarFtpEstado(); pintarZonas(); pintarClasificacion(); vistaPrevia(); });
@@ -331,7 +350,7 @@ function tarjetaRival(r) {
     const c = J.claseDe(r.clase);
     const rango = J.RANGOS.find((x) => x.id === r.rango);
     return `<div class="rival-tarjeta" style="--chip:${r.color}"><img src="${srcRetratoRango(r.clase, r.rango)}" width="56" height="56" alt="">
-      <div><b>${r.nombre.split(' (')[0]}</b><small>${c.nombre} ${rango?.nombre || ''} · ${J.DIFICULTADES[r.dificultad]?.nombre || ''} · ${r.clasificacion} · ${r.ftp} W</small>
+      <div><b>${escaparHtml(r.nombre.split(' (')[0])}</b><small>${c.nombre} ${rango?.nombre || ''} · ${J.DIFICULTADES[r.dificultad]?.nombre || ''} · ${r.clasificacion} · ${r.ftp} W</small>
       <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
   }
   let detalle = '';
@@ -339,7 +358,7 @@ function tarjetaRival(r) {
   else if (r.fecha) detalle = `${fechaMini(r.fecha)} · ${miles(r.distancia ?? r.muestras.at(-1)?.dist ?? 0)} m en ${formatoTiempo(r.duracion ?? r.muestras.at(-1)?.t ?? 0)}`;
   else if (r.ftp) detalle = `Rema a ${r.ftp} W de FTP, sin estilo propio.`;
   return `<div class="rival-tarjeta${r.falta ? ' falta' : ''}" style="--chip:${r.color || 'var(--borde)'}"><span class="rival-ico">${ico('i-fantasma')}</span>
-    <div><b>${r.nombre.replace(/^Fantasma /, '')}</b><span>${detalle}</span></div></div>`;
+    <div><b>${escaparHtml(r.nombre.replace(/^Fantasma /, ''))}</b><span>${escaparHtml(detalle)}</span></div></div>`;
 }
 
 // Sesión que remarías si completas el plan a tu FTP: sirve para estimar la XP.
@@ -377,7 +396,7 @@ async function pintarPreparar() {
   const reales = rivales.filter((r) => !r.falta);
   const hip = sesionHipotetica(ent, reales, sesiones);
   const est = J.estimarXp(sesiones, hip, { ftp: ftp(), per: leerPersonaje() });
-  const condicion = [ent ? `completas «${ent.nombre}»` : `remas unos ${miles(hip.distancia)} m`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
+  const condicion = [ent ? `completas «${escaparHtml(ent.nombre)}»` : `remas unos ${miles(hip.distancia)} m`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
   const partes = [...est.detalle.map(([k, v]) => [k, v]), ...(est.extra ? [['Misiones y logros', est.extra]] : [])].filter(([, v]) => v > 0);
   caja.innerHTML = `<div class="xp-cabecera">${ico('i-trofeo')}<div><b>≈ ${miles(est.total)} XP</b> <span class="monedas">${icoMoneda}${est.monedas}</span>
     <small>si ${condicion}${est.subeNivel ? ` · subirías al nivel ${est.subeNivel}` : ''}</small></div></div>
@@ -1477,7 +1496,7 @@ function pintarGraficaRemo(t) {
   const canvas = $('#mr-grafica');
   if (vistaRemo() === 'carrera') {
     const clases = ['lcar', 'lcar2', 'lcar3'];
-    leyenda(`<span class="lw">Tú</span>${sesion.rivales.map((r, i) => `<span class="${clases[i]}">${r.nombre.replace(/^Fantasma /, '')}</span>`).join('')}`);
+    leyenda(`<span class="lw">Tú</span>${sesion.rivales.map((r, i) => `<span class="${clases[i]}">${escaparHtml(r.nombre.replace(/^Fantasma /, ''))}</span>`).join('')}`);
     canvas.setAttribute('aria-label', $('#mr-rival-texto').textContent);
     carreraRemo.actualizar(carreraActual().estado);
     return;
@@ -1798,7 +1817,7 @@ async function pintarEntrenamientos() {
   $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
   $('#base-nivel').textContent = `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`;
   $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
-      ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${x.nombre}">${x.nombre}<span aria-hidden="true">›</span></button>
+      ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}">${escaparHtml(x.nombre)}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
       <div class="base-acciones"><button type="button" class="boton primario" data-usar="${x.id}">Entrenar</button>
       <button type="button" class="boton chico enlace-boton" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
@@ -1814,7 +1833,6 @@ async function pintarEntrenamientos() {
     : `<li class="vacio">${seccion === 'mios' ? 'Aún no has creado entrenamientos.' : 'Aún no tienes entrenamientos propios aquí.'} Toca «+ Nuevo» o «Copiar y editar» en uno base.</li>`;
   await llenarSelectorEntrenamientos();
 }
-const escaparHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 document.querySelector('.planes-pestanas').addEventListener('click', (e) => {
   const b = e.target.closest('[data-pt]');
@@ -1939,6 +1957,10 @@ form.tipo.addEventListener('change', mostrarTipo);
 form.obj_metrica.addEventListener('change', resumenEditor);
 form.obj_valor.addEventListener('input', resumenEditor);
 
+// Rangos razonables para lo que se escribe en un intervalo; fuera de ellos el valor no se acepta.
+const LIMITES_META = { watts: [1, 2000], ftp: [1, 300], split: [60, 600], spm: [10, 60], fc: [40, 230], fcpct: [30, 110] };
+const LIMITES_CANTIDAD = { tiempo: [5, 10800], distancia: [10, 100000], paladas: [1, 10000] };
+
 function pintarBloques() {
   const cont = $('#bloques');
   cont.innerHTML = '';
@@ -2003,9 +2025,17 @@ function pintarBloques() {
     fila.addEventListener('change', (e) => {
       const k = e.target.dataset.k;
       if (!k) return;
+      const rechazar = (txt) => { $('#ent-error').textContent = `Intervalo ${i + 1}: ${txt}`; toast($('#ent-error').textContent, 4500); pintarBloques(); };
       if (k === 'cantidad') {
-        if (Ent.finDe(b) === 'tiempo') b.duracion = Math.max(5, Ent.deMmss(e.target.value));
-        else b.cantidad = Math.max(1, Math.round(Number(e.target.value)) || 0);
+        const fin = Ent.finDe(b);
+        const texto = e.target.value.trim();
+        const v = fin === 'tiempo' ? (/^\d+(:\d{1,2})?$/.test(texto) ? Ent.deMmss(texto) : NaN) : Math.round(Number(texto));
+        const [lo, hi] = LIMITES_CANTIDAD[fin];
+        if (!(v >= lo && v <= hi)) {
+          rechazar(fin === 'tiempo' ? `escribe el tiempo como mm:ss, de ${formatoTiempo(lo)} a ${formatoTiempo(hi)}.` : `escribe de ${miles(lo)} a ${miles(hi)} ${fin === 'distancia' ? 'metros' : 'paladas'}.`);
+          return;
+        }
+        if (fin === 'tiempo') b.duracion = v; else b.cantidad = v;
       } else if (k === 'fin') {
         b.fin = e.target.value;
         if (b.fin === 'tiempo') { delete b.fin; delete b.cantidad; b.duracion = b.duracion || 60; } else {
@@ -2014,8 +2044,16 @@ function pintarBloques() {
         }
         pintarBloques();
         return;
-      } else if (k === 'min' || k === 'max') b[k] = b.metrica === 'split' ? Ent.deMmss(e.target.value) : (Number(e.target.value) || 0);
-      else if (k === 'nivel') {
+      } else if (k === 'min' || k === 'max') {
+        const texto = e.target.value.trim();
+        const v = texto === '' ? 0 : b.metrica === 'split' ? (/^\d+:\d{1,2}$/.test(texto) ? Ent.deMmss(texto) : NaN) : Number(texto);
+        const [lo, hi] = LIMITES_META[b.metrica] || [0, Infinity];
+        if (v !== 0 && !(v >= lo && v <= hi)) {
+          rechazar(b.metrica === 'split' ? `el split va de ${Ent.formatoMmss(lo)} a ${Ent.formatoMmss(hi)} (mm:ss).` : `el ${k === 'min' ? 'mínimo' : 'máximo'} va de ${lo} a ${hi}.`);
+          return;
+        }
+        b[k] = Math.round(v);
+      } else if (k === 'nivel') {
         const n = Math.round(Number(e.target.value));
         if (n >= 1 && n <= 24) b.nivel = n; else delete b.nivel;
       } else b[k] = e.target.value;
@@ -2029,6 +2067,7 @@ function pintarBloques() {
         return;
       }
       if (k === 'min' || k === 'max') unidadYZonas();
+      $('#ent-error').textContent = '';
       resumenEditor();
     });
     fila.querySelector('[data-a=subir]').onclick = () => { [bloques[i - 1], bloques[i]] = [bloques[i], bloques[i - 1]]; pintarBloques(); };
@@ -2417,8 +2456,8 @@ function pintarFicha(h, per, clase, sesiones) {
   $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => `<div><b>${a.nombre}${a.clave === clase.favorito ? ' ★' : ''} · ${h.atributos[a.clave]}</b><small>${a.detalle}</small></div>`).join('');
   const rec = J.recomendarPorAtributos(h.atributos);
   $('#heroe-recomienda').innerHTML = rec ? `<p>Tu atributo más bajo es <b>${rec.atributo.nombre}</b>. ${rec.texto}</p>
-    <div class="fila-botones"><button type="button" class="boton primario" id="btn-preparar-rec" data-ent="${rec.entrenamiento || ''}" data-reto="${rec.reto}">
-    Preparar: ${rec.entrenamiento || 'Remo libre'} contra ${({ igual: 'un rival de tu rango', superior: 'un rival superior', inferior: 'un rival inferior' })[rec.reto]}</button></div>`
+    <div class="fila-botones"><button type="button" class="boton primario" id="btn-preparar-rec" data-ent="${escaparHtml(rec.entrenamiento || '')}" data-reto="${rec.reto}">
+    Preparar: ${escaparHtml(rec.entrenamiento || 'Remo libre')} contra ${({ igual: 'un rival de tu rango', superior: 'un rival superior', inferior: 'un rival inferior' })[rec.reto]}</button></div>`
     : '<p class="suave">Rema tu primera sesión y te diré qué te conviene trabajar.</p>';
   // Los premios de capítulos y logros son insignias.
   const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
@@ -2427,7 +2466,7 @@ function pintarFicha(h, per, clase, sesiones) {
   const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 5);
   $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
     const g = h.porSesion.get(x.fecha);
-    return `<li><div><b>${fechaCorta(x.fecha)} · ${x.entrenamiento || 'Remo libre'}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
+    return `<li><div><b>${fechaCorta(x.fecha)} · ${escaparHtml(x.entrenamiento || 'Remo libre')}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
       <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
@@ -2645,14 +2684,14 @@ async function pintarPodio(s) {
   const dato = (f) => (f.tiempo != null ? formatoTiempo(Math.round(f.tiempo)) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${Math.abs(f.dif)} m`);
   const bloque = (f, i) => `<div class="podio-puesto p${i + 1}${f.yo ? ' yo' : ''}">
       ${f.img ? `<img src="${f.img}" width="48" height="48" alt="">` : `<span class="podio-ico">${ico('i-fantasma')}</span>`}
-      <b>${f.nombre}</b><small>${dato(f)}</small>
+      <b>${escaparHtml(f.nombre)}</b><small>${dato(f)}</small>
       <div class="podio-escalon">${i + 1}º</div></div>`;
   const top = filas.slice(0, 3);
   const orden = [top[1], top[0], top[2]].map((f) => (f ? bloque(f, filas.indexOf(f)) : '<div></div>')).join('');
   const titulo = s.carreraSinTerminar ? `Carrera sin terminar: ibas ${lugar}º de ${filas.length}` : lugar === 1 ? '¡Ganaste la carrera!' : `Llegaste ${lugar}º de ${filas.length}`;
   caja.innerHTML = `<h2>${titulo}</h2>
     <div class="podio-escena">${orden}</div>
-    ${filas.slice(3).map((f, i) => `<p class="podio-resto">${i + 4}º ${f.nombre} · ${dato(f)}</p>`).join('')}
+    ${filas.slice(3).map((f, i) => `<p class="podio-resto">${i + 4}º ${escaparHtml(f.nombre)} · ${dato(f)}</p>`).join('')}
     ${xp ? `<p class="podio-xp">+${xp} XP por fantasmas vencidos</p>` : ''}`;
 }
 
@@ -2703,7 +2742,7 @@ function tablaIntervalos(s) {
   const filas = E.resumenIntervalos(s);
   if (filas.length) {
     return `<h2>Por intervalo</h2><div class="desliza"><table class="tabla"><thead><tr><th>Intervalo</th><th>Tiempo</th><th>m</th><th>W</th><th>Split</th><th>g/min</th><th>Rango</th></tr></thead><tbody>${
-      filas.map((f) => `<tr><td>${f.nombre}${f.bloque.metrica ? `<br><span class="sub ayuda" style="margin:0">${Ent.textoMeta(f.bloque)}</span>` : ''}</td><td>${formatoTiempo(f.segundos)}</td><td>${f.metros}</td><td>${f.w}</td><td>${formatoSplit(f.split)}</td><td>${f.spm}</td><td class="${f.pctRango == null ? '' : f.pctRango >= 70 ? 'ok' : f.pctRango < 40 ? 'mal' : ''}">${f.pctRango == null ? '-' : `${f.pctRango}%`}</td></tr>`).join('')
+      filas.map((f) => `<tr><td>${escaparHtml(f.nombre)}${f.bloque.metrica ? `<br><span class="sub ayuda" style="margin:0">${Ent.textoMeta(f.bloque)}</span>` : ''}</td><td>${formatoTiempo(f.segundos)}</td><td>${f.metros}</td><td>${f.w}</td><td>${formatoSplit(f.split)}</td><td>${f.spm}</td><td class="${f.pctRango == null ? '' : f.pctRango >= 70 ? 'ok' : f.pctRango < 40 ? 'mal' : ''}">${f.pctRango == null ? '-' : `${f.pctRango}%`}</td></tr>`).join('')
     }</tbody></table></div>`;
   }
   const par = E.parciales(s.muestras, 500);
@@ -2790,7 +2829,7 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
     const obj = V.objetoVentaja(s.ventaja.objeto);
     stats.push(['Ventaja ⚑', `${s.ventaja.metros} m${obj ? ` · ${obj.nombre}` : ''}`]);
   }
-  $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${k}</span><span class="valor">${v}</span></div>`).join('');
+  $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${escaparHtml(k)}</span><span class="valor">${v}</span></div>`).join('');
 
   corregirRpe = false;
   pintarRpe();
@@ -2891,7 +2930,7 @@ async function pintarPrograma() {
     const nombresDia = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const previos = [...$('#p-dias').querySelectorAll('select')].map((x) => x.value);
     $('#p-dias').innerHTML = nombresDia.map((d, i) => `<label>${d}<select data-dia="${i}"><option value="">Descanso</option>${
-      ents.map((e) => `<option>${e.nombre.replace(/</g, '&lt;')}</option>`).join('')}</select></label>`).join('');
+      ents.map((e) => `<option>${escaparHtml(e.nombre)}</option>`).join('')}</select></label>`).join('');
     $('#p-dias').querySelectorAll('select').forEach((x, i) => { x.value = previos[i] || ''; });
     return;
   }
@@ -2913,7 +2952,7 @@ async function pintarPrograma() {
     const hoy = k === E.claveDia(Date.now());
     const clase = dia ? dia.estado : `libre${hoy ? ' hoy' : ''}`;
     const marca = dia?.estado === 'hecho' ? ico('i-check') : '';
-    celdas.push(`<button type="button" class="${clase}" data-k="${k}" aria-label="${new Date(d).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}${dia ? `: ${dia.ent}` : ''}">${d.getDate()}${marca}</button>`);
+    celdas.push(`<button type="button" class="${clase}" data-k="${k}" aria-label="${new Date(d).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}${dia ? `: ${escaparHtml(dia.ent)}` : ''}">${d.getDate()}${marca}</button>`);
   }
   $('#calendario').innerHTML = celdas.join('');
   const describirDia = (k) => {
@@ -3186,11 +3225,20 @@ async function restaurarRespaldo(archivo) {
     await db.guardar('entrenamientos', copia);
     nE++;
   }
-  if (datos.programa && !leerPrograma()) guardarPrograma(datos.programa);
-  for (const [k, v] of Object.entries(datos.ajustes || {})) {
-    if (CLAVES_AJUSTES.includes(k) && ajustes.leer(k, null) == null) ajustes.escribir(k, v);
+  // Lo que falta se toma del respaldo; si el héroe, el plan o los ajustes ya existen y son otros, se pregunta.
+  const ajustesResp = Object.entries(datos.ajustes || {}).filter(([k]) => CLAVES_AJUSTES.includes(k));
+  const distintos = [];
+  if (datos.programa && leerPrograma() && JSON.stringify(leerPrograma()) !== JSON.stringify(datos.programa)) distintos.push('el plan');
+  if (ajustesResp.some(([k, v]) => k === 'personaje' && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('el héroe');
+  if (ajustesResp.some(([k, v]) => ['peso', 'ftp', 'edad', 'fcMax', 'metaSemana'].includes(k) && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('tus ajustes');
+  const reemplazar = distintos.length > 0 && confirm(`El respaldo trae ${distintos.join(', ').replace(/, ([^,]*)$/, ' y $1')} distintos a los de ahora. ¿Usar los del respaldo?`);
+  if (datos.programa && (reemplazar || !leerPrograma())) guardarPrograma(datos.programa);
+  for (const [k, v] of ajustesResp) {
+    if (reemplazar || ajustes.leer(k, null) == null) ajustes.escribir(k, v);
   }
-  toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos`);
+  toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos${reemplazar ? ', con el héroe, el plan y los ajustes del respaldo' : ''}`);
+  // Con el héroe y los ajustes cambiados, lo más simple y seguro es volver a cargar la app.
+  if (reemplazar) setTimeout(() => location.reload(), 1500);
   llenarSelectorEntrenamientos();
   pintarHoy();
 }

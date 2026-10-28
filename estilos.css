@@ -969,3 +969,13 @@ details.seccion[open] { padding-bottom: 8px; }
 .hoy-detalle-caja { margin-top: 4px; }
 .hoy-detalle-caja[hidden] { display: none; }
 .hoy-detalle-caja .he-bloques { margin: 8px 0 4px; }
+
+/* Nombres que escribe el usuario (héroe, entrenamientos, bloques): una palabra muy larga baja de renglón en vez de salirse. */
+h1, h2, h3, .titulo, .tm-nombre, #heroe-titulo, .lista b, .podio b { overflow-wrap: anywhere; }
+.crece, .heroe-tarjeta > div { min-width: 0; }
+/* En el bloque actual la meta de ahora manda: se ve entera y lo que sigue es lo que se recorta. */
+#bloque-actual .tm-fila > span:first-child { flex-shrink: 0; }
+#bloque-actual .tm-fila > span:last-child { flex-shrink: 1; text-align: right; }
+/* El nombre del entrenamiento en el modo remo puede usar dos renglones. */
+.mr-nombre { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }
+.lista .suave { overflow-wrap: anywhere; }
