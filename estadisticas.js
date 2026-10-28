@@ -440,3 +440,16 @@ export function repararSaltos(s) {
   r.marcas = marcasDeSesion(r);
   return r;
 }
+
+// Esfuerzo (1–10) a partir del pulso: el pulso medio como % del máximo marca la base
+// (60 % → 3, 70 % → 5, 80 % → 7, 90 % → 9) y una sesión larga a buen pulso suma 1.
+// Hace falta pulso en al menos el 60 % de la sesión y 5 minutos con dato; si no, null.
+export function esfuerzoPorPulso(muestras, fcMax) {
+  if (!fcMax || !muestras?.length) return null;
+  const con = muestras.filter((x) => x.fc > 0);
+  if (con.length < 300 || con.length < muestras.length * 0.6) return null;
+  const pct = (100 * con.reduce((a, x) => a + x.fc, 0)) / con.length / fcMax;
+  let rpe = Math.round((pct - 45) / 5);
+  if (muestras.length > 2700 && pct >= 70) rpe += 1;
+  return { rpe: Math.max(1, Math.min(10, rpe)), pct: Math.round(pct) };
+}

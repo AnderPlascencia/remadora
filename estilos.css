@@ -958,3 +958,8 @@ details.seccion[open] { padding-bottom: 8px; }
 .xp-nivel { display: block; color: var(--texto-suave); font-size: 13px; }
 .xp-desglose > summary { min-height: 40px; font-size: 14px; color: var(--primario-claro); }
 .aviso-bt[hidden] { display: none; }
+.rpe-auto { display: flex; align-items: center; gap: 12px; background: var(--panel); border-radius: var(--radio); padding: 10px 12px; }
+.rpe-auto[hidden], .rpe[hidden] { display: none; }
+.rpe-auto .rpe-valor { font-size: 34px; font-weight: 900; color: var(--acento); line-height: 1; }
+.rpe-auto > span { flex: 1; font-weight: 600; }
+.rpe-auto small { display: block; color: var(--texto-tenue); font-weight: 500; font-size: 13px; }

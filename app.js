@@ -15,7 +15,7 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 
-const VERSION = '0.21.0';
+const VERSION = '0.21.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -862,8 +862,12 @@ async function detenerSesion() {
   pitido(660, 0.2);
   agregarLog(`sesión guardada: ${formatoTiempo(registro.duracion)}, ${registro.distancia} m`);
   const ftpAuto = ftpAutomatico(registro);
+  // Con pulso, el esfuerzo se calcula solo; sin pulso, se pregunta en el resumen.
+  const porPulso = E.esfuerzoPorPulso(registro.muestras, fcParaEsfuerzo());
+  if (porPulso) Object.assign(registro, { rpe: porPulso.rpe, rpeFuente: 'pulso', rpePct: porPulso.pct });
+  if (porPulso) await db.guardar('sesiones', registro);
   const recs = E.nuevosRecords(registro, previas);
-  hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}. ¿Qué tan duro se sintió?`);
+  hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
   pintarHoy();
   pintarLineaNivel();
@@ -2596,13 +2600,29 @@ async function guardarSesionAbierta() {
   if (sesionAbierta?.id != null) await db.guardar('sesiones', sesionAbierta);
 }
 
+// Pulso máximo para el esfuerzo: el tuyo, o 220 − edad, o 190 como aproximación.
+const fcParaEsfuerzo = () => fcMaxima() || (ajustes.num('edad', 0) ? 220 - ajustes.num('edad', 0) : 190);
+let corregirRpe = false;
 function pintarRpe() {
   const s = sesionAbierta;
+  const auto = s.rpeFuente === 'pulso' && !corregirRpe;
+  $('#hoja-esfuerzo-titulo').textContent = s.rpeFuente === 'pulso' ? 'Esfuerzo según tu pulso' : '¿Qué tan duro se sintió?';
+  $('#rpe').hidden = auto;
+  $('#rpe-auto').hidden = !auto;
+  if (auto) {
+    $('#rpe-auto').innerHTML = `<b class="rpe-valor">${s.rpe}</b><span>de 10 · ${TEXTO_RPE[s.rpe]}<small>Pulso medio al ${s.rpePct} % de tu máximo${fcMaxima() ? '' : ' (aproximado: pon tu edad en Ajustes › Avanzado)'}</small></span>
+      <button type="button" class="boton chico" id="btn-corregir-rpe">Corregir</button>`;
+    $('#btn-corregir-rpe').onclick = () => { corregirRpe = true; pintarRpe(); };
+    $('#rpe-texto').textContent = '';
+    return;
+  }
   $('#rpe').innerHTML = Array.from({ length: 10 }, (_, i) => `<button type="button" class="boton${s.rpe === i + 1 ? ' activo' : ''}" data-rpe="${i + 1}" aria-pressed="${s.rpe === i + 1}">${i + 1}</button>`).join('');
   $('#rpe-texto').textContent = s.rpe ? `${s.rpe}: ${TEXTO_RPE[s.rpe]}` : '1 = muy fácil, 10 = esfuerzo máximo';
   $('#rpe').querySelectorAll('button').forEach((b) => {
     b.onclick = async () => {
       s.rpe = Number(b.dataset.rpe);
+      if (s.rpeFuente === 'pulso') s.rpeFuente = 'tu';
+      corregirRpe = false;
       pintarRpe();
       await guardarSesionAbierta();
     };
@@ -2708,6 +2728,7 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   }
   $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${k}</span><span class="valor">${v}</span></div>`).join('');
 
+  corregirRpe = false;
   pintarRpe();
   $('#in-notas').value = s.notas || '';
   $('#hoja-intervalos').innerHTML = tablaIntervalos(s);
