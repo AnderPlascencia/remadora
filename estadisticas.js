@@ -397,7 +397,7 @@ export function recomendacion(sesiones, ftp, ahora = Date.now()) {
   if (f < -25) return { tipo: 'descanso', texto: 'Mucha fatiga acumulada: hoy toca descanso o 20 min muy suaves.', frescura: f };
   if (f < -10) return { tipo: 'suave', texto: 'Algo de fatiga: rema suave en zona 2 (Resistencia).', frescura: f };
   if (f > 10) return { tipo: 'fuerte', texto: 'Estás fresco: buen día para una prueba o intervalos fuertes.', frescura: f };
-  return { tipo: 'normal', texto: 'Vas equilibrado: cualquier entrenamiento del plan te queda bien.', frescura: f };
+  return { tipo: 'normal', texto: 'Vas equilibrado: cualquier entrenamiento te queda bien.', frescura: f };
 }
 
 // FTP sugerido por una sesión sin prueba formal: 95 % de los mejores 20 min (si duró al menos 20 min).

@@ -28,3 +28,10 @@ assert.equal(g['Pirámide de paladas'], 'tecnica');
 assert.equal(g['150 kcal'], 'calorias');
 assert.equal(g['5000 m'], 'distancia');
 console.log('plan por objetivo OK', g);
+// v0.24: 1 día por semana y objetivo «Subir de nivel», con lo elegido guardado en el plan
+{
+  const { programa } = P.planPorObjetivo({ objetivo: 'nivel', dias: 1, semanas: 6, inicio: '2026-11-02', ctx: { ...ctx, sinHistorial: true } });
+  assert.equal(programa.dias.length, 6);
+  assert.ok(programa.dias.some((d) => d.ent === 'Prueba 500 m'), 'incluye la prueba que abre la historia');
+  assert.deepEqual([programa.objetivo, programa.porSemana, programa.semanas, programa.sinHistorial], ['nivel', 1, 6, true]);
+}

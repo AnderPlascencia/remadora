@@ -317,6 +317,7 @@
         </div>
         <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div id="heroe-xp-barra"></div></div>
         <p class="ayuda heroe-xp-fila"><span id="heroe-xp-texto"></span> <button type="button" class="ayuda-q" data-ayuda="xp" aria-label="¿Cómo se gana XP?">?</button></p>
+        <div id="heroe-avisos" class="heroe-avisos"></div>
         <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
           <button type="button" data-hp="ficha" class="activa">Ficha</button>
           <button type="button" data-hp="talentos">Talentos</button>
@@ -330,9 +331,11 @@
           <ul id="ficha-talentos" class="ficha-talentos"></ul>
           <h2>Atributos</h2>
           <div id="heroe-radar" class="radar"></div>
-          <div id="heroe-atributos" class="atributos-lista"></div>
-          <h2>Qué te conviene entrenar</h2>
+          <h3 class="sub-atr">Qué te conviene entrenar</h3>
           <div id="heroe-recomienda" class="recomienda"></div>
+          <h3 class="sub-atr">Cómo subir cada atributo</h3>
+          <p class="ayuda">Toca uno para ver qué lo sube con tus vatios y prepararlo en Entrenar.</p>
+          <div id="heroe-atributos" class="atributos-guia"></div>
           <h2>Insignias de la historia</h2>
           <div id="ficha-insignias" class="insignias"></div>
           <h2>Últimas sesiones</h2>
@@ -387,6 +390,8 @@
         </div>
       </div>
 
+      <button type="button" id="progreso-heroe" class="progreso-heroe" hidden></button>
+
       <div id="aviso-respaldo" class="aviso" hidden></div>
 
       <div class="segmentado" role="group" aria-label="Periodo">
@@ -417,7 +422,8 @@
       </details>
 
       <details class="seccion" data-seccion="insignias">
-      <summary><h2>Insignias</h2><span id="insignias-resumen" class="seccion-resumen"></span></summary>
+      <summary><h2>Insignias de entrenamiento</h2><span id="insignias-resumen" class="seccion-resumen"></span></summary>
+      <p class="ayuda">Salen de tus métricas. Las insignias de la historia del héroe están en Héroe › Ficha.</p>
       <div id="insignias" class="insignias"></div>
       </details>
 
