@@ -161,10 +161,18 @@
     <section id="vista-entrenamientos" class="vista" aria-labelledby="tab-entrenamientos">
       <h2>Programa</h2>
       <div id="programa-vacio">
-        <p class="ayuda">Un programa reparte tus entrenamientos en el calendario y cada día te dice cuál toca.</p>
-        <div id="plantillas-programa"></div>
+        <p class="ayuda">Responde 4 preguntas y la app arma tu plan: elige las sesiones, la intensidad y cómo subir la carga cada semana.</p>
+        <div id="asistente" class="asistente">
+          <div class="pregunta"><span class="etq-campo">1. ¿Qué quieres mejorar?</span><div id="as-objetivo" class="opciones-grandes" role="radiogroup"></div></div>
+          <div class="pregunta"><span class="etq-campo">2. ¿Cómo vas con el remo?</span><div id="as-nivel" class="chips" role="radiogroup"></div></div>
+          <div class="pregunta"><span class="etq-campo">3. ¿Cuántos días por semana puedes remar?</span><div id="as-dias" class="chips" role="radiogroup"></div></div>
+          <div class="pregunta"><span class="etq-campo">4. ¿Durante cuántas semanas?</span><div id="as-semanas" class="chips" role="radiogroup"></div></div>
+          <div id="as-resumen" class="as-resumen" hidden></div>
+          <button type="button" id="btn-asistente" class="boton primario grande" disabled>Crear mi plan</button>
+        </div>
+        <div id="plantillas-programa" hidden></div>
         <details class="serie" id="plan-meta">
-          <summary>Plan automático para una meta</summary>
+          <summary>Plan para una distancia y un tiempo meta</summary>
           <p class="ayuda">Dime qué distancia y en qué tiempo quieres remarla: la app arma 3 sesiones por semana a tu ritmo meta y te pone pruebas para medir el avance.</p>
           <div class="fila-dos">
             <label class="campo">Distancia

@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.14.0';
+const VERSION = '0.15.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -1325,6 +1325,24 @@ async function pintarEntrenamientos() {
       <button type="button" class="boton primario" data-ejemplos>Agregar ejemplos</button></li>`;
     ul.querySelector('[data-ejemplos]').addEventListener('click', () => $('#btn-plantillas').click());
   }
+  // Agrupados por objetivo, cada grupo plegable para que la lista no crezca sin orden.
+  const abiertos = new Set(JSON.parse(ajustes.leer('gruposAbiertos', '[]')));
+  const grupos = new Map(P.GRUPOS_ENT.map((g) => [g.clave, []]));
+  for (const ent of lista) grupos.get(P.enfoqueDe(ent))?.push(ent);
+  const contenedor = {};
+  for (const g of P.GRUPOS_ENT) {
+    const ents = grupos.get(g.clave);
+    if (!ents.length) continue;
+    const det = document.createElement('li');
+    det.className = 'grupo-ent';
+    det.innerHTML = `<details${abiertos.has(g.clave) ? ' open' : ''}><summary><b>${g.nombre}</b><span class="suave">${ents.length}</span></summary><ul class="lista"></ul></details>`;
+    det.querySelector('details').addEventListener('toggle', (ev) => {
+      if (ev.target.open) abiertos.add(g.clave); else abiertos.delete(g.clave);
+      ajustes.escribir('gruposAbiertos', JSON.stringify([...abiertos]));
+    });
+    ul.append(det);
+    contenedor[g.clave] = det.querySelector('ul');
+  }
   for (const ent of lista) {
     const li = document.createElement('li');
     li.innerHTML = `<div class="info clic" role="button" tabindex="0"><div class="titulo"></div><div class="suave"></div></div>
@@ -1356,7 +1374,7 @@ async function pintarEntrenamientos() {
     li.querySelector('[data-a=borrar]').onclick = async () => {
       if (confirm(`¿Borrar "${ent.nombre}"?`)) { await db.borrar('entrenamientos', ent.id); pintarEntrenamientos(); }
     };
-    ul.append(li);
+    contenedor[P.enfoqueDe(ent)].append(li);
   }
   await llenarSelectorEntrenamientos(lista);
 }
@@ -2229,6 +2247,7 @@ async function pintarPrograma() {
         pintarEntrenamientos();
       };
     });
+    pintarAsistente();
     if (!$('#p-inicio').value) $('#p-inicio').value = E.claveDia(Date.now());
     const ents = await db.listar('entrenamientos');
     const nombresDia = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -2275,6 +2294,62 @@ async function pintarPrograma() {
   const hoyK = E.claveDia(Date.now());
   describirDia(porFecha.has(hoyK) ? hoyK : (P.proximo(prog)?.fecha || hoyK));
 }
+
+// ---------- Asistente de plan por objetivo ----------
+const asistente = { objetivo: null, nivel: null, dias: 3, semanas: 6 };
+// Ritmo actual y distancia habitual, sacados de tu historial (o de tu FTP) para que no tengas que escribirlos.
+async function contextoPlan() {
+  const sesiones = await db.listar('sesiones');
+  let split2k = null;
+  for (const x of sesiones.slice(-30)) {
+    const t = x.muestras?.length ? E.mejorTiempo(x.muestras, 2000) : null;
+    if (t && (!split2k || t / 4 < split2k)) split2k = t / 4;
+  }
+  const w = ftp() || estimarFtp(sesiones);
+  if (!split2k) split2k = w ? F.splitDeWatts(w * 1.05) : 135;
+  const dists = sesiones.slice(-10).map((x) => x.distancia).filter((d) => d > 0).sort((a, b) => a - b);
+  const recientes = sesiones.filter((x) => x.fecha > Date.now() - 30 * 864e5).length;
+  return { split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000, nivelSugerido: recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto' };
+}
+async function pintarAsistente() {
+  const ctx = await contextoPlan();
+  asistente.nivel ??= ctx.nivelSugerido;
+  const marcar = (v, x) => `aria-checked="${v === x}"`;
+  $('#as-objetivo').innerHTML = P.OBJETIVOS_PLAN.map((o) => `<button type="button" role="radio" class="opcion" data-v="${o.clave}" ${marcar(asistente.objetivo, o.clave)}><b>${o.nombre}</b><small>${o.texto}</small></button>`).join('');
+  $('#as-nivel').innerHTML = P.NIVELES_PLAN.map((n) => `<button type="button" role="radio" class="chip" data-v="${n.clave}" aria-pressed="${asistente.nivel === n.clave}">${n.nombre}</button>`).join('');
+  $('#as-dias').innerHTML = [2, 3, 4, 5].map((d) => `<button type="button" role="radio" class="chip" data-v="${d}" aria-pressed="${asistente.dias === d}">${d} días</button>`).join('');
+  $('#as-semanas').innerHTML = [4, 6, 8, 12].map((d) => `<button type="button" role="radio" class="chip" data-v="${d}" aria-pressed="${asistente.semanas === d}">${d} semanas</button>`).join('');
+  $('#btn-asistente').disabled = !asistente.objetivo;
+  const res = $('#as-resumen');
+  res.hidden = !asistente.objetivo;
+  if (!asistente.objetivo) return;
+  const { programa } = P.planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx });
+  const primera = programa.dias.slice(0, asistente.dias).map((d) => d.ent);
+  const ultima = programa.dias.slice(-asistente.dias).map((d) => d.ent);
+  const o = P.OBJETIVOS_PLAN.find((x) => x.clave === asistente.objetivo);
+  res.innerHTML = `<b>Tu plan: ${programa.dias.length} sesiones</b>
+    <p>Semana 1: ${primera.join(' · ')}</p><p>Última semana: ${ultima.join(' · ')}</p>
+    <small>La carga sube cada semana y cada 4 semanas hay una más suave para recuperar.${o.prueba ? ` Harás la «${o.prueba}» para medir tu avance.` : ''} Las intensidades van según tu FTP${asistente.objetivo === 'ritmo' ? ` y tu ritmo actual (${Ent.formatoMmss(ctx.split2k)} /500 m)` : ''}${asistente.objetivo === 'distancia' ? ` y tu distancia habitual (${miles(ctx.distHabitual)} m)` : ''}.</small>`;
+}
+$('#asistente').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-v]');
+  if (!b) return;
+  const grupo = b.parentElement.id.replace('as-', '');
+  asistente[grupo] = grupo === 'dias' || grupo === 'semanas' ? Number(b.dataset.v) : b.dataset.v;
+  pintarAsistente();
+});
+$('#btn-asistente').addEventListener('click', async () => {
+  if (!asistente.objetivo) return;
+  const { programa, entrenamientos } = P.planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx: await contextoPlan() });
+  const existentes = new Set((await db.listar('entrenamientos')).map((x) => x.nombre));
+  for (const x of entrenamientos) if (!existentes.has(x.nombre)) await db.guardar('entrenamientos', x);
+  guardarPrograma(programa);
+  confeti(1500);
+  toast(`Plan creado: ${programa.dias.length} sesiones en ${asistente.semanas} semanas`);
+  pintarEntrenamientos();
+  llenarSelectorEntrenamientos();
+  pintarHoyToca();
+});
 
 // Plan automático: sugiere la meta a partir de tu mejor marca y predicción en esa distancia.
 async function pintarPlanMeta() {
