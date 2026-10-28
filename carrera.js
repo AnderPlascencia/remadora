@@ -307,7 +307,8 @@ function cabecera(c, { ctx, ancho }) {
     filas.forEach((f, i) => {
       const fy = filas.length === 1 ? 27 : 19 + i * 18;
       // Sin signo: «delante» o «detrás» ya dice el lado y así no choca con el signo de los carriles (que es el del rival).
-      const num = `${f.m} m${f.seg != null && f.m >= 1 ? ` · ${f.seg} s` : ''}`;
+      const tiempo = f.seg >= 60 ? `${Math.floor(f.seg / 60)}:${String(f.seg % 60).padStart(2, '0')}` : `${f.seg} s`;
+      const num = `${f.m.toLocaleString('es-MX')} m${f.seg != null && f.m >= 1 ? ` · ${tiempo}` : ''}`;
       const flecha = f.delante ? '▲ ' : '▼ ';
       ctx.font = '800 13px system-ui, sans-serif';
       const wNum = ctx.measureText(num).width;
@@ -358,9 +359,12 @@ function minimapa(c, { ctx, ancho }, { botes, referencias }, arriba) {
   const e = c.estado;
   const y = arriba - MINIMAPA / 2;
   const x0 = 14;
-  const x1 = ancho - 22;
   const lejos = Math.max(...botes.map((b) => b.dist), ...referencias.map((r) => r.dist));
   const fin = e.meta ?? Math.max(200, Math.ceil((lejos * 1.25) / 100) * 100);
+  // Sin meta, la etiqueta del final deja su propio espacio a la derecha para no cortarse.
+  ctx.font = '600 9px system-ui, sans-serif';
+  const etqFin = e.meta != null ? '' : fin >= 1000 ? `${(fin / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} km` : `${fin} m`;
+  const x1 = ancho - (etqFin ? Math.ceil(ctx.measureText(etqFin).width) + 8 : 22);
   const X = (m) => x0 + (Math.max(0, Math.min(fin, m)) / fin) * (x1 - x0);
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
   ctx.lineWidth = 3;
@@ -377,7 +381,7 @@ function minimapa(c, { ctx, ancho }, { botes, referencias }, arriba) {
     ctx.font = '600 9px system-ui, sans-serif';
     ctx.fillStyle = '#94A3B8';
     ctx.textAlign = 'left';
-    ctx.fillText(fin >= 1000 ? `${fin / 1000} km` : `${fin} m`, x1 + 3, y + 3);
+    ctx.fillText(etqFin, x1 + 3, y + 3);
   }
   for (const r of referencias) {
     ctx.fillStyle = COLOR_RITMO;
@@ -558,8 +562,12 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     ctx.strokeStyle = 'rgba(255,255,255,0.10)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + pista); ctx.stroke();
+    // La etiqueta que no cabe entera en el borde no se escribe (antes salía cortada).
+    const etq = `${m.toLocaleString('es-MX')} m`;
+    const medio = ctx.measureText(etq).width / 2;
+    if (x - medio < 2 || x + medio > ancho - 2) continue;
     ctx.fillStyle = '#CBD5E1';
-    ctx.fillText(`${m} m`, x, alto - 4);
+    ctx.fillText(etq, x, alto - 4);
   }
 
   // Meta
@@ -695,7 +703,7 @@ function etiqueta2d(ctx, b, yo, yCarril, carril, ancho, e, fuera = 0) {
     if ((e.ventajaM || 0) >= 1) { txt = `⚑ +${Math.round(e.ventajaM)} m`; color = '#FDE047'; }
   } else {
     const d = Math.round(b.dist - yo.dist);
-    txt = d === 0 ? 'parejos' : `${fuera < 0 ? '◀ ' : ''}${d > 0 ? '+' : '−'}${Math.abs(d)} m${fuera > 0 ? ' ▶' : ''}`;
+    txt = d === 0 ? 'parejos' : `${fuera < 0 ? '◀ ' : ''}${d > 0 ? '+' : '−'}${Math.abs(d).toLocaleString('es-MX')} m${fuera > 0 ? ' ▶' : ''}`;
     color = d > 0 ? '#FCA5A5' : d < 0 ? '#86EFAC' : '#F8FAFC';
   }
   if (!txt) return;

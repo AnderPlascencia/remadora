@@ -15,7 +15,7 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 
-const VERSION = '0.21.2';
+const VERSION = '0.22.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -428,9 +428,10 @@ function pintarFtpEstado() {
   $('#ftp-estimado').hidden = !(ftp() && ajustes.si('ftpEstimado', false));
 }
 
-// FTP aproximado sin prueba: el 80 % de la mejor media de watts de tus últimas 20 sesiones.
+// FTP aproximado sin prueba: el 95 % de la mejor media de watts de tus últimas 20 sesiones (por fecha,
+// sin importar en qué orden venga la lista).
 function estimarFtp(sesiones) {
-  const w = sesiones.slice(-20).map((s) => s.wattsProm || 0).filter((x) => x > 0);
+  const w = [...sesiones].sort((a, b) => a.fecha - b.fecha).slice(-20).map((s) => s.wattsProm || 0).filter((x) => x > 0);
   return w.length ? Math.round(Math.max(...w) * 0.95) : 0;
 }
 
@@ -574,11 +575,12 @@ remadora.addEventListener('datos', (e) => {
   if (d.tipo === 'metricas') {
     actual.watts = d.watts; actual.distancia = d.distancia; actual.nivel = d.resistencia;
     // En modo demo, sin banda conectada, simula el pulso para poder probar las zonas.
-    if (remadora.demoTimer && !bandaConectada) actual.fc = Math.round(actual.fc ? actual.fc + (95 + d.watts / 3 - actual.fc) * 0.05 : 100);
+    if (remadora.demoTimer && !bandaConectada) actual.fc = Math.round(actual.fc ? actual.fc + (Math.min(190, 95 + d.watts / 3) - actual.fc) * 0.05 : 100);
   }
 });
 let bandaConectada = false;
-banda.addEventListener('fc', (e) => { bandaConectada = true; actual.fc = e.detail; });
+// Un pulso fuera de 30–240 lpm es un error de lectura de la banda: se ignora.
+banda.addEventListener('fc', (e) => { bandaConectada = true; if (e.detail >= 30 && e.detail <= 240) actual.fc = e.detail; });
 
 $('#btn-conectar').addEventListener('click', async () => {
   if (remadora.conectada || remadora.reconectando) { remadora.desconectar(); return; }
@@ -652,7 +654,7 @@ function actualizarBotones() {
   if ($('#en-vivo').hidden === vivo) { $('#en-vivo').hidden = !vivo; if (vivo) requestAnimationFrame(dibujarVivo); }
   $('#resumen-sesion').hidden = !sesion;
   if (sesion) {
-    const contra = sesion.rivales.length ? ` · contra ${sesion.rivales.map((r) => r.nombre.replace(/^Fantasma /, '')).join(', ')}` : '';
+    const contra = sesion.rivales.length ? ` · contra ${sesion.rivales.map((r) => corto(r.nombre)).join(', ')}` : '';
     $('#resumen-sesion').textContent = `${sesion.entrenamiento || 'Remo libre'}${contra}`;
   }
   pintarChips();
@@ -1872,7 +1874,8 @@ $('#pt-entrenamientos').addEventListener('click', async (e) => {
     if (accion.dataset.a === 'duplicar') {
       const copia = structuredClone(ent);
       delete copia.id;
-      copia.nombre = `${ent.nombre} (copia)`;
+      copia.nombre = await nombreLibre(ent.nombre);
+      delete copia.dePlan;
       await db.guardar('entrenamientos', copia);
       toast('Entrenamiento duplicado');
       pintarEntrenamientos();
@@ -1942,6 +1945,17 @@ $('#btn-cancelar-ent').addEventListener('click', () => { form.hidden = true; });
 
 let enEdicion = null;
 const form = $('#editor-ent');
+
+// El nombre identifica al entrenamiento en tus sesiones y récords: no se repite.
+// «Remo (copia)» → «Remo (copia 2)», sin encadenar «(copia) (copia)».
+async function nombreLibre(nombre) {
+  const usados = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
+  const base = nombre.replace(/ \((copia|mío)( \d+)?\)$/, '');
+  for (let n = 1; ; n++) {
+    const candidato = `${base} (copia${n > 1 ? ` ${n}` : ''})`;
+    if (!usados.has(candidato)) return candidato;
+  }
+}
 
 function abrirEditor(ent) {
   enEdicion = structuredClone(ent);
@@ -2137,6 +2151,15 @@ form.addEventListener('submit', async (e) => {
   const error = (txt, foco) => { $('#ent-error').textContent = txt; foco?.focus(); };
   enEdicion.nombre = form.nombre.value.trim();
   if (!enEdicion.nombre) { error('Ponle un nombre al entrenamiento.', form.nombre); return; }
+  const todos = await db.listar('entrenamientos');
+  if (todos.some((e) => e.nombre === enEdicion.nombre && e.id !== enEdicion.id) || B.NOMBRES_PRUEBA.has(enEdicion.nombre)) {
+    error('Ya tienes un entrenamiento con ese nombre: elige otro para no mezclar sus sesiones y récords.', form.nombre);
+    return;
+  }
+  // Al renombrar, las sesiones y el plan pasan al nombre nuevo (si quieres) para no partir tu historial en dos.
+  const anterior = enEdicion.id != null ? todos.find((e) => e.id === enEdicion.id)?.nombre : null;
+  const renombrar = anterior && anterior !== enEdicion.nombre
+    ? (await db.listar('sesiones')).filter((x) => x.entrenamiento === anterior) : [];
   enEdicion.tipo = form.tipo.value;
   if (enEdicion.tipo === 'objetivo') {
     const valor = Number(form.obj_valor.value);
@@ -2152,6 +2175,11 @@ form.addEventListener('submit', async (e) => {
     delete enEdicion.objetivo;
   }
   $('#ent-error').textContent = '';
+  if (renombrar.length && confirm(`Tienes ${renombrar.length} ${renombrar.length === 1 ? 'sesión' : 'sesiones'} de «${anterior}». ¿Pasarlas a «${enEdicion.nombre}» para que sigan juntas en tus récords y comparaciones?`)) {
+    for (const x of renombrar) await db.guardar('sesiones', { ...x, entrenamiento: enEdicion.nombre });
+  }
+  const prog = anterior && leerPrograma();
+  if (prog?.dias.some((d) => d.ent === anterior)) guardarPrograma({ ...prog, dias: prog.dias.map((d) => (d.ent === anterior ? { ...d, ent: enEdicion.nombre } : d)) });
   await db.guardar('entrenamientos', enEdicion);
   form.hidden = true;
   toast('Entrenamiento guardado');
@@ -2274,6 +2302,7 @@ function pintarAvisoRespaldo(total) {
   }
 }
 
+let sesionesVisibles = 50;
 async function pintarHistorial() {
   const lista = (await db.listar('sesiones')).sort((a, b) => b.fecha - a.fecha);
   cacheSesiones = lista;
@@ -2284,7 +2313,9 @@ async function pintarHistorial() {
   const semanas = E.rachaSemanas(lista);
   const dias = E.racha(lista);
   $('#racha').textContent = semanas;
-  $('#racha-etq').textContent = `${semanas === 1 ? 'semana seguida' : 'semanas seguidas'}${dias >= 2 ? ` · ${dias} días seguidos` : ''}`;
+  $('#racha-etq').textContent = semanas === 1 ? 'semana seguida' : 'semanas seguidas';
+  $('#racha-dias').textContent = dias >= 2 ? `y ${dias} días seguidos` : '';
+  $('#racha-dias').hidden = dias < 2;
   const semana = E.resumenPeriodos(lista, 'semana', 1)[0];
   const meta = ajustes.num('metaSemana', 10);
   const km = semana.metros / 1000;
@@ -2321,7 +2352,8 @@ async function pintarHistorial() {
     ? `${visibles.length} ${visibles.length === 1 ? 'sesión' : 'sesiones'} · ${(totalM / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} km · ${horasYMin(totalT)} en total`
     : '';
   if (!visibles.length) ul.innerHTML = '<li class="vacio">Todavía no hay sesiones. Tu primera sesión aparecerá aquí.</li>';
-  for (const s of visibles) {
+  // Con cientos de sesiones se pintan de 50 en 50 para que Progreso abra rápido.
+  for (const s of visibles.slice(0, sesionesVisibles)) {
     const li = document.createElement('li');
     li.className = 'clic';
     li.tabIndex = 0;
@@ -2334,6 +2366,14 @@ async function pintarHistorial() {
     li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoTiempo(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
     li.addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') li.click(); });
+    ul.append(li);
+  }
+  const quedan = visibles.length - sesionesVisibles;
+  if (quedan > 0) {
+    const li = document.createElement('li');
+    li.className = 'separador-plan';
+    li.innerHTML = `<button type="button" class="boton">Ver ${Math.min(50, quedan)} más (quedan ${miles(quedan)})</button>`;
+    li.querySelector('button').addEventListener('click', () => { sesionesVisibles += 50; pintarHistorial(); });
     ul.append(li);
   }
 }
