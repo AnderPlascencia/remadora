@@ -53,8 +53,9 @@
   <main>
     <!-- ENTRENAR -->
     <section id="vista-entrenar" class="vista activa" aria-labelledby="tab-entrenar">
-      <div id="aviso-bt" class="aviso" hidden>
-        Este navegador no tiene Bluetooth web: abre la app en Chrome para Android o prueba el modo demo en Ajustes.
+      <div id="aviso-bt" class="aviso aviso-bt" hidden>
+        <span>Este navegador no tiene Bluetooth web: abre la app en Chrome para Android.</span>
+        <button type="button" id="btn-demo-aviso" class="boton chico">Probar en modo demo</button>
       </div>
 
       <div class="fila-botones">
@@ -62,36 +63,49 @@
         <button id="btn-banda" class="boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span>Pulso</span></button>
       </div>
 
+      <button type="button" id="linea-nivel" class="linea-nivel" hidden></button>
+
       <div id="preparar" class="preparar">
-      <div id="hoy-toca" class="hoy-toca" hidden>
-        <svg class="ico" aria-hidden="true"><use href="#i-calendario"/></svg>
-        <div class="crece"><span class="etq">Hoy toca</span><b id="hoy-toca-nombre"></b></div>
-        <button id="btn-hoy-toca" class="boton chico">Elegir</button>
+      <div id="hoy" class="hoy">
+        <div class="hoy-cabecera">
+          <span id="hoy-etq" class="etq">Hoy</span>
+          <button type="button" id="btn-cambiar" class="enlace-boton" aria-expanded="false" aria-controls="otra-cosa">Cambiar</button>
+        </div>
+        <b id="hoy-nombre" class="hoy-nombre">Remo libre</b>
+        <span id="hoy-resumen" class="hoy-resumen"></span>
+        <button type="button" id="btn-hoy-detalle" class="enlace-boton hoy-detalle" hidden>Ver detalles</button>
+        <div id="hoy-sugerencia" class="hoy-sugerencia" hidden><span></span><button type="button" class="boton chico"></button></div>
+      </div>
+
+      <div id="otra-cosa" class="otra-cosa" hidden>
+        <span class="etq-campo">Otra cosa</span>
+        <div id="modo-ent" class="modo-ent" role="radiogroup" aria-label="Tipo de entrenamiento">
+          <button type="button" role="radio" data-modo="libre" aria-checked="true"><b>Remo libre</b><small>Rema a tu aire, sin meta</small></button>
+          <button type="button" role="radio" data-modo="objetivo" aria-checked="false"><b>Un entrenamiento</b><small>Potencia, ritmo, distancia…</small></button>
+        </div>
+        <label id="campo-ent" class="campo" hidden>Entrenamiento
+          <select id="sel-entrenamiento"><option value="">Elige un entrenamiento</option></select>
+        </label>
       </div>
 
       <p id="recomendacion" class="recomendacion" hidden></p>
-      <div id="modo-ent" class="modo-ent" role="radiogroup" aria-label="Tipo de entrenamiento">
-        <button type="button" role="radio" data-modo="libre" aria-checked="true"><b>Remo libre</b><small>Rema a tu aire, sin meta</small></button>
-        <button type="button" role="radio" data-modo="objetivo" aria-checked="false"><b>Por objetivo</b><small>Potencia, ritmo, distancia…</small></button>
-      </div>
-      <label id="campo-ent" class="campo" hidden>Entrenamiento
-        <select id="sel-entrenamiento"><option value="">Elige un entrenamiento</option></select>
-      </label>
+      <details id="opciones-carrera" class="opciones-carrera">
+      <summary><span class="oc-titulo">Opciones de carrera</span><span id="oc-resumen" class="oc-resumen"></span></summary>
       <div class="campo fantasmas">
         <label id="libre-fantasmas" class="interruptor" hidden><input type="checkbox" id="in-libre-fantasmas"><span>Competir contra 3 fantasmas<small class="ayuda bloque">Reman a tu nivel mientras tú remas libre</small></span></label>
         <div id="bloque-rivales" hidden>
-          <span class="etq-campo">Rivales <small>(3 de otras clases)</small></span>
+          <span class="etq-campo">Rivales <small>(3 de otras clases)</small> <button type="button" class="ayuda-q" data-ayuda="dificultad" aria-label="¿Qué es la dificultad?">?</button></span>
           <div id="dificultad" class="modo-ent tres" role="radiogroup" aria-label="Dificultad de los rivales"></div>
         </div>
         <p id="rival-semana" class="ayuda"></p>
         <div id="rivales-vista" class="rivales-vista"></div>
-        <span class="etq-campo">Referencia en tu carril <small>(línea amarilla)</small></span>
+        <span class="etq-campo">Referencia en tu carril <small>(línea amarilla)</small> <button type="button" class="ayuda-q" data-ayuda="referencia" aria-label="¿Qué es la referencia?">?</button></span>
         <div id="chips-rival" class="chips" role="group" aria-label="Líneas de referencia en tu carril">
           <button type="button" class="chip" data-rival="anterior" aria-pressed="false">Mi anterior</button>
           <button type="button" class="chip" data-rival="mejor" aria-pressed="false">Mi mejor</button>
         </div>
         <div id="referencias-vista" class="rivales-vista"></div>
-        <label id="ventaja-campo" class="campo" hidden>Ventaja para la carrera
+        <label id="ventaja-campo" class="campo" hidden><span>Ventaja para la carrera <button type="button" class="ayuda-q" data-ayuda="ventaja" aria-label="¿Qué es una ventaja?">?</button></span>
           <select id="sel-ventaja"></select>
           <small id="ventaja-ayuda" class="ayuda"></small>
         </label>
@@ -112,6 +126,7 @@
           <input id="in-ritmo" inputmode="numeric" autocomplete="off" placeholder="2:05">
         </label>
       </div>
+      </details>
       <div id="xp-estimada" class="xp-estimada" hidden></div>
       </div>
       <p id="resumen-sesion" class="resumen-sesion" hidden></p>
@@ -137,7 +152,7 @@
       </div>
 
       <div class="fila-botones">
-        <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Iniciar sesión</span></button>
+        <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
         <button id="btn-pausa" class="boton grande" hidden aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
         <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
       </div>
@@ -178,31 +193,29 @@
       </div>
       <div id="pt-programa" hidden>
       <div id="programa-vacio">
-        <p class="ayuda">Responde 4 preguntas y la app arma tu plan: elige las sesiones, la intensidad y cómo subir la carga cada semana.</p>
+        <p class="ayuda">Responde unas preguntas y la app arma tu plan: elige las sesiones, la intensidad y cómo subir la carga cada semana.</p>
         <div id="asistente" class="asistente">
-          <div class="pregunta"><span class="etq-campo">1. ¿Qué quieres mejorar?</span><div id="as-objetivo" class="opciones-grandes" role="radiogroup"></div></div>
-          <div class="pregunta"><span class="etq-campo">2. ¿Cómo vas con el remo?</span><div id="as-nivel" class="chips" role="radiogroup"></div></div>
-          <div class="pregunta"><span class="etq-campo">3. ¿Cuántos días por semana puedes remar?</span><div id="as-dias" class="chips" role="radiogroup"></div></div>
-          <div class="pregunta"><span class="etq-campo">4. ¿Durante cuántas semanas?</span><div id="as-semanas" class="chips" role="radiogroup"></div></div>
+          <div class="pregunta"><span class="etq-campo">1. ¿Qué quieres lograr?</span><div id="as-objetivo" class="opciones-grandes" role="radiogroup"></div></div>
+          <div class="pregunta as-normal"><span class="etq-campo">2. ¿Cómo vas con el remo?</span><div id="as-nivel" class="chips" role="radiogroup"></div></div>
+          <div class="pregunta as-normal"><span class="etq-campo">3. ¿Cuántos días por semana puedes remar?</span><div id="as-dias" class="chips" role="radiogroup"></div></div>
+          <div class="pregunta as-normal"><span class="etq-campo">4. ¿Durante cuántas semanas?</span><div id="as-semanas" class="chips" role="radiogroup"></div></div>
+          <div id="as-meta" class="pregunta" hidden>
+            <span class="etq-campo">2. ¿Qué distancia y en qué tiempo?</span>
+            <div class="fila-dos">
+              <label class="campo">Distancia
+                <select id="pm-dist"><option value="500">500 m</option><option value="1000">1000 m</option><option value="2000" selected>2000 m</option><option value="5000">5000 m</option><option value="6000">6000 m</option><option value="10000">10 000 m</option></select>
+              </label>
+              <label class="campo">Tiempo meta (mm:ss) <input id="pm-tiempo" inputmode="numeric" autocomplete="off" placeholder="7:45"></label>
+              <label class="campo">Semanas <input id="pm-semanas" type="number" min="2" max="16" value="8" inputmode="numeric"></label>
+              <label class="campo">Empieza <input id="pm-inicio" type="date"></label>
+            </div>
+            <p id="pm-info" class="ayuda" aria-live="polite"></p>
+            <p id="pm-error" class="error" role="alert"></p>
+          </div>
           <div id="as-resumen" class="as-resumen" hidden></div>
           <button type="button" id="btn-asistente" class="boton primario grande" disabled>Crear mi plan</button>
         </div>
         <div id="plantillas-programa" hidden></div>
-        <details class="serie" id="plan-meta">
-          <summary>Plan para una distancia y un tiempo meta</summary>
-          <p class="ayuda">Dime qué distancia y en qué tiempo quieres remarla: la app arma 3 sesiones por semana a tu ritmo meta y te pone pruebas para medir el avance.</p>
-          <div class="fila-dos">
-            <label class="campo">Distancia
-              <select id="pm-dist"><option value="500">500 m</option><option value="1000">1000 m</option><option value="2000" selected>2000 m</option><option value="5000">5000 m</option><option value="6000">6000 m</option><option value="10000">10 000 m</option></select>
-            </label>
-            <label class="campo">Tiempo meta (mm:ss) <input id="pm-tiempo" inputmode="numeric" autocomplete="off" placeholder="7:45"></label>
-            <label class="campo">Semanas <input id="pm-semanas" type="number" min="2" max="16" value="8" inputmode="numeric"></label>
-            <label class="campo">Empieza <input id="pm-inicio" type="date"></label>
-          </div>
-          <p id="pm-info" class="ayuda" aria-live="polite"></p>
-          <p id="pm-error" class="error" role="alert"></p>
-          <button type="button" id="btn-plan-meta" class="boton primario">Crear plan</button>
-        </details>
         <details class="serie">
           <summary>Crear mi propio programa</summary>
           <div class="fila-dos">
@@ -300,7 +313,7 @@
           <div class="heroe-nivel"><span class="etq">Nivel</span><b id="heroe-nivel">1</b></div>
         </div>
         <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div id="heroe-xp-barra"></div></div>
-        <p id="heroe-xp-texto" class="ayuda"></p>
+        <p class="ayuda heroe-xp-fila"><span id="heroe-xp-texto"></span> <button type="button" class="ayuda-q" data-ayuda="xp" aria-label="¿Cómo se gana XP?">?</button></p>
         <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
           <button type="button" data-hp="ficha" class="activa">Ficha</button>
           <button type="button" data-hp="talentos">Talentos</button>
@@ -420,14 +433,22 @@
       <summary><h2>Tú</h2></summary>
       <div class="fila-dos">
         <label class="campo">Peso (kg) <input id="in-peso" type="number" min="30" max="200" inputmode="numeric"></label>
-        <label class="campo">FTP (W) <input id="in-ftp" type="number" min="30" max="1000" inputmode="numeric"></label>
+        <label class="campo"><span>FTP (W) <span id="ftp-estimado" class="etq-estimado" hidden>estimado</span> <button type="button" class="ayuda-q" data-ayuda="ftp" aria-label="¿Qué es el FTP?">?</button></span>
+          <input id="in-ftp" type="number" min="30" max="1000" inputmode="numeric" placeholder="Se calcula solo"></label>
       </div>
-      <p id="clasificacion-ftp" class="aviso suave-aviso"></p>
-      <p class="ayuda">El FTP es la potencia que puedes sostener cerca de una hora. Haz el entrenamiento "Prueba FTP 20 min" y la app lo calcula por ti.</p>
-      <table id="tabla-zonas" class="tabla"></table>
-      <label class="campo">Pulso máximo (lpm) <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
-      <p class="ayuda">Si no lo conoces, usa 220 menos tu edad. Sirve para las zonas de pulso.</p>
       <label class="campo">Meta semanal (km) <input id="in-meta-semana" type="number" min="1" max="500" inputmode="numeric"></label>
+      <p id="clasificacion-ftp" class="aviso suave-aviso"></p>
+      </details>
+
+      <details class="seccion" data-seccion="avanzado">
+      <summary><h2>Avanzado</h2></summary>
+      <h3 class="sub-ajustes">Zonas de potencia</h3>
+      <table id="tabla-zonas" class="tabla"></table>
+      <div class="fila-dos">
+        <label class="campo">Edad <input id="in-edad" type="number" min="10" max="99" inputmode="numeric" placeholder="ej. 35"></label>
+        <label class="campo">Pulso máximo (lpm) <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
+      </div>
+      <p class="ayuda">Con tu edad se calcula el pulso máximo (220 menos la edad). Solo hace falta si usas banda de pulso.</p>
       </details>
 
       <details class="seccion" data-seccion="durante">
@@ -560,15 +581,17 @@
       <p id="hoja-sub" class="ayuda"></p>
       <div id="hoja-podio" class="podio" hidden></div>
       <div id="hoja-xp" class="hoja-xp" hidden></div>
-      <div id="hoja-records" class="records"></div>
       <div id="hoja-ftp" class="aviso exito" hidden></div>
-      <div id="hoja-stats" class="metricas compacta"></div>
       <div id="hoja-esfuerzo" class="esfuerzo">
         <h2>¿Qué tan duro se sintió?</h2>
         <div id="rpe" class="rpe" role="group" aria-label="Esfuerzo del 1 al 10"></div>
         <p id="rpe-texto" class="ayuda"></p>
         <label class="campo">Notas <textarea id="in-notas" rows="2" maxlength="500" placeholder="Cómo te sentiste, molestias, ajustes de la consola…"></textarea></label>
       </div>
+      <details id="hoja-detalle" class="hoja-detalle">
+      <summary><span id="hoja-detalle-titulo">Ver detalle</span></summary>
+      <div id="hoja-records" class="records"></div>
+      <div id="hoja-stats" class="metricas compacta"></div>
       <div id="hoja-prediccion"></div>
       <div id="hoja-intervalos"></div>
       <div id="hoja-comparacion"></div>
@@ -583,12 +606,51 @@
         <h2>Potencia contra el plan</h2>
         <canvas id="hoja-grafica-perfil" class="grafica" role="img" aria-label="Potencia contra el plan"></canvas>
       </div>
+      </details>
       <div class="fila-botones">
         <button id="btn-compartir-img" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-descarga"/></svg><span>Compartir imagen</span></button>
         <button id="btn-csv" class="boton">Exportar CSV</button>
         <button id="btn-tcx" class="boton">Exportar TCX</button>
         <button id="btn-borrar" class="boton peligro">Borrar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- PRIMER INICIO: héroe, objetivo y conexión -->
+  <div id="inicio" class="inicio" role="dialog" aria-modal="true" aria-labelledby="inicio-titulo" hidden>
+    <div class="inicio-cabecera">
+      <div id="inicio-puntos" class="inicio-puntos" aria-hidden="true"><span></span><span></span><span></span></div>
+      <button type="button" id="inicio-saltar" class="enlace-boton">Saltar</button>
+    </div>
+    <div class="inicio-cuerpo">
+      <section class="inicio-paso" data-paso="1">
+        <img class="inicio-logo" src="rower-logo.svg" alt="" width="56" height="56">
+        <h2 id="inicio-titulo">Elige tu héroe</h2>
+        <p class="ayuda">Crece con cada sesión que remas. Su atributo favorito sube un 15 % más rápido.</p>
+        <div id="inicio-clases" class="inicio-clases" role="radiogroup" aria-label="Clase"></div>
+        <label class="campo">Nombre <small>(opcional)</small><input id="inicio-nombre" maxlength="20" autocomplete="off" placeholder="Ander el Implacable"></label>
+      </section>
+      <section class="inicio-paso" data-paso="2" hidden>
+        <h2>¿Qué quieres lograr?</h2>
+        <p class="ayuda">Con tu respuesta armo un plan de 6 semanas. Lo puedes cambiar cuando quieras en Planes.</p>
+        <div id="inicio-objetivos" class="opciones-grandes" role="radiogroup" aria-label="Objetivo"></div>
+        <div id="inicio-dias-campo" hidden>
+          <span class="etq-campo">¿Cuántos días por semana?</span>
+          <div id="inicio-dias" class="chips" role="radiogroup" aria-label="Días por semana"></div>
+        </div>
+      </section>
+      <section class="inicio-paso" data-paso="3" hidden>
+        <h2>Conecta tu remadora</h2>
+        <p id="inicio-bt-texto" class="ayuda">Enciende la consola de la RW200, toca Conectar y elígela en la lista que muestra el teléfono.</p>
+        <div class="inicio-conectar">
+          <button type="button" id="inicio-conectar" class="boton primario grande"><svg class="ico" aria-hidden="true"><use href="#i-bt"/></svg><span>Conectar remadora</span></button>
+          <button type="button" id="inicio-demo" class="boton">Probar en modo demo</button>
+        </div>
+      </section>
+    </div>
+    <div class="inicio-pie">
+      <button type="button" id="inicio-atras" class="boton" hidden>Atrás</button>
+      <button type="button" id="inicio-siguiente" class="boton primario grande" disabled>Siguiente</button>
     </div>
   </div>
 
