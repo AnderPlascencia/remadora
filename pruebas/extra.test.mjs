@@ -64,3 +64,14 @@ console.log('extra OK');
   assert.equal(E.ftpSugerido({ muestras }), 190);
   console.log('v0.7.0 ok');
 }
+
+// Racha por semanas: remar en días alternos no la rompe y una semana sin remar sí.
+{
+  const E2 = await import('../estadisticas.js');
+  const dia = (iso) => ({ fecha: Date.parse(iso) });
+  const ahora = Date.parse('2026-10-28T12:00');
+  assert.equal(E2.rachaSemanas([dia('2026-10-26T09:00'), dia('2026-10-21T09:00'), dia('2026-10-13T09:00')], ahora), 3);
+  assert.equal(E2.rachaSemanas([dia('2026-10-21T09:00'), dia('2026-10-13T09:00')], ahora), 2);
+  assert.equal(E2.rachaSemanas([dia('2026-10-26T09:00'), dia('2026-10-07T09:00')], ahora), 1);
+  assert.equal(E2.rachaSemanas([], ahora), 0);
+}

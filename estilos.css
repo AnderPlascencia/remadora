@@ -979,3 +979,16 @@ h1, h2, h3, .titulo, .tm-nombre, #heroe-titulo, .lista b, .podio b { overflow-wr
 /* El nombre del entrenamiento en el modo remo puede usar dos renglones. */
 .mr-nombre { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }
 .lista .suave { overflow-wrap: anywhere; }
+/* [hidden] siempre oculta, aunque la clase del elemento le ponga display (p. ej. .grafica o .lista li). */
+[hidden] { display: none !important; }
+.lista li.separador-plan { background: none; justify-content: center; padding: 8px; }
+/* Teléfono en horizontal: el inicio guiado usa tres columnas y los avisos van arriba para no tapar los botones. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .inicio .opciones-grandes { grid-template-columns: repeat(3, 1fr); margin: 8px 0; }
+  .inicio .opcion { min-height: 0; padding: 8px 12px; }
+  .inicio-paso h2 { margin-top: 0; }
+  .inicio-pie { padding-top: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .toast { bottom: auto; top: calc(8px + env(safe-area-inset-top)); padding: 6px 14px; font-size: 14px; }
+}
+#mr-vista { flex-direction: column; gap: 2px; }
+#mr-vista .vista-puntos { font-size: 8px; letter-spacing: 3px; line-height: 1; opacity: .8; }

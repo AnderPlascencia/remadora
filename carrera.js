@@ -253,7 +253,7 @@ function partesReloj(r) {
     p.push(['   faltan ', '600 12px system-ui, sans-serif', '#CBD5E1']);
     p.push([`${r.porRitmo ? '≈' : ''}${reloj(r.falta)}`, '800 15px system-ui, sans-serif', '#FDE047']);
   }
-  if (r.lugar && r.falta) p.push([`  · llegas ${r.lugar}º`, '600 12px system-ui, sans-serif', '#CBD5E1']);
+  if (r.lugar && r.falta) p.push([`  · a este ritmo, ${r.lugar}º`, '600 12px system-ui, sans-serif', '#CBD5E1']);
   return p;
 }
 
@@ -306,7 +306,8 @@ function cabecera(c, { ctx, ancho }) {
     if (ancha(c)) derecha = ladoDerecho(c, ctx, ancho, l2);
     filas.forEach((f, i) => {
       const fy = filas.length === 1 ? 27 : 19 + i * 18;
-      const num = `${f.m ? (f.delante ? '−' : '+') : ''}${f.m} m${f.seg != null && f.m >= 1 ? ` · ${f.seg} s` : ''}`;
+      // Sin signo: «delante» o «detrás» ya dice el lado y así no choca con el signo de los carriles (que es el del rival).
+      const num = `${f.m} m${f.seg != null && f.m >= 1 ? ` · ${f.seg} s` : ''}`;
       const flecha = f.delante ? '▲ ' : '▼ ';
       ctx.font = '800 13px system-ui, sans-serif';
       const wNum = ctx.measureText(num).width;

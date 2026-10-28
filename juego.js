@@ -583,15 +583,17 @@ export function estimarXp(sesiones, hipotetica, opts = {}) {
   };
 }
 
-// Qué entrenar según el atributo más flojo: un entrenamiento de la lista y un reto contra rivales.
+// Qué entrenar según el atributo más flojo: un entrenamiento base (se adapta a tu nivel) y un reto contra rivales.
+// El reto elige la dificultad de los rivales: inferior = Bahía, igual = Costa, superior = Alta mar.
 export const RECOMENDACION_ATRIBUTO = {
-  fuerza: { entrenamiento: 'Umbral 3 × 8 min (zona 4)', reto: 'superior', texto: 'Series en zona 4. Un rival superior te obliga a apretar en cada bloque.' },
-  agilidad: { entrenamiento: '4 × 500 m', reto: 'igual', texto: 'Series cortas por encima de tu FTP. Si te toca un vikingo, aguanta su salida fuerte.' },
-  resistencia: { entrenamiento: '5000 m', reto: 'igual', texto: 'Distancia larga en zona 2. Un polinesio acelera al final: guarda fuerzas para el último tramo.' },
-  recuperacion: { entrenamiento: null, reto: 'inferior', texto: 'Remo libre suave en zona 1 y 2, o un día de descanso. Un rival inferior para remar sin presión.' },
-  tecnica: { entrenamiento: 'Ritmo 2:10 × 20 min', reto: 'igual', texto: 'Ritmo parejo y buena distancia por palada. Rema como un samurái: constante de principio a fin.' },
-  voluntad: { entrenamiento: 'Pirámide de paladas', reto: 'superior', texto: 'Termina el entrenamiento completo y cuida tu racha. Un rival superior pone a prueba tu voluntad.' },
+  fuerza: { base: 'base:pot-mant', entrenamiento: 'Umbral', reto: 'superior', texto: 'Series en zona 4. Un rival superior te obliga a apretar en cada bloque.' },
+  agilidad: { base: 'base:pot-mejora', entrenamiento: 'VO2 máx', reto: 'igual', texto: 'Series cortas por encima de tu FTP. Si te toca un vikingo, aguanta su salida fuerte.' },
+  resistencia: { base: 'base:dis-mant', entrenamiento: 'Fondo', reto: 'igual', texto: 'Distancia larga en zona 2. Un polinesio acelera al final: guarda fuerzas para el último tramo.' },
+  recuperacion: { base: null, entrenamiento: null, reto: 'inferior', texto: 'Remo libre suave en zona 1 y 2, o un día de descanso. Un rival inferior para remar sin presión.' },
+  tecnica: { base: 'base:rit-mant', entrenamiento: 'Ritmo de crucero', reto: 'igual', texto: 'Ritmo parejo y buena distancia por palada. Rema como un samurái: constante de principio a fin.' },
+  voluntad: { base: 'base:pal-mejora', entrenamiento: 'Paladas en pirámide', reto: 'superior', texto: 'Termina el entrenamiento completo y cuida tu racha. Un rival superior pone a prueba tu voluntad.' },
 };
+export const DIFICULTAD_RETO = { inferior: 'bahia', igual: 'costa', superior: 'altamar' };
 export function recomendarPorAtributos(atributos) {
   const lista = ATRIBUTOS.map((a) => ({ ...a, valor: atributos[a.clave] || 0 }));
   if (!lista.some((a) => a.valor > 0)) return null;
