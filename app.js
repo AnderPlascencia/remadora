@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.19.3';
+const VERSION = '0.19.4';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -385,6 +385,8 @@ $('#mr-grafica').addEventListener('click', () => {
 
 // Clasificación de tripulación por FTP (Grumete … Capitán): en la Ficha y en Ajustes, con aviso al subir.
 function pintarClasificacion(sesiones = null) {
+  // Sin FTP escrito se estima con el historial, igual que en la Ficha, para que Ajustes no diga otra cosa.
+  if (!sesiones && !ftp()) { db.listar('sesiones').then((s) => pintarClasificacion(s)); return; }
   const peso = ajustes.num('peso', 75);
   const w = ftp() || (sesiones ? estimarFtp(sesiones) : 0);
   const caja = $('#clasificacion-ftp');
@@ -565,10 +567,11 @@ function actualizarBotones() {
 
 // Terminar pide un segundo toque para evitar cortes accidentales mientras se rema.
 function confirmarTerminar(boton) {
-  if (boton.dataset.confirmar) { delete boton.dataset.confirmar; detenerSesion(); return; }
-  boton.dataset.confirmar = '1';
   const span = boton.querySelector('span');
+  // Al confirmar se devuelve el texto: si no, la siguiente sesión arranca con «¿Seguro?» en el botón.
+  if (boton.dataset.confirmar) { span.textContent = boton.dataset.confirmar; delete boton.dataset.confirmar; detenerSesion(); return; }
   const previo = span.textContent;
+  boton.dataset.confirmar = previo;
   span.textContent = '¿Seguro?';
   setTimeout(() => { if (boton.dataset.confirmar) { delete boton.dataset.confirmar; span.textContent = previo; } }, 3000);
 }
@@ -727,9 +730,17 @@ async function detenerSesion() {
   }
   if (s.rival) {
     const metaCarrera = ent?.objetivo?.metrica === 'distancia' ? ent.objetivo.valor : null;
+    // En una carrera a distancia manda quién cruzó primero: lo remado después de la meta («Seguir remando»)
+    // no adelanta a fantasmas que ya llegaron y se detuvieron.
+    const metrosVs = (r) => {
+      if (metaCarrera == null || s.tiempoMeta == null) return s.dist - E.distanciaEn(r.muestras, s.t);
+      const tr = F.tiempoA(r, metaCarrera);
+      if (tr != null && tr < s.tiempoMeta) return E.distanciaEn(m, tr) - metaCarrera;
+      return metaCarrera - E.distanciaEn(r.muestras, s.tiempoMeta);
+    };
     const resumen = (r) => ({
       fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, clase: r.clase ?? null, rango: r.rango ?? null, dificultad: r.dificultad ?? null,
-      diferencia: V.diferenciaFinal(s.dist - E.distanciaEn(r.muestras, s.t), s.ventaja),
+      diferencia: V.diferenciaFinal(metrosVs(r), s.ventaja),
       tiempo: metaCarrera ? F.tiempoA(r, metaCarrera) : null,
     });
     if (s.ventaja && (V.metrosVentaja(s.ventaja) >= 0.5 || s.ventaja.objeto)) {
@@ -738,6 +749,8 @@ async function detenerSesion() {
     if (s.ventaja?.objeto) registro.ventajaUsada = s.ventaja.objeto;
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
+    // Terminar antes de completar el entrenamiento no gana la carrera: se guarda la diferencia, pero no cuenta como victoria.
+    if (s.tiempoMeta == null) registro.carreraSinTerminar = true;
   }
   if (s.referencias?.length) {
     registro.referencias = s.referencias.map((r) => ({ nombre: r.nombre, fecha: r.fecha ?? null, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)) }));
@@ -1094,10 +1107,22 @@ function carreraActual() {
   const meta = obj?.metrica === 'distancia' ? obj.valor : null;
   const extra = V.metrosVentaja(sesion.ventaja);
   const miDist = sesion.dist + extra;
-  const difs = rs.map((r) => miDist - E.distanciaEn(r.muestras, t));
+  // Después de cruzar la meta el puesto queda fijo: cuenta quién llegó primero, no lo remado de más.
+  const tm = meta != null ? sesion.tiempoMeta : null;
+  const difs = rs.map((r) => {
+    if (tm == null) return miDist - E.distanciaEn(r.muestras, t);
+    const tr = F.tiempoA(r, meta);
+    return tr != null && tr < tm ? E.distanciaEn(sesion.muestras, tr) + extra - meta : meta + extra - E.distanciaEn(r.muestras, tm);
+  });
   const lugar = 1 + difs.filter((d) => d < -0.5).length;
-  const dif = Math.round(difs[0]);
-  const r = rs[0];
+  // Con varios fantasmas se compara con el más cercano en la pelea: el que va justo delante o, si vas primero, el segundo.
+  let iRef = 0;
+  if (rs.length > 1) {
+    const delante = difs.map((d, i) => [d, i]).filter(([d]) => d < -0.5);
+    iRef = (delante.length ? delante.reduce((a, b) => (b[0] > a[0] ? b : a)) : difs.map((d, i) => [d, i]).reduce((a, b) => (b[0] < a[0] ? b : a)))[1];
+  }
+  const dif = Math.round(difs[iRef]);
+  const r = rs[iRef];
   const quien = r.nivel && F.NIVELES[r.nivel] ? `fantasma ${F.NIVELES[r.nivel].nombre.toLowerCase()}` : (r.nombre || 'fantasma').replace(/^Fantasma/, 'fantasma');
   let texto = dif === 0 ? `Empatado con ${quien}` : `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} de ${quien}`;
   if (rs.length > 1) texto = `Vas ${lugar}º de ${rs.length + 1} · ${texto}`;
@@ -2302,7 +2327,7 @@ async function pintarPodio(s) {
       img: r.clase && r.rango ? srcRetratoRango(r.clase, r.rango) : null,
     })),
   ].sort((a, b) => b.pos - a.pos || (a.yo ? -1 : 1));
-  const xp = rivales.filter((r) => r.diferencia > 0 && r.clase).slice(0, 3).reduce((a, r) => a + J.xpPorFantasma(r.dificultad), 0);
+  const xp = s.carreraSinTerminar ? 0 : rivales.filter((r) => r.diferencia > 0 && r.clase).slice(0, 3).reduce((a, r) => a + J.xpPorFantasma(r.dificultad), 0);
   const lugar = filas.findIndex((f) => f.yo) + 1;
   const dato = (f) => (f.tiempo != null ? formatoTiempo(Math.round(f.tiempo)) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${Math.abs(f.dif)} m`);
   const bloque = (f, i) => `<div class="podio-puesto p${i + 1}${f.yo ? ' yo' : ''}">
@@ -2311,7 +2336,8 @@ async function pintarPodio(s) {
       <div class="podio-escalon">${i + 1}º</div></div>`;
   const top = filas.slice(0, 3);
   const orden = [top[1], top[0], top[2]].map((f) => (f ? bloque(f, filas.indexOf(f)) : '<div></div>')).join('');
-  caja.innerHTML = `<h2>${lugar === 1 ? '¡Ganaste la carrera!' : `Llegaste ${lugar}º de ${filas.length}`}</h2>
+  const titulo = s.carreraSinTerminar ? `Carrera sin terminar: ibas ${lugar}º de ${filas.length}` : lugar === 1 ? '¡Ganaste la carrera!' : `Llegaste ${lugar}º de ${filas.length}`;
+  caja.innerHTML = `<h2>${titulo}</h2>
     <div class="podio-escena">${orden}</div>
     ${filas.slice(3).map((f, i) => `<p class="podio-resto">${i + 4}º ${f.nombre} · ${dato(f)}</p>`).join('')}
     ${xp ? `<p class="podio-xp">+${xp} XP por fantasmas vencidos</p>` : ''}`;
@@ -2388,7 +2414,7 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   const medallas = resumen ? E.insignias([...previas, s]).filter((x) => x.ganada && !antes.has(x.clave)) : [];
   $('#hoja-records').insertAdjacentHTML('beforeend', medallas.map((x) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}Nueva insignia</div>
     <div class="valor">${x.nombre}</div><div class="sub">${x.detalle}</div></div>`).join(''));
-  const gano = (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);
+  const gano = !s.carreraSinTerminar && (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);
   pintarPodio(s);
   const subio = pintarXpSesion(s, previas, resumen);
   if (resumen && (recs.length || medallas.length || gano || subio)) setTimeout(confeti, 250);
@@ -2909,6 +2935,13 @@ document.addEventListener('visibilitychange', async () => {
   }
 });
 
+const horizontalTel = matchMedia('(orientation: landscape) and (max-height: 520px)');
+// Al girar a horizontal a mitad de una carrera, la pista se lleva a la vista igual que al empezar.
+horizontalTel.addEventListener('change', () => {
+  if (horizontalTel.matches && sesion && hayCarrera() && vistaActiva('entrenar') && $('#modo-remo').hidden) {
+    requestAnimationFrame(() => $('#carrera').scrollIntoView({ block: 'start' }));
+  }
+});
 window.addEventListener('resize', () => {
   if (vistaActiva('entrenar')) { dibujarVivo(); if (!sesion) vistaPrevia(); }
   if (vistaActiva('historial')) pintarHistorial();

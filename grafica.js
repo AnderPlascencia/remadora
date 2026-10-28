@@ -193,7 +193,7 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
   // Eje X en minutos
   ctx.textAlign = 'center';
   const paso = [60, 120, 300, 600, 900, 1800].find((p) => tFin / p <= 6) || 3600;
-  for (let t = 0; t <= tFin; t += paso) ctx.fillText(`${Math.round(t / 60)}m`, X(t), alto - 6);
+  for (let t = 0; t <= tFin; t += paso) ctx.fillText(`${Math.round(t / 60)} min`, X(t), alto - 6);
 
   // Potencia real
   if (puntos.length) {
@@ -290,7 +290,7 @@ export function dibujarAvance(canvas, puntos, meta, estimadoFin = null) {
   }
   ctx.textAlign = 'center';
   const paso = [60, 120, 300, 600, 900, 1800].find((p) => tFin / p <= 6) || 3600;
-  for (let t = 0; t <= tFin; t += paso) ctx.fillText(`${Math.round(t / 60)}m`, X(t), alto - 6);
+  for (let t = 0; t <= tFin; t += paso) ctx.fillText(`${Math.round(t / 60)} min`, X(t), alto - 6);
 
   // Meta
   ctx.strokeStyle = colorMeta;

@@ -360,7 +360,7 @@ export function insignias(sesiones) {
     if (i + 1 >= 10) marca('ses10', s);
     if (i + 1 >= 50) marca('ses50', s);
     if (total >= 100000) marca('tot100', s);
-    const rivales = s.rivales || (s.rival ? [s.rival] : []);
+    const rivales = s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : []);
     if (rivales.some((r) => r.diferencia > 0)) marca('fantasma', s);
     if (rivales.some((r) => r.nivel === 'avanzado' && r.diferencia > 0)) marca('avanzado', s);
     const t2k = s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null;

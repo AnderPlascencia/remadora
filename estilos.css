@@ -341,7 +341,7 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--nav) + 16px + env(safe-area-inset-bottom)); transform: translateX(-50%);
   z-index: 60; background: var(--texto); color: var(--fondo); font-weight: 600;
-  padding: 10px 18px; border-radius: 999px; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+  padding: 10px 18px; border-radius: 999px; width: max-content; max-width: calc(100vw - 32px); text-align: center; box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
 }
 .toast[hidden] { display: none; }
 
@@ -549,7 +549,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .heroe-nivel { text-align: center; }
 .heroe-nivel .etq { display: block; font-size: 12px; color: var(--texto-tenue); font-weight: 600; }
 .heroe-nivel b { font-size: 34px; font-weight: 900; color: var(--acento); font-variant-numeric: tabular-nums; line-height: 1; }
-.heroe-xp { margin-top: 12px; }
+.heroe-xp { margin-top: 12px; background: var(--panel-2); }
 .atributos { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
 .atributo { background: var(--panel); border-radius: 12px; padding: 10px 12px; }
 .atributo .fila { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -760,3 +760,12 @@ details.seccion[open] { padding-bottom: 8px; }
 .rs-meta { min-width: 0; }
 .rs-meta .tm-fila { flex-wrap: wrap; column-gap: 8px; row-gap: 0; }
 .rs-meta .tm-fila > span { white-space: normal; overflow: visible; }
+
+/* Modo remo en horizontal con rivales: el aviso de la carrera ocupa menos y los watts nunca se aplastan. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mr-rival { grid-column: 2; font-size: 17px; padding: 6px 10px; line-height: 1.25; }
+  .modo-remo.vista-grafica .mr-principal { min-height: auto; }
+}
+
+/* En tema claro el logotipo usa letras oscuras: las claras no se ven sobre la barra blanca. */
+:root[data-tema="claro"] .barra .marca { content: url(rower-marca-clara.svg); }

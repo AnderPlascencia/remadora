@@ -274,7 +274,8 @@ export function medidas(s, ftpActual) {
     if (p >= 1.0) sobre++;
     if (x.spm >= 24) spm24++;
   }
-  const rivales = s.rivales || (s.rival ? [s.rival] : []);
+  // Una carrera abandonada antes de la meta no suma fantasmas vencidos.
+  const rivales = s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : []);
   // Minutos activos: con muestras (1 por segundo) se excluyen las pausas; sin ellas, la duración registrada.
   const activos = s.muestras?.length ? s.muestras.filter((x) => x.w > 0 || x.spm > 0).length / 60 : (s.duracion || 0) / 60;
   return {
@@ -319,7 +320,7 @@ function gananciaSesion(s, m, ctx) {
   if (ctx.records) detalle.push(['Récord personal', 100]);
   // Cada fantasma vencido vale según su dificultad: Bahía 15, Costa 25 (y los demás fantasmas), Alta mar 40. Máximo 3.
   if (m.ganados) {
-    const vencidos = (s.rivales || (s.rival ? [s.rival] : [])).filter((r) => r.diferencia > 0).slice(0, 3);
+    const vencidos = (s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : [])).filter((r) => r.diferencia > 0).slice(0, 3);
     detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, vencidos.reduce((a, r) => a + xpPorFantasma(r.dificultad), 0)]);
   }
   if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
