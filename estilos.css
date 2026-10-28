@@ -411,7 +411,7 @@ textarea { font: inherit; color: var(--texto); background: var(--panel); border:
 .tabla td.ok { color: var(--exito); font-weight: 700; }
 .tabla td.mal { color: var(--mal-texto); font-weight: 700; }
 .lista .rpe-chip { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 0 8px; background: var(--panel-2); color: var(--texto-suave); margin-left: 6px; }
-.grafica.carrera { height: 210px; margin-bottom: 4px; cursor: pointer; background: #0C0F0A; touch-action: manipulation; }
+.grafica.carrera { height: 280px; margin-bottom: 4px; cursor: pointer; background: #0C0F0A; touch-action: manipulation; }
 .grafica.carrera[hidden] { display: none; }
 #mr-vista .ico-txt { font-weight: 800; font-size: 13px; }
 .modo-remo.vista-carrera .mr-rival { display: none; }
@@ -727,3 +727,19 @@ details.seccion[open] { padding-bottom: 8px; }
 .modo-ent.tres button small { font-size: 11px; line-height: 1.3; }
 .aguas { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--primario-claro); }
 .aguas .ico { width: 16px; height: 16px; }
+
+/* Podio de la carrera contra fantasmas */
+.podio { margin: 4px 0 12px; text-align: center; }
+.podio h2 { margin: 0 0 8px; font-size: 1.1rem; }
+.podio-escena { display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 6px; }
+.podio-puesto { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.podio-puesto img, .podio-ico { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--borde); object-fit: cover; display: grid; place-items: center; background: var(--panel-2); }
+.podio-puesto.yo img, .podio-puesto.yo .podio-ico { border-color: var(--acento); }
+.podio-puesto b { font-size: .85rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podio-puesto small { color: var(--texto-tenue); font-variant-numeric: tabular-nums; }
+.podio-escalon { width: 100%; margin-top: 4px; border-radius: 8px 8px 0 0; background: var(--panel-2); font-weight: 800; padding-top: 6px; }
+.p1 .podio-escalon { height: 64px; background: #A16207; color: #FEF9C3; }
+.p2 .podio-escalon { height: 46px; background: #64748B; color: #F1F5F9; }
+.p3 .podio-escalon { height: 34px; background: #9A3412; color: #FFEDD5; }
+.podio-resto { margin: 6px 0 0; color: var(--texto-suave); font-size: .9rem; }
+.podio-xp { margin: 8px 0 0; font-weight: 700; color: var(--primario-claro); }

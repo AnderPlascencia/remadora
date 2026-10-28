@@ -9,8 +9,53 @@ const sinMovimiento = typeof matchMedia === 'function' && matchMedia('(prefers-r
 
 export const COLORES_RIVAL = ['#A5B4FC', '#F9A8D4', '#5EEAD4'];
 const COLOR_YO = '#F2A33A';
+const COLOR_RITMO = '#FACC15';
+const SPRINT_M = 250;
+const DURA_EVENTO = 2600; // ms que se ve un aviso (adelanto, ventaja)
 
-// estado: { t, pausa, yo: { dist, v, spm }, rivales: [{ nombre, color, muestras, spm(t) }], meta, cabecera: [l1, l2], tono, ritmo?: { v, etiqueta } }
+// Cada clase rema en su propio bote, con su bandera.
+export const BOTES = {
+  vikingo: { nombre: 'Drakkar vikingo', tela: '#B91C1C', marca: '#FDE68A' },
+  pirata: { nombre: 'Balandra pirata', tela: '#111827', marca: '#F8FAFC' },
+  samurai: { nombre: 'Barca samurái', tela: '#F8FAFC', marca: '#DC2626' },
+  polinesio: { nombre: 'Canoa polinesia', tela: '#0EA5E9', marca: '#FDE047' },
+  romano: { nombre: 'Trirreme romano', tela: '#7E22CE', marca: '#FACC15' },
+};
+
+// Retratos de los carriles: se cargan una vez y se pintan cuando ya llegaron.
+const imagenes = new Map();
+function imagen(src) {
+  if (!src || typeof Image === 'undefined') return null;
+  let im = imagenes.get(src);
+  if (!im) {
+    im = new Image();
+    im.src = src;
+    imagenes.set(src, im);
+  }
+  return im.complete && im.naturalWidth ? im : null;
+}
+
+function retrato(ctx, src, x, y, r, color) {
+  const im = imagen(src);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (im) {
+    ctx.clip();
+    ctx.drawImage(im, x - r, y - r, r * 2, r * 2);
+  } else {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.5;
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+}
+
+// estado: { t, pausa, yo: { dist, v, spm }, rivales: [{ nombre, color, muestras, spmEn(t), clase?, retrato?, aviso? }], meta,
+//   cabecera: [l1, l2], tono, lugar?, total?, cercanos?: [{ nombre, color, m, seg, delante }], yoClase?, yoRetrato?,
+//   ventajaM?, eventos?: [{ id, tipo, texto, detalle }], ritmo?: { v, etiqueta }, referencias? }
 export function crearCarrera(canvas) {
   const c = {
     canvas,
@@ -19,7 +64,10 @@ export function crearCarrera(canvas) {
     recibido: 0,
     yoVista: null,
     ventana: 80,
+    zoom: 0,
     fases: [],
+    vistos: null,
+    yoPantalla: null,
     ultimoCuadro: 0,
     actualizar(estado) {
       const previo = this.estado;
@@ -32,7 +80,7 @@ export function crearCarrera(canvas) {
       if (this.yoVista == null || Math.abs(this.yoVista - estado.yo.dist) > 40) this.yoVista = estado.yo.dist;
       arrancar();
     },
-    detener() { this.estado = null; this.yoVista = null; },
+    detener() { this.estado = null; this.yoVista = null; this.vistos = null; },
   };
   carreras.add(c);
   return c;
@@ -65,13 +113,19 @@ function interpolar(c, ahora) {
   c.yoVista += (objetivo - c.yoVista) * Math.min(1, dt * 8);
   if (sinMovimiento) c.yoVista = objetivo;
   const t = e.t + el;
-  const botes = [{ nombre: 'Tú', color: e.yoColor || COLOR_YO, dist: c.yoVista, spm: e.pausa ? 0 : e.yo.spm, v: e.pausa ? 0 : e.yo.v, yo: true }];
+  const botes = [{
+    nombre: 'Tú', color: e.yoColor || COLOR_YO, dist: c.yoVista, spm: e.pausa ? 0 : e.yo.spm, v: e.pausa ? 0 : e.yo.v, yo: true,
+    clase: e.yoClase || null, retrato: e.yoRetrato || null,
+  }];
   e.rivales.forEach((r, i) => {
     const d = distanciaEn(r.muestras, t);
     const d2 = distanciaEn(r.muestras, t + 1);
     const v = e.pausa ? 0 : d2 - d;
     const spm = e.pausa || v <= 0 ? 0 : (r.spmEn ? r.spmEn(t) : 24);
-    botes.push({ nombre: r.nombre, color: r.color || COLORES_RIVAL[i % 3], dist: d, spm, v });
+    // Acelerón: va un 3 % más rápido que su media de los últimos 10 s.
+    const media = t > 12 ? (d - distanciaEn(r.muestras, t - 10)) / 10 : 0;
+    const acelera = !e.pausa && media > 0 && v > media * 1.03;
+    botes.push({ nombre: r.nombre, color: r.color || COLORES_RIVAL[i % 3], dist: d, spm, v, clase: r.clase || null, retrato: r.retrato || null, aviso: r.aviso || null, acelera });
   });
   botes.forEach((b, i) => {
     c.fases[i] = ((c.fases[i] || 0) + (dt * b.spm) / 60) % 1;
@@ -81,7 +135,14 @@ function interpolar(c, ahora) {
   });
   const ritmo = e.ritmo ? { dist: e.ritmo.v * t, etiqueta: e.ritmo.etiqueta } : null;
   const referencias = (e.referencias || []).map((r) => ({ dist: distanciaEn(r.muestras, t), etiqueta: r.etiqueta, discontinua: r.discontinua }));
-  return { botes, dt, t: ahora / 1000, ritmo, referencias };
+  const falta = e.meta != null ? e.meta - c.yoVista : null;
+  const sprint = falta != null && falta <= SPRINT_M && falta > 0 && !e.pausa;
+  // Avisos activos: los que ya estaban al abrir la carrera no se repiten.
+  if (!c.vistos) c.vistos = new Map((e.eventos || []).map((x) => [x.id, -Infinity]));
+  for (const x of e.eventos || []) if (!c.vistos.has(x.id)) c.vistos.set(x.id, ahora);
+  const eventos = (e.eventos || []).filter((x) => ahora - c.vistos.get(x.id) < DURA_EVENTO).map((x) => ({ ...x, edad: (ahora - c.vistos.get(x.id)) / DURA_EVENTO }));
+  botes[0].brillo = eventos.some((x) => x.tipo === 'ventaja');
+  return { botes, dt, t: ahora / 1000, ritmo, referencias, falta, sprint, eventos };
 }
 
 // Ángulo del remo (radianes, + hacia la proa) y posición del asiento (−1 popa, +1 proa) según la fase.
@@ -120,18 +181,23 @@ export function pintarCarrera(c, ahora = performance.now()) {
   const p = preparar(c.canvas);
   if (!p) return;
   const datos = interpolar(c, ahora);
+  const arriba = altoCabecera(c);
   if (c.modo === '3d') pintar3d(c, p, datos);
-  else pintar2d(c, p, datos);
-  insignia(c, p, cabecera(c, p));
+  else pintar2d(c, p, datos, arriba);
+  sprintFinal(c, p, datos, arriba);
+  avisos(c, p, datos, arriba);
+  cabecera(c, p);
+  minimapa(c, p, datos, arriba);
+  insignia(c, p);
 }
 
 // Pequeña pastilla en la esquina que recuerda que tocar cambia de vista.
-function insignia(c, { ctx, ancho }, arriba) {
+function insignia(c, { ctx, ancho }) {
   const txt = c.modo === '3d' ? 'Toca: 2D' : 'Toca: 3D';
   ctx.font = '600 11px system-ui, sans-serif';
   const w = ctx.measureText(txt).width + 14;
   const x = ancho - w - 6;
-  const y = arriba + 6;
+  const y = 6;
   ctx.fillStyle = 'rgba(2, 6, 23, 0.6)';
   ctx.beginPath();
   ctx.roundRect ? ctx.roundRect(x, y, w, 18, 9) : ctx.rect(x, y, w, 18);
@@ -141,40 +207,209 @@ function insignia(c, { ctx, ancho }, arriba) {
   ctx.fillText(txt, x + w / 2, y + 13);
 }
 
-function cabecera(c, { ctx, ancho, alto }) {
-  const [l1, l2] = c.estado.cabecera || [];
-  const grande = Math.round(Math.max(14, Math.min(22, alto * 0.07)));
+// Alto de la cabecera más el minimapa: la pista empieza debajo.
+const MINIMAPA = 16;
+function altoCaja(c) {
+  const e = c.estado;
+  if (e.lugar) return e.cabecera?.[1] ? 60 : 46;
+  return e.cabecera?.[1] ? 48 : 34;
+}
+const altoCabecera = (c) => altoCaja(c) + MINIMAPA;
+
+// Recorta un texto para que quepa en el ancho dado.
+function cabe(ctx, txt, max) {
+  if (ctx.measureText(txt).width <= max) return txt;
+  while (txt.length > 4 && ctx.measureText(`${txt}…`).width > max) txt = txt.slice(0, -1);
+  return `${txt}…`;
+}
+
+function cabecera(c, { ctx, ancho }) {
+  const e = c.estado;
+  const [l1, l2] = e.cabecera || [];
+  const alto = altoCaja(c);
+  ctx.fillStyle = 'rgba(2, 6, 23, 0.72)';
+  ctx.fillRect(0, 0, ancho, alto + MINIMAPA);
+  const color = { adelante: '#4ADE80', atras: '#FCA5A5' }[e.tono] || '#F8FAFC';
+  if (e.lugar) {
+    // Lugar en grande a la izquierda; a la derecha, el rival de delante y el de detrás.
+    ctx.textAlign = 'center';
+    ctx.fillStyle = color;
+    ctx.font = '800 28px system-ui, sans-serif';
+    ctx.fillText(`${e.lugar}º`, 30, 29);
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillStyle = '#CBD5E1';
+    ctx.fillText(`de ${e.total}`, 30, 42);
+    const filas = e.cercanos || [];
+    ctx.textAlign = 'left';
+    filas.forEach((f, i) => {
+      const y = filas.length === 1 ? 27 : 19 + i * 17;
+      let x = 64;
+      ctx.font = '700 12px system-ui, sans-serif';
+      ctx.fillStyle = f.delante ? '#FCA5A5' : '#4ADE80';
+      const flecha = f.delante ? '▲' : '▼';
+      ctx.fillText(flecha, x, y);
+      x += ctx.measureText(flecha).width + 5;
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.nombre, x, y);
+      x += ctx.measureText(f.nombre).width + 6;
+      ctx.font = '800 13px system-ui, sans-serif';
+      ctx.fillStyle = '#F8FAFC';
+      const num = `${f.delante ? '−' : '+'}${f.m} m${f.seg != null && f.m >= 1 ? ` · ${f.seg} s` : ''}`;
+      ctx.fillText(num, x, y);
+      x += ctx.measureText(num).width + 6;
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.fillStyle = '#94A3B8';
+      ctx.fillText(f.delante ? 'delante' : 'detrás', x, y);
+    });
+    if (l2) {
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.fillStyle = '#E2E8F0';
+      ctx.textAlign = 'center';
+      ctx.fillText(cabe(ctx, l2, ancho - 16), ancho / 2, 55);
+    }
+    return;
+  }
+  const grande = 18;
   ctx.textAlign = 'center';
   ctx.font = `800 ${grande}px system-ui, sans-serif`;
-  ctx.fillStyle = 'rgba(2, 6, 23, 0.55)';
-  const altoCaja = l2 ? grande + 26 : grande + 12;
-  ctx.fillRect(0, 0, ancho, altoCaja);
-  ctx.fillStyle = { adelante: '#4ADE80', atras: '#FCA5A5' }[c.estado.tono] || '#F8FAFC';
-  if (l1) ctx.fillText(l1, ancho / 2, grande + 2);
+  ctx.fillStyle = color;
+  if (l1) ctx.fillText(cabe(ctx, l1, ancho - 150), ancho / 2, grande + 6);
   if (l2) {
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.fillStyle = '#E2E8F0';
-    ctx.fillText(l2, ancho / 2, grande + 19);
+    ctx.fillText(cabe(ctx, l2, ancho - 16), ancho / 2, grande + 23);
   }
-  return altoCaja;
+}
+
+// Barra fina de 0 a la meta con un punto por bote.
+function minimapa(c, { ctx, ancho }, { botes, referencias }, arriba) {
+  const e = c.estado;
+  const y = arriba - MINIMAPA / 2;
+  const x0 = 14;
+  const x1 = ancho - 22;
+  const lejos = Math.max(...botes.map((b) => b.dist), ...referencias.map((r) => r.dist));
+  const fin = e.meta ?? Math.max(200, Math.ceil((lejos * 1.25) / 100) * 100);
+  const X = (m) => x0 + (Math.max(0, Math.min(fin, m)) / fin) * (x1 - x0);
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  if (e.meta != null) {
+    // Banderita a cuadros en la meta y tramo del sprint marcado.
+    ctx.strokeStyle = 'rgba(239,68,68,0.55)';
+    ctx.beginPath(); ctx.moveTo(X(e.meta - SPRINT_M), y); ctx.lineTo(x1, y); ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = (i + (i > 1 ? 1 : 0)) % 2 ? '#111' : '#fff';
+      ctx.fillRect(x1 + 4 + (i % 2) * 4, y - 4 + Math.floor(i / 2) * 4, 4, 4);
+    }
+  } else {
+    ctx.font = '600 9px system-ui, sans-serif';
+    ctx.fillStyle = '#94A3B8';
+    ctx.textAlign = 'left';
+    ctx.fillText(fin >= 1000 ? `${fin / 1000} km` : `${fin} m`, x1 + 3, y + 3);
+  }
+  for (const r of referencias) {
+    ctx.fillStyle = COLOR_RITMO;
+    ctx.fillRect(X(r.dist) - 1, y - 5, 2, 10);
+  }
+  for (const b of [...botes.slice(1), botes[0]]) {
+    ctx.fillStyle = b.color;
+    ctx.beginPath(); ctx.arc(X(b.dist), y, b.yo ? 5 : 3.6, 0, Math.PI * 2); ctx.fill();
+    if (b.yo) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+  }
+}
+
+// Últimos 250 m: borde que late, contador grande y, al cruzar, el puesto de llegada.
+function sprintFinal(c, { ctx, ancho, alto }, { falta, sprint, t }, arriba) {
+  const e = c.estado;
+  if (sprint) {
+    const late = sinMovimiento ? 0.5 : 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
+    ctx.strokeStyle = `rgba(239,68,68,${0.35 + 0.35 * late})`;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(2.5, arriba + 2.5, ancho - 5, alto - arriba - 5);
+    ctx.textAlign = 'center';
+    ctx.font = `900 ${Math.round(Math.min(72, alto * 0.24))}px system-ui, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.30)';
+    const y = arriba + (alto - arriba) * 0.55;
+    ctx.fillText(`${Math.ceil(falta)} m`, ancho / 2, y);
+    ctx.font = '800 12px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(252,165,165,0.9)';
+    ctx.fillText('SPRINT FINAL', ancho / 2, y - Math.min(72, alto * 0.24) * 0.85);
+  } else if (falta != null && falta <= 0 && e.lugar) {
+    const txt = `🏁 Llegaste ${e.lugar}º de ${e.total}`;
+    ctx.font = '800 18px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    const w = ctx.measureText(txt).width + 28;
+    const y = arriba + (alto - arriba) * 0.5;
+    ctx.fillStyle = 'rgba(2,6,23,0.78)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(ancho / 2 - w / 2, y - 22, w, 34, 17) : ctx.rect(ancho / 2 - w / 2, y - 22, w, 34);
+    ctx.fill();
+    ctx.fillStyle = e.lugar === 1 ? '#FACC15' : '#F8FAFC';
+    ctx.fillText(txt, ancho / 2, y);
+  }
+}
+
+// Adelantos (destello y aviso al centro) y ventajas (+15 m que sube desde tu bote).
+function avisos(c, { ctx, ancho, alto }, { eventos }, arriba) {
+  let fila = 0;
+  for (const ev of eventos) {
+    const a = sinMovimiento ? 1 : Math.min(1, (1 - ev.edad) * 3);
+    if (ev.tipo === 'ventaja') {
+      const p = c.yoPantalla;
+      if (!p) continue;
+      const sube = sinMovimiento ? 0 : ev.edad * 34;
+      ctx.globalAlpha = a;
+      ctx.font = '900 16px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(2,6,23,0.8)';
+      ctx.strokeText(ev.texto, p.x, p.y - 14 - sube);
+      ctx.fillStyle = '#FDE047';
+      ctx.fillText(ev.texto, p.x, p.y - 14 - sube);
+      if (ev.detalle) {
+        ctx.font = '700 10px system-ui, sans-serif';
+        ctx.strokeText(ev.detalle, p.x, p.y - 2 - sube);
+        ctx.fillText(ev.detalle, p.x, p.y - 2 - sube);
+      }
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    const bueno = ev.tipo === 'adelanto';
+    // Destello breve de toda la pista al principio del aviso.
+    if (!sinMovimiento && ev.edad < 0.25) {
+      ctx.fillStyle = bueno ? `rgba(74,222,128,${0.28 * (1 - ev.edad / 0.25)})` : `rgba(239,68,68,${0.28 * (1 - ev.edad / 0.25)})`;
+      ctx.fillRect(0, arriba, ancho, alto - arriba);
+    }
+    ctx.globalAlpha = a;
+    ctx.font = '800 15px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    const w = ctx.measureText(ev.texto).width + 24;
+    const y = arriba + 26 + fila * 32;
+    ctx.fillStyle = bueno ? 'rgba(20,83,45,0.92)' : 'rgba(127,29,29,0.92)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(ancho / 2 - w / 2, y - 18, w, 27, 13) : ctx.rect(ancho / 2 - w / 2, y - 18, w, 27);
+    ctx.fill();
+    ctx.fillStyle = bueno ? '#BBF7D0' : '#FECACA';
+    ctx.fillText(ev.texto, ancho / 2, y);
+    ctx.globalAlpha = 1;
+    fila++;
+  }
 }
 
 // ---------- 2D: vista desde arriba, la cámara sigue tu bote ----------
-const COLOR_RITMO = '#FACC15';
-
-function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = [] }) {
+function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = [], sprint }, arriba) {
   const n = botes.length;
-  const arriba = Math.max(36, Math.min(54, alto * 0.16));
-  const orilla = Math.min(16, alto * 0.06);
-  const abajo = 20;
+  const orilla = Math.min(14, alto * 0.05);
+  const abajo = 18;
   const carril = Math.min(90, (alto - arriba - abajo - 2 * orilla) / n);
   const pista = carril * n;
   const y0 = arriba + orilla + Math.max(0, (alto - arriba - abajo - 2 * orilla - pista) / 2);
   const yo = botes[0];
 
-  // Zoom automático: que quepan los botes cercanos; los lejanos se señalan en el borde.
+  // Zoom automático: que quepan los botes cercanos; los lejanos se señalan en el borde. En el sprint se acerca.
   const maxDif = Math.max(0, ...botes.slice(1).map((b) => Math.abs(b.dist - yo.dist)).filter((d) => d < 250));
-  const objetivo = Math.max(50, Math.min(320, maxDif * 2.6 + 36));
+  let objetivo = Math.max(50, Math.min(320, maxDif * 2.6 + 36));
+  if (sprint) objetivo = Math.max(40, objetivo * 0.7);
   c.ventana += (objetivo - c.ventana) * Math.min(1, dt * 2);
   const ventana = c.ventana;
   const xYo = ancho * 0.55;
@@ -182,22 +417,20 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   const M = (x) => yo.dist + ((x - xYo) / ancho) * ventana;
   const ppm = ancho / ventana;
 
-  // Orillas
-  // Si sobra alto, la tierra llena el espacio en vez de dejar franjas vacías.
+  // Orillas: si sobra alto, la tierra llena el espacio en vez de dejar franjas vacías.
   const tierraArriba = Math.max(orilla, y0 - arriba);
   const tierraAbajo = Math.max(orilla, alto - abajo - (y0 + pista));
   ctx.fillStyle = '#1F3A2A';
   ctx.fillRect(0, y0 - tierraArriba, ancho, tierraArriba);
-  ctx.fillRect(0, y0 + pista, ancho, tierraAbajo);
+  ctx.fillRect(0, y0 + pista, ancho, alto - (y0 + pista));
   ctx.fillStyle = '#C2A878';
   ctx.fillRect(0, y0 - 3, ancho, 3);
   ctx.fillRect(0, y0 + pista, ancho, 3);
   // Árboles en la orilla, anclados al mundo (se desplazan al avanzar)
   ctx.fillStyle = '#2F6B3F';
   for (let m = Math.floor(M(0) / 9) * 9; m < M(ancho) + 9; m += 9) {
-    const x = X(m);
     const r = Math.min(orilla * 0.42, 6);
-    ctx.beginPath(); ctx.arc(x, y0 - orilla / 2 - 1, r, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(X(m), y0 - orilla / 2 - 1, r, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(X(m + 4.5), y0 + pista + orilla / 2 + 1, r, 0, Math.PI * 2); ctx.fill();
   }
 
@@ -218,9 +451,8 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     for (let m = Math.floor(M(0) / pasoOla) * pasoOla + desf; m < M(ancho) + pasoOla; m += pasoOla) {
       const brillo = sinMovimiento ? 0 : Math.sin(t * 1.6 + m * 0.9 + fila);
       if (brillo < 0) continue;
-      const x = X(m);
       const l = Math.min(10, ppm * 1.4);
-      ctx.beginPath(); ctx.arc(x, y + 3, l, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+      ctx.beginPath(); ctx.arc(X(m), y + 3, l, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
     }
   }
 
@@ -229,10 +461,9 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     const y = y0 + k * carril;
     for (let m = Math.floor(M(0) / 5) * 5; m < M(ancho) + 5; m += 5) {
       if (m < 0) continue;
-      const x = X(m);
       const grande = m % 250 === 0;
       ctx.fillStyle = grande ? '#F2A33A' : m % 25 === 0 ? '#EF4444' : 'rgba(255,255,255,0.75)';
-      ctx.beginPath(); ctx.arc(x, y, grande ? 5 : Math.min(2.6, ppm * 0.35 + 1), 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(X(m), y, grande ? 5 : Math.min(2.6, ppm * 0.35 + 1), 0, Math.PI * 2); ctx.fill();
     }
   }
 
@@ -247,7 +478,7 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + pista); ctx.stroke();
     ctx.fillStyle = '#CBD5E1';
-    ctx.fillText(`${m} m`, x, alto - 5);
+    ctx.fillText(`${m} m`, x, alto - 4);
   }
 
   // Meta
@@ -257,9 +488,9 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     const q = 6;
     for (let y = y0, i = 0; y < y0 + pista; y += q, i++) {
       ctx.fillStyle = i % 2 ? '#fff' : '#111';
-      ctx.fillRect(x - q, y, q, q);
+      ctx.fillRect(x - q, y, q, Math.min(q, y0 + pista - y));
       ctx.fillStyle = i % 2 ? '#111' : '#fff';
-      ctx.fillRect(x, y, q, q);
+      ctx.fillRect(x, y, q, Math.min(q, y0 + pista - y));
     }
   }
 
@@ -276,7 +507,6 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     ctx.fillStyle = COLOR_RITMO;
     ctx.fillText(ritmo.etiqueta, x + (x > ancho - 60 ? -4 : 4), y0 + pista - 4);
   } else if (ritmo) {
-    // Fuera de la ventana: aviso en el borde con la diferencia
     const der = X(ritmo.dist) > ancho;
     const dif = Math.round(ritmo.dist - yo.dist);
     ctx.font = 'bold 11px system-ui, sans-serif';
@@ -299,27 +529,22 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
       ctx.beginPath(); ctx.moveTo(x, yA); ctx.lineTo(x, yB); ctx.stroke();
       ctx.setLineDash([]);
       ctx.textAlign = x > ancho - 60 ? 'right' : 'left';
-      ctx.fillText(r.etiqueta, x + (x > ancho - 60 ? -5 : 5), yA + 11 + k * 13);
+      ctx.fillText(r.etiqueta, x + (x > ancho - 60 ? -5 : 5), yB - 4 - k * 13);
     } else {
       const der = x > ancho;
       const dif = Math.round(r.dist - yo.dist);
       ctx.textAlign = der ? 'right' : 'left';
-      ctx.fillText(`${der ? '' : '◀ '}${r.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 6 : 6, yA + 11 + k * 13);
+      ctx.fillText(`${der ? '' : '◀ '}${r.etiqueta} ${dif > 0 ? '+' : '−'}${Math.abs(dif)} m${der ? ' ▶' : ''}`, der ? ancho - 6 : 6, yB - 4 - k * 13);
     }
   });
 
   // Botes: los rivales arriba, tú en el carril de abajo
   const orden = [...botes.slice(1), botes[0]];
   orden.forEach((b, fila) => {
-    const y = y0 + carril * (fila + 0.55);
+    const y = y0 + carril * (fila + 0.58);
     const largo = Math.max(44, Math.min(120, ppm * 8));
     const x = X(b.dist);
-    const etiquetaY = y0 + carril * fila + 14;
-    ctx.font = 'bold 12px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = b.color;
-    const dif = b.yo ? '' : ` ${b.dist >= yo.dist ? '+' : '−'}${Math.round(Math.abs(b.dist - yo.dist))} m`;
-    ctx.fillText(`${b.nombre}${dif}`, 8, etiquetaY);
+    etiqueta2d(ctx, b, yo, y0 + carril * fila, carril, ancho, c.estado);
     if (x > ancho + largo * 0.2 || x < -largo * 0.2) {
       // Fuera de la ventana: flecha en el borde
       const der = x > ancho;
@@ -332,15 +557,85 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
       ctx.fill();
       return;
     }
-    bote2d(ctx, x, y, largo, Math.min(carril * 0.42, 34), b, ppm);
+    bote2d(ctx, x, y, largo, Math.min(carril * 0.4, 34), b, ppm, t);
+    if (b.yo) c.yoPantalla = { x: x - largo * 0.5, y: y - carril * 0.2 };
   });
 }
 
-function bote2d(ctx, x, y, largo, remo, b, ppm) {
-  const ancho = Math.max(5, largo * 0.07);
-  ctx.globalAlpha = b.yo ? 1 : 0.85;
-  // Estela en V que crece con la velocidad
-  const estela = Math.min(largo * 1.4, b.v * ppm * 3);
+// Etiqueta del carril: retrato y nombre corto a la izquierda, diferencia a la derecha.
+function etiqueta2d(ctx, b, yo, yCarril, carril, ancho, e) {
+  const r = Math.max(6, Math.min(10, carril * 0.17));
+  const y = yCarril + r + 3;
+  let x = 6;
+  if (b.retrato || b.clase) {
+    retrato(ctx, b.retrato, x + r, y, r, b.color);
+    x += r * 2 + 5;
+  }
+  ctx.font = 'bold 12px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(2,6,23,0.6)';
+  ctx.strokeText(b.nombre, x, y + 4);
+  ctx.fillStyle = b.color;
+  ctx.fillText(b.nombre, x, y + 4);
+  x += ctx.measureText(b.nombre).width + 6;
+  // Acelerón en curso o anunciado por el Mapa del rival
+  if (b.acelera || b.aviso) {
+    ctx.font = '700 11px system-ui, sans-serif';
+    const txt = b.acelera ? '⚡ acelera' : `⚡ en ${b.aviso} s`;
+    ctx.strokeText(txt, x, y + 4);
+    ctx.fillStyle = '#FDE047';
+    ctx.fillText(txt, x, y + 4);
+  }
+  // Diferencia a la derecha del carril, en una pastilla
+  let txt = '';
+  let color = '#F8FAFC';
+  if (b.yo) {
+    if ((e.ventajaM || 0) >= 1) { txt = `⚑ +${Math.round(e.ventajaM)} m`; color = '#FDE047'; }
+  } else {
+    const d = Math.round(b.dist - yo.dist);
+    txt = d === 0 ? 'parejos' : `${d > 0 ? '+' : '−'}${Math.abs(d)} m`;
+    color = d > 0 ? '#FCA5A5' : d < 0 ? '#86EFAC' : '#F8FAFC';
+  }
+  if (!txt) return;
+  ctx.font = '800 12px system-ui, sans-serif';
+  const w = ctx.measureText(txt).width + 12;
+  const px = ancho - w - 6;
+  const py = b.yo ? yCarril + carril - 22 : yCarril + 3;
+  ctx.fillStyle = 'rgba(2,6,23,0.6)';
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(px, py, w, 17, 8) : ctx.rect(px, py, w, 17);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(txt, px + w / 2, py + 13);
+}
+
+// Bandera de popa que ondea.
+function bandera2d(ctx, x, y, tam, deco, t) {
+  const o = sinMovimiento ? 0 : Math.sin(t * 6 + x * 0.05) * tam * 0.18;
+  ctx.strokeStyle = '#E2E8F0';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - tam * 0.2); ctx.stroke();
+  ctx.fillStyle = deco.tela;
+  ctx.beginPath();
+  ctx.moveTo(x, y - tam * 0.2);
+  ctx.quadraticCurveTo(x - tam * 0.5, y - tam * 0.2 + o, x - tam, y - tam * 0.05 + o);
+  ctx.lineTo(x - tam, y + tam * 0.35 + o);
+  ctx.quadraticCurveTo(x - tam * 0.5, y + tam * 0.45 + o, x, y + tam * 0.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = deco.marca;
+  ctx.beginPath(); ctx.arc(x - tam * 0.5, y + tam * 0.1 + o * 0.6, tam * 0.14, 0, Math.PI * 2); ctx.fill();
+}
+
+function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
+  const deco = BOTES[b.clase];
+  let ancho = Math.max(5, largo * 0.07);
+  if (b.clase === 'pirata' || b.clase === 'romano') ancho *= 1.25;
+  ctx.globalAlpha = b.yo ? 1 : 0.88;
+  // Estela en V que crece con la velocidad; con un acelerón, más espuma.
+  const estela = Math.min(largo * 1.4, b.v * ppm * 3 * (b.acelera ? 1.4 : 1));
   if (estela > 2) {
     for (let i = 0; i < 3; i++) {
       ctx.strokeStyle = `rgba(255,255,255,${0.35 - i * 0.1})`;
@@ -354,14 +649,70 @@ function bote2d(ctx, x, y, largo, remo, b, ppm) {
       ctx.stroke();
     }
   }
-  // Casco
+  if (b.acelera) espuma2d(ctx, x, y, ancho, largo, t);
+  // Brillo dorado cuando ganas metros con un talento
+  if (b.brillo) {
+    ctx.shadowColor = '#FDE047';
+    ctx.shadowBlur = sinMovimiento ? 14 : 12 + 8 * Math.sin(t * 10);
+  }
+  // Canoa polinesia: flotador lateral unido con dos varas
+  if (b.clase === 'polinesio') {
+    ctx.strokeStyle = '#E7D3A8';
+    ctx.lineWidth = 1.5;
+    const yAma = y - ancho * 2.6;
+    for (const k of [0.3, 0.7]) { ctx.beginPath(); ctx.moveTo(x - largo * k, y); ctx.lineTo(x - largo * k, yAma); ctx.stroke(); }
+    ctx.fillStyle = '#C9A46A';
+    ctx.beginPath(); ctx.ellipse(x - largo * 0.5, yAma, largo * 0.32, ancho * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  // Trirreme: espolón de bronce en la proa
+  if (b.clase === 'romano') {
+    ctx.fillStyle = '#B45309';
+    ctx.beginPath(); ctx.moveTo(x + largo * 0.1, y); ctx.lineTo(x - 2, y - ancho * 0.35); ctx.lineTo(x - 2, y + ancho * 0.35); ctx.fill();
+  }
+  // Casco (la barca samurái tiene la popa recta)
   ctx.fillStyle = b.color;
   ctx.beginPath();
   ctx.moveTo(x, y);
-  ctx.quadraticCurveTo(x - largo * 0.35, y - ancho, x - largo, y - ancho * 0.25);
-  ctx.lineTo(x - largo, y + ancho * 0.25);
-  ctx.quadraticCurveTo(x - largo * 0.35, y + ancho, x, y);
+  if (b.clase === 'samurai') {
+    ctx.quadraticCurveTo(x - largo * 0.3, y - ancho, x - largo, y - ancho * 0.75);
+    ctx.lineTo(x - largo, y + ancho * 0.75);
+    ctx.quadraticCurveTo(x - largo * 0.3, y + ancho, x, y);
+  } else {
+    ctx.quadraticCurveTo(x - largo * 0.35, y - ancho, x - largo, y - ancho * 0.25);
+    ctx.lineTo(x - largo, y + ancho * 0.25);
+    ctx.quadraticCurveTo(x - largo * 0.35, y + ancho, x, y);
+  }
   ctx.fill();
+  ctx.shadowBlur = 0;
+  if (deco) {
+    if (b.clase === 'vikingo') {
+      // Cabeza de dragón en la proa y escudos en las bordas
+      ctx.fillStyle = deco.marca;
+      ctx.beginPath(); ctx.arc(x + ancho * 0.5, y, ancho * 0.45, 0, Math.PI * 2); ctx.fill();
+      for (let k = 0; k < 5; k++) {
+        const sx = x - largo * (0.22 + k * 0.13);
+        for (const s of [-1, 1]) {
+          ctx.fillStyle = k % 2 ? deco.tela : deco.marca;
+          ctx.beginPath(); ctx.arc(sx, y + s * ancho * 0.62, Math.max(1.6, ancho * 0.28), 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    } else if (b.clase === 'pirata') {
+      // Botavara y vela vistas desde arriba
+      ctx.strokeStyle = '#8B5E34';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x - largo * 0.3, y); ctx.lineTo(x - largo * 0.75, y - ancho * 1.4); ctx.stroke();
+      ctx.fillStyle = 'rgba(241,245,249,0.85)';
+      ctx.beginPath(); ctx.moveTo(x - largo * 0.3, y); ctx.quadraticCurveTo(x - largo * 0.5, y - ancho * 2.2, x - largo * 0.75, y - ancho * 1.4); ctx.closePath(); ctx.fill();
+    } else if (b.clase === 'romano') {
+      ctx.strokeStyle = deco.tela;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x - largo * 0.15, y); ctx.lineTo(x - largo * 0.9, y); ctx.stroke();
+    } else if (b.clase === 'samurai') {
+      ctx.fillStyle = deco.marca;
+      ctx.beginPath(); ctx.arc(x - largo * 0.82, y, ancho * 0.35, 0, Math.PI * 2); ctx.fill();
+    }
+    bandera2d(ctx, x - largo + 2, y, Math.max(7, ancho * 1.5), deco, t);
+  }
   // Remos y remero
   const { ang, asiento } = palada(b.fase, b.spm);
   const px = x - largo * 0.52;
@@ -373,18 +724,49 @@ function bote2d(ctx, x, y, largo, remo, b, ppm) {
     ctx.beginPath(); ctx.moveTo(px, y + lado * ancho * 0.6); ctx.lineTo(bx, by); ctx.stroke();
     ctx.fillStyle = b.color;
     ctx.beginPath(); ctx.ellipse(bx, by, 4, 2.2, ang * lado, 0, Math.PI * 2); ctx.fill();
+    // Salpicadura al meter la pala
+    if (b.spm && b.fase < 0.14 && !sinMovimiento) {
+      const k = b.fase / 0.14;
+      ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - k)})`;
+      for (let g = 0; g < 4; g++) {
+        const a = g * 1.6 + lado;
+        ctx.beginPath(); ctx.arc(bx + Math.cos(a) * (2 + 6 * k), by + Math.sin(a) * (2 + 6 * k), 1.4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
   }
   ctx.fillStyle = '#F8FAFC';
   const sx = px - largo * 0.08 + asiento * largo * 0.06;
-  ctx.beginPath(); ctx.arc(sx, y, Math.max(3, ancho * 0.55), 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx, y, Math.max(3, ancho * 0.5), 0, Math.PI * 2); ctx.fill();
   ctx.globalAlpha = 1;
 }
 
+// Espuma en la proa de un rival que acelera.
+function espuma2d(ctx, x, y, ancho, largo, t) {
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  for (let i = 0; i < 9; i++) {
+    const a = i * 0.7 + (sinMovimiento ? 0 : t * 9);
+    const lado = i % 2 ? 1 : -1;
+    const dx = -((i * 7 + (sinMovimiento ? 0 : t * 40)) % (largo * 0.5));
+    ctx.beginPath();
+    ctx.arc(x + dx, y + lado * (ancho * 0.9 + Math.abs(Math.sin(a)) * ancho * 0.8), 1.2 + (i % 3) * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 // ---------- 3D: cámara detrás de tu bote ----------
-function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [] }) {
+// Número pseudoaleatorio fijo para cada posición del mundo (árboles, rocas).
+const ruido = (n) => {
+  const x = Math.sin(n * 127.1) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], sprint, dt }) {
   const yo = botes[0];
-  const camZ = yo.dist - 13;
-  const camH = 4.6;
+  // En el sprint la cámara se acerca y baja.
+  c.zoom += ((sprint ? 1 : 0) - c.zoom) * Math.min(1, (dt || 0) * 1.5);
+  if (sinMovimiento) c.zoom = sprint ? 1 : 0;
+  const camZ = yo.dist - 13 + c.zoom * 3.5;
+  const camH = 4.6 - c.zoom * 1;
   const horizonte = alto * 0.3;
   const f = alto * 0.95;
   const cx = ancho / 2;
@@ -409,11 +791,17 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [] }
   cielo.addColorStop(1, '#36597F');
   ctx.fillStyle = cielo;
   ctx.fillRect(0, 0, ancho, horizonte);
-  // Colinas lejanas
+  // Colinas lejanas, en dos capas
+  ctx.fillStyle = '#244634';
+  ctx.beginPath();
+  ctx.moveTo(0, horizonte);
+  for (let x = 0; x <= ancho; x += 20) ctx.lineTo(x, horizonte - 18 - 10 * Math.sin(x / 140 + yo.dist / 900) - 6 * Math.sin(x / 53));
+  ctx.lineTo(ancho, horizonte);
+  ctx.fill();
   ctx.fillStyle = '#1C3B2C';
   ctx.beginPath();
   ctx.moveTo(0, horizonte);
-  for (let x = 0; x <= ancho; x += 20) ctx.lineTo(x, horizonte - 10 - 8 * Math.sin(x / 90 + yo.dist / 400) - 5 * Math.sin(x / 37));
+  for (let x = 0; x <= ancho; x += 20) ctx.lineTo(x, horizonte - 8 - 7 * Math.sin(x / 90 + yo.dist / 400) - 4 * Math.sin(x / 37));
   ctx.lineTo(ancho, horizonte);
   ctx.fill();
   // Agua
@@ -422,18 +810,29 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [] }
   agua.addColorStop(1, '#0A3352');
   ctx.fillStyle = agua;
   ctx.fillRect(0, horizonte, ancho, alto - horizonte);
+  // Reflejo del cielo cerca del horizonte
+  const reflejo = ctx.createLinearGradient(0, horizonte, 0, horizonte + alto * 0.12);
+  reflejo.addColorStop(0, 'rgba(148,184,214,0.35)');
+  reflejo.addColorStop(1, 'rgba(148,184,214,0)');
+  ctx.fillStyle = reflejo;
+  ctx.fillRect(0, horizonte, ancho, alto * 0.12);
 
-  // Orillas (franjas a los lados del canal)
+  // Orillas (franjas a los lados del canal) con arena en el borde
   const lejos = 400;
+  const bordes = { [-1]: minX - 6, 1: maxX + 6 };
   for (const s of [-1, 1]) {
-    const borde = s < 0 ? minX - 6 : maxX + 6;
+    const borde = bordes[s];
     const a = P(borde, camZ + 1.2);
     const b = P(borde, camZ + lejos);
-    if (!a || !b) continue;
+    const a2 = P(borde + s * 0.8, camZ + 1.2);
+    if (!a || !b || !a2) continue;
+    ctx.fillStyle = '#C2A878';
+    ctx.beginPath();
+    ctx.moveTo(a.x, alto); ctx.lineTo(b.x, b.y); ctx.lineTo(a2.x, alto); ctx.fill();
     ctx.fillStyle = '#1F3A2A';
     ctx.beginPath();
     ctx.moveTo(s < 0 ? 0 : ancho, alto);
-    ctx.lineTo(a.x, alto);
+    ctx.lineTo(a2.x, alto);
     ctx.lineTo(b.x, b.y);
     ctx.lineTo(s < 0 ? 0 : ancho, b.y);
     ctx.fill();
@@ -486,6 +885,19 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [] }
         const x0 = a.x + ((b.x - a.x) * i) / cuadros;
         ctx.fillRect(x0, a.y - grueso / 2, (b.x - a.x) / cuadros + 1, grueso);
       }
+      // Postes con pancarta de meta
+      const pa = P(minX - 2, meta, 4);
+      const pb = P(maxX + 2, meta, 4);
+      if (pa && pb) {
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.lineWidth = Math.max(1, a.s * 0.06);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(pa.x, pa.y); ctx.moveTo(b.x, b.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+        const alto2 = Math.max(4, a.s * 0.5);
+        for (let i = 0; i < cuadros; i++) {
+          ctx.fillStyle = i % 2 ? '#111' : '#fff';
+          ctx.fillRect(pa.x + ((pb.x - pa.x) * i) / cuadros, pa.y, (pb.x - pa.x) / cuadros + 1, alto2);
+        }
+      }
     }
   }
 
@@ -537,58 +949,275 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [] }
     }
   }
 
+  // Orilla: árboles, rocas y juncos anclados al mundo, del más lejano al más cercano
+  const PASO_ARBOL = 7;
+  for (let z = Math.floor((camZ + 220) / PASO_ARBOL) * PASO_ARBOL; z > camZ + 1.5; z -= PASO_ARBOL) {
+    for (const s of [-1, 1]) {
+      const semilla = z * 0.37 + s * 11;
+      const r1 = ruido(semilla);
+      const x = bordes[s] + s * (1.5 + r1 * 5);
+      const zz = z + ruido(semilla + 3) * PASO_ARBOL;
+      const base = P(x, zz);
+      if (!base || base.x < -60 || base.x > ancho + 60) continue;
+      if (r1 < 0.18) {
+        // Roca
+        ctx.fillStyle = '#5B6470';
+        ctx.beginPath(); ctx.ellipse(base.x, base.y, base.s * 0.7, base.s * 0.35, 0, Math.PI, 0); ctx.fill();
+        continue;
+      }
+      const altura = 3 + ruido(semilla + 7) * 4;
+      const copa = P(x, zz, altura);
+      if (!copa) continue;
+      ctx.strokeStyle = '#4A3423';
+      ctx.lineWidth = Math.max(1, base.s * 0.12);
+      ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(copa.x, copa.y + (base.y - copa.y) * 0.3); ctx.stroke();
+      ctx.fillStyle = r1 > 0.6 ? '#2F6B3F' : '#245A34';
+      if (r1 > 0.6) {
+        // Pino
+        ctx.beginPath();
+        ctx.moveTo(copa.x, copa.y);
+        ctx.lineTo(copa.x - base.s * 0.9, base.y - (base.y - copa.y) * 0.25);
+        ctx.lineTo(copa.x + base.s * 0.9, base.y - (base.y - copa.y) * 0.25);
+        ctx.fill();
+      } else {
+        ctx.beginPath(); ctx.arc(copa.x, copa.y + base.s * 0.5, base.s * 0.9, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+  // Juncos al borde del agua
+  ctx.strokeStyle = '#6B8F4E';
+  for (let z = Math.ceil((camZ + 2) / 2) * 2; z < camZ + 60; z += 2) {
+    for (const s of [-1, 1]) {
+      if (ruido(z * 1.3 + s) < 0.5) continue;
+      const a = P(bordes[s] + s * 0.3, z);
+      const b = P(bordes[s] + s * 0.3, z, 0.9);
+      if (!a || !b) continue;
+      ctx.lineWidth = Math.max(0.8, a.s * 0.03);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x + (sinMovimiento ? 0 : Math.sin(t * 2 + z) * a.s * 0.05), b.y); ctx.stroke();
+    }
+  }
+
   // Botes, del más lejano al más cercano
   const atras = [];
   const lista = botes.map((b, i) => ({ ...b, x: lateral[i] })).sort((a, b) => b.dist - a.dist);
   const etiquetas = [];
   for (const b of lista) {
     if (b.dist - camZ < 4.5) { atras.push(b); continue; }
-    bote3d(ctx, P, b, etiquetas, yo.dist, alto * 0.24);
+    bote3d(ctx, P, b, etiquetas, yo.dist, alto * 0.24, t);
+    if (b.yo) {
+      const q = P(b.x, b.dist, 0.8);
+      if (q) c.yoPantalla = { x: q.x, y: q.y };
+    }
   }
   // Indicador de quien viene detrás (fuera de cámara)
+  const hueco = Math.min(160, (ancho - 8) / Math.max(1, atras.length));
   atras.forEach((b, i) => {
-    const txt = `${b.nombre} ${Math.round(yo.dist - b.dist)} m atrás`;
-    ctx.font = 'bold 13px system-ui, sans-serif';
+    ctx.font = 'bold 12px system-ui, sans-serif';
     ctx.textAlign = 'center';
-    const x = ancho / 2 + (i - (atras.length - 1) / 2) * 160;
+    const x = ancho / 2 + (i - (atras.length - 1) / 2) * hueco;
     ctx.fillStyle = 'rgba(2,6,23,0.7)';
-    ctx.fillRect(x - 76, alto - 28, 152, 22);
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x - hueco / 2 + 3, alto - 28, hueco - 6, 22, 11) : ctx.rect(x - hueco / 2 + 3, alto - 28, hueco - 6, 22);
+    ctx.fill();
     ctx.fillStyle = b.color;
-    ctx.fillText(`▼ ${txt}`, x, alto - 12);
+    ctx.fillText(cabe(ctx, `▼ ${b.nombre} −${Math.round(yo.dist - b.dist)} m`, hueco - 12), x, alto - 12);
   });
 }
 
-function bote3d(ctx, P, b, etiquetas, miDist, techo) {
+// Vela cuadrada vista desde atrás: un cuadrilátero de lado a lado entre dos alturas.
+function vela3d(ctx, P, x, z, mitad, h0, h1, color, alfa) {
+  const q = [P(x - mitad, z, h1), P(x + mitad, z, h1), P(x + mitad, z, h0), P(x - mitad, z, h0)];
+  if (q.some((p) => !p)) return null;
+  const previo = ctx.globalAlpha;
+  ctx.globalAlpha = alfa;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  q.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = previo;
+  return q;
+}
+
+function palo3d(ctx, P, x, z, h0, h1) {
+  const a = P(x, z, h0);
+  const b = P(x, z, h1);
+  if (!a || !b) return null;
+  ctx.strokeStyle = '#8B5E34';
+  ctx.lineWidth = Math.max(1, a.s * 0.05);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  return b;
+}
+
+// Detalles de cada clase sobre el casco (en 3D).
+function adornos3d(ctx, P, b, largo, t) {
+  const deco = BOTES[b.clase];
+  const cerca = P(b.x, b.dist);
+  if (!deco || !cerca) return;
+  // Las velas de los botes que pasan junto a la cámara se desvanecen para no tapar la pista.
+  const lejania = b.yo ? 1 : Math.max(0.15, Math.min(1, (cerca.d - 9) / 12));
+  const alfa = (b.yo ? 0.55 : 0.9) * lejania;
+  ctx.globalAlpha = lejania;
+  const onda = sinMovimiento ? 0 : Math.sin(t * 5 + b.dist) * 0.12;
+  if (b.clase === 'vikingo') {
+    // Cuello y cabeza de dragón en la proa, escudos a los lados y vela a rayas
+    const a = P(b.x, b.dist + largo * 0.5, 0.15);
+    const c = P(b.x, b.dist + largo * 0.55, 1.3);
+    if (a && c) {
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = Math.max(1.5, a.s * 0.1);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(a.x, c.y, c.x, c.y); ctx.stroke();
+      ctx.fillStyle = deco.marca;
+      ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(1.5, c.s * 0.14), 0, Math.PI * 2); ctx.fill();
+    }
+    for (let k = -2; k <= 2; k++) {
+      for (const s of [-1, 1]) {
+        const q = P(b.x + s * 0.42, b.dist + k * 0.9, 0.25);
+        if (!q) continue;
+        ctx.fillStyle = (k + 2) % 2 ? deco.tela : deco.marca;
+        ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1, q.s * 0.1), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    palo3d(ctx, P, b.x, b.dist + 1, 0.15, 2.4);
+    for (let i = 0; i < 4; i++) vela3d(ctx, P, b.x, b.dist + 1, 0.85, 1.0 + i * 0.32, 1.32 + i * 0.32, i % 2 ? '#F8FAFC' : deco.tela, alfa);
+  } else if (b.clase === 'pirata') {
+    // Mástil, vela triangular y bandera negra
+    const tope = palo3d(ctx, P, b.x, b.dist + 0.8, 0.15, 3.0);
+    const q = [P(b.x, b.dist + 0.8, 2.8), P(b.x, b.dist + 0.8, 0.6), P(b.x + 0.1, b.dist - 2.4, 0.6)];
+    if (!q.some((p) => !p)) {
+      ctx.globalAlpha = alfa;
+      ctx.fillStyle = '#F1F5F9';
+      ctx.beginPath(); q.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = lejania;
+    }
+    if (tope) bandera3d(ctx, tope, deco, onda);
+  } else if (b.clase === 'samurai') {
+    // Nobori: estandarte alto en la popa
+    const tope = palo3d(ctx, P, b.x, b.dist - largo * 0.45, 0.15, 2.6);
+    if (tope) {
+      const w = Math.max(3, tope.s * 0.35);
+      const h = Math.max(8, tope.s * 1.1);
+      ctx.fillStyle = deco.tela;
+      ctx.fillRect(tope.x, tope.y, w, h);
+      ctx.fillStyle = deco.marca;
+      ctx.beginPath(); ctx.arc(tope.x + w / 2, tope.y + h * 0.3, w * 0.32, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (b.clase === 'polinesio') {
+    // Flotador lateral y banderín
+    const s = b.x > 0 ? 1 : -1;
+    const q = [P(b.x + s * 1.4, b.dist + 2, 0.08), P(b.x + s * 1.55, b.dist, 0.08), P(b.x + s * 1.4, b.dist - 2, 0.08), P(b.x + s * 1.25, b.dist, 0.08)];
+    if (!q.some((p) => !p)) {
+      ctx.fillStyle = '#C9A46A';
+      ctx.beginPath(); q.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#E7D3A8';
+      for (const dz of [1.2, -1.2]) {
+        const a = P(b.x, b.dist + dz, 0.2);
+        const z = P(b.x + s * 1.4, b.dist + dz, 0.15);
+        if (a && z) { ctx.lineWidth = Math.max(1, a.s * 0.04); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke(); }
+      }
+    }
+    const tope = palo3d(ctx, P, b.x, b.dist - largo * 0.42, 0.15, 1.8);
+    if (tope) bandera3d(ctx, tope, deco, onda);
+  } else if (b.clase === 'romano') {
+    // Espolón y vela cuadrada púrpura
+    const a = P(b.x, b.dist + largo * 0.5, 0.05);
+    const z = P(b.x, b.dist + largo * 0.5 + 0.9, 0.02);
+    if (a && z) {
+      ctx.strokeStyle = '#B45309';
+      ctx.lineWidth = Math.max(1.5, a.s * 0.12);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke();
+    }
+    palo3d(ctx, P, b.x, b.dist + 0.6, 0.15, 2.5);
+    const q = vela3d(ctx, P, b.x, b.dist + 0.6, 0.9, 1.1, 2.3, deco.tela, alfa);
+    if (q) {
+      ctx.globalAlpha = alfa;
+      ctx.fillStyle = deco.marca;
+      const m = { x: (q[0].x + q[2].x) / 2, y: (q[0].y + q[2].y) / 2 };
+      ctx.beginPath(); ctx.arc(m.x, m.y, Math.max(1.5, q[0].s * 0.18), 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = lejania;
+    }
+  }
+}
+
+function bandera3d(ctx, tope, deco, onda) {
+  const previo = ctx.globalAlpha;
+  const w = Math.max(5, tope.s * 0.6);
+  const h = Math.max(3, tope.s * 0.35);
+  ctx.fillStyle = deco.tela;
+  ctx.beginPath();
+  ctx.moveTo(tope.x, tope.y);
+  ctx.quadraticCurveTo(tope.x - w * 0.5, tope.y + h * onda * 3, tope.x - w, tope.y + h * onda * 2);
+  ctx.lineTo(tope.x - w, tope.y + h + h * onda * 2);
+  ctx.quadraticCurveTo(tope.x - w * 0.5, tope.y + h + h * onda * 3, tope.x, tope.y + h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = deco.marca;
+  ctx.beginPath(); ctx.arc(tope.x - w * 0.5, tope.y + h * 0.5 + h * onda * 2, h * 0.22, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = previo;
+}
+
+function bote3d(ctx, P, b, etiquetas, miDist, techo, t) {
   const largo = 8;
   const proa = P(b.x, b.dist + largo * 0.5);
   const popa = P(b.x, b.dist - largo * 0.5);
   if (!proa || !popa) return;
-  const anchoCasco = 0.45;
-  // Estela
+  const anchoCasco = b.clase === 'pirata' || b.clase === 'romano' ? 0.6 : 0.45;
+  // Estela en V con espuma que se abre y se desvanece
   if (b.v > 0) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.lineWidth = Math.max(1, popa.s * 0.03);
-    for (const s of [-1, 1]) {
-      const a = P(b.x + s * 0.2, b.dist - largo * 0.5);
-      const z = P(b.x + s * (0.8 + b.v * 0.5), b.dist - largo * 0.5 - b.v * 3);
-      if (a && z) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke(); }
+    const fuerza = b.acelera ? 1.5 : 1;
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(255,255,255,${(0.4 - i * 0.08) * Math.min(1, b.v / 3)})`;
+      ctx.lineWidth = Math.max(1, popa.s * 0.03);
+      for (const s of [-1, 1]) {
+        const z0 = b.dist - largo * 0.5 - i * 2.5 * fuerza;
+        const a = P(b.x + s * (0.25 + i * 0.45 * fuerza), z0);
+        const z = P(b.x + s * (0.7 + i * 0.45 * fuerza + b.v * 0.3), z0 - 2.5 * fuerza);
+        if (a && z) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke(); }
+      }
+    }
+    // Rastro de espuma detrás de la popa
+    for (let i = 0; i < 8; i++) {
+      const zz = b.dist - largo * 0.5 - 0.6 - i * 1.4;
+      const q = P(b.x + (sinMovimiento ? 0 : Math.sin(t * 3 + i) * 0.1), zz, 0);
+      if (!q) continue;
+      ctx.fillStyle = `rgba(255,255,255,${0.3 * (1 - i / 8) * Math.min(1, b.v / 3)})`;
+      ctx.beginPath(); ctx.ellipse(q.x, q.y, Math.max(1, q.s * (0.25 + i * 0.05)), Math.max(0.5, q.s * 0.05), 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // Ola de proa (más grande si acelera)
+  if (b.v > 0) {
+    const q = P(b.x, b.dist + largo * 0.5, 0.05);
+    if (q) {
+      ctx.fillStyle = `rgba(255,255,255,${b.acelera ? 0.8 : 0.35})`;
+      const n = b.acelera ? 10 : 4;
+      for (let i = 0; i < n; i++) {
+        const a = Math.PI + (i / (n - 1)) * Math.PI;
+        const r = q.s * (b.acelera ? 0.5 : 0.3) * (0.7 + 0.3 * (sinMovimiento ? 1 : Math.abs(Math.sin(t * 8 + i))));
+        ctx.beginPath(); ctx.arc(q.x + Math.cos(a) * r, q.y + Math.sin(a) * r * 0.3 + q.s * 0.05, Math.max(0.8, q.s * 0.05), 0, Math.PI * 2); ctx.fill();
+      }
     }
   }
   // Casco como polígono proyectado
+  const popaAncha = b.clase === 'samurai' ? 0.85 : 0.4;
   const puntos = [
     P(b.x, b.dist + largo * 0.5, 0.15),
     P(b.x + anchoCasco, b.dist, 0.15),
-    P(b.x + anchoCasco * 0.4, b.dist - largo * 0.5, 0.15),
-    P(b.x - anchoCasco * 0.4, b.dist - largo * 0.5, 0.15),
+    P(b.x + anchoCasco * popaAncha, b.dist - largo * 0.5, 0.15),
+    P(b.x - anchoCasco * popaAncha, b.dist - largo * 0.5, 0.15),
     P(b.x - anchoCasco, b.dist, 0.15),
   ];
   if (puntos.some((q) => !q)) return;
-  ctx.globalAlpha = b.yo ? 1 : 0.88;
+  ctx.globalAlpha = b.yo ? 1 : 0.9;
+  if (b.brillo) {
+    ctx.shadowColor = '#FDE047';
+    ctx.shadowBlur = sinMovimiento ? 18 : 16 + 10 * Math.sin(t * 10);
+  }
   ctx.fillStyle = b.color;
   ctx.beginPath();
   puntos.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
   ctx.closePath();
   ctx.fill();
+  ctx.shadowBlur = 0;
   // Remos sobre el agua
   const { ang, asiento } = palada(b.fase, b.spm);
   const pivZ = b.dist - 0.4;
@@ -602,7 +1231,20 @@ function bote3d(ctx, P, b, etiquetas, miDist, techo) {
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke();
     ctx.fillStyle = b.color;
     ctx.beginPath(); ctx.ellipse(z.x, z.y, Math.max(1.5, z.s * 0.22), Math.max(1, z.s * 0.08), 0, 0, Math.PI * 2); ctx.fill();
+    // Salpicadura al meter la pala y remolino al sacarla
+    if (b.spm && !sinMovimiento && (b.fase < 0.14 || (b.fase > 0.36 && b.fase < 0.46))) {
+      const k = b.fase < 0.14 ? b.fase / 0.14 : (b.fase - 0.36) / 0.1;
+      ctx.fillStyle = `rgba(255,255,255,${0.85 * (1 - k)})`;
+      for (let g = 0; g < 6; g++) {
+        const ag = -Math.PI * (0.15 + 0.7 * (g / 5));
+        const r = z.s * (0.15 + 0.35 * k);
+        ctx.beginPath(); ctx.arc(z.x + Math.cos(ag) * r, z.y + Math.sin(ag) * r * (1 - k * 0.5), Math.max(0.8, z.s * 0.04), 0, Math.PI * 2); ctx.fill();
+      }
+    }
   }
+  ctx.globalAlpha = 1;
+  adornos3d(ctx, P, b, largo, t);
+  ctx.globalAlpha = b.yo ? 1 : 0.9;
   // Remero: torso inclinado según la palada
   const asientoZ = pivZ - 0.9 + asiento * 0.35;
   const cadera = P(b.x, asientoZ, 0.3);
@@ -615,25 +1257,40 @@ function bote3d(ctx, P, b, etiquetas, miDist, techo) {
     ctx.beginPath(); ctx.arc(hombro.x, hombro.y - hombro.s * 0.12, Math.max(2, hombro.s * 0.12), 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  // Nombre sobre el bote
+  // Etiqueta sobre el bote: retrato, nombre corto y diferencia
   if (!b.yo) {
-    const q = P(b.x, b.dist, 2);
+    const q = P(b.x, b.dist, 1.8);
     if (q) {
       const dif = Math.round(b.dist - miDist);
-      const txt = `${b.nombre} ${dif > 0 ? '+' : ''}${dif} m`;
-      ctx.font = `bold ${Math.round(Math.max(11, Math.min(14, q.s * 0.5)))}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      const w = ctx.measureText(txt).width + 6;
+      const difTxt = `${dif > 0 ? '+' : dif < 0 ? '−' : ''}${Math.abs(dif)} m`;
+      const extra = b.acelera ? ' ⚡' : b.aviso ? ` ⚡${b.aviso}s` : '';
+      const tam = Math.round(Math.max(11, Math.min(13, q.s * 0.5)));
+      ctx.font = `bold ${tam}px system-ui, sans-serif`;
+      const wNombre = ctx.measureText(b.nombre + extra).width;
+      const wDif = ctx.measureText(difTxt).width;
+      const r = 8;
+      const w = r * 2 + 4 + wNombre + 6 + wDif + 10;
       let y = q.y;
       // Si otra etiqueta ya ocupa ese sitio, esta sube un renglón.
-      const choca = (yy) => etiquetas.some((e) => Math.abs(e.x - q.x) < (e.w + w) / 2 && Math.abs(e.y - yy) < 15);
-      while (choca(y) && y - 15 > techo) y -= 15;
-      while (choca(y)) y += 15;
+      const choca = (yy) => etiquetas.some((e) => Math.abs(e.x - q.x) < (e.w + w) / 2 && Math.abs(e.y - yy) < 20);
+      while (choca(y) && y - 20 > techo) y -= 20;
+      while (choca(y)) y += 20;
       etiquetas.push({ x: q.x, y, w });
-      ctx.fillStyle = 'rgba(2,6,23,0.55)';
-      ctx.fillRect(q.x - w / 2, y - 12, w, 16);
+      const x0 = Math.max(4, Math.min(ctx.canvas.clientWidth - w - 4, q.x - w / 2));
+      ctx.fillStyle = 'rgba(2,6,23,0.65)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(x0, y - 13, w, 19, 9) : ctx.rect(x0, y - 13, w, 19);
+      ctx.fill();
+      retrato(ctx, b.retrato, x0 + 3 + r, y - 3.5, r, b.color);
+      ctx.textAlign = 'left';
       ctx.fillStyle = b.color;
-      ctx.fillText(txt, q.x, y);
+      ctx.fillText(b.nombre, x0 + r * 2 + 7, y + 1);
+      if (extra) {
+        ctx.fillStyle = '#FDE047';
+        ctx.fillText(extra, x0 + r * 2 + 7 + ctx.measureText(b.nombre).width, y + 1);
+      }
+      ctx.fillStyle = dif > 0 ? '#FCA5A5' : dif < 0 ? '#86EFAC' : '#F8FAFC';
+      ctx.fillText(difTxt, x0 + r * 2 + 7 + wNombre + 6, y + 1);
     }
   }
 }

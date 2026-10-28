@@ -14,7 +14,7 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 
-const VERSION = '0.18.0';
+const VERSION = '0.19.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -652,6 +652,10 @@ async function iniciarSesion() {
     t500: 0,
     parcial: null,
     lento: 0,
+    eventosCarrera: [],
+    lados: null,
+    sprintAvisado: false,
+    retrato: rival ? await retratoPropio() : null,
   };
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
   if (rival) sesion.ventaja = crearVentaja(entrenamientoActivo);
@@ -718,9 +722,11 @@ async function detenerSesion() {
     }
   }
   if (s.rival) {
+    const metaCarrera = ent?.objetivo?.metrica === 'distancia' ? ent.objetivo.valor : null;
     const resumen = (r) => ({
       fecha: r.fecha ?? null, nivel: r.nivel ?? null, nombre: r.nombre, clase: r.clase ?? null, rango: r.rango ?? null, dificultad: r.dificultad ?? null,
       diferencia: V.diferenciaFinal(s.dist - E.distanciaEn(r.muestras, s.t), s.ventaja),
+      tiempo: metaCarrera ? F.tiempoA(r, metaCarrera) : null,
     });
     if (s.ventaja && (V.metrosVentaja(s.ventaja) >= 0.5 || s.ventaja.objeto)) {
       registro.ventaja = { metros: Math.round(V.metrosVentaja(s.ventaja)), talentos: Math.round(s.ventaja.talentos), objeto: s.ventaja.objeto };
@@ -806,8 +812,10 @@ function avanzarSesion() {
       const texto = ev.m ? `${ev.nombre}: +${Math.round(ev.m)} m` : `${ev.nombre}: los fantasmas van más lentos 60 s`;
       toast(texto);
       hablar(texto, { clave: 'talento', cadaSeg: 15 });
+      eventoCarrera('ventaja', ev.m ? `+${Math.round(ev.m)} m` : 'Fantasmas −1 %', ev.nombre);
     }
   }
+  if (sesion.rivales.length) { vigilarAdelantos(t); tamborSprint(); }
   if (sesion.rival && t % 60 === 0) {
     const dif = Math.round(sesion.dist + V.metrosVentaja(sesion.ventaja) - E.distanciaEn(sesion.rival.muestras, t));
     if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
@@ -818,6 +826,57 @@ function avanzarSesion() {
     avanceObjetivo(t);
   } else avanceBloque(t);
 }
+
+// Avisos que la carrera dibuja un momento: adelantos, te pasan y ventajas.
+function eventoCarrera(tipo, texto, detalle = '') {
+  const lista = sesion.eventosCarrera;
+  lista.push({ id: (lista.at(-1)?.id || 0) + 1, tipo, texto, detalle });
+  if (lista.length > 8) lista.shift();
+}
+
+// Adelantos: cuando cambia quién va delante entre tú y cada fantasma (con 1 m de margen para no parpadear).
+function vigilarAdelantos(t) {
+  const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
+  const lados = sesion.rivales.map((r, i) => {
+    const d = miDist - E.distanciaEn(r.muestras, t);
+    const antes = sesion.lados?.[i] ?? 0;
+    return d > 1 ? 1 : d < -1 ? -1 : antes;
+  });
+  if (sesion.lados && t > 5) {
+    lados.forEach((l, i) => {
+      const antes = sesion.lados[i];
+      if (!antes || l === antes) return;
+      const nombre = corto(sesion.rivales[i].nombre);
+      if (l > 0) {
+        eventoCarrera('adelanto', `¡Adelantaste a ${nombre}!`);
+        hablar(`Adelantaste a ${nombre}`, { clave: `adelanto-${i}`, cadaSeg: 8 });
+        vibrar([60, 40, 60]);
+      } else {
+        eventoCarrera('te-pasan', `${nombre} te adelantó`);
+        hablar(`${nombre} te adelantó`, { clave: `adelanto-${i}`, cadaSeg: 8 });
+        vibrar(250);
+      }
+    });
+  }
+  sesion.lados = lados;
+}
+
+// Sprint final: en los últimos 250 m suena un tambor cada segundo (doble en los últimos 100 m).
+function tamborSprint() {
+  const meta = entrenamientoActivo?.objetivo?.metrica === 'distancia' ? entrenamientoActivo.objetivo.valor : null;
+  if (!meta || sesion.tiempoMeta != null) return;
+  const falta = meta - sesion.dist;
+  if (falta > 250 || falta <= 0) return;
+  if (!sesion.sprintAvisado) {
+    sesion.sprintAvisado = true;
+    hablar('¡Sprint final! Últimos 250 metros', { urgente: true });
+    vibrar([80, 60, 80, 60, 80]);
+  }
+  pitido(98, 0.14);
+  if (falta <= 100) setTimeout(() => pitido(98, 0.12), 480);
+}
+
+const corto = (nombre = '') => nombre.replace(/^Fantasma /, '').split(' (')[0];
 
 const ANIMOS = ['¡Buen ritmo, sigue así!', 'Vas muy bien, mantén la técnica', 'Piernas, espalda, brazos. Así se rema', '¡Fuerte! Cada palada cuenta', 'Respira y mantén el ritmo'];
 
@@ -1058,23 +1117,54 @@ function carreraActual() {
   }
   if (extra >= 1) l2 = `${l2 ? `${l2} · ` : ''}Ventaja +${Math.round(extra)} m`;
   if (vsRef) l2 = `${l2 ? `${l2} · ` : ''}${vsRef}`;
-  if (sesion.ventaja?.objeto === 'mapa') {
-    const k = V.proximoAceleron(r, t);
-    if (k) l2 = `${l2 ? `${l2} · ` : ''}${(r.nombre || 'Fantasma').split(' (')[0]} acelera en ${k} s`;
-  }
   const estado = {
     t,
     pausa: !!enPausa() || !sesion.empezo,
     yo: { dist: miDist, v: actual.split > 0 ? 500 / actual.split : 0, spm: actual.spm },
-    rivales: rs.map((x) => ({ nombre: x.nombre.replace(/^Fantasma /, ''), color: x.color, muestras: x.muestras, spmEn: (tt) => F.spmEn(x, tt) })),
+    rivales: rs.map((x) => ({
+      nombre: corto(x.nombre), color: x.color, muestras: x.muestras, spmEn: (tt) => F.spmEn(x, tt), clase: x.clase || null,
+      retrato: x.clase && x.rango ? srcRetratoRango(x.clase, x.rango) : null,
+      aviso: sesion.ventaja?.objeto === 'mapa' ? V.proximoAceleron(x, t) : null,
+    })),
     referencias: refs,
     meta,
     cabecera: [l1, l2],
+    lugar, total: rs.length + 1, cercanos: cercanos(rs, difs, miDist, t),
+    yoClase: J.claseDe(leerPersonaje().clase)?.clave || null,
+    yoRetrato: sesion.retrato,
+    ventajaM: extra,
+    eventos: sesion.eventosCarrera,
     tono,
     ritmo: sesion.ritmo ? { v: 500 / sesion.ritmo, etiqueta: `Ritmo ${formatoSplit(sesion.ritmo)}` } : null,
     yoColor: O.objeto(leerPersonaje().equipo?.bote)?.color || null,
   };
   return { texto, tono, estado, proyeccion: p };
+}
+
+// Rival justo delante y justo detrás de ti, con la diferencia en metros y en segundos.
+function cercanos(rs, difs, miDist, t) {
+  const fila = (i, delante) => {
+    if (i < 0) return null;
+    const tr = F.tiempoA(rs[i], miDist);
+    const seg = tr == null ? null : Math.round(Math.abs(t - tr));
+    return { nombre: corto(rs[i].nombre), color: rs[i].color, m: Math.round(Math.abs(difs[i])), seg, delante };
+  };
+  let ad = -1;
+  let at = -1;
+  difs.forEach((d, i) => {
+    if (d < 0 && (ad < 0 || d > difs[ad])) ad = i;
+    if (d >= 0 && (at < 0 || d < difs[at])) at = i;
+  });
+  return [fila(ad, true), fila(at, false)].filter(Boolean);
+}
+
+// Retrato de tu héroe con su rango actual, para tu carril.
+async function retratoPropio() {
+  const per = leerPersonaje();
+  const c = per.clase ? J.claseDe(per.clase) : null;
+  if (!c) return null;
+  const h = J.estadoJuego(await db.listar('sesiones'), { ftp: ftp(), per });
+  return srcHeroe(c.clave, h.nivel || 1, true);
 }
 
 // Duración de la carrera para proyectar cuando la meta no es una distancia.
@@ -2181,6 +2271,34 @@ function pintarXpSesion(s, previas, resumen) {
   return subio || logros.some((l) => l.tipo === 'jefe' || l.tipo === 'hazana');
 }
 
+// Podio de la carrera contra fantasmas: puesto, tiempo (o diferencia) y XP de cada fantasma vencido.
+async function pintarPodio(s) {
+  const caja = $('#hoja-podio');
+  const rivales = s.rivales || (s.rival ? [s.rival] : []);
+  caja.hidden = !rivales.length;
+  if (!rivales.length) return;
+  const filas = [
+    { nombre: 'Tú', yo: true, pos: 0, tiempo: s.tiempoMeta, img: await retratoPropio() },
+    ...rivales.map((r) => ({
+      nombre: corto(r.nombre), pos: -r.diferencia, tiempo: r.tiempo, dif: r.diferencia,
+      img: r.clase && r.rango ? srcRetratoRango(r.clase, r.rango) : null,
+    })),
+  ].sort((a, b) => b.pos - a.pos || (a.yo ? -1 : 1));
+  const xp = rivales.filter((r) => r.diferencia > 0 && r.clase).slice(0, 3).reduce((a, r) => a + J.xpPorFantasma(r.dificultad), 0);
+  const lugar = filas.findIndex((f) => f.yo) + 1;
+  const dato = (f) => (f.tiempo != null ? formatoTiempo(Math.round(f.tiempo)) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${Math.abs(f.dif)} m`);
+  const bloque = (f, i) => `<div class="podio-puesto p${i + 1}${f.yo ? ' yo' : ''}">
+      ${f.img ? `<img src="${f.img}" width="48" height="48" alt="">` : `<span class="podio-ico">${ico('i-fantasma')}</span>`}
+      <b>${f.nombre}</b><small>${dato(f)}</small>
+      <div class="podio-escalon">${i + 1}º</div></div>`;
+  const top = filas.slice(0, 3);
+  const orden = [top[1], top[0], top[2]].map((f) => (f ? bloque(f, filas.indexOf(f)) : '<div></div>')).join('');
+  caja.innerHTML = `<h2>${lugar === 1 ? '¡Ganaste la carrera!' : `Llegaste ${lugar}º de ${filas.length}`}</h2>
+    <div class="podio-escena">${orden}</div>
+    ${filas.slice(3).map((f, i) => `<p class="podio-resto">${i + 4}º ${f.nombre} · ${dato(f)}</p>`).join('')}
+    ${xp ? `<p class="podio-xp">+${xp} XP por fantasmas vencidos</p>` : ''}`;
+}
+
 // ---------- Resumen / detalle de sesión ----------
 let sesionAbierta = null;
 const TEXTO_RPE = ['', 'Muy fácil', 'Muy fácil', 'Fácil', 'Fácil', 'Moderado', 'Moderado', 'Duro', 'Duro', 'Muy duro', 'Máximo'];
@@ -2253,6 +2371,7 @@ function abrirSesion(s, { resumen = false, previas = [] } = {}) {
   $('#hoja-records').insertAdjacentHTML('beforeend', medallas.map((x) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}Nueva insignia</div>
     <div class="valor">${x.nombre}</div><div class="sub">${x.detalle}</div></div>`).join(''));
   const gano = (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);
+  pintarPodio(s);
   const subio = pintarXpSesion(s, previas, resumen);
   if (resumen && (recs.length || medallas.length || gano || subio)) setTimeout(confeti, 250);
 
