@@ -225,6 +225,7 @@ function semanalATuMedida(d, rit) {
 }
 // Qué preparar al tocar «Hacer ahora» en una misión: un entrenamiento base o Remo libre contra fantasmas ('').
 const PREPARAR_MISION = { rango: 'base:pot-mant', ritmo: 'base:rit-mant', bushido: 'base:rit-mant' };
+const prepararMision = (mi) => (mi.clave === 'atributo' ? PREPARAR_ATRIBUTO[mi.atributo] : PREPARAR_MISION[mi.clave]) ?? '';
 function elegir(pool, n, semilla, r = azar(semilla)) {
   const lista = [...pool];
   const salida = [];
@@ -247,7 +248,22 @@ export function misionesDelDia(dia, rit = null) {
     .map((d) => (d.id === 'distdia' ? aTuMedida(d, rit.metros * 1.3, 500) : d.id === 'constante' ? aTuMedida(d, rit.min * 1.3, 5) : d));
   return [crear(aTuMedida(DIARIA_DIST, rit.metros * 1.15, 500), r, semilla), crear(aTuMedida(DIARIA_DUR, rit.min * 1.15, 5), r, semilla), ...elegir(pool, 3, semilla, r)];
 }
-export function misionesDeSemana(lunes, clase = null, rit = null) {
+// Meta semanal de atributo (desde la semana del 26 de octubre de 2026): sube tu atributo más bajo.
+// Las metas equivalen más o menos a una sesión pensada para ese atributo.
+export const ATRIBUTO_SEMANAL_DESDE = '2026-10-26';
+export const META_ATRIBUTO = { fuerza: 15, agilidad: 12, resistencia: 20, recuperacion: 6, tecnica: 15, voluntad: 8 };
+export const PREPARAR_ATRIBUTO = { fuerza: 'base:pot-mant', agilidad: 'base:pot-mejora', resistencia: 'base:dis-mant', recuperacion: 'base:dis-suave', tecnica: 'base:rit-mant', voluntad: 'base:pal-mejora' };
+// El atributo más bajo con el que trabajar la semana; sin banda de pulso no se elige Recuperación.
+export function atributoDeLaSemana(atributos, { sinPulso = true } = {}) {
+  const lista = ATRIBUTOS.filter((a) => !(sinPulso && a.clave === 'recuperacion'));
+  if (!lista.some((a) => (atributos[a.clave] || 0) > 0)) return null;
+  return lista.reduce((m, a) => ((atributos[a.clave] || 0) < (atributos[m.clave] || 0) ? a : m)).clave;
+}
+function misionAtributo(clave) {
+  const a = ATRIBUTOS.find((x) => x.clave === clave);
+  return { id: 'atributo', atributo: clave, nombre: 'Héroe equilibrado', texto: (m) => `Sube ${m} puntos de ${a.nombre} esta semana`, metas: [META_ATRIBUTO[clave]], xp: [150], valor: (d) => Math.floor(d.atr?.[clave] || 0) };
+}
+export function misionesDeSemana(lunes, clase = null, rit = null, atributo = null) {
   const semilla = `s${lunes}`;
   const r = azar(semilla);
   const tema = MISION_CLASE[claseDe(clase)?.clave];
@@ -256,7 +272,9 @@ export function misionesDeSemana(lunes, clase = null, rit = null) {
   // Con historial no se repiten dos misiones de una sesión larga (Fondo y la Travesía del océano).
   const pool = rit && tema?.id === 'oceano' ? SEMANALES.filter((d) => d.id !== 'fondo') : SEMANALES;
   const a = (d) => semanalATuMedida(d, rit);
-  return [crear(a(SEMANAL_RUTA), r, semilla), ...(tema ? [crear(a(tema), r, semilla)] : []), ...elegir(pool.map(a), tema ? 1 : 2, semilla, r), crear(reto, r, semilla)];
+  const lista = [crear(a(SEMANAL_RUTA), r, semilla), ...(tema ? [crear(a(tema), r, semilla)] : []), ...elegir(pool.map(a), tema ? 1 : 2, semilla, r), crear(reto, r, semilla)];
+  if (atributo && lunes >= ATRIBUTO_SEMANAL_DESDE) lista.push({ ...crear(misionAtributo(atributo), r, semilla), atributo });
+  return lista;
 }
 
 // Bonos de constancia: premian volver, nunca castigan descansar, y tienen tope.
@@ -464,7 +482,10 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   const dia = { clave: null, misiones: [], hechas: new Set(), d: null };
   const semana = { clave: null, misiones: [], hechas: new Set(), d: null };
   const nuevoAgg = () => ({ metros: 0, min: 0, kcal: 0, z2min: 0, z4min: 0, sobreSeg: 0, spm24min: 0, mejorPct: 0, ganados: 0, sesiones: 0, dias: new Set(),
-    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0, vencidas: [] });
+    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0, vencidas: [], atr: Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0])) });
+  // Atributos antes de cada semana (para elegir la meta de atributo) y si ya usaste banda de pulso.
+  let semAtr = { lunes: null, atr: null, pulso: false };
+  let hayPulso = false;
   let cap = 0;
   let capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
   let capMejores = {};
@@ -517,6 +538,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     const descansoATiempo = !dias.has(ayer) && (cargaDia.get(anteayer) || 0) >= 60;
     const lunesS = lunesDe(s.fecha);
     sesPorSemana.set(lunesS, (sesPorSemana.get(lunesS) || 0) + 1);
+    if (semAtr.lunes !== lunesS) semAtr = { lunes: lunesS, atr: { ...atributos }, pulso: hayPulso };
     const gan = gananciaSesion(s, m, { grados, clase: claveClase, sesSemana: sesPorSemana.get(lunesS), racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0 });
     cargaDia.set(hoy, (cargaDia.get(hoy) || 0) + gan.carga);
     if (s.paladas) { mppSuma += s.distancia / s.paladas; mppN++; }
@@ -524,18 +546,21 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     xpSesion = 0;
     xp += gan.xp;
     const ganancias = {};
+    const atrSesion = {};
     for (const [k, v] of Object.entries(gan.atributos)) {
       const total = v * (k === fav ? 1.15 : 1);
       atributos[k] += total;
+      atrSesion[k] = total;
       if (total >= 0.5) ganancias[k] = Math.round(total);
     }
+    if (s.fcProm > 0) hayPulso = true;
     const monedasSesion = Math.floor(gan.xpBase / 50);
     monedas += monedasSesion;
 
     // Misiones del día y de la semana
     if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(s.fecha))), hechas: new Set(), d: nuevoAgg() });
     const lunes = lunesDe(s.fecha);
-    if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes))), hechas: new Set(), d: nuevoAgg() });
+    if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes)), atributoDeLaSemana(semAtr.atr, { sinPulso: !semAtr.pulso })), hechas: new Set(), d: nuevoAgg() });
     // Semanas seguidas con al menos una sesión
     if (g.ultimoLunes !== lunes) {
       const seguida = g.ultimoLunes && claveDia(inicioLunes(g.ultimoLunes) + 7 * 864e5 + 12 * 36e5) === lunes;
@@ -550,6 +575,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
       agg.maxMetros = Math.max(agg.maxMetros, m.metros); agg.maxMin = Math.max(agg.maxMin, m.min);
       if (m.estable) agg.estables++;
       agg.vencidas.push(...m.clasesVencidas);
+      for (const [k, v] of Object.entries(atrSesion)) agg.atr[k] += v;
       agg.dias.add(hoy);
     }
     revisar(s.fecha, dia);
@@ -624,12 +650,13 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   const hoy = claveDia(ahora);
   const lunes = lunesDe(ahora);
   const diaHoy = dia.clave === hoy ? dia : { misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(ahora))), hechas: new Set(), d: nuevoAgg() };
-  const semanaHoy = semana.clave === lunes ? semana : { misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes))), hechas: new Set(), d: nuevoAgg() };
+  const atrHoy = atributoDeLaSemana(atributos, { sinPulso: !hayPulso });
+  const semanaHoy = semana.clave === lunes ? semana : { misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes)), atrHoy), hechas: new Set(), d: nuevoAgg() };
   // La XP que se muestra es la que se paga hoy (desde el 29 de octubre, la mitad).
   const fHoy = factorXp(ahora);
   const vista = (gr) => gr.misiones.map((mi) => ({
     id: mi.id, clave: mi.clave, nombre: mi.nombre, texto: mi.texto, meta: mi.meta, monedas: mi.monedas, xp: Math.round(mi.xp * fHoy),
-    hecha: gr.hechas.has(mi.id), valor: Math.min(mi.meta, mi.valor(gr.d)), preparar: PREPARAR_MISION[mi.clave] ?? '',
+    hecha: gr.hechas.has(mi.id), valor: Math.min(mi.meta, mi.valor(gr.d)), preparar: prepararMision(mi), atributo: mi.atributo || null,
   }));
   // XP media de tus últimas 5 sesiones (con misiones y bonos): para decir cuántas sesiones faltan.
   const ultimas = [...porSesion.values()].slice(-5);
@@ -665,6 +692,42 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     xpPorSesion,
     ritmo: ritmoReciente(orden, ahora),
     factorXp: fHoy,
+    contexto: contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio: mppN ? mppSuma / mppN : 0, sinPulso: !hayPulso }),
+  };
+}
+
+// Lo que necesita una sesión de hoy para estimar sus atributos: racha si remas hoy, tu % en rango de siempre, etc.
+function contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio, sinPulso }) {
+  let racha = 1;
+  for (let d = ahora - 864e5; dias.has(claveDia(d)); d -= 864e5) racha++;
+  const pcts = orden.filter((s) => s.pctEnRango != null).slice(-8).map((s) => s.pctEnRango);
+  return {
+    racha, mppPromedio, sinPulso, cargaAyer: cargaDia.get(claveDia(ahora - 864e5)) || 0,
+    pctMedio: pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : null,
+  };
+}
+
+// Puntos de atributo de una sesión suelta (con el 15 % del favorito de tu clase), sin decimales recortados.
+// ctx = { racha, mppPromedio, cargaAyer, descansoATiempo } como en estadoJuego.
+export function atributosDeSesion(s, { ftp = 0, clase = null, ctx = {} } = {}) {
+  const m = medidas(s, ftp);
+  const { atributos } = gananciaSesion(s, m, { racha: ctx.racha || 0, mppPromedio: ctx.mppPromedio || 0, cargaAyer: ctx.cargaAyer || 0, descansoATiempo: !!ctx.descansoATiempo });
+  const fav = claseDe(clase)?.favorito;
+  return Object.fromEntries(Object.entries(atributos).map(([k, v]) => [k, v * (k === fav ? 1.15 : 1)]));
+}
+export const factorAtributo = (clave, clase) => (claseDe(clase)?.favorito === clave ? 1.15 : 1);
+
+// Títulos por atributo: «Aprendiz de la fuerza» a los 50 puntos… hasta «Leyenda de la fuerza».
+export const TITULOS_ATRIBUTO = [[50, 'Aprendiz'], [150, 'Iniciado'], [400, 'Experto'], [1000, 'Maestro'], [2500, 'Leyenda']];
+const DE_ATRIBUTO = { fuerza: 'de la fuerza', agilidad: 'de la agilidad', resistencia: 'de la resistencia', recuperacion: 'de la recuperación', tecnica: 'de la técnica', voluntad: 'de la voluntad' };
+export function tituloAtributo(clave, valor) {
+  const v = Math.round(valor || 0);
+  const hechos = TITULOS_ATRIBUTO.filter(([m]) => v >= m);
+  const sig = TITULOS_ATRIBUTO.find(([m]) => v < m);
+  const nombre = (t) => `${t} ${DE_ATRIBUTO[clave]}`;
+  return {
+    actual: hechos.length ? nombre(hechos.at(-1)[1]) : null,
+    siguiente: sig ? { nombre: nombre(sig[1]), meta: sig[0], faltan: sig[0] - v } : null,
   };
 }
 export const progresoHeroe = (sesiones, { ftp = 0, clase = null } = {}) => estadoJuego(sesiones, { ftp, per: { clase } });
@@ -688,7 +751,7 @@ export function estimarXp(sesiones, hipotetica, opts = {}) {
   return {
     total: despues.xp - antes.xp, sesion: ps.xp, extra: ps.xpExtra, detalle: ps.detalle,
     monedas: despues.monedasGanadas - antes.monedasGanadas, subeNivel: despues.nivel > antes.nivel ? despues.nivel : null,
-    ganancias: ps.ganancias,
+    ganancias: ps.ganancias, contexto: antes.contexto, atributos: antes.atributos,
   };
 }
 

@@ -14,8 +14,9 @@ import * as J from './juego.js';
 import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
+import * as C from './consejos.js';
 
-const VERSION = '0.24.0';
+const VERSION = '0.25.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -150,6 +151,7 @@ function interruptor(sel, clave, defecto, alCambiar) {
 interruptor('#in-voz', 'voz', true, (v) => { configurarVoz(v); if (v) hablar('Avisos por voz activados'); });
 interruptor('#in-modo-auto', 'modoAuto', false);
 interruptor('#in-pausa-auto', 'pausaAuto', true);
+interruptor('#in-atr-vivo', 'atrVivo', true);
 interruptor('#in-res-auto', 'resAuto', false);
 // Datos avanzados: nombres técnicos de zona, carga, W/kg, predicciones y tablas por tramo. Apagado, la app habla en sencillo.
 const avanzado = () => ajustes.si('avanzado', false);
@@ -432,7 +434,17 @@ async function pintarPreparar() {
   caja.innerHTML = `<div class="xp-cabecera">${ico('i-trofeo')}<div><b>≈ ${miles(est.total)} XP</b> <span class="monedas">${icoMoneda}${est.monedas}</span>
     <small>si ${condicion}${est.subeNivel ? ` · subirías al nivel ${est.subeNivel}` : ''}</small></div></div>
     <div class="xp-partes">${partes.map(([k, v]) => `<span>${k} <b>+${miles(v)}</b></span>`).join('')}</div>
-    ${Object.keys(est.ganancias || {}).length ? `<div class="xp-atributos"><small>Atributos que subirías:</small><div class="chips-ganancia">${Object.entries(est.ganancias).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></div>` : ''}`;
+    ${bloqueAtributos(ent, hip, est, sesiones)}`;
+}
+
+// Idea «antes de remar»: lo que ganas seguro y lo que puedes sumar si remas de cierta forma.
+function bloqueAtributos(ent, hip, est, sesiones) {
+  const o = opcConsejos(est, sesiones);
+  const plan = ent || { nombre: 'Remo libre', tipo: 'objetivo', objetivo: { metrica: 'distancia', valor: hip.distancia } };
+  const p = previsionDe(plan, { ...o, libre: !ent });
+  if (!p || !Object.keys(p.seguro).length) return '';
+  return `<div class="xp-atributos"><small>${ent ? 'Lo que ganas seguro si lo terminas' : 'Lo que ganarías remando como sueles'}:</small>${chipsAtr(p.seguro, o.debil, 6)}
+    <small class="sumar-titulo">Y puedes sumar más:</small><ul class="lista-cond">${p.extras.map((x) => filaCond(x)).join('')}${p.riesgo ? filaCond(p.riesgo, 'riesgo') : ''}</ul></div>`;
 }
 
 // FTP automático: sin FTP (o con uno estimado), cada sesión de 10 min o más lo calcula o lo sube.
@@ -811,6 +823,7 @@ async function iniciarSesion() {
     retrato: rival ? await retratoPropio() : null,
   };
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
+  await prepararAtrVivo();
   if (rival) sesion.ventaja = crearVentaja(entrenamientoActivo, await rachaConHoy());
   actualizarBotones();
   $('#bloque-actual').hidden = !entrenamientoActivo;
@@ -836,6 +849,8 @@ async function detenerSesion() {
   cerrarModoRemo();
   $('#pausa-aviso').hidden = true;
   $('#rival').hidden = true;
+  $('#atr-vivo').hidden = true;
+  $('#mr-atr').hidden = true;
   carreraEnt.detener();
   carreraRemo.detener();
   cerrarFin();
@@ -1048,6 +1063,7 @@ function avanzarSesion() {
   }
   if (sesion.rivales.length) { vigilarAdelantos(t); tamborSprint(); }
   avisarTalentos();
+  if (t % 5 === 0) actualizarAtrVivo();
   if (sesion.rival && t % 60 === 0) {
     const dif = Math.round(sesion.dist + V.metrosVentaja(sesion.ventaja) - E.distanciaEn(sesion.rival.muestras, t));
     if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
@@ -1057,6 +1073,57 @@ function avanzarSesion() {
     sesion.avance.push([t, { distancia: sesion.dist, kcal: sesion.kcal, paladas: sesion.paladas }[entrenamientoActivo.objetivo.metrica]]);
     avanceObjetivo(t);
   } else avanceBloque(t);
+}
+
+// Atributos en vivo: lo que llevas de los que se ganan remando, el siguiente punto y un aviso al sumar.
+const ATR_VIVO = ['fuerza', 'agilidad', 'resistencia', 'tecnica'];
+async function prepararAtrVivo() {
+  $('#atr-vivo').hidden = true;
+  $('#mr-atr').hidden = true;
+  if (!sesion || ajustes.leer('atrVivo', '1') !== '1') return;
+  const { per, h } = await estadoHeroe();
+  if (!sesion) return;
+  sesion.atr = { opc: { ftp: ftp() || estimarFtp(await db.listar('sesiones')) || 150, clase: per.clase || null, ctx: h.contexto }, vistos: {}, ultimoPop: -99 };
+}
+function actualizarAtrVivo() {
+  const a = sesion?.atr;
+  if (!a || !sesion.muestras.length) return;
+  const pct = sesion.segConMeta ? Math.round((100 * sesion.segEnRango) / sesion.segConMeta) : null;
+  const b = sesion.info && !sesion.info.terminado ? sesion.info.bloque : null;
+  const rw = b && Ent.rangoWatts(b, ftp());
+  const v = C.enVivo(sesion.muestras, { ...a.opc, pct, rango: rw ? { min: Math.round(rw.min), max: Math.round(rw.max) } : null });
+  if (!v) return;
+  const subidas = ATR_VIVO.filter((k) => v.puntos[k] > (a.vistos[k] || 0));
+  if (subidas.length && sesion.t - a.ultimoPop >= 15) {
+    const k = subidas.includes(v.reto.atributo) ? v.reto.atributo : subidas[0];
+    const f = a.opc.ftp;
+    const porque = { fuerza: `Otro tramo por encima de ${Math.round(f * 0.91)} W`, agilidad: `20 s por encima de ${Math.round(f * 1.06)} W`, resistencia: 'Minutos en zonas 2 y 3', tecnica: pct != null ? `En rango el ${pct} % del tiempo` : 'Buena palada' }[k];
+    mostrarPopAtr(`+${v.puntos[k] - (a.vistos[k] || 0)} ${nombreAtributo(k)}`, `${porque}. Llevas +${v.puntos[k]} hoy.`);
+    a.ultimoPop = sesion.t;
+  }
+  for (const k of ATR_VIVO) a.vistos[k] = Math.max(a.vistos[k] || 0, v.puntos[k]);
+  pintarAtrVivo(v);
+}
+function pintarAtrVivo(v) {
+  const r = v.reto;
+  const n = nombreAtributo(r.atributo);
+  const anillo = `<span class="anillo" style="--p:${Math.round(r.progreso * 100)}%" aria-hidden="true"></span>`;
+  const meta = r.faltanSeg ? `+1 ${n} en ${r.faltanSeg} s` : r.corto || `Suma ${n}`;
+  $('#atr-vivo').hidden = false;
+  $('#atr-vivo-chips').innerHTML = ATR_VIVO.map((k) => `<span class="${k === r.atributo ? 'activo' : ''}">${nombreAtributo(k)} <b>+${v.puntos[k]}</b></span>`).join('');
+  $('#atr-reto').innerHTML = `${anillo}<div><b>${escaparHtml(r.titulo)}</b><small>${escaparHtml(r.detalle)}</small></div><span class="cond-pts">${meta}</span>`;
+  const mr = $('#mr-atr');
+  mr.hidden = false;
+  mr.innerHTML = `${anillo}<span><b>${meta}</b> · ${ATR_VIVO.filter((k) => v.puntos[k] > 0).map((k) => `${nombreAtributo(k).slice(0, 3)}. +${v.puntos[k]}`).join(' · ') || 'Hoy: sin puntos aún'}</span>`;
+}
+let popAtrTimer = 0;
+function mostrarPopAtr(titulo, detalle) {
+  const el = $('#atr-pop');
+  el.innerHTML = `${ico('i-sube')}<div><b>${titulo}</b><small>${escaparHtml(detalle)}</small></div>`;
+  el.hidden = false;
+  el.classList.toggle('en-remo', !$('#modo-remo').hidden);
+  clearTimeout(popAtrTimer);
+  popAtrTimer = setTimeout(() => { el.hidden = true; }, 2800);
 }
 
 // Avisos de los talentos de carrera: los frecuentes (paladas extra, cada 250 m…) solo en la pista; los grandes, también con voz.
@@ -1854,6 +1921,15 @@ async function pintarEntrenamientos() {
   $('#pt-programa').hidden = pestana !== 'programa';
   const h = await actualizarBase();
   const lista = propios(await db.listar('entrenamientos'));
+  const sesiones = await db.listar('sesiones');
+  const o = opcConsejos(h, sesiones);
+  // «Quiero subir…»: con un atributo elegido, los entrenamientos se ordenan por lo que lo suben.
+  const subir = ajustes.leer('subirAtr', '');
+  $('#subir-atr').innerHTML = [['', 'Todo'], ...J.ATRIBUTOS.map((a) => [a.clave, a.nombre])]
+    .map(([k, n]) => `<button type="button" class="chip" data-subir="${k}" aria-pressed="${k === subir}">${n}${k && k === o.debil ? ' <span class="punto-bajo" title="Tu atributo más bajo">•</span>' : ''}</button>`).join('');
+  for (const id of ['#secciones-ent', '#base-nivel', '#base-tarjetas', '.mios-cabecera', '#lista-ent']) document.querySelector(id).hidden = !!subir;
+  $('#subir-lista').hidden = !subir;
+  if (subir) { pintarSubir(subir, h, o, lista); await llenarSelectorEntrenamientos(); return; }
   const seccion = ajustes.leer('seccionEnt', 'potencia');
   $('#secciones-ent').innerHTML = SECCIONES_ENT.map((x) => `<button type="button" class="chip" data-sec="${x.clave}" aria-pressed="${x.clave === seccion}">${x.nombre}</button>`).join('');
   // Tarjetas base de la sección
@@ -1865,6 +1941,7 @@ async function pintarEntrenamientos() {
   $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
       ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}">${escaparHtml(x.nombre)}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
+      ${chipsAtr(previsionDe(x, o)?.seguro || {}, o.debil, 3)}
       <div class="base-acciones"><button type="button" class="boton primario" data-usar="${x.id}">Entrenar</button>
       <button type="button" class="boton chico enlace-boton" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
   // Tus entrenamientos: los de la sección, o todos en «Míos»
@@ -1886,6 +1963,39 @@ async function pintarEntrenamientos() {
     : vacio;
   await llenarSelectorEntrenamientos();
 }
+
+// Ranking de entrenamientos para un atributo (base y tuyos), con lo que suben y cómo sumar más.
+function pintarSubir(clave, h, o, lista) {
+  const a = J.ATRIBUTOS.find((x) => x.clave === clave);
+  const ents = [...baseActual, ...lista.filter((x) => !esDePlan(x))];
+  const mejores = C.mejoresPara(clave, ents, o).slice(0, 5);
+  const valor = h.atributos[clave] || 0;
+  const tit = J.tituloAtributo(clave, valor);
+  const intro = `<p class="ayuda">Tu ${a.nombre} va en <b>${miles(valor)}</b>${clave === o.debil ? ': es tu atributo más bajo' : ''}.${tit.siguiente ? ` Con ${miles(tit.siguiente.faltan)} más serás <b>${tit.siguiente.nombre}</b>.` : ''}</p>`;
+  const nota = clave === 'recuperacion'
+    ? `<p class="aviso suave-aviso">Recuperación no sube apretando: rema suave (media por debajo de ${Math.round(o.ftp * 0.75)} W), descansa el día después de uno duro${h.contexto?.sinPulso ? ' o usa banda de pulso para que cuenten tus descansos' : ''}.</p>` : '';
+  const tarjeta = (x, i) => {
+    const { ent, p } = x;
+    const extra = x.si || p.extras.find((e) => e.atributo === clave);
+    return `<article class="base-tarjeta subir-tarjeta ${ent.dificultad || 'prueba'}" data-ver="${ent.id}">
+      ${i === 0 && !x.si ? `<span class="dif mejor">El mejor para ${a.nombre}</span>` : ''}
+      <div class="subir-fila"><button type="button" class="base-nombre" data-ver="${ent.id}" aria-label="Ver detalles de ${escaparHtml(ent.nombre)}">${escaparHtml(ent.nombre)}</button>
+        <span class="subir-pts"><b>+${p.seguro[clave] || x.si.puntos}</b><small>${x.si ? 'si lo logras' : a.nombre}</small></span></div>
+      <p class="base-resumen">${B.resumenEnt(ent)}</p>
+      ${chipsAtr(p.seguro, clave, 4)}
+      ${extra ? `<p class="subir-extra">${ico(extra.icono)}<span>${escaparHtml(extra.titulo)}: <b>${C.textoPuntos(extra)}</b></span></p>` : ''}
+      <div class="base-acciones"><button type="button" class="boton primario" data-usar="${ent.id}">Entrenar</button></div></article>`;
+  };
+  $('#subir-lista').innerHTML = intro + nota + (mejores.length
+    ? `<div class="base-tarjetas">${mejores.map(tarjeta).join('')}</div>`
+    : `<p class="vacio">Ningún entrenamiento sube ${a.nombre} por sí solo. ${J.comoSubir(clave, o.ftp).join(' ')}</p>`);
+}
+$('#subir-atr').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-subir]');
+  if (!b) return;
+  ajustes.escribir('subirAtr', b.dataset.subir);
+  pintarEntrenamientos();
+});
 
 document.querySelector('.planes-pestanas').addEventListener('click', (e) => {
   const b = e.target.closest('[data-pt]');
@@ -2513,6 +2623,26 @@ async function prepararEntrenamiento(baseId, dificultad = null) {
 }
 const nombreAtributo = (k) => J.ATRIBUTOS.find((a) => a.clave === k)?.nombre || k;
 const miles = (n) => Math.round(n).toLocaleString('es-MX');
+// Opciones de los consejos de atributos con tu FTP, tu clase, tu contexto de hoy y tu atributo más bajo.
+function opcConsejos(h, sesiones = []) {
+  return { ftp: ftp() || estimarFtp(sesiones) || 150, clase: leerPersonaje().clase || null, ctx: h.contexto || {}, debil: J.atributoDeLaSemana(h.atributos, { sinPulso: h.contexto?.sinPulso ?? true }) };
+}
+// Previsión de un entrenamiento, guardada mientras no cambien tu FTP, tu clase ni tu contexto.
+const cachePrevision = new Map();
+function previsionDe(ent, o) {
+  const clave = JSON.stringify([ent.id ?? null, ent.nombre, ent.bloques?.length, ent.objetivo, o.ftp, o.clase, o.ctx, o.debil, !!o.libre]);
+  if (!cachePrevision.has(clave)) {
+    if (cachePrevision.size > 80) cachePrevision.clear();
+    cachePrevision.set(clave, C.prevision(ent, o));
+  }
+  return cachePrevision.get(clave);
+}
+// Chips de atributos: el destacado primero y en color.
+const chipsAtr = (gan, destacar = null, max = 4) => `<div class="chips-ganancia">${Object.entries(gan)
+  .sort((a, b) => (b[0] === destacar) - (a[0] === destacar) || b[1] - a[1]).slice(0, max)
+  .map(([k, v]) => `<span${k === destacar ? ' class="top"' : ''}>${nombreAtributo(k)} +${miles(v)}</span>`).join('')}</div>`;
+// Una condición con sus puntos: «Mantén el rango… +6 Técnica».
+const filaCond = (x, clase = '') => `<li class="cond ${clase}">${ico(x.icono || 'i-aviso')}<div><b>${escaparHtml(x.titulo)}</b>${x.detalle ? `<small>${escaparHtml(x.detalle)}</small>` : ''}</div><span class="cond-pts">${C.textoPuntos(x)}</span></li>`;
 // Duraciones largas (totales): «174 h 55 min» en vez de «174:55:00».
 const horasYMin = (seg) => { const h = Math.floor(seg / 3600); const m = Math.round((seg % 3600) / 60); return h ? `${miles(h)} h ${m} min` : `${m} min`; };
 const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
@@ -2630,11 +2760,13 @@ function pintarFicha(h, per, clase, sesiones) {
     return `<details class="atributo"${rec?.atributo.clave === a.clave ? ' open' : ''}>
       <summary><span class="atr-nombre">${a.nombre}${a.clave === clase.favorito ? ' <span class="fav" title="Favorito de tu clase: crece un 15 % más">★ +15 %</span>' : ''}</span>
         <span class="atr-valor"><b>${miles(h.atributos[a.clave])}</b><small class="${sube ? 'sube' : ''}">${sube ? `+${miles(sube)} esta semana` : 'sin cambios esta semana'}</small></span>
-        <span class="atr-barra" aria-hidden="true"><i style="width:${(100 * h.atributos[a.clave]) / maximo}%"></i></span></summary>
+        <span class="atr-barra" aria-hidden="true"><i style="width:${(100 * h.atributos[a.clave]) / maximo}%"></i></span>
+        <span class="atr-titulo">${tituloCorto(a.clave, h.atributos[a.clave])}</span></summary>
       <ul>${J.comoSubir(a.clave, f).map((t) => `<li>${t}</li>`).join('')}</ul>${nota}
       <button type="button" class="boton chico${rec?.atributo.clave === a.clave ? ' primario' : ''}" data-preparar="${r.base || ''}" data-reto="${r.reto}">Entrenar ${a.nombre.toLowerCase()}: ${escaparHtml(r.entrenamiento || 'Remo libre suave')}</button>
     </details>`;
   }).join('');
+  pintarSemanaHeroe(h, sesiones, f);
   $('#heroe-recomienda').innerHTML = rec ? `<p>Tu atributo más bajo es <b>${rec.atributo.nombre}</b>${semana[rec.atributo.clave] ? ` (+${miles(semana[rec.atributo.clave])} esta semana)` : ''}. ${rec.texto}</p>
     <div class="fila-botones"><button type="button" class="boton primario" data-preparar="${rec.base || ''}" data-reto="${rec.reto}">
     Preparar: ${escaparHtml(rec.entrenamiento || 'Remo libre')} en ${J.DIFICULTADES[J.DIFICULTAD_RETO[rec.reto]].nombre}</button></div>`
@@ -2649,6 +2781,39 @@ function pintarFicha(h, per, clase, sesiones) {
     return `<li><div><b>${fechaCorta(x.fecha)} · ${escaparHtml(x.entrenamiento || 'Remo libre')}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
       <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
+}
+
+// «Aprendiz de la fuerza · 12 para Iniciado».
+function tituloCorto(clave, valor) {
+  const t = J.tituloAtributo(clave, valor);
+  const sig = t.siguiente ? `${miles(t.siguiente.faltan)} para <b>${t.siguiente.nombre.split(' ')[0]}</b>` : 'Título máximo';
+  return `${t.actual ? `${t.actual} · ` : ''}${sig}`;
+}
+// Semana de héroe: la meta de atributo de la semana, una semana sugerida para equilibrarte y el título más cercano.
+function pintarSemanaHeroe(h, sesiones, f) {
+  const caja = $('#heroe-semana');
+  const mi = h.semanales.find((m) => m.clave === 'atributo');
+  const sinPulso = h.contexto.sinPulso;
+  const flojos = J.ATRIBUTOS.filter((a) => !(sinPulso && a.clave === 'recuperacion'))
+    .sort((a, b) => (h.atributos[a.clave] || 0) - (h.atributos[b.clave] || 0)).slice(0, 3);
+  if (!mi && !Object.values(h.atributos).some((v) => v > 0)) { caja.innerHTML = '<p class="suave">Rema tu primera sesión y te armo una semana para equilibrar tu héroe.</p>'; return; }
+  const o = opcConsejos(h, sesiones);
+  const bases = baseActual.length ? baseActual : B.entrenamientosBase(h.nivel, ftp());
+  const meta = mi ? `<div class="semana-meta${mi.hecha ? ' hecha' : ''}"><div class="fila-meta"><div><b>${mi.hecha ? '¡Meta cumplida!' : `Meta: sube ${nombreAtributo(mi.atributo)}`}</b><small>${escaparHtml(mi.texto)}</small></div>
+      <span class="anillo grande" style="--p:${Math.round((100 * mi.valor) / mi.meta)}%"><i>${mi.valor}/${mi.meta}</i></span></div>
+      <small class="premio">Premio: <b>+${miles(mi.xp)} XP</b> y ${icoMoneda}${mi.monedas}</small></div>` : '';
+  const filas = flojos.map((a) => {
+    const id = J.PREPARAR_ATRIBUTO[a.clave];
+    const ent = bases.find((x) => x.id === id);
+    const p = ent && previsionDe(ent, o);
+    const pts = p?.seguro[a.clave];
+    return `<li><div><b>${escaparHtml(ent?.nombre || 'Remo libre')}</b><small>Para ${a.nombre} · vas en ${miles(h.atributos[a.clave] || 0)}</small></div>
+      <span class="cond-pts">${pts ? `+${pts} ${a.nombre.slice(0, 3)}.` : ''}</span><button type="button" class="boton chico" data-preparar="${id || ''}" data-reto="${J.RECOMENDACION_ATRIBUTO[a.clave].reto}">Preparar</button></li>`;
+  }).join('');
+  const cercano = J.ATRIBUTOS.map((a) => ({ a, t: J.tituloAtributo(a.clave, h.atributos[a.clave]) })).filter((x) => x.t.siguiente)
+    .sort((x, y) => x.t.siguiente.faltan - y.t.siguiente.faltan)[0];
+  caja.innerHTML = `${meta}<p class="etq-campo">Semana sugerida para equilibrarte</p><ul class="semana-sugerida">${filas}</ul>
+    ${cercano ? `<p class="titulo-cerca">${ico('i-trofeo')}<span>${cercano.a.nombre} ${miles(h.atributos[cercano.a.clave] || 0)} → título <b>«${cercano.t.siguiente.nombre}»</b>. Te faltan ${miles(cercano.t.siguiente.faltan)}.</span></p>` : ''}`;
 }
 
 function pintarTalentos(h, per, clase) {
@@ -2861,6 +3026,39 @@ function pintarXpSesion(s, previas, resumen) {
   return subio || logros.some((l) => l.tipo === 'jefe' || l.tipo === 'hazana');
 }
 
+// Al terminar: lo que lograste, lo que te quedó cerca (con sus puntos) y qué entrenar la próxima vez.
+let atrAbierta = null;
+function pintarAtrSesion(s, previas, resumen) {
+  const caja = $('#hoja-atr');
+  atrAbierta = { s, previas, resumen };
+  const per = leerPersonaje();
+  const ant = previas.filter((x) => x.fecha < s.fecha && x.paladas > 0 && x.distancia > 0);
+  const mpp = ant.length ? ant.reduce((a, x) => a + x.distancia / x.paladas, 0) / ant.length : 0;
+  const f = ftp() || estimarFtp(previas) || 150;
+  const r = C.analisis(s, { ftp: f, clase: per.clase || null, ctx: { mppPromedio: mpp } });
+  let prox = '';
+  if (resumen) {
+    const h = J.estadoJuego([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), per });
+    const rec = J.recomendarPorAtributos(h.atributos, { sinPulso: h.contexto.sinPulso });
+    const bases = baseActual.length ? baseActual : B.entrenamientosBase(h.nivel, ftp());
+    const ent = rec && bases.find((x) => x.id === (rec.base || J.PREPARAR_ATRIBUTO[rec.atributo.clave]));
+    const p = ent && previsionDe(ent, opcConsejos(h, previas));
+    if (p) {
+      prox = `<div class="proxima"><span class="etq">Para la próxima</span><p><b>${escaparHtml(ent.nombre)}</b> sube tu ${rec.atributo.nombre}, tu atributo más bajo.</p>
+        ${chipsAtr(p.seguro, rec.atributo.clave, 3)}<button type="button" class="boton chico" data-prox="${ent.id}" data-reto="${rec.reto}">Dejarlo listo para la próxima</button></div>`;
+    }
+  }
+  caja.hidden = !r.logros.length && !r.cerca.length && !prox;
+  caja.innerHTML = `${r.logros.length ? `<h3>Lo que lograste</h3><ul class="lista-cond">${r.logros.map((x) => filaCond(x, 'hecho')).join('')}</ul>` : ''}
+    ${r.cerca.length ? `<h3>Te quedaste cerca</h3><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul>` : ''}${prox}`;
+}
+$('#hoja-atr').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-prox]');
+  if (!b) return;
+  cerrarHoja();
+  await prepararEntrenamiento(b.dataset.prox, J.DIFICULTAD_RETO[b.dataset.reto] || null);
+});
+
 $('#hoja-xp').addEventListener('click', (e) => {
   if (e.target.closest('[data-ir-talentos]')) { cerrarHoja(); seccionHeroe = 'talentos'; irA('heroe'); return; }
   const b = e.target.closest('[data-clase-rapida]');
@@ -2934,6 +3132,7 @@ function pintarRpe() {
       corregirRpe = false;
       pintarRpe();
       await guardarSesionAbierta();
+      if (atrAbierta?.s === s) pintarAtrSesion(s, atrAbierta.previas, atrAbierta.resumen);
     };
   });
 }
@@ -2995,6 +3194,7 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   const gano = !s.carreraSinTerminar && (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);
   pintarPodio(s);
   const subio = pintarXpSesion(s, previas, resumen);
+  pintarAtrSesion(s, previas, resumen);
   if (resumen && (recs.length || medallas.length || gano || subio)) setTimeout(confeti, 250);
 
   const hojaFtp = $('#hoja-ftp');
@@ -3424,7 +3624,7 @@ $('#btn-hoy-detalle').addEventListener('click', () => {
 });
 
 // ---------- Respaldo ----------
-const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'edad', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje', 'avanzado'];
+const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'edad', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'atrVivo', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje', 'avanzado'];
 
 async function guardarRespaldo() {
   const datos = {

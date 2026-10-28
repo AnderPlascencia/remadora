@@ -1234,3 +1234,102 @@ body:has(#modo-remo:not([hidden])) .toast { bottom: auto; top: calc(12px + env(s
 .ph-barras i { flex: 1; background: var(--primario-osc); border-radius: 2px 2px 0 0; }
 .ph-barras i.actual { background: var(--primario); }
 .progreso-heroe > span[aria-hidden] { color: var(--texto-tenue); font-size: 20px; }
+
+/* ---------- v0.25: atributos por entrenamiento ---------- */
+.chips-ganancia span.top { background: var(--primario); color: var(--sobre-primario); }
+.base-tarjeta .chips-ganancia { margin: 6px 0 0; }
+.subir-atr { margin: 4px 0 8px; }
+.subir-atr .etq-campo { display: block; font-size: 13px; color: var(--texto-tenue); margin-bottom: 4px; }
+.punto-bajo { color: var(--mal-texto); font-size: 18px; line-height: 0; }
+.subir-lista .ayuda { margin: 4px 0 10px; }
+.subir-lista .base-tarjetas { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.subir-fila { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.subir-pts { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; flex: none; }
+.subir-pts b { font-size: 28px; font-weight: 800; color: var(--primario-claro); font-variant-numeric: tabular-nums; }
+.subir-pts small { font-size: 12px; color: var(--texto-tenue); }
+.subir-tarjeta .dif.mejor { color: var(--primario); }
+.subir-extra { display: flex; align-items: center; gap: 6px; margin-top: 6px !important; font-size: 13px !important; color: var(--texto-suave); }
+.subir-extra .ico { width: 16px; height: 16px; color: var(--ok-texto); flex: none; }
+.subir-extra b { color: var(--ok-texto); }
+/* Condiciones con puntos: antes de remar y al terminar */
+.lista-cond { list-style: none; margin: 4px 0 0; padding: 0; }
+.cond { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--borde); }
+.cond:first-child { border-top: 0; }
+.cond > .ico { width: 28px; height: 28px; padding: 5px; border-radius: 8px; background: var(--panel-2); color: var(--primario-claro); }
+.cond b { display: block; font-size: 14px; color: var(--texto); line-height: 1.3; }
+.cond small { display: block; font-size: 12px; color: var(--texto-tenue); line-height: 1.35; }
+.cond-pts { font-weight: 800; font-size: 14px; color: var(--ok-texto); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cond.riesgo .cond-pts { color: var(--mal-texto); }
+.cond.riesgo > .ico { color: var(--mal-texto); }
+.cond.hecho > .ico { color: var(--ok-texto); }
+.cond.cerca .cond-pts { color: var(--primario-claro); }
+.sumar-titulo { display: block; margin-top: 10px; }
+/* Durante la sesión */
+.anillo { --p: 0%; width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: radial-gradient(closest-side, var(--panel) 72%, transparent 73%), conic-gradient(var(--primario) var(--p), var(--panel-2) 0); }
+.anillo.grande { width: 58px; height: 58px; }
+.anillo i { font-style: normal; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.atr-vivo { margin: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+.atr-vivo[hidden] { display: none; }
+.atr-vivo > .etq { font-size: 13px; color: var(--texto-tenue); }
+.atr-ticker { display: flex; flex-wrap: wrap; gap: 6px; }
+.atr-ticker span { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 4px 10px; font-size: 13px; color: var(--texto-suave); }
+.atr-ticker span b { color: var(--primario-claro); font-variant-numeric: tabular-nums; }
+.atr-ticker span.activo { border-color: var(--primario); color: var(--texto); }
+.atr-reto { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px dashed var(--primario); border-radius: 14px; }
+.atr-reto > div { flex: 1; min-width: 0; }
+.atr-reto b { display: block; font-size: 15px; }
+.atr-reto small { display: block; font-size: 12px; color: var(--texto-tenue); }
+.mr-atr { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--texto-suave); max-width: 100%; padding: 0 10px; }
+.mr-atr[hidden] { display: none; }
+.mr-atr .anillo { width: 26px; height: 26px; background: radial-gradient(closest-side, var(--fondo) 66%, transparent 67%), conic-gradient(var(--primario) var(--p), var(--panel-2) 0); }
+.mr-atr span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mr-atr b { color: var(--primario-claro); }
+.modo-remo.vista-grafica .mr-principal { flex-wrap: wrap; }
+.modo-remo.vista-grafica .mr-atr { flex-basis: 100%; padding: 0 0 2px; font-size: 13px; }
+.atr-pop { position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav) + 76px + env(safe-area-inset-bottom)); z-index: 61; display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--exito) 18%, var(--panel)); border: 1px solid var(--exito); box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+  max-width: 480px; margin: 0 auto; animation: pop-atr .3s ease-out; }
+.atr-pop[hidden] { display: none; }
+.atr-pop:not(.en-remo) { bottom: auto; top: calc(72px + env(safe-area-inset-top)); }
+.atr-pop.en-remo { bottom: calc(84px + env(safe-area-inset-bottom)); }
+.atr-pop > .ico { width: 30px; height: 30px; padding: 5px; border-radius: 8px; background: var(--exito); color: #06210F; flex: none; }
+.atr-pop b { display: block; font-size: 17px; }
+.atr-pop small { display: block; font-size: 13px; color: var(--texto-suave); }
+@keyframes pop-atr { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Al terminar */
+.hoja-atr { margin: 12px 0; padding: 12px 14px; border-radius: var(--radio); background: var(--panel); border: 1px solid var(--borde); }
+.hoja-atr[hidden] { display: none; }
+.hoja-atr h3 { font-size: 15px; margin: 6px 0 2px; }
+.hoja-atr h3:first-child { margin-top: 0; }
+.proxima { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borde); }
+.proxima .etq { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--primario); }
+.proxima p { margin: 2px 0 0; font-size: 14px; }
+.proxima .boton { margin-top: 10px; }
+/* Semana de héroe */
+.heroe-semana { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.semana-meta { padding: 12px 14px; border-radius: var(--radio); background: var(--panel); border: 1px solid color-mix(in srgb, var(--primario) 45%, var(--borde)); }
+.semana-meta.hecha { border-color: var(--exito); }
+.fila-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fila-meta b { display: block; }
+.fila-meta small, .semana-meta .premio { display: block; font-size: 13px; color: var(--texto-tenue); }
+.semana-meta .premio { margin-top: 6px; }
+.semana-meta .premio b { color: var(--acento); }
+.semana-sugerida { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.semana-sugerida li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--panel); }
+.semana-sugerida b { display: block; font-size: 14px; }
+.semana-sugerida small { display: block; font-size: 12px; color: var(--texto-tenue); }
+.semana-sugerida .cond-pts { font-size: 13px; }
+.titulo-cerca { display: flex; gap: 8px; align-items: center; margin: 2px 0 0; font-size: 13px; color: var(--texto-suave); }
+.titulo-cerca .ico { color: var(--acento); flex: none; width: 18px; height: 18px; }
+.titulo-cerca b { color: var(--acento); }
+.atr-titulo { grid-column: 1 / -1; font-size: 11px; color: var(--texto-tenue); }
+.atr-titulo b { color: var(--texto-suave); font-size: inherit; font-weight: 700; }
+@media (orientation: landscape) and (max-height: 560px) {
+  /* En horizontal el aviso va arriba al centro y angosto, donde no tapa números. */
+  .atr-pop, .atr-pop.en-remo, .atr-pop:not(.en-remo) { top: max(10px, env(safe-area-inset-top)); bottom: auto; left: 50%; right: auto; transform: translateX(-50%); width: min(380px, 44vw); margin: 0; padding: 6px 12px; }
+  .atr-pop b { font-size: 15px; }
+  .atr-pop small { font-size: 12px; }
+  .atr-pop > .ico { width: 24px; height: 24px; padding: 3px; }
+  @keyframes pop-atr { from { opacity: 0; } to { opacity: 1; } }
+}

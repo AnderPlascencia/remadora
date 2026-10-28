@@ -54,6 +54,11 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Caminos para subir de nivel: cuántas sesiones faltan para el siguiente nivel y rango, misiones a tu medida (según tus últimas 4 semanas) con botón «Hacer ahora», jefes con botón «Enfrentar» y XP, y cuánto te daría cada talento con tus sesiones.
 - Guía de atributos: qué sube cada uno con tus vatios, cuánto subió esta semana, qué atributos subirías con el entrenamiento elegido y un botón para entrenarlo.
 - Plan «Subir de nivel» y planes de 1 a 5 días por semana; al terminar un plan, el siguiente con un poco más de carga; un plan armado sin historial se ajusta cuando ya remaste.
+- Atributos por entrenamiento: en Planes eliges «Quiero subir…» y los entrenamientos se ordenan por lo que suben; cada tarjeta muestra sus puntos.
+- Antes de remar: lo que ganas seguro y lo que puedes sumar («Mantén el rango el 85 % del tiempo: +3 Técnica», «Un sprint de 20 s por encima de 191 W: +1 Agilidad»).
+- Mientras remas: lo que llevas de cada atributo, cuánto falta para el siguiente punto (sin sacarte de tu tramo) y un aviso al sumar; se apaga en Ajustes.
+- Al terminar: lo que lograste, lo que te quedó cerca con sus puntos y qué entrenar la próxima vez.
+- Semana de héroe: meta semanal para tu atributo más bajo (con XP y monedas), semana sugerida para equilibrarte y títulos por atributo («Experto de la técnica»).
 
 ## Archivos
 
@@ -69,6 +74,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `fantasma.js` | Fantasmas simulados por nivel o a tu medida, y proyección de llegada |
 | `carrera.js` | Carrera animada 2D/3D contra los fantasmas |
 | `efectos.js` | Confeti y tarjeta de la sesión para compartir |
+| `consejos.js` | Qué atributos sube cada entrenamiento, extras con puntos, reto en vivo y análisis al terminar |
 | `juego.js` | Héroe: clases, atributos, XP, niveles, talentos, misiones, capítulos y monedas, calculados con tu historial |
 | `objetos.js` | Vestimenta, colecciones y dibujo vectorial del héroe |
 | `app.js` | Interfaz, sesiones, editor e historial |
