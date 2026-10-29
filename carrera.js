@@ -1493,12 +1493,14 @@ function bote3d(ctx, P, b, t) {
   const pa = palada(b.fase, b.spm);
   const { ang } = pa;
   const pivZ = b.dist - 0.4;
-  const remo = 2.9;
-  const dentro = 1.0;
+  // Medidas para que remo y pala quepan en el carril (medio carril = 1,5): escálamo a 0,55, fuera 0,75, pala 0,14.
+  const escalamo = 0.55;
+  const remo = 0.75;
+  const dentro = 0.6;
   const puños = [];
   for (const s of [-1, 1]) {
-    const m = P(b.x + s * (0.8 - Math.cos(ang) * dentro), pivZ - Math.sin(ang) * dentro, 0.45);
-    const z = P(b.x + s * (0.8 + Math.cos(ang) * remo), pivZ + Math.sin(ang) * remo, pa.agua ? 0 : 0.3);
+    const m = P(b.x + s * (escalamo - Math.cos(ang) * dentro), pivZ - Math.sin(ang) * dentro, 0.45);
+    const z = P(b.x + s * (escalamo + Math.cos(ang) * remo), pivZ + Math.sin(ang) * remo, pa.agua ? 0 : 0.3);
     puños.push(m);
     if (!m || !z) continue;
     ctx.strokeStyle = '#E2E8F0';
@@ -1506,14 +1508,14 @@ function bote3d(ctx, P, b, t) {
     ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(z.x, z.y); ctx.stroke();
     // Pala cuadrada en el agua, girada (fina) en la recuperación
     ctx.fillStyle = pa.agua ? b.color : '#E2E8F0';
-    ctx.beginPath(); ctx.ellipse(z.x, z.y, Math.max(1.5, z.s * 0.22), Math.max(0.6, z.s * (0.08 + 0.1 * (1 - pa.pluma))), 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(z.x, z.y, Math.max(1.5, z.s * 0.14), Math.max(0.6, z.s * (0.05 + 0.06 * (1 - pa.pluma))), 0, 0, Math.PI * 2); ctx.fill();
     // Salpicadura al meter la pala y remolino al sacarla
     if (b.spm && !sinMovimiento && (b.fase < 0.14 || (b.fase > 0.36 && b.fase < 0.46))) {
       const k = b.fase < 0.14 ? b.fase / 0.14 : (b.fase - 0.36) / 0.1;
       ctx.fillStyle = `rgba(255,255,255,${0.85 * (1 - k)})`;
       for (let g = 0; g < 6; g++) {
         const ag = -Math.PI * (0.15 + 0.7 * (g / 5));
-        const r = z.s * (0.15 + 0.35 * k);
+        const r = z.s * (0.1 + 0.18 * k);
         ctx.beginPath(); ctx.arc(z.x + Math.cos(ag) * r, z.y + Math.sin(ag) * r * (1 - k * 0.5), Math.max(0.8, z.s * 0.04), 0, Math.PI * 2); ctx.fill();
       }
     }
