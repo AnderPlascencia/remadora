@@ -48,7 +48,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Entrenador por voz: parcial de cada 500 m, ánimo y aviso si el ritmo se cae.
 - Modo remo con gestos: doble toque para pausar, deslizar para cambiar de vista.
 - Héroe: elige una de 5 clases (Vikingo, Pirata, Polinesio, Samurái o Romano) y sube de nivel con tus entrenamientos; 6 atributos crecen según el tipo de entrenamiento.
-- Árbol de talentos, misiones diarias y semanales, historia en 5 capítulos con jefes que son pruebas reales, hazañas, monedas y tienda de ventajas para la carrera.
+- Árbol de talentos, misiones diarias y semanales, historia en 5 capítulos con jefes que son pruebas reales, hazañas, monedas y tienda de ventajas y de paisajes para la carrera (fiordo nórdico gratis, laguna tropical por 400 monedas).
 - Si la app se cierra a media sesión, al volver ofrece guardarla; el botón Atrás de Android cierra lo que esté abierto en vez de salir.
 - Último parcial de 500 m en pantalla (verde o rojo) y ritmo objetivo con línea en la carrera.
 - Caminos para subir de nivel: cuántas sesiones faltan para el siguiente nivel y rango, misiones a tu medida (según tus últimas 4 semanas) con botón «Hacer ahora», jefes con botón «Enfrentar» y XP, y cuánto te daría cada talento con tus sesiones.

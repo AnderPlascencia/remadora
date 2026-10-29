@@ -2,7 +2,7 @@ import { Remadora, BandaCardiaca } from './remadora.js';
 import { VARIANTES } from './variantes.js';
 import { formatoSplit, formatoTiempo, kcalPorSegundo } from './protocolo.js';
 import { dibujar, dibujarPerfil, dibujarBarras, dibujarAvance } from './grafica.js';
-import { crearCarrera, COLORES_RIVAL } from './carrera.js';
+import { crearCarrera, COLORES_RIVAL, PAISAJES, usarPaisaje, tienePaisaje, paisajeElegido, comprarPaisaje } from './carrera.js';
 import * as F from './fantasma.js';
 import * as db from './db.js';
 import * as Ent from './entrenamientos.js';
@@ -16,7 +16,7 @@ import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
 
-const VERSION = '0.27.0';
+const VERSION = '0.28.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -2569,6 +2569,8 @@ function inventario() { return leerPersonaje().inventario || {}; }
 function guardarPersonaje(cambios) {
   ajustes.escribir('personaje', JSON.stringify({ ...leerPersonaje(), ...cambios }));
 }
+// Paisaje de la carrera: el fiordo es gratis; los demás se compran en la tienda.
+usarPaisaje(paisajeElegido(leerPersonaje()));
 const emblema = (c) => `<svg viewBox="0 0 24 24" aria-hidden="true">${c.icono}</svg>`;
 // Ilustración del personaje según su clase y el rango de su nivel (assets/heroes, generados por tools/build-app-assets.py).
 const srcHeroe = (clave, nivel, retrato = false) => `assets/heroes/${clave}_${J.rangoDe(nivel).id}${retrato ? '_retrato' : ''}.webp`;
@@ -2929,6 +2931,15 @@ function pintarTienda(h, per) {
   $('#tienda').innerHTML = items.map((x) => `<div class="objeto ventaja"><span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b><small>${x.texto}</small>
     <span class="monedas">${icoMoneda}${x.precio}</span>
     <button type="button" class="boton chico primario" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button></div>`).join('');
+  const elegido = paisajeElegido(per);
+  $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).map(([id, x]) => {
+    const tiene = tienePaisaje(per, id);
+    const boton = id === elegido ? '<span class="paisaje-uso">En uso</span>'
+      : tiene ? `<button type="button" class="boton chico" data-paisaje="${id}">Usar</button>`
+        : `<button type="button" class="boton chico primario" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
+    return `<div class="objeto paisaje${id === elegido ? ' activo' : ''}"><img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"><b>${x.nombre}</b><small>${x.texto}</small>
+      <span class="monedas">${x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis'}</span>${boton}</div>`;
+  }).join('');
   const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
   $('#inventario').innerHTML = tengo.length ? tengo.map((x) => `<li><div class="mision-fila"><span><b>${x.nombre}</b> · ${x.texto}</span><span class="recompensa"><span class="xp">×${inv[x.id]}</span></span></div></li>`).join('')
     : '<li class="vacio">Aún no tienes ventajas. Cómpralas aquí y elígelas en Entrenar antes de la carrera.</li>';
@@ -2985,6 +2996,26 @@ $('#tienda').addEventListener('click', async (e) => {
   toast(`${x.nombre} a tu bolsa. Elígela en Entrenar antes de la carrera.`);
   pintarHeroe();
   pintarChips();
+});
+
+$('#tienda-paisajes').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-paisaje]');
+  if (!b) return;
+  const id = b.dataset.paisaje;
+  const { per, h } = await estadoHeroe();
+  if (tienePaisaje(per, id)) {
+    guardarPersonaje({ paisaje: id });
+    toast(`Tus carreras ahora son en: ${PAISAJES[id].nombre}.`);
+  } else {
+    const cambios = comprarPaisaje(per, id, h.monedas);
+    if (!cambios) return;
+    guardarPersonaje(cambios);
+    confeti();
+    toast(`¡${PAISAJES[id].nombre} es tuyo! Ya lo verás en tu próxima carrera.`);
+  }
+  usarPaisaje(id);
+  vibrar(60);
+  pintarHeroe();
 });
 
 // XP, monedas y logros que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel o venciste a un jefe.

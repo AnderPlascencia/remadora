@@ -20,6 +20,9 @@ const SPRINT_M = 250;
 export const PAISAJES = {
   fiordo: {
     nombre: 'Fiordo nórdico',
+    texto: 'Montañas nevadas y bosque de pinos al atardecer.',
+    precio: 0,
+    miniatura: 'assets/carrera/fiordo_mini.webp',
     panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 204 },
     costa: 'assets/carrera/costa.webp',
     orilla: {
@@ -50,6 +53,9 @@ export const PAISAJES = {
   },
   laguna: {
     nombre: 'Laguna tropical',
+    texto: 'Agua turquesa, islas volcánicas, palmeras y fares.',
+    precio: 400,
+    miniatura: 'assets/carrera/laguna_mini.webp',
     panorama: { src: 'assets/carrera/laguna.webp', horizonte: 204 },
     costa: 'assets/carrera/laguna_costa.webp',
     orilla: {
@@ -83,8 +89,17 @@ export const PAISAJES = {
 };
 let paisaje = PAISAJES.fiordo;
 export function usarPaisaje(id) { paisaje = PAISAJES[id] || PAISAJES.fiordo; }
-// Vista previa mientras el paisaje nuevo no está en la tienda: index.html?paisaje=laguna
-try { const q = new URLSearchParams(location.search).get('paisaje'); if (q) usarPaisaje(q); } catch { /* sin location (pruebas) */ }
+
+// Paisajes de la tienda: los gratis (precio 0) los tiene todo el mundo; los demás se compran una vez con monedas.
+// per es el personaje guardado: paisajes = ids comprados, paisaje = el elegido.
+export const tienePaisaje = (per, id) => !!PAISAJES[id] && (PAISAJES[id].precio === 0 || (per.paisajes || []).includes(id));
+export const paisajeElegido = (per = {}) => (tienePaisaje(per, per.paisaje) ? per.paisaje : 'fiordo');
+// Cambios que hay que guardar en el personaje al comprar (y estrenar) un paisaje; null si no se puede.
+export function comprarPaisaje(per, id, monedas) {
+  const x = PAISAJES[id];
+  if (!x || tienePaisaje(per, id) || monedas < x.precio) return null;
+  return { paisajes: [...(per.paisajes || []), id], gastado: (per.gastado || 0) + x.precio, paisaje: id };
+}
 const DURA_EVENTO = 2600; // ms que se ve un aviso (adelanto, ventaja)
 
 // Cada clase rema en su propio bote, con su bandera.
