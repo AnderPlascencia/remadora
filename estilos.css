@@ -1333,3 +1333,16 @@ body:has(#modo-remo:not([hidden])) .toast { bottom: auto; top: calc(12px + env(s
   .atr-pop > .ico { width: 24px; height: 24px; padding: 3px; }
   @keyframes pop-atr { from { opacity: 0; } to { opacity: 1; } }
 }
+
+/* Personajes 3D (personajes3d/visor.js): el lienzo tapa la ilustración WebP solo cuando el modelo ya cargó. */
+.heroe-figura .visor3d-lienzo, .remero-3d .visor3d-lienzo { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s; }
+.heroe-figura[data-visor3d="listo"] .visor3d-lienzo, .remero-3d[data-visor3d="listo"] .visor3d-lienzo { opacity: 1; }
+.heroe-figura[data-visor3d="listo"] > img { visibility: hidden; }
+.heroe-figura .visor3d-lienzo { cursor: grab; }
+.heroe-figura .visor3d-lienzo:active { cursor: grabbing; }
+.visor3d-acciones { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin-top: 8px; }
+.visor3d-acciones .chip { min-height: 34px; padding: 4px 12px; font-size: 13px; }
+.visor3d-acciones .chip[aria-pressed="true"] { border-color: var(--acento, #E9A23B); color: var(--texto, #fff); }
+.visor3d-acciones small { flex-basis: 100%; text-align: center; font-size: 12px; }
+.remero-3d { position: relative; height: 150px; margin: 8px 0; border-radius: var(--radio); overflow: hidden; background: radial-gradient(circle at 50% 30%, #1D3442, #071015); }
+@media (prefers-reduced-motion: reduce) { .heroe-figura .visor3d-lienzo, .remero-3d .visor3d-lienzo { transition: none; } }

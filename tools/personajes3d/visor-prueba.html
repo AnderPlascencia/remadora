@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Banco de pruebas del visor 3D (no forma parte de la app). Sirve la raíz del repo y abre
+     /tools/personajes3d/visor-prueba.html?clase=vikingo&anim=idle&camara=cuerpo&niveles=1,5,10,15,20 -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visor 3D: pruebas</title>
+  <script type="importmap">{ "imports": { "three": "../../vendor/three/three.module.min.js", "three/addons/": "../../vendor/three/addons/" } }</script>
+  <style>
+    body { margin: 0; padding: 16px; background: #0B1217; color: #EDF1F2; font: 14px system-ui, sans-serif; }
+    .rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+    .celda { position: relative; height: 300px; border-radius: 14px; overflow: hidden; background: radial-gradient(circle at 50% 35%, #1D3442, #071015); }
+    .celda canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .celda b { position: absolute; left: 10px; top: 8px; z-index: 1; }
+    .celda[data-visor3d="error"]::after { content: 'Error'; position: absolute; inset: 0; display: grid; place-items: center; color: #f88; }
+  </style>
+</head>
+<body>
+  <div id="rejilla" class="rejilla"></div>
+  <pre id="log"></pre>
+  <script type="module">
+    import { VisorPersonaje } from '../../personajes3d/visor.js';
+    import { varianteDe } from '../../personajes3d/config.js';
+    const q = new URLSearchParams(location.search);
+    const clase = q.get('clase') || 'vikingo';
+    const niveles = (q.get('niveles') || '1,5,10,15,20').split(',').map(Number);
+    const log = (t) => { document.querySelector('#log').textContent += `${t}\n`; };
+    if (q.get('alto')) document.head.insertAdjacentHTML('beforeend', `<style>.celda { height: ${q.get('alto')}px; }.rejilla { grid-template-columns: repeat(auto-fill, ${q.get('ancho') || 180}px); }</style>`);
+    const visores = [];
+    await Promise.all(niveles.map(async (nivel) => {
+      const celda = document.createElement('div');
+      celda.className = 'celda';
+      celda.innerHTML = `<b>Nivel ${nivel} · ${varianteDe(clase, nivel)?.nombre}</b>`;
+      document.querySelector('#rejilla').append(celda);
+      const t0 = performance.now();
+      const v = new VisorPersonaje(celda, { clase, nivel, animacion: q.get('anim') || 'idle', camara: q.get('camara') || 'auto', calidad: q.get('calidad') || 'auto', fondo: q.get('fondo') || null, interactivo: true });
+      visores.push(v);
+      try { await v.cargar(); log(`nivel ${nivel}: cargado en ${Math.round(performance.now() - t0)} ms`); } catch (e) { log(`nivel ${nivel}: ERROR ${e.message}`); }
+    }));
+    window.visores = visores;
+    window.listo = true;
+  </script>
+</body>
+</html>
