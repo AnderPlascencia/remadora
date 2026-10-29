@@ -77,6 +77,8 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `consejos.js` | Qué atributos sube cada entrenamiento, extras con puntos, reto en vivo y análisis al terminar |
 | `juego.js` | Héroe: clases, atributos, XP, niveles, talentos, misiones, capítulos y monedas, calculados con tu historial |
 | `objetos.js` | Vestimenta, colecciones y dibujo vectorial del héroe |
+| `personajes3d/` | Héroe en 3D: configuración por clase y nivel, y visor Three.js (ver `docs/personajes3d/`) |
+| `vendor/three/` | Three.js r169 local para el visor 3D |
 | `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
 | `db.js` | Almacenamiento local |
@@ -90,6 +92,9 @@ actualización de firmware (`1530`) ni en el servicio `1400`, que solo escucha p
 
 El diseño de la interfaz sigue la skill [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT), incluida en `.claude/skills/`.
 
+
+El vikingo en 3D usa la malla base, el esqueleto y los ojos de [MakeHuman](https://makehumancommunity.org) (CC0)
+y se muestra con [Three.js](https://threejs.org) (MIT). El GLB se optimiza con [glTF Transform](https://gltf-transform.dev) (MIT).
 
 El formato de los mensajes se tomó como referencia del proyecto
 [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift). El código de esta app es propio.
