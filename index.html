@@ -36,6 +36,10 @@
       <symbol id="i-baja" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
       <symbol id="i-trofeo" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.6 2 2 2 3.8M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
       <symbol id="i-fuego" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4.1 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3.3.3 1.6 1.3 2.8 2.5 2.8Z"/></symbol>
+      <symbol id="i-diana" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+      <symbol id="i-rayo" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+      <symbol id="i-reloj" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
       <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
       <symbol id="i-fantasma" viewBox="0 0 24 24"><path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></symbol>
       <symbol id="i-descarga" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
@@ -174,6 +178,11 @@
         <div class="metrica"><span class="etq">Calorías</span><span id="m-kcal" class="valor">0</span><span class="sub">kcal est.</span></div>
         <div class="metrica"><span class="etq">Pulso</span><span id="m-fc" class="valor">-</span><span id="m-fc-zona" class="sub">lpm</span></div>
       </div>
+      <div id="atr-vivo" class="atr-vivo" hidden>
+        <span class="etq">Lo que llevas hoy</span>
+        <div id="atr-vivo-chips" class="atr-ticker"></div>
+        <div id="atr-reto" class="atr-reto"></div>
+      </div>
 
       <h2>Últimos 5 minutos</h2>
       <div class="leyenda"><span class="lw">Watts</span><span class="ls">Golpes/min</span></div>
@@ -188,6 +197,9 @@
         <button type="button" data-pt="programa" aria-pressed="false">Programa</button>
       </div>
       <div id="pt-entrenamientos">
+        <div class="subir-atr"><span class="etq-campo">Quiero subir…</span>
+          <div id="subir-atr" class="chips secciones-ent" role="group" aria-label="Atributo que quieres subir"></div></div>
+        <div id="subir-lista" class="subir-lista" hidden></div>
         <div id="secciones-ent" class="chips secciones-ent" aria-label="Secciones"></div>
         <p id="base-nivel" class="ayuda"></p>
         <div id="base-tarjetas" class="base-tarjetas"></div>
@@ -331,6 +343,8 @@
           <ul id="ficha-talentos" class="ficha-talentos"></ul>
           <h2>Atributos</h2>
           <div id="heroe-radar" class="radar"></div>
+          <h3 class="sub-atr">Tu semana de héroe</h3>
+          <div id="heroe-semana" class="heroe-semana"></div>
           <h3 class="sub-atr">Qué te conviene entrenar</h3>
           <div id="heroe-recomienda" class="recomienda"></div>
           <h3 class="sub-atr">Cómo subir cada atributo</h3>
@@ -468,6 +482,7 @@
       <summary><h2>Durante el entrenamiento</h2></summary>
       <label class="interruptor"><input type="checkbox" id="in-voz"><span>Avisos por voz</span></label>
       <label class="interruptor"><input type="checkbox" id="in-modo-auto"><span>Abrir modo remo al iniciar sesión</span></label>
+      <label class="interruptor"><input type="checkbox" id="in-atr-vivo"><span>Atributos mientras remas<small class="ayuda bloque">Lo que llevas hoy, el siguiente punto y un aviso al sumar</small></span></label>
       <label class="campo">Pantalla completa muestra
         <select id="sel-vista-remo">
           <option value="numeros">Números grandes</option>
@@ -561,6 +576,7 @@
       <span class="mr-etq">Watts</span>
       <span id="mr-watts" class="mr-watts">0</span>
       <span id="mr-indicador" class="mr-indicador" aria-live="polite"></span>
+      <span id="mr-atr" class="mr-atr" hidden></span>
     </div>
     <div class="mr-grid">
       <div><span class="mr-etq">Split</span><span id="mr-split" class="mr-valor">--:--</span><span id="mr-parcial" class="mr-parcial"></span></div>
@@ -595,6 +611,7 @@
       <p id="hoja-sub" class="ayuda"></p>
       <div id="hoja-podio" class="podio" hidden></div>
       <div id="hoja-xp" class="hoja-xp" hidden></div>
+      <div id="hoja-atr" class="hoja-atr" hidden></div>
       <div id="hoja-ftp" class="aviso exito" hidden></div>
       <div id="hoja-esfuerzo" class="esfuerzo">
         <h2 id="hoja-esfuerzo-titulo">¿Qué tan duro se sintió?</h2>
@@ -711,6 +728,7 @@
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div id="atr-pop" class="atr-pop" role="status" aria-live="polite" hidden></div>
 
   <script type="module" src="app.js"></script>
 </body>
