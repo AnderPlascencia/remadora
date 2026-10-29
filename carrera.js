@@ -11,6 +11,8 @@ export const COLORES_RIVAL = ['#A5B4FC', '#F9A8D4', '#5EEAD4'];
 const COLOR_YO = '#F2A33A';
 const COLOR_RITMO = '#FACC15';
 const SPRINT_M = 250;
+// Fondo de la vista 3D: fila del horizonte en la imagen (ver tools/blender/paisaje/componer.py).
+const PANORAMA = { src: 'assets/carrera/fiordo.webp', horizonte: 204 };
 const DURA_EVENTO = 2600; // ms que se ve un aviso (adelanto, ventaja)
 
 // Cada clase rema en su propio bote, con su bandera.
@@ -980,7 +982,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   const alcance = Math.max(300, al + 80);
   // El horizonte y la escala se calculan con el alto que queda bajo la cabecera.
   const util = alto - arriba;
-  const horizonte = arriba + util * 0.2;
+  const horizonte = arriba + util * 0.34; // deja ver las montañas del panorama bajo la cabecera
   const f = Math.min(util * 1.05, ancho * 1.15);
   const cx = ancho / 2;
   const carril = 3;
@@ -998,34 +1000,38 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     return { x: cx + (fx * x) / d, y: horizonte + (f * (camH - h)) / d, s: f / d, d };
   };
 
-  // Cielo y fondo
+  // Cielo y fondo: panorama del fiordo renderizado en Blender (tools/blender/paisaje); mientras carga, degradados.
   const cielo = ctx.createLinearGradient(0, 0, 0, horizonte);
-  cielo.addColorStop(0, '#0B1E3A');
-  cielo.addColorStop(1, '#36597F');
+  cielo.addColorStop(0, '#8FA6BC');
+  cielo.addColorStop(1, '#C6D1DA');
   ctx.fillStyle = cielo;
   ctx.fillRect(0, 0, ancho, horizonte);
-  // Colinas lejanas, en dos capas
-  ctx.fillStyle = '#244634';
-  ctx.beginPath();
-  ctx.moveTo(0, horizonte);
-  for (let x = 0; x <= ancho; x += 20) ctx.lineTo(x, horizonte - 18 - 10 * Math.sin(x / 140 + yo.dist / 900) - 6 * Math.sin(x / 53));
-  ctx.lineTo(ancho, horizonte);
-  ctx.fill();
-  ctx.fillStyle = '#1C3B2C';
-  ctx.beginPath();
-  ctx.moveTo(0, horizonte);
-  for (let x = 0; x <= ancho; x += 20) ctx.lineTo(x, horizonte - 8 - 7 * Math.sin(x / 90 + yo.dist / 400) - 4 * Math.sin(x / 37));
-  ctx.lineTo(ancho, horizonte);
-  ctx.fill();
-  // Agua
   const agua = ctx.createLinearGradient(0, horizonte, 0, alto);
-  agua.addColorStop(0, '#2C5C80');
-  agua.addColorStop(1, '#0A3352');
+  agua.addColorStop(0, '#1E2E3E');
+  agua.addColorStop(1, '#0A2236');
   ctx.fillStyle = agua;
   ctx.fillRect(0, horizonte, ancho, alto - horizonte);
+  const fiordo = imagen(PANORAMA.src);
+  if (fiordo) {
+    // 360° del panorama = 2π·f píxeles, con el horizonte de la imagen sobre el del lienzo y el frente centrado.
+    const k = (2 * Math.PI * f) / fiordo.naturalWidth;
+    const w = fiordo.naturalWidth * k;
+    const h = fiordo.naturalHeight * k;
+    const y = horizonte - PANORAMA.horizonte * k;
+    let x = cx - w / 2;
+    while (x > 0) x -= w;
+    for (; x < ancho; x += w) ctx.drawImage(fiordo, x, y, w, h);
+  } else {
+    ctx.fillStyle = '#244634';
+    ctx.beginPath();
+    ctx.moveTo(0, horizonte);
+    for (let x = 0; x <= ancho; x += 20) ctx.lineTo(x, horizonte - 18 - 10 * Math.sin(x / 140) - 6 * Math.sin(x / 53));
+    ctx.lineTo(ancho, horizonte);
+    ctx.fill();
+  }
   // Reflejo del cielo cerca del horizonte
   const reflejo = ctx.createLinearGradient(0, horizonte, 0, horizonte + alto * 0.12);
-  reflejo.addColorStop(0, 'rgba(148,184,214,0.35)');
+  reflejo.addColorStop(0, 'rgba(148,184,214,0.12)');
   reflejo.addColorStop(1, 'rgba(148,184,214,0)');
   ctx.fillStyle = reflejo;
   ctx.fillRect(0, horizonte, ancho, alto * 0.12);
