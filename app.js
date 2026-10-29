@@ -15,9 +15,8 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
-import { tiene3D, varianteDe } from './personajes3d/config.js';
 
-const VERSION = '0.26.0';
+const VERSION = '0.25.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -698,7 +697,7 @@ function actualizarBotones() {
   $('#linea-nivel').hidden = !!sesion || !$('#linea-nivel').textContent;
   // Métricas y gráfica solo con la remadora conectada o durante la sesión.
   const vivo = !!sesion || remadora.conectada;
-  if ($('#en-vivo').hidden === vivo) { $('#en-vivo').hidden = !vivo; if (vivo) requestAnimationFrame(dibujarVivo); pintarRemero3d(vivo); }
+  if ($('#en-vivo').hidden === vivo) { $('#en-vivo').hidden = !vivo; if (vivo) requestAnimationFrame(dibujarVivo); }
   $('#resumen-sesion').hidden = !sesion;
   if (sesion) {
     const contra = sesion.rivales.length ? ` · contra ${sesion.rivales.map((r) => corto(r.nombre)).join(', ')}` : '';
@@ -1531,7 +1530,6 @@ function pintar() {
   $('#m-zona').style.color = zona ? COLOR_ZONA[zona.n - 1] : '';
   cambiarTexto($('#m-split'), formatoSplit(actual.split));
   $('#m-spm').textContent = actual.spm;
-  visores3d.remo?.velocidad(actual.spm ? actual.spm / 37.5 : 0);
   $('#m-tiempo').textContent = formatoTiempo(t);
   $('#m-dist').textContent = dist;
   $('#m-paladas').textContent = sesion ? Math.round(sesion.paladas) : 0;
@@ -2580,51 +2578,6 @@ function figuraHeroe(per, nivel, ancho) {
   return `<div class="heroe-figura" style="width:${ancho}px;height:${alto}px"><svg class="aura" viewBox="0 0 200 200" aria-hidden="true">${O.auraHeroe(per)}</svg>
     <img src="${srcHeroe(c.clave, nivel)}" width="${ancho}" height="${alto}" alt="${c.nombre} ${J.rangoDe(nivel).nombre}"></div>`;
 }
-
-// ---------- Héroe en 3D (personajes3d/) ----------
-// La ilustración WebP se pinta siempre primero; si la clase tiene modelo y hay WebGL, el visor 3D la tapa al cargar.
-// Si algo falla (sin WebGL, sin red, GLB roto) se queda la ilustración. Three.js solo se descarga aquí.
-const visores3d = {}; // 'ficha' y 'remo': se reutilizan al repintar la vista en lugar de recargar el modelo
-async function visor3d(id, caja, opciones) {
-  const previo = visores3d[id];
-  if (previo && previo.o.clase === opciones.clase && previo.estado !== 'error') {
-    previo.montar(caja);
-    previo.nivel(opciones.nivel);
-    if (opciones.animacion !== previo.o.animacion) previo.animacion(opciones.animacion);
-    return previo.estado === 'listo' ? previo : null;
-  }
-  previo?.destruir();
-  delete visores3d[id];
-  if (!tiene3D(opciones.clase)) return null;
-  try {
-    const { VisorPersonaje, webglDisponible } = await import('./personajes3d/visor.js');
-    if (!webglDisponible()) return null;
-    const v = (visores3d[id] = new VisorPersonaje(caja, opciones));
-    await v.cargar();
-    return v;
-  } catch (e) {
-    console.warn('Visor 3D:', e.message);
-    if (visores3d[id]?.estado === 'error') delete visores3d[id];
-    return null;
-  }
-}
-function cerrarVisor3d(id) {
-  visores3d[id]?.destruir();
-  delete visores3d[id];
-}
-// Remero 3D del entrenamiento: rema al ritmo de tus golpes por minuto (la animación grabada va a 37,5).
-async function pintarRemero3d(vivo) {
-  const caja = $('#remero-3d');
-  const per = leerPersonaje();
-  const clave = per.clase ? J.claseDe(per.clase)?.clave : null;
-  if (!vivo || !tiene3D(clave)) { caja.hidden = true; cerrarVisor3d('remo'); return; }
-  caja.hidden = false;
-  const { nivel } = J.estadoJuego(await db.listar('sesiones'), { ftp: ftp(), per });
-  const v = await visor3d('remo', caja, { clase: clave, nivel: nivel || 1, animacion: 'rowing', camara: 'remo', calidad: 'movil' });
-  if (!v && !visores3d.remo) caja.hidden = true;
-  v?.velocidad(actual.spm ? actual.spm / 37.5 : 0);
-}
-
 // Gráfico de radar de los 6 atributos (SVG, se adapta al tema con currentColor y variables).
 function radarAtributos(at, fav) {
   const A = J.ATRIBUTOS;
@@ -2646,12 +2599,6 @@ function radarAtributos(at, fav) {
   return `<svg viewBox="-40 -6 380 286" role="img" aria-label="Atributos: ${A.map((a) => `${a.nombre} ${at[a.clave] || 0}`).join(', ')}">
     ${anillos}${ejes}<polygon class="radar-area" points="${poli((a) => (R * (at[a.clave] || 0)) / max)}"/>${valores}${etiquetas}</svg>`;
 }
-$('#ficha-figura').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-anim3d]');
-  if (!b || !visores3d.ficha) return;
-  visores3d.ficha.animacion(b.dataset.anim3d);
-  for (const x of document.querySelectorAll('[data-anim3d]')) x.setAttribute('aria-pressed', x === b);
-});
 $('#vista-heroe').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-preparar]');
   if (!b) return;
@@ -2792,11 +2739,7 @@ $('#heroe-avisos').addEventListener('click', (e) => {
 });
 
 function pintarFicha(h, per, clase, sesiones) {
-  $('#ficha-figura').innerHTML = `${figuraHeroe(per, h.nivel, 220)}<div class="visor3d-acciones" hidden>
-    ${[['idle', 'Reposo'], ['rowing', 'Remar'], ['victory', 'Victoria']].map(([a, t]) => `<button type="button" class="chip" data-anim3d="${a}" aria-pressed="${a === 'idle'}">${t}</button>`).join('')}
-    <small class="suave">${escaparHtml(varianteDe(clase.clave, h.nivel)?.nombre || '')} · arrastra para girarlo</small></div>`;
-  visor3d('ficha', $('#ficha-figura .heroe-figura'), { clase: clase.clave, nivel: h.nivel, animacion: 'idle', camara: 'auto', interactivo: true })
-    .then((v) => { if (v) $('#ficha-figura .visor3d-acciones').hidden = false; });
+  $('#ficha-figura').innerHTML = figuraHeroe(per, h.nivel, 180);
   // Lo que te dan ahora los talentos aprendidos, en una línea cada uno.
   const arbol = per.arbol?.[clase.clave] || {};
   const tal = J.talentosDe(clase.clave).map((t) => ({ t, g: J.grado(arbol, clase.clave, t.slot) })).filter((x) => x.g > 0);

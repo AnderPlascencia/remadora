@@ -1,23 +1,18 @@
 // Guarda la app en caché para que abra sin conexión. Cambia VERSION al publicar cambios.
-const VERSION = 'remadora-0.26.0';
+const VERSION = 'remadora-0.25.0';
 const ARCHIVOS = ['./', 'index.html', 'estilos.css', 'app.js', 'remadora.js', 'protocolo.js', 'variantes.js',
-  'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'efectos.js', 'juego.js', 'talentos.js', 'ventajas.js', 'base.js', 'objetos.js', 'consejos.js', 'personajes3d/config.js', 'manifest.webmanifest', 'rower-logo.svg', 'rower-marca.svg', 'rower-marca-clara.svg', 'rower-192.png', 'rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
+  'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'efectos.js', 'juego.js', 'talentos.js', 'ventajas.js', 'base.js', 'objetos.js', 'consejos.js', 'manifest.webmanifest', 'rower-logo.svg', 'rower-marca.svg', 'rower-marca-clara.svg', 'rower-192.png', 'rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
 
 // Ilustraciones de los héroes (5 clases × 9 rangos, figura y retrato): ~1.7 MB. Se guardan aparte para que,
 // si alguna falla, la app igual quede instalada; así los rangos que aún no has visto también salen sin conexión.
 const CLASES = ['pirata', 'polinesio', 'romano', 'samurai', 'vikingo'];
 const RANGOS = ['novato', 'aprendiz', 'combatiente', 'guerrero', 'veterano', 'elite', 'campeon', 'maestro', 'legendario'];
 const HEROES = CLASES.flatMap((c) => RANGOS.flatMap((r) => [`assets/heroes/${c}_${r}.webp`, `assets/heroes/${c}_${r}_retrato.webp`]));
-// Visor 3D (Three.js local y el modelo ligero del vikingo, ~2.2 MB): igual que las ilustraciones, si falla se usa la ilustración.
-// La versión de alta calidad del GLB se guarda al usarse por primera vez.
-const VISOR_3D = ['personajes3d/visor.js', 'vendor/three/three.module.min.js', 'vendor/three/addons/loaders/GLTFLoader.js',
-  'vendor/three/addons/utils/BufferGeometryUtils.js', 'vendor/three/addons/libs/meshopt_decoder.module.js',
-  'vendor/three/addons/environments/RoomEnvironment.js', 'assets/personajes3d/vikingo/vikingo_movil.glb'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION)
     .then((c) => c.addAll(ARCHIVOS.map((a) => new Request(a, { cache: 'reload' })))
-      .then(() => Promise.all([...HEROES, ...VISOR_3D].map((a) => c.add(a).catch(() => {})))))
+      .then(() => Promise.all(HEROES.map((a) => c.add(a).catch(() => {})))))
     .then(() => self.skipWaiting()));
 });
 
