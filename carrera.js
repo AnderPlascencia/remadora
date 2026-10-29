@@ -1217,33 +1217,66 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   }
 
   // Botes, del más lejano al más cercano
-  const atras = [];
   const lista = botes.map((b, i) => ({ ...b, x: lateral[i] })).sort((a, b) => b.dist - a.dist);
-  const etiquetas = [];
   for (const b of lista) {
-    // Los rivales que van justo detrás de ti se verían enormes y deformados: van a la barra de abajo.
-    if (!b.yo && b.dist - camZ < 9) { atras.push(b); continue; }
+    // Los rivales que van justo detrás de ti se verían enormes y deformados: solo salen en la tabla.
+    if (!b.yo && b.dist - camZ < 9) continue;
     if (b.yo && b.dist - camZ < 4.5) continue;
-    bote3d(ctx, P, b, etiquetas, yo.dist, arriba + 4, t);
+    bote3d(ctx, P, b, t);
     if (b.yo) {
       const q = P(b.x, b.dist, 0.8);
       if (q) c.yoPantalla = { x: q.x, y: q.y };
     }
   }
-  // Indicador de quien viene detrás (fuera de cámara)
-  const hueco = Math.min(160, (ancho - 8) / Math.max(1, atras.length));
-  atras.forEach((b, i) => {
-    ctx.font = 'bold 12px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    const x = ancho / 2 + (i - (atras.length - 1) / 2) * hueco;
-    ctx.fillStyle = 'rgba(2,6,23,0.7)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x - hueco / 2 + 3, alto - 28, hueco - 6, 22, 11) : ctx.rect(x - hueco / 2 + 3, alto - 28, hueco - 6, 22);
-    ctx.fill();
+  tabla3d(ctx, botes, yo, arriba, ancho);
+}
+
+// Diferencias de la vista 3D: todas juntas en la esquina, ordenadas por posición (también los que van detrás
+// y no salen en cámara). Sobre cada bote solo queda una marca de su color.
+function tabla3d(ctx, botes, yo, arriba, ancho) {
+  const filas = [...botes].sort((a, b) => b.dist - a.dist);
+  const alto = 19;
+  const r = 6.5;
+  ctx.font = '700 12px system-ui, sans-serif';
+  const maxNombre = Math.min(96, ancho * 0.24);
+  const nombres = filas.map((b) => cabe(ctx, b.nombre, maxNombre));
+  const wNombre = Math.max(...nombres.map((n) => ctx.measureText(n).width));
+  ctx.font = '800 12px system-ui, sans-serif';
+  const difs = filas.map((b) => {
+    if (b.yo) return '';
+    const d = Math.round(b.dist - yo.dist);
+    return d === 0 ? 'parejos' : `${d > 0 ? '+' : '−'}${Math.abs(d).toLocaleString('es-MX')} m`;
+  });
+  const wDif = Math.max(28, ...difs.map((d) => ctx.measureText(d).width));
+  const w = 8 + r * 2 + 6 + wNombre + 10 + wDif + 8;
+  const x0 = 6;
+  const y0 = arriba + 6;
+  ctx.fillStyle = 'rgba(2,6,23,0.7)';
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(x0, y0, w, filas.length * alto + 6, 10) : ctx.rect(x0, y0, w, filas.length * alto + 6);
+  ctx.fill();
+  filas.forEach((b, i) => {
+    const y = y0 + 3 + i * alto + alto / 2;
+    if (b.yo) {
+      ctx.fillStyle = 'rgba(242,163,58,0.18)';
+      ctx.fillRect(x0 + 2, y - alto / 2 + 1, w - 4, alto - 2);
+    }
+    retrato(ctx, b.retrato, x0 + 8 + r, y, r, b.color);
+    ctx.textAlign = 'left';
+    ctx.font = '700 12px system-ui, sans-serif';
     ctx.fillStyle = b.color;
-    const m = ` −${Math.round(yo.dist - b.dist)} m`;
-    const nombre = cabe(ctx, `▼ ${b.nombre}`, hueco - 14 - ctx.measureText(m).width);
-    ctx.fillText(nombre + m, x, alto - 12);
+    ctx.fillText(nombres[i], x0 + 8 + r * 2 + 6, y + 4);
+    if (b.acelera || b.aviso) {
+      ctx.fillStyle = '#FDE047';
+      ctx.fillText('⚡', x0 + 8 + r * 2 + 6 + ctx.measureText(nombres[i]).width + 2, y + 4);
+    }
+    if (!b.yo) {
+      const d = b.dist - yo.dist;
+      ctx.font = '800 12px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = Math.round(d) > 0 ? '#FCA5A5' : Math.round(d) < 0 ? '#86EFAC' : '#F8FAFC';
+      ctx.fillText(difs[i], x0 + w - 8, y + 4);
+    }
   });
 }
 
@@ -1394,7 +1427,7 @@ function bandera3d(ctx, tope, deco, onda) {
   ctx.globalAlpha = previo;
 }
 
-function bote3d(ctx, P, b, etiquetas, miDist, techo, t) {
+function bote3d(ctx, P, b, t) {
   const largo = 8;
   const proa = P(b.x, b.dist + largo * 0.5);
   const popa = P(b.x, b.dist - largo * 0.5);
@@ -1530,40 +1563,16 @@ function bote3d(ctx, P, b, etiquetas, miDist, techo, t) {
     }
   }
   ctx.globalAlpha = 1;
-  // Etiqueta sobre el bote: retrato, nombre corto y diferencia
+  // Marca del color del rival sobre su bote (las diferencias van en la tabla de la esquina)
   if (!b.yo) {
-    const q = P(b.x, b.dist, 1.8);
+    const q = P(b.x, b.dist, 1.9);
     if (q) {
-      const dif = Math.round(b.dist - miDist);
-      const difTxt = `${dif > 0 ? '+' : dif < 0 ? '−' : ''}${Math.abs(dif)} m`;
-      const extra = b.acelera ? ' ⚡' : b.aviso ? ` ⚡${b.aviso}s` : '';
-      const tam = Math.round(Math.max(11, Math.min(13, q.s * 0.5)));
-      ctx.font = `bold ${tam}px system-ui, sans-serif`;
-      const wNombre = ctx.measureText(b.nombre + extra).width;
-      const wDif = ctx.measureText(difTxt).width;
-      const r = 8;
-      const w = r * 2 + 4 + wNombre + 6 + wDif + 10;
-      let y = q.y;
-      // Si otra etiqueta ya ocupa ese sitio, esta sube un renglón.
-      const choca = (yy) => etiquetas.some((e) => Math.abs(e.x - q.x) < (e.w + w) / 2 && Math.abs(e.y - yy) < 20);
-      while (choca(y) && y - 20 > techo) y -= 20;
-      while (choca(y)) y += 20;
-      etiquetas.push({ x: q.x, y, w });
-      const x0 = Math.max(4, Math.min(ctx.canvas.clientWidth - w - 4, q.x - w / 2));
-      ctx.fillStyle = 'rgba(2,6,23,0.65)';
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(x0, y - 13, w, 19, 9) : ctx.rect(x0, y - 13, w, 19);
-      ctx.fill();
-      retrato(ctx, b.retrato, x0 + 3 + r, y - 3.5, r, b.color);
-      ctx.textAlign = 'left';
+      const m = Math.max(4, Math.min(7, q.s * 0.25));
       ctx.fillStyle = b.color;
-      ctx.fillText(b.nombre, x0 + r * 2 + 7, y + 1);
-      if (extra) {
-        ctx.fillStyle = '#FDE047';
-        ctx.fillText(extra, x0 + r * 2 + 7 + ctx.measureText(b.nombre).width, y + 1);
-      }
-      ctx.fillStyle = dif > 0 ? '#FCA5A5' : dif < 0 ? '#86EFAC' : '#F8FAFC';
-      ctx.fillText(difTxt, x0 + r * 2 + 7 + wNombre + 6, y + 1);
+      ctx.strokeStyle = 'rgba(2,6,23,0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(q.x - m, q.y - m * 1.4); ctx.lineTo(q.x + m, q.y - m * 1.4); ctx.lineTo(q.x, q.y); ctx.closePath();
+      ctx.fill(); ctx.stroke();
     }
   }
 }
