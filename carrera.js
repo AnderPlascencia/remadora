@@ -13,6 +13,20 @@ const COLOR_RITMO = '#FACC15';
 const SPRINT_M = 250;
 // Fondo de la vista 3D: fila del horizonte en la imagen (ver tools/blender/paisaje/componer.py).
 const PANORAMA = { src: 'assets/carrera/fiordo.webp', horizonte: 204 };
+// Piezas de la orilla renderizadas en Blender (tools/blender/paisaje/orilla.py + atlas.py): recorte en el atlas,
+// pie (fracción donde toca el suelo) y alto en metros.
+const ORILLA_SRC = 'assets/carrera/orilla.webp';
+const ORILLA = {
+  pino_alto: { x: 0, y: 0, w: 381, h: 660, pie: [0.5, 0.996], m: 11.79 },
+  pino_medio: { x: 383, y: 0, w: 277, h: 481, pie: [0.5, 0.995], m: 8.59 },
+  abedul: { x: 662, y: 0, w: 114, h: 460, pie: [0.496, 0.994], m: 8.21 },
+  abedul_verde: { x: 778, y: 0, w: 120, h: 368, pie: [0.5, 0.993], m: 6.57 },
+  pino_bajo: { x: 0, y: 662, w: 225, h: 330, pie: [0.5, 0.993], m: 5.89 },
+  casa: { x: 227, y: 662, w: 272, h: 267, pie: [0.502, 0.929], m: 4.78 },
+  roca_grande: { x: 501, y: 662, w: 289, h: 126, pie: [0.5, 0.86], m: 2.25 },
+  juncos: { x: 792, y: 662, w: 81, h: 82, pie: [0.5, 0.958], m: 1.46 },
+  roca: { x: 0, y: 994, w: 180, h: 77, pie: [0.497, 0.778], m: 1.38 }
+};
 const DURA_EVENTO = 2600; // ms que se ve un aviso (adelanto, ventaja)
 
 // Cada clase rema en su propio bote, con su bandera.
@@ -1045,15 +1059,17 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     const b = P(borde, camZ + lejos);
     const a2 = P(borde + s * 0.8, camZ + 1.2);
     if (!a || !b || !a2) continue;
-    ctx.fillStyle = '#C2A878';
+    // Se usan los puntos proyectados de verdad: con la cámara alta el borde cercano cae muy por debajo del lienzo.
+    ctx.fillStyle = '#6E6450';
     ctx.beginPath();
-    ctx.moveTo(a.x, alto); ctx.lineTo(b.x, b.y); ctx.lineTo(a2.x, alto); ctx.fill();
-    ctx.fillStyle = '#1F3A2A';
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(a2.x, a2.y); ctx.fill();
+    const lado = s < 0 ? Math.min(0, a2.x) : Math.max(ancho, a2.x);
+    ctx.fillStyle = '#22362B';
     ctx.beginPath();
-    ctx.moveTo(s < 0 ? 0 : ancho, alto);
-    ctx.lineTo(a2.x, alto);
+    ctx.moveTo(lado, Math.max(alto, a2.y));
+    ctx.lineTo(a2.x, a2.y);
     ctx.lineTo(b.x, b.y);
-    ctx.lineTo(s < 0 ? 0 : ancho, b.y);
+    ctx.lineTo(lado, b.y);
     ctx.fill();
   }
 
@@ -1174,7 +1190,28 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     }
   }
 
-  // Orilla: árboles, rocas y juncos anclados al mundo, del más lejano al más cercano
+  // Orilla: árboles, rocas, casas y juncos anclados al mundo, del más lejano al más cercano.
+  // Con el atlas de Blender cargado se pintan sus piezas; mientras tanto, las formas sencillas de antes.
+  const atlas = imagen(ORILLA_SRC);
+  const pieza = (nombre, x, zz, espejo, alfa = 1) => {
+    const q = ORILLA[nombre];
+    const base = P(x, zz);
+    if (!q || !base) return;
+    const h = q.m * base.s;
+    const w = (h * q.w) / q.h;
+    if (base.x + w < 0 || base.x - w > ancho || h < 2) return;
+    ctx.globalAlpha = alfa;
+    if (espejo) {
+      ctx.save();
+      ctx.translate(base.x, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(atlas, q.x, q.y, q.w, q.h, -q.pie[0] * w, base.y - q.pie[1] * h, w, h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(atlas, q.x, q.y, q.w, q.h, base.x - q.pie[0] * w, base.y - q.pie[1] * h, w, h);
+    }
+    ctx.globalAlpha = 1;
+  };
   const PASO_ARBOL = 7;
   for (let z = Math.floor((camZ + 220) / PASO_ARBOL) * PASO_ARBOL; z > camZ + 1.5; z -= PASO_ARBOL) {
     for (const s of [-1, 1]) {
@@ -1182,6 +1219,17 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
       const r1 = ruido(semilla);
       const x = bordes[s] + s * (1.5 + r1 * 5);
       const zz = z + ruido(semilla + 3) * PASO_ARBOL;
+      if (atlas) {
+        // Lejos se funden con la bruma del fiordo
+        const alfa = Math.max(0, Math.min(1, (camZ + 230 - zz) / 60));
+        const r2 = ruido(semilla + 9);
+        const nombre = r1 < 0.1 ? 'roca' : r1 < 0.16 ? 'roca_grande' : r1 < 0.19 && r2 < 0.5 ? 'casa'
+          : r1 < 0.38 ? (r2 < 0.5 ? 'abedul' : 'abedul_verde') : r2 < 0.35 ? 'pino_alto' : r2 < 0.7 ? 'pino_medio' : 'pino_bajo';
+        pieza(nombre, nombre === 'casa' ? x + s * 4 : x, zz, s > 0 && r2 > 0.5, alfa);
+        // Un segundo árbol más atrás para que el bosque se vea tupido
+        if (r2 > 0.3) pieza(r2 > 0.65 ? 'pino_alto' : 'pino_medio', x + s * (4 + r2 * 4), zz + PASO_ARBOL * 0.5, r1 > 0.5, alfa);
+        continue;
+      }
       const base = P(x, zz);
       if (!base || base.x < -60 || base.x > ancho + 60) continue;
       if (r1 < 0.18) {
@@ -1214,6 +1262,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   for (let z = Math.ceil((camZ + 2) / 2) * 2; z < camZ + 60; z += 2) {
     for (const s of [-1, 1]) {
       if (ruido(z * 1.3 + s) < 0.5) continue;
+      if (atlas) { pieza('juncos', bordes[s] + s * 0.4, z, ruido(z) > 0.5); continue; }
       const a = P(bordes[s] + s * 0.3, z);
       const b = P(bordes[s] + s * 0.3, z, 0.9);
       if (!a || !b) continue;
