@@ -46,8 +46,9 @@ coinciden con los rangos: quedan configurables en `config.js` (`desde`). A parti
 
 ## Decisiones
 
-- **Three.js local** (`vendor/three`, r169) con importmap, sin bundler, como el resto de la app; sin CDN para que
-  funcione sin conexión.
+- **Fuera de la app (29-10-2026)**: se probó un visor Three.js en la ficha y en el entrenamiento y se quitó a
+  petición de Ander: la ficha vuelve a las ilustraciones 2D. El visor está en el historial de git
+  (commit «Visor 3D del héroe en la ficha y en el entrenamiento») por si se retoma.
 - **MakeHuman** como base anatómica: topología limpia para deformar y licencia CC0. Los archivos incluidos en
   `tools/blender/makehuman/` (malla base, objetivos, esqueleto `default`, pesos y ojos) son de MakeHuman
   1.x (makehumancommunity.org), dominio público CC0 1.0.

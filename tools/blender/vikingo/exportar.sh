@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Construye el vikingo en Blender y genera los GLB optimizados que usa la app.
+# Construye el vikingo en Blender y genera los GLB optimizados (experimental: la app no los usa).
 # Requisitos (gratuitos): Blender 4.2+ (o `pip install bpy`) y Node 18+ (usa npx @gltf-transform/cli).
 #   BLENDER="blender --background --python" tools/blender/vikingo/exportar.sh    # con Blender instalado
 #   BLENDER=python tools/blender/vikingo/exportar.sh                              # con el módulo bpy
@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../../.."
 BLENDER=${BLENDER:-python}
 TMP=$(mktemp -d)
-DEST=assets/personajes3d/vikingo
+DEST=${DEST:-tools/blender/vikingo/salida}  # la app ya no usa el GLB: se genera fuera de assets/
 GT="npx --yes @gltf-transform/cli@4.5.1"
 mkdir -p "$DEST"
 

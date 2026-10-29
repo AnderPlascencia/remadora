@@ -3,7 +3,7 @@
 ## Convenciones
 
 - **Unidades**: metros. **Ejes**: glTF (Y arriba). El personaje mira hacia +Z y tiene los pies en y = 0.
-- **Escala**: 1,95 m de alto. `altura` en `personajes3d/config.js` debe coincidir (la cámara encuadra con ella).
+- **Escala**: 1,95 m de alto.
 - **Nombres**: cada pieza es un nodo con nombre estable (`Capa`, `MantoPelaje`, `HachaCabeza`, `RemoMango`…). La app
   muestra u oculta piezas por nombre, así que no se unen mallas al optimizar. Three.js quita los puntos de los
   nombres (`RemoPuno.001` → `RemoPuno001`); el visor compara con el nombre ya saneado.
@@ -31,10 +31,7 @@ Draco no se usa: meshopt pesa parecido, decodifica más rápido y su decodificad
 | `vikingo_movil.glb` | 1,35 MB | 47 084 | 21 WebP, 512 px | ~28 MB |
 
 Ambos: 39 mallas, 78 huesos (69 de deformación + remo + 8 auxiliares del IK), 15 materiales, 4 animaciones.
-La app usa el móvil salvo que el lienzo mida más de 1000 px físicos y el equipo tenga más de 4 GB de memoria.
 
-Three.js local: `three.module.min.js` 672 KB + complementos 192 KB (sin comprimir; con gzip ~180 KB).
-
-Tiempo de carga medido en el banco de pruebas (Chromium sin GPU, SwiftShader, servidor local): 1,2–1,7 s con un
+Tiempo de carga medido en el visor Three.js que se probó (y luego se quitó de la app) (Chromium sin GPU, SwiftShader, servidor local): 1,2–1,7 s con un
 visor; 3 s en la ficha de la app incluyendo Three.js. En un teléfono real con GPU debería ser menor, pero **no se
 midió en un dispositivo físico**.
