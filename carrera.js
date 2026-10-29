@@ -80,7 +80,7 @@ export function crearCarrera(canvas) {
       if (this.yoVista == null || Math.abs(this.yoVista - estado.yo.dist) > 40) this.yoVista = estado.yo.dist;
       arrancar();
     },
-    detener() { this.estado = null; this.yoVista = null; this.vistos = null; },
+    detener() { this.estado = null; this.yoVista = null; this.vistos = null; this.centro = null; this.ventanaLista = false; this.charcos = []; this.alejar = 0; },
   };
   carreras.add(c);
   return c;
@@ -145,19 +145,40 @@ function interpolar(c, ahora) {
   return { botes, dt, t: ahora / 1000, ritmo, referencias, falta, sprint, eventos };
 }
 
-// Ángulo del remo (radianes, + hacia la proa) y posición del asiento (−1 popa, +1 proa) según la fase.
+// Palada completa según la fase (0 = ataque, 0,38 = final). Empuje: piernas, luego espalda, luego brazos;
+// recuperación al revés y el asiento despacio. asiento: −1 popa, +1 proa; tronco: +1 inclinado hacia la popa
+// (ataque), −0,6 hacia atrás (final); brazos: 0 estirados, 1 recogidos; ang: ángulo del remo (radianes, + hacia
+// la proa), que sale de dónde están las manos; agua: la pala está metida; pluma: 1 pala girada en horizontal.
+const EMPUJE = 0.38;
+const suave = (x) => { const k = Math.max(0, Math.min(1, x)); return k * k * (3 - 2 * k); };
 function palada(fase, spm) {
-  if (!spm) return { ang: -0.15, asiento: 0.6 };
-  const empuje = 0.38;
-  if (fase < empuje) {
-    const p = fase / empuje;
-    const s = 0.5 - 0.5 * Math.cos(Math.PI * p);
-    return { ang: 0.85 - 1.45 * s, asiento: -1 + 2 * s };
+  if (!spm) return { ang: -0.15, asiento: 0.6, tronco: 0, brazos: 0.3, agua: false, pluma: 1 };
+  let asiento, tronco, brazos;
+  if (fase < EMPUJE) {
+    const p = fase / EMPUJE;
+    asiento = -1 + 2 * suave(p / 0.6);
+    tronco = 1 - 1.6 * suave((p - 0.25) / 0.55);
+    brazos = suave((p - 0.55) / 0.45);
+  } else {
+    const q = (fase - EMPUJE) / (1 - EMPUJE);
+    brazos = 1 - suave(q / 0.25);
+    tronco = -0.6 + 1.6 * suave((q - 0.1) / 0.35);
+    asiento = 1 - 2 * suave((q - 0.3) / 0.7);
   }
-  const p = (fase - empuje) / (1 - empuje);
-  const s = 0.5 - 0.5 * Math.cos(Math.PI * p);
-  return { ang: -0.6 + 1.45 * s, asiento: 1 - 2 * s };
+  const mano = 0.5 * asiento - 0.3 * tronco + 0.2 * (2 * brazos - 1); // −1 en el ataque, ≈ +0,9 en el final
+  const pluma = fase < EMPUJE ? 0 : suave((fase - EMPUJE) / 0.06) * (1 - suave((fase - 0.92) / 0.08));
+  return { ang: 0.125 - 0.725 * mano, asiento, tronco, brazos, agua: fase > 0.02 && fase < EMPUJE - 0.02, pluma };
 }
+
+// Colores del remero de cada clase: ropa y pelo (o tocado).
+const REMEROS = {
+  vikingo: { ropa: '#7C2D12', pelo: '#C2410C' },
+  pirata: { ropa: '#1F2937', pelo: '#B91C1C' },
+  samurai: { ropa: '#1E3A8A', pelo: '#111827' },
+  polinesio: { ropa: '#0E7490', pelo: '#1C1917' },
+  romano: { ropa: '#991B1B', pelo: '#A16207' },
+};
+const PIEL = '#E2B48C';
 
 function preparar(canvas) {
   const dpr = window.devicePixelRatio || 1;
@@ -491,16 +512,25 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   const y0 = arriba + orilla + Math.max(0, (alto - arriba - abajo - 2 * orilla - pista) / 2);
   const yo = botes[0];
 
-  // Zoom automático: que quepan los botes cercanos; los lejanos se señalan en el borde. En el sprint se acerca.
-  const maxDif = Math.max(0, ...botes.slice(1).map((b) => Math.abs(b.dist - yo.dist)).filter((d) => d < 250));
-  let objetivo = Math.max(50, Math.min(320, maxDif * 2.6 + 36));
-  if (sprint) objetivo = Math.max(40, objetivo * 0.7);
+  // Zoom automático: la ventana se abre para que quepan todos los botes y se centra entre el primero y el último.
+  // Solo si alguno queda a más de 3 km se señala en el borde. En el sprint se acerca si no deja a nadie fuera.
+  const dists = botes.map((b) => b.dist).filter((d) => Math.abs(d - yo.dist) < 3000);
+  const minD = Math.min(...dists);
+  const maxD = Math.max(...dists);
+  const separacion = maxD - minD;
+  let objetivo = Math.max(50, separacion * 1.45 + 30);
+  if (sprint && separacion < 20) objetivo = Math.max(40, objetivo * 0.7);
   c.ventana += (objetivo - c.ventana) * Math.min(1, dt * 2);
+  if (sinMovimiento || !c.ventanaLista) { c.ventana = objetivo; c.ventanaLista = true; }
   const ventana = c.ventana;
-  const xYo = ancho * 0.55;
-  const X = (m) => xYo + ((m - yo.dist) / ventana) * ancho;
-  const M = (x) => yo.dist + ((x - xYo) / ancho) * ventana;
+  // Centro relativo a tu bote, suavizado (así no tiembla con tu avance). El bote se dibuja hacia atrás desde la proa.
+  const centroObj = (minD + maxD) / 2 - ventana * 0.04 - yo.dist;
+  c.centro = c.centro == null || sinMovimiento ? centroObj : c.centro + (centroObj - c.centro) * Math.min(1, dt * 2);
+  const X = (m) => ancho / 2 + ((m - yo.dist - c.centro) / ventana) * ancho;
+  const M = (x) => yo.dist + c.centro + ((x - ancho / 2) / ancho) * ventana;
   const ppm = ancho / ventana;
+  // Con la ventana muy abierta se dibujan menos olas, boyas y árboles.
+  const escala = Math.max(1, ventana / 120);
 
   // Orillas: si sobra alto, la tierra llena el espacio en vez de dejar franjas vacías.
   const tierraArriba = Math.max(orilla, y0 - arriba);
@@ -513,10 +543,11 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   ctx.fillRect(0, y0 + pista, ancho, 3);
   // Árboles en la orilla, anclados al mundo (se desplazan al avanzar)
   ctx.fillStyle = '#2F6B3F';
-  for (let m = Math.floor(M(0) / 9) * 9; m < M(ancho) + 9; m += 9) {
+  const pasoArbol = 9 * Math.ceil(escala);
+  for (let m = Math.floor(M(0) / pasoArbol) * pasoArbol; m < M(ancho) + pasoArbol; m += pasoArbol) {
     const r = Math.min(orilla * 0.42, 6);
     ctx.beginPath(); ctx.arc(X(m), y0 - orilla / 2 - 1, r, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(X(m + 4.5), y0 + pista + orilla / 2 + 1, r, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(X(m + pasoArbol / 2), y0 + pista + orilla / 2 + 1, r, 0, Math.PI * 2); ctx.fill();
   }
 
   // Agua
@@ -529,7 +560,7 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   // Olas ancladas al mundo, con un brillo que va y viene
   ctx.strokeStyle = 'rgba(255,255,255,0.10)';
   ctx.lineWidth = 1.2;
-  const pasoOla = 4;
+  const pasoOla = 4 * Math.ceil(escala);
   for (let fila = 0; fila < n * 3; fila++) {
     const y = y0 + (fila + 0.5) * (pista / (n * 3));
     const desf = (fila % 2) * 2;
@@ -542,9 +573,10 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   }
 
   // Líneas de boyas entre carriles: puntos cada 5 m, rojos cada 25 m, boya grande cada 250 m
+  const pasoBoya = escala > 8 ? 50 : escala > 3 ? 25 : 5;
   for (let k = 1; k < n; k++) {
     const y = y0 + k * carril;
-    for (let m = Math.floor(M(0) / 5) * 5; m < M(ancho) + 5; m += 5) {
+    for (let m = Math.floor(M(0) / pasoBoya) * pasoBoya; m < M(ancho) + pasoBoya; m += pasoBoya) {
       if (m < 0) continue;
       const grande = m % 250 === 0;
       ctx.fillStyle = grande ? '#F2A33A' : m % 25 === 0 ? '#EF4444' : 'rgba(255,255,255,0.75)';
@@ -553,7 +585,7 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   }
 
   // Marcas de distancia
-  const paso = [10, 25, 50, 100, 250].find((q) => ventana / q <= 6) || 500;
+  const paso = [10, 25, 50, 100, 250, 500, 1000].find((q) => ventana / q <= 6) || 2000;
   ctx.font = '12px system-ui, sans-serif';
   ctx.textAlign = 'center';
   for (let m = Math.ceil(M(0) / paso) * paso; m <= M(ancho); m += paso) {
@@ -651,17 +683,44 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     }
   });
 
+  // Remolinos que deja cada pala al salir del agua: se quedan en su sitio del lago y se borran solos.
+  c.charcos = (c.charcos || []).filter((h) => t - h.t < 2.4);
+  for (const h of c.charcos) {
+    const x = X(h.m);
+    if (x < -20 || x > ancho + 20) continue;
+    const k = (t - h.t) / 2.4;
+    ctx.strokeStyle = `rgba(255,255,255,${0.45 * (1 - k)})`;
+    ctx.lineWidth = 1.2;
+    const y = y0 + carril * (h.fila + 0.58) + h.dy * carril;
+    for (const r of [0.5, 1]) {
+      ctx.beginPath(); ctx.ellipse(x, y, (2 + 7 * k) * r, (1.4 + 4 * k) * r, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
   // Botes: los rivales arriba, tú en el carril de abajo
   const orden = [...botes.slice(1), botes[0]];
+  c.fasePrevia = c.fasePrevia || new Map();
   orden.forEach((b, fila) => {
     const y = y0 + carril * (fila + 0.58);
-    const largo = Math.max(44, Math.min(120, ppm * 8));
+    const largo = Math.max(72, Math.min(150, ppm * 10));
     const x = X(b.dist);
     // Fuera de la ventana: la flecha va dentro de la pastilla de la diferencia, sin tapar el nombre.
     const fuera = x > ancho + largo * 0.2 ? 1 : x < -largo * 0.2 ? -1 : 0;
     etiqueta2d(ctx, b, yo, y0 + carril * fila, carril, ancho, c.estado, fuera);
     if (fuera) return;
-    bote2d(ctx, x, y, largo, Math.min(carril * 0.4, 34), b, ppm, t);
+    const remo = Math.min(carril * 0.4, 34);
+    const pa = bote2d(ctx, x, y, largo, remo, b, ppm, t);
+    // Al pasar del final de la palada, un remolino por pala.
+    const antes = c.fasePrevia.get(b.nombre);
+    c.fasePrevia.set(b.nombre, b.fase);
+    if (!sinMovimiento && b.spm && antes != null && antes < EMPUJE && b.fase >= EMPUJE) {
+      const anchoB = Math.max(7, largo * 0.09);
+      for (const lado of [-1, 1]) {
+        const bx = x - largo * 0.5 + Math.sin(pa.ang) * remo;
+        const by = lado * (anchoB * 0.9 + Math.cos(pa.ang) * remo);
+        c.charcos.push({ m: M(bx), fila, dy: by / carril, t });
+      }
+    }
     if (b.yo) c.yoPantalla = { x: x - largo * 0.5, y: y - carril * 0.2 };
   });
 }
@@ -740,7 +799,7 @@ function bandera2d(ctx, x, y, tam, deco, t) {
 
 function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
   const deco = BOTES[b.clase];
-  let ancho = Math.max(5, largo * 0.07);
+  let ancho = Math.max(7, largo * 0.09);
   if (b.clase === 'pirata' || b.clase === 'romano') ancho *= 1.25;
   ctx.globalAlpha = b.yo ? 1 : 0.88;
   // Estela en V que crece con la velocidad; con un acelerón, más espuma.
@@ -822,31 +881,65 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
     }
     bandera2d(ctx, x - largo + 2, y, Math.max(7, ancho * 1.5), deco, t);
   }
-  // Remos y remero
-  const { ang, asiento } = palada(b.fase, b.spm);
-  const px = x - largo * 0.52;
-  ctx.strokeStyle = b.color;
-  ctx.lineWidth = 2;
+  // Remos y remero, vistos desde arriba: mira a la popa (izquierda) y el cuerpo mueve los remos.
+  const pa = palada(b.fase, b.spm);
+  const px = x - largo * 0.5; // chumaceras
+  const col = REMEROS[b.clase] || { ropa: '#475569', pelo: '#334155' };
+  const dentro = ancho * 1.1; // del escálamo al puño
+  const pala = Math.max(3.5, ancho * 0.6);
+  const manos = [];
   for (const lado of [-1, 1]) {
-    const bx = px + Math.sin(ang) * remo;
-    const by = y + lado * Math.cos(ang) * remo;
-    ctx.beginPath(); ctx.moveTo(px, y + lado * ancho * 0.6); ctx.lineTo(bx, by); ctx.stroke();
-    ctx.fillStyle = b.color;
-    ctx.beginPath(); ctx.ellipse(bx, by, 4, 2.2, ang * lado, 0, Math.PI * 2); ctx.fill();
-    // Salpicadura al meter la pala
+    const ex = px;
+    const ey = y + lado * ancho * 0.9;
+    const bx = ex + Math.sin(pa.ang) * remo;
+    const by = ey + lado * Math.cos(pa.ang) * remo;
+    const hx = ex - Math.sin(pa.ang) * dentro;
+    const hy = ey - lado * Math.cos(pa.ang) * dentro;
+    manos.push([hx, hy]);
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(bx, by); ctx.stroke();
+    // Pala: cuadrada (ancha) en el agua, girada (fina) en la recuperación; deja un remolino al salir.
+    ctx.fillStyle = pa.agua ? b.color : 'rgba(226,232,240,0.95)';
+    ctx.beginPath(); ctx.ellipse(bx, by, pala * 0.55, pala * (0.42 - 0.27 * pa.pluma) + 0.4, pa.ang * lado + Math.PI / 2, 0, Math.PI * 2); ctx.fill();
     if (b.spm && b.fase < 0.14 && !sinMovimiento) {
       const k = b.fase / 0.14;
       ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - k)})`;
-      for (let g = 0; g < 4; g++) {
-        const a = g * 1.6 + lado;
-        ctx.beginPath(); ctx.arc(bx + Math.cos(a) * (2 + 6 * k), by + Math.sin(a) * (2 + 6 * k), 1.4, 0, Math.PI * 2); ctx.fill();
+      for (let g = 0; g < 5; g++) {
+        const a = g * 1.3 + lado;
+        ctx.beginPath(); ctx.arc(bx + Math.cos(a) * (2 + 7 * k), by + Math.sin(a) * (2 + 7 * k), 1.3, 0, Math.PI * 2); ctx.fill();
       }
     }
   }
-  ctx.fillStyle = '#F8FAFC';
-  const sx = px - largo * 0.08 + asiento * largo * 0.06;
-  ctx.beginPath(); ctx.arc(sx, y, Math.max(3, ancho * 0.5), 0, Math.PI * 2); ctx.fill();
+  // Cuerpo: piernas al reposapiés, tronco que se inclina, brazos a los puños y cabeza.
+  const u = ancho * 1.25; // el remero es algo más grande que el casco para que se lea
+  const cadera = px + ancho * (0.6 + 0.45 * pa.asiento);
+  const pie = px - ancho * 0.9;
+  const tronco = u * Math.sin(pa.tronco * (pa.tronco > 0 ? 0.55 : 0.4));
+  const hombro = cadera - tronco;
+  const anchoH = u * 0.6;
+  ctx.strokeStyle = col.ropa;
+  ctx.lineWidth = Math.max(1.6, u * 0.32);
+  for (const lado of [-1, 1]) {
+    const rodilla = (cadera + pie) / 2 - Math.max(0, 1 - (cadera - pie) / (ancho * 2)) * ancho * 0.3;
+    ctx.beginPath(); ctx.moveTo(cadera, y + lado * ancho * 0.22); ctx.lineTo(rodilla, y + lado * ancho * 0.36); ctx.lineTo(pie, y + lado * ancho * 0.28); ctx.stroke();
+  }
+  ctx.fillStyle = col.ropa;
+  ctx.beginPath(); ctx.ellipse((cadera + hombro) / 2, y, Math.max(anchoH * 0.7, Math.abs(cadera - hombro) / 2 + anchoH * 0.5), anchoH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = PIEL;
+  ctx.lineWidth = Math.max(1.2, u * 0.2);
+  manos.forEach(([hx, hy], k) => {
+    const sy = y + (k ? 1 : -1) * anchoH;
+    const codo = [(hombro + hx) / 2 + pa.brazos * ancho * 0.25, (sy + hy) / 2 + (k ? 1 : -1) * pa.brazos * ancho * 0.35];
+    ctx.beginPath(); ctx.moveTo(hombro, sy); ctx.lineTo(codo[0], codo[1]); ctx.lineTo(hx, hy); ctx.stroke();
+  });
+  const rc = Math.max(2.4, u * 0.4);
+  ctx.fillStyle = PIEL;
+  ctx.beginPath(); ctx.arc(hombro - rc * 0.3, y, rc, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = col.pelo;
+  ctx.beginPath(); ctx.arc(hombro - rc * 0.1, y, rc, Math.PI * 0.5, Math.PI * 1.5, true); ctx.fill();
   ctx.globalAlpha = 1;
+  return pa;
 }
 
 // Espuma en la proa de un rival que acelera.
@@ -874,8 +967,17 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   // En el sprint la cámara se acerca y baja.
   c.zoom += ((sprint ? 1 : 0) - c.zoom) * Math.min(1, (dt || 0) * 1.5);
   if (sinMovimiento) c.zoom = sprint ? 1 : 0;
-  const camZ = yo.dist - 13 + c.zoom * 3.5;
-  const camH = 4.6 - c.zoom * 1;
+  // Si hay distancia entre botes, la cámara se aleja y sube para que se vean todos (hasta 400 m de separación).
+  const cerca = botes.map((b) => b.dist).filter((d) => Math.abs(d - yo.dist) < 400);
+  const atrasM = Math.max(0, yo.dist - Math.min(...cerca));
+  const separacion = Math.max(...cerca) - Math.min(...cerca);
+  const alejarObj = separacion > 12 ? separacion : 0;
+  c.alejar = (c.alejar || 0) + (alejarObj - (c.alejar || 0)) * Math.min(1, (dt || 0) * 1.2);
+  if (sinMovimiento) c.alejar = alejarObj;
+  const al = c.alejar;
+  const camZ = yo.dist - 13 + c.zoom * 3.5 * (al < 12 ? 1 : 0) - Math.min(atrasM, al) - al * 0.12;
+  const camH = 4.6 - c.zoom * (al < 12 ? 1 : 0) + al * 0.085;
+  const alcance = Math.max(300, al + 80);
   // El horizonte y la escala se calculan con el alto que queda bajo la cabecera.
   const util = alto - arriba;
   const horizonte = arriba + util * 0.2;
@@ -953,7 +1055,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   if (!sinMovimiento) {
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     ctx.lineWidth = 1;
-    for (let z = Math.floor((camZ + 2) / 3) * 3; z < camZ + 120; z += 3) {
+    for (let z = Math.floor((camZ + 2) / 3) * 3; z < camZ + Math.min(alcance, 160); z += 3) {
       for (let x = minX - 4; x <= maxX + 4; x += 2.5) {
         if (Math.sin(t * 1.5 + z * 0.7 + x) < 0.3) continue;
         const q = P(x + (z % 2), z);
@@ -969,7 +1071,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   ctx.font = '12px system-ui, sans-serif';
   ctx.textAlign = 'left';
   let ultimaEtq = Infinity;
-  for (let m = Math.ceil(camZ / paso) * paso; m < camZ + 300; m += paso) {
+  for (let m = Math.ceil(camZ / paso) * paso; m < camZ + alcance; m += paso) {
     if (m < 0) continue;
     const a = P(minX - 2, m);
     const b = P(maxX + 2, m);
@@ -985,7 +1087,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     }
   }
   const meta = c.estado.meta;
-  if (meta != null && meta - camZ < 300 && meta > camZ) {
+  if (meta != null && meta - camZ < alcance && meta > camZ) {
     const a = P(minX - 2, meta);
     const b = P(maxX + 2, meta);
     if (a && b) {
@@ -1053,7 +1155,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   // Cuerdas de boyas entre carriles
   for (let k = 0; k <= botes.length; k++) {
     const x = minX + k * carril;
-    for (let z = Math.ceil((camZ + 1) / 5) * 5; z < camZ + 160; z += 5) {
+    for (let z = Math.ceil((camZ + 1) / 5) * 5; z < camZ + Math.max(160, al + 40); z += 5) {
       if (z < 0) continue;
       const q = P(x, z);
       if (!q) continue;
@@ -1354,19 +1456,24 @@ function bote3d(ctx, P, b, etiquetas, miDist, techo, t) {
   ctx.closePath();
   ctx.fill();
   ctx.shadowBlur = 0;
-  // Remos sobre el agua
-  const { ang, asiento } = palada(b.fase, b.spm);
+  // Remos sobre el agua: salen de los puños (en las manos del remero) y pasan por los escálamos.
+  const pa = palada(b.fase, b.spm);
+  const { ang } = pa;
   const pivZ = b.dist - 0.4;
   const remo = 2.9;
-  ctx.strokeStyle = b.color;
+  const dentro = 1.0;
+  const puños = [];
   for (const s of [-1, 1]) {
-    const a = P(b.x + s * 0.8, pivZ, 0.35);
-    const z = P(b.x + s * (0.8 + Math.cos(ang) * remo), pivZ + Math.sin(ang) * remo, b.spm && b.fase < 0.38 ? 0 : 0.25);
-    if (!a || !z) continue;
-    ctx.lineWidth = Math.max(1, a.s * 0.05);
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke();
-    ctx.fillStyle = b.color;
-    ctx.beginPath(); ctx.ellipse(z.x, z.y, Math.max(1.5, z.s * 0.22), Math.max(1, z.s * 0.08), 0, 0, Math.PI * 2); ctx.fill();
+    const m = P(b.x + s * (0.8 - Math.cos(ang) * dentro), pivZ - Math.sin(ang) * dentro, 0.45);
+    const z = P(b.x + s * (0.8 + Math.cos(ang) * remo), pivZ + Math.sin(ang) * remo, pa.agua ? 0 : 0.3);
+    puños.push(m);
+    if (!m || !z) continue;
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = Math.max(1, m.s * 0.05);
+    ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(z.x, z.y); ctx.stroke();
+    // Pala cuadrada en el agua, girada (fina) en la recuperación
+    ctx.fillStyle = pa.agua ? b.color : '#E2E8F0';
+    ctx.beginPath(); ctx.ellipse(z.x, z.y, Math.max(1.5, z.s * 0.22), Math.max(0.6, z.s * (0.08 + 0.1 * (1 - pa.pluma))), 0, 0, Math.PI * 2); ctx.fill();
     // Salpicadura al meter la pala y remolino al sacarla
     if (b.spm && !sinMovimiento && (b.fase < 0.14 || (b.fase > 0.36 && b.fase < 0.46))) {
       const k = b.fase < 0.14 ? b.fase / 0.14 : (b.fase - 0.36) / 0.1;
@@ -1381,16 +1488,46 @@ function bote3d(ctx, P, b, etiquetas, miDist, techo, t) {
   ctx.globalAlpha = 1;
   adornos3d(ctx, P, b, largo, t);
   ctx.globalAlpha = b.yo ? 1 : 0.9;
-  // Remero: torso inclinado según la palada
-  const asientoZ = pivZ - 0.9 + asiento * 0.35;
+  // Remero: mira a la popa (a la cámara); el asiento se desliza, el tronco se inclina y los brazos van a los puños.
+  const col = REMEROS[b.clase] || { ropa: '#475569', pelo: '#334155' };
+  const asientoZ = pivZ + 0.25 + pa.asiento * 0.3;
+  const incl = pa.tronco * 0.55;
+  const hombroZ = asientoZ - Math.sin(incl) * 0.7;
+  const hombroH = 0.3 + Math.cos(incl) * 0.7;
   const cadera = P(b.x, asientoZ, 0.3);
-  const hombro = P(b.x, asientoZ + 0.35 - asiento * 0.25, 1.0);
-  if (cadera && hombro) {
-    ctx.strokeStyle = '#F8FAFC';
-    ctx.lineWidth = Math.max(2, cadera.s * 0.22);
-    ctx.beginPath(); ctx.moveTo(cadera.x, cadera.y); ctx.lineTo(hombro.x, hombro.y); ctx.stroke();
-    ctx.fillStyle = '#F8FAFC';
-    ctx.beginPath(); ctx.arc(hombro.x, hombro.y - hombro.s * 0.12, Math.max(2, hombro.s * 0.12), 0, Math.PI * 2); ctx.fill();
+  const cuello = P(b.x, hombroZ, hombroH);
+  if (cadera && cuello) {
+    // Piernas hacia el reposapiés (más cerca de la cámara), con la rodilla arriba al recoger
+    const pie = pivZ - 0.55;
+    const doblez = Math.max(0, 1 - (asientoZ - pie) / 1.1);
+    ctx.strokeStyle = col.ropa;
+    ctx.lineWidth = Math.max(1.5, cadera.s * 0.1);
+    for (const s of [-1, 1]) {
+      const r = P(b.x + s * 0.16, (asientoZ + pie) / 2, 0.3 + doblez * 0.45);
+      const f = P(b.x + s * 0.14, pie, 0.2);
+      if (r && f) { ctx.beginPath(); ctx.moveTo(cadera.x + s * cadera.s * 0.12, cadera.y); ctx.lineTo(r.x, r.y); ctx.lineTo(f.x, f.y); ctx.stroke(); }
+    }
+    ctx.lineWidth = Math.max(2.5, cadera.s * 0.3);
+    ctx.beginPath(); ctx.moveTo(cadera.x, cadera.y); ctx.lineTo(cuello.x, cuello.y); ctx.stroke();
+    // Brazos
+    ctx.strokeStyle = PIEL;
+    ctx.lineWidth = Math.max(1.2, cuello.s * 0.07);
+    [-1, 1].forEach((s, k) => {
+      const h = P(b.x + s * 0.24, hombroZ, hombroH - 0.05);
+      const m = puños[k];
+      if (!h || !m) return;
+      const codo = { x: (h.x + m.x) / 2 + s * pa.brazos * cuello.s * 0.18, y: (h.y + m.y) / 2 + pa.brazos * cuello.s * 0.06 };
+      ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(codo.x, codo.y); ctx.lineTo(m.x, m.y); ctx.stroke();
+    });
+    // Cabeza con pelo
+    const cab = P(b.x, hombroZ - Math.sin(incl) * 0.18, hombroH + 0.22);
+    if (cab) {
+      const r = Math.max(2, cab.s * 0.13);
+      ctx.fillStyle = PIEL;
+      ctx.beginPath(); ctx.arc(cab.x, cab.y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col.pelo;
+      ctx.beginPath(); ctx.arc(cab.x, cab.y, r, Math.PI, 0); ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
   // Etiqueta sobre el bote: retrato, nombre corto y diferencia
