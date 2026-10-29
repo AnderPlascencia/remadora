@@ -1,5 +1,6 @@
 # Junta las piezas de la orilla en un atlas WebP y escribe sus medidas en JSON para carrera.js.
-# Uso: python3 tools/blender/paisaje/atlas.py DIR_PIEZAS assets/carrera/orilla.webp assets/carrera/orilla.json
+# Uso: python3 tools/blender/paisaje/atlas.py DIR_PIEZAS assets/carrera/orilla.webp DIR_PIEZAS/orilla.json
+# (los recortes del JSON se copian a mano en la constante ORILLA de carrera.js)
 import json, os, sys
 from PIL import Image
 

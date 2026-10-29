@@ -9,7 +9,7 @@ const CLASES = ['pirata', 'polinesio', 'romano', 'samurai', 'vikingo'];
 const RANGOS = ['novato', 'aprendiz', 'combatiente', 'guerrero', 'veterano', 'elite', 'campeon', 'maestro', 'legendario'];
 const HEROES = CLASES.flatMap((c) => RANGOS.flatMap((r) => [`assets/heroes/${c}_${r}.webp`, `assets/heroes/${c}_${r}_retrato.webp`]));
 // Paisaje de la carrera 3D renderizado en Blender (~70 KB); sin él se dibujan las formas sencillas.
-const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp'];
+const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION)

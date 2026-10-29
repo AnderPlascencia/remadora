@@ -16,6 +16,8 @@ const PANORAMA = { src: 'assets/carrera/fiordo.webp', horizonte: 204 };
 // Piezas de la orilla renderizadas en Blender (tools/blender/paisaje/orilla.py + atlas.py): recorte en el atlas,
 // pie (fracción donde toca el suelo) y alto en metros.
 const ORILLA_SRC = 'assets/carrera/orilla.webp';
+// Orilla vista desde arriba para la vista 2D (tools/blender/paisaje/costa.py): tira que se repite, agua abajo.
+const COSTA_SRC = 'assets/carrera/costa.webp';
 const ORILLA = {
   pino_alto: { x: 0, y: 0, w: 381, h: 660, pie: [0.5, 0.996], m: 11.79 },
   pino_medio: { x: 383, y: 0, w: 277, h: 481, pie: [0.5, 0.995], m: 8.59 },
@@ -96,7 +98,7 @@ export function crearCarrera(canvas) {
       if (this.yoVista == null || Math.abs(this.yoVista - estado.yo.dist) > 40) this.yoVista = estado.yo.dist;
       arrancar();
     },
-    detener() { this.estado = null; this.yoVista = null; this.vistos = null; this.centro = null; this.ventanaLista = false; this.charcos = []; this.alejar = 0; },
+    detener() { this.estado = null; this.yoVista = null; this.vistos = null; this.centro = null; this.ventanaLista = false; this.charcos = []; this.alejar = 0; this.costa = null; },
   };
   carreras.add(c);
   return c;
@@ -521,7 +523,7 @@ function avisos(c, { ctx, ancho, alto }, { eventos }, arriba) {
 // ---------- 2D: vista desde arriba, la cámara sigue tu bote ----------
 function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = [], sprint }, arriba) {
   const n = botes.length;
-  const orilla = Math.min(14, alto * 0.05);
+  const orilla = Math.min(30, alto * 0.07);
   const abajo = 18;
   const carril = Math.min(90, (alto - arriba - abajo - 2 * orilla) / n);
   const pista = carril * n;
@@ -554,16 +556,38 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   ctx.fillStyle = '#1F3A2A';
   ctx.fillRect(0, y0 - tierraArriba, ancho, tierraArriba);
   ctx.fillRect(0, y0 + pista, ancho, alto - (y0 + pista));
-  ctx.fillStyle = '#C2A878';
-  ctx.fillRect(0, y0 - 3, ancho, 3);
-  ctx.fillRect(0, y0 + pista, ancho, 3);
-  // Árboles en la orilla, anclados al mundo (se desplazan al avanzar)
-  ctx.fillStyle = '#2F6B3F';
-  const pasoArbol = 9 * Math.ceil(escala);
-  for (let m = Math.floor(M(0) / pasoArbol) * pasoArbol; m < M(ancho) + pasoArbol; m += pasoArbol) {
-    const r = Math.min(orilla * 0.42, 6);
-    ctx.beginPath(); ctx.arc(X(m), y0 - orilla / 2 - 1, r, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(X(m + pasoArbol / 2), y0 + pista + orilla / 2 + 1, r, 0, Math.PI * 2); ctx.fill();
+  const costa = imagen(COSTA_SRC);
+  if (costa) {
+    // La tira avanza con tu bote: el desplazamiento se acumula en píxeles para que el zoom no la haga saltar.
+    if (!c.costa || sinMovimiento) c.costa = { px: yo.dist * ppm, dist: yo.dist };
+    c.costa.px += (yo.dist - c.costa.dist) * ppm;
+    c.costa.dist = yo.dist;
+    const tira = (y, h, volteada) => {
+      // Escala mínima fija: con poca tierra se ve solo la franja junto al agua, sin encoger el bosque.
+      const k = Math.max(0.45, h / costa.naturalHeight);
+      const w = costa.naturalWidth * k;
+      const sh = Math.min(costa.naturalHeight, h / k);
+      const x0 = -(((c.costa.px % w) + w) % w);
+      ctx.save();
+      ctx.translate(0, y);
+      if (volteada) ctx.scale(1, -1);
+      for (let x = x0; x < ancho; x += w) ctx.drawImage(costa, 0, costa.naturalHeight - sh, costa.naturalWidth, sh, x, -h, w + 0.5, h);
+      ctx.restore();
+    };
+    tira(y0, tierraArriba, false);
+    tira(y0 + pista, tierraAbajo, true);
+  } else {
+    ctx.fillStyle = '#C2A878';
+    ctx.fillRect(0, y0 - 3, ancho, 3);
+    ctx.fillRect(0, y0 + pista, ancho, 3);
+    // Árboles en la orilla, anclados al mundo (se desplazan al avanzar)
+    ctx.fillStyle = '#2F6B3F';
+    const pasoArbol = 9 * Math.ceil(escala);
+    for (let m = Math.floor(M(0) / pasoArbol) * pasoArbol; m < M(ancho) + pasoArbol; m += pasoArbol) {
+      const r = Math.min(orilla * 0.42, 6);
+      ctx.beginPath(); ctx.arc(X(m), y0 - orilla / 2 - 1, r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(X(m + pasoArbol / 2), y0 + pista + orilla / 2 + 1, r, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   // Agua
@@ -1093,6 +1117,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   ctx.font = '12px system-ui, sans-serif';
   ctx.textAlign = 'left';
   let ultimaEtq = Infinity;
+  const marcas = [];
   for (let m = Math.ceil(camZ / paso) * paso; m < camZ + alcance; m += paso) {
     if (m < 0) continue;
     const a = P(minX - 2, m);
@@ -1101,10 +1126,9 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.lineWidth = Math.max(1, a.s * 0.02);
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    // Etiquetas solo mientras no se amontonan cerca del horizonte.
+    // Etiquetas solo mientras no se amontonan cerca del horizonte; se pintan al final, encima de todo.
     if (ultimaEtq - b.y >= 16 && b.x + 50 < ancho) {
-      ctx.fillStyle = 'rgba(226,232,240,0.85)';
-      ctx.fillText(`${m} m`, b.x + 6, b.y + 4);
+      marcas.push({ txt: `${m} m`, x: b.x + 6, y: b.y + 4 });
       ultimaEtq = b.y;
     }
   }
@@ -1282,6 +1306,22 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
       const q = P(b.x, b.dist, 0.8);
       if (q) c.yoPantalla = { x: q.x, y: q.y };
     }
+  }
+  // Distancias encima de árboles y botes, con fondo para leerse sobre cualquier cosa
+  ctx.font = '700 12px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  // De cerca a lejos; cerca del horizonte se juntan, así que se salta la que pisaría a la anterior.
+  let ultimaY = Infinity;
+  for (const k of marcas.sort((a, b) => b.y - a.y)) {
+    if (ultimaY - k.y < 20) continue;
+    ultimaY = k.y;
+    const w = ctx.measureText(k.txt).width + 10;
+    ctx.fillStyle = 'rgba(2,6,23,0.6)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(k.x - 5, k.y - 12, w, 16, 8) : ctx.rect(k.x - 5, k.y - 12, w, 16);
+    ctx.fill();
+    ctx.fillStyle = '#F1F5F9';
+    ctx.fillText(k.txt, k.x, k.y);
   }
   tabla3d(ctx, botes, yo, arriba, ancho);
 }
