@@ -91,5 +91,8 @@ actualización de firmware (`1530`) ni en el servicio `1400`, que solo escucha p
 El diseño de la interfaz sigue la skill [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT), incluida en `.claude/skills/`.
 
 
+El pipeline experimental del vikingo en 3D (`tools/blender/`, no se usa en la app) parte de la malla base, el
+esqueleto y los ojos de [MakeHuman](https://makehumancommunity.org) (CC0) y optimiza con [glTF Transform](https://gltf-transform.dev) (MIT).
+
 El formato de los mensajes se tomó como referencia del proyecto
 [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift). El código de esta app es propio.
