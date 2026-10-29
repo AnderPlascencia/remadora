@@ -11,24 +11,95 @@ export const COLORES_RIVAL = ['#A5B4FC', '#F9A8D4', '#5EEAD4'];
 const COLOR_YO = '#F2A33A';
 const COLOR_RITMO = '#FACC15';
 const SPRINT_M = 250;
-// Fondo de la vista 3D: fila del horizonte en la imagen (ver tools/blender/paisaje/componer.py).
-const PANORAMA = { src: 'assets/carrera/fiordo.webp', horizonte: 204 };
-// Piezas de la orilla renderizadas en Blender (tools/blender/paisaje/orilla.py + atlas.py): recorte en el atlas,
-// pie (fracción donde toca el suelo) y alto en metros.
-const ORILLA_SRC = 'assets/carrera/orilla.webp';
-// Orilla vista desde arriba para la vista 2D (tools/blender/paisaje/costa.py): tira que se repite, agua abajo.
-const COSTA_SRC = 'assets/carrera/costa.webp';
-const ORILLA = {
-  pino_alto: { x: 0, y: 0, w: 381, h: 660, pie: [0.5, 0.996], m: 11.79 },
-  pino_medio: { x: 383, y: 0, w: 277, h: 481, pie: [0.5, 0.995], m: 8.59 },
-  abedul: { x: 662, y: 0, w: 114, h: 460, pie: [0.496, 0.994], m: 8.21 },
-  abedul_verde: { x: 778, y: 0, w: 120, h: 368, pie: [0.5, 0.993], m: 6.57 },
-  pino_bajo: { x: 0, y: 662, w: 225, h: 330, pie: [0.5, 0.993], m: 5.89 },
-  casa: { x: 227, y: 662, w: 272, h: 267, pie: [0.502, 0.929], m: 4.78 },
-  roca_grande: { x: 501, y: 662, w: 289, h: 126, pie: [0.5, 0.86], m: 2.25 },
-  juncos: { x: 792, y: 662, w: 81, h: 82, pie: [0.5, 0.958], m: 1.46 },
-  roca: { x: 0, y: 994, w: 180, h: 77, pie: [0.497, 0.778], m: 1.38 }
+// Paisajes de la carrera, renderizados en Blender (tools/blender/paisaje y tools/blender/paisaje/laguna):
+// - panorama: fondo de la vista 3D y fila de su horizonte (ver tools/blender/paisaje/componer.py).
+// - orilla: atlas de piezas de la orilla 3D (orilla.py + atlas.py): recorte, pie (fracción donde toca el suelo)
+//   y alto en metros. elegir() decide qué pieza va en cada hueco; borde es la pieza pequeña junto al agua.
+// - costa: orilla vista desde arriba para la vista 2D (costa.py), tira que se repite con el agua abajo.
+// - colores: lo que se pinta mientras cargan las imágenes y las partes que no son imagen (agua, tierra).
+export const PAISAJES = {
+  fiordo: {
+    nombre: 'Fiordo nórdico',
+    texto: 'Montañas nevadas y bosque de pinos al atardecer.',
+    precio: 0,
+    miniatura: 'assets/carrera/fiordo_mini.webp',
+    panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 204 },
+    costa: 'assets/carrera/costa.webp',
+    orilla: {
+      src: 'assets/carrera/orilla.webp',
+      piezas: {
+        pino_alto: { x: 0, y: 0, w: 381, h: 660, pie: [0.5, 0.996], m: 11.79 },
+        pino_medio: { x: 383, y: 0, w: 277, h: 481, pie: [0.5, 0.995], m: 8.59 },
+        abedul: { x: 662, y: 0, w: 114, h: 460, pie: [0.496, 0.994], m: 8.21 },
+        abedul_verde: { x: 778, y: 0, w: 120, h: 368, pie: [0.5, 0.993], m: 6.57 },
+        pino_bajo: { x: 0, y: 662, w: 225, h: 330, pie: [0.5, 0.993], m: 5.89 },
+        casa: { x: 227, y: 662, w: 272, h: 267, pie: [0.502, 0.929], m: 4.78 },
+        roca_grande: { x: 501, y: 662, w: 289, h: 126, pie: [0.5, 0.86], m: 2.25 },
+        juncos: { x: 792, y: 662, w: 81, h: 82, pie: [0.5, 0.958], m: 1.46 },
+        roca: { x: 0, y: 994, w: 180, h: 77, pie: [0.497, 0.778], m: 1.38 }
+      },
+      elegir: (r1, r2) => (r1 < 0.1 ? 'roca' : r1 < 0.16 ? 'roca_grande' : r1 < 0.19 && r2 < 0.5 ? 'casa'
+        : r1 < 0.38 ? (r2 < 0.5 ? 'abedul' : 'abedul_verde') : r2 < 0.35 ? 'pino_alto' : r2 < 0.7 ? 'pino_medio' : 'pino_bajo'),
+      fondo: (r2) => (r2 > 0.65 ? 'pino_alto' : 'pino_medio'),
+      apartar: { casa: 4 },
+      borde: 'juncos',
+      // Las piezas son simétricas: en la orilla derecha se espejan a medias para variar
+      espejo: (s, r) => s > 0 && r > 0.5
+    },
+    colores: {
+      tierra2d: '#1F3A2A', agua2d: ['#0E4A70', '#0A3352'], cielo3d: ['#8FA6BC', '#C6D1DA'], agua3d: ['#1E2E3E', '#0A2236'],
+      reflejo: '148,184,214', arena3d: '#6E6450', tierra3d: '#22362B', bruma: 230
+    }
+  },
+  laguna: {
+    nombre: 'Laguna tropical',
+    texto: 'Agua turquesa, islas volcánicas, palmeras y fares.',
+    precio: 400,
+    miniatura: 'assets/carrera/laguna_mini.webp',
+    panorama: { src: 'assets/carrera/laguna.webp', horizonte: 204 },
+    costa: 'assets/carrera/laguna_costa.webp',
+    orilla: {
+      src: 'assets/carrera/laguna_orilla.webp',
+      piezas: {
+        palmera_alta: { x: 0, y: 0, w: 551, h: 830, pie: [0.501, 0.995], m: 12.96 },
+        palmera_curva: { x: 0, y: 832, w: 618, h: 657, pie: [0.5, 0.995], m: 10.26 },
+        palmera_baja: { x: 620, y: 832, w: 266, h: 443, pie: [0.5, 0.992], m: 6.92 },
+        fare: { x: 0, y: 1491, w: 350, h: 330, pie: [0.501, 0.945], m: 5.16 },
+        arbusto: { x: 352, y: 1491, w: 192, h: 130, pie: [0.5, 0.904], m: 2.03 },
+        roca_grande: { x: 546, y: 1491, w: 340, h: 122, pie: [0.5, 0.835], m: 1.9 },
+        arbusto_rosa: { x: 0, y: 1823, w: 144, h: 92, pie: [0.5, 0.895], m: 1.44 },
+        roca: { x: 146, y: 1823, w: 184, h: 79, pie: [0.5, 0.75], m: 1.23 },
+        canoa: { x: 332, y: 1823, w: 411, h: 59, pie: [0.5, 0.84], m: 0.92 },
+        matas: { x: 745, y: 1823, w: 88, h: 54, pie: [0.5, 0.919], m: 0.84 }
+      },
+      elegir: (r1, r2) => (r1 < 0.07 ? 'roca' : r1 < 0.11 ? 'roca_grande' : r1 < 0.15 && r2 < 0.5 ? 'fare'
+        : r1 < 0.19 && r2 < 0.5 ? 'canoa' : r1 < 0.36 ? (r2 < 0.5 ? 'arbusto' : 'arbusto_rosa')
+          : r2 < 0.4 ? 'palmera_alta' : r2 < 0.75 ? 'palmera_curva' : 'palmera_baja'),
+      fondo: (r2) => (r2 > 0.65 ? 'palmera_alta' : r2 > 0.45 ? 'palmera_curva' : 'arbusto'),
+      apartar: { fare: 4, canoa: -1 },
+      borde: 'matas',
+      // Las palmeras se inclinan hacia +x: en la orilla derecha se espejan siempre para que miren al agua
+      espejo: (s) => s > 0
+    },
+    colores: {
+      tierra2d: '#C9A46C', agua2d: ['#1BA7B0', '#0E7C93'], cielo3d: ['#7FB2E0', '#CFE3F1'], agua3d: ['#4FA9BC', '#0E6F86'],
+      reflejo: '190,230,240', arena3d: '#D9C08E', tierra3d: '#3F6A2C', bruma: 230
+    }
+  }
 };
+let paisaje = PAISAJES.fiordo;
+export function usarPaisaje(id) { paisaje = PAISAJES[id] || PAISAJES.fiordo; }
+
+// Paisajes de la tienda: los gratis (precio 0) los tiene todo el mundo; los demás se compran una vez con monedas.
+// per es el personaje guardado: paisajes = ids comprados, paisaje = el elegido.
+export const tienePaisaje = (per, id) => !!PAISAJES[id] && (PAISAJES[id].precio === 0 || (per.paisajes || []).includes(id));
+export const paisajeElegido = (per = {}) => (tienePaisaje(per, per.paisaje) ? per.paisaje : 'fiordo');
+// Cambios que hay que guardar en el personaje al comprar (y estrenar) un paisaje; null si no se puede.
+export function comprarPaisaje(per, id, monedas) {
+  const x = PAISAJES[id];
+  if (!x || tienePaisaje(per, id) || monedas < x.precio) return null;
+  return { paisajes: [...(per.paisajes || []), id], gastado: (per.gastado || 0) + x.precio, paisaje: id };
+}
 const DURA_EVENTO = 2600; // ms que se ve un aviso (adelanto, ventaja)
 
 // Cada clase rema en su propio bote, con su bandera.
@@ -553,10 +624,10 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   // Orillas: si sobra alto, la tierra llena el espacio en vez de dejar franjas vacías.
   const tierraArriba = Math.max(orilla, y0 - arriba);
   const tierraAbajo = Math.max(orilla, alto - abajo - (y0 + pista));
-  ctx.fillStyle = '#1F3A2A';
+  ctx.fillStyle = paisaje.colores.tierra2d;
   ctx.fillRect(0, y0 - tierraArriba, ancho, tierraArriba);
   ctx.fillRect(0, y0 + pista, ancho, alto - (y0 + pista));
-  const costa = imagen(COSTA_SRC);
+  const costa = imagen(paisaje.costa);
   if (costa) {
     // La tira avanza con tu bote: el desplazamiento se acumula en píxeles para que el zoom no la haga saltar.
     if (!c.costa || sinMovimiento) c.costa = { px: yo.dist * ppm, dist: yo.dist };
@@ -592,8 +663,8 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
 
   // Agua
   const grad = ctx.createLinearGradient(0, y0, 0, y0 + pista);
-  grad.addColorStop(0, '#0E4A70');
-  grad.addColorStop(1, '#0A3352');
+  grad.addColorStop(0, paisaje.colores.agua2d[0]);
+  grad.addColorStop(1, paisaje.colores.agua2d[1]);
   ctx.fillStyle = grad;
   ctx.fillRect(0, y0, ancho, pista);
 
@@ -1040,22 +1111,22 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
 
   // Cielo y fondo: panorama del fiordo renderizado en Blender (tools/blender/paisaje); mientras carga, degradados.
   const cielo = ctx.createLinearGradient(0, 0, 0, horizonte);
-  cielo.addColorStop(0, '#8FA6BC');
-  cielo.addColorStop(1, '#C6D1DA');
+  cielo.addColorStop(0, paisaje.colores.cielo3d[0]);
+  cielo.addColorStop(1, paisaje.colores.cielo3d[1]);
   ctx.fillStyle = cielo;
   ctx.fillRect(0, 0, ancho, horizonte);
   const agua = ctx.createLinearGradient(0, horizonte, 0, alto);
-  agua.addColorStop(0, '#1E2E3E');
-  agua.addColorStop(1, '#0A2236');
+  agua.addColorStop(0, paisaje.colores.agua3d[0]);
+  agua.addColorStop(1, paisaje.colores.agua3d[1]);
   ctx.fillStyle = agua;
   ctx.fillRect(0, horizonte, ancho, alto - horizonte);
-  const fiordo = imagen(PANORAMA.src);
+  const fiordo = imagen(paisaje.panorama.src);
   if (fiordo) {
     // 360° del panorama = 2π·f píxeles, con el horizonte de la imagen sobre el del lienzo y el frente centrado.
     const k = (2 * Math.PI * f) / fiordo.naturalWidth;
     const w = fiordo.naturalWidth * k;
     const h = fiordo.naturalHeight * k;
-    const y = horizonte - PANORAMA.horizonte * k;
+    const y = horizonte - paisaje.panorama.horizonte * k;
     let x = cx - w / 2;
     while (x > 0) x -= w;
     for (; x < ancho; x += w) ctx.drawImage(fiordo, x, y, w, h);
@@ -1069,8 +1140,8 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   }
   // Reflejo del cielo cerca del horizonte
   const reflejo = ctx.createLinearGradient(0, horizonte, 0, horizonte + alto * 0.12);
-  reflejo.addColorStop(0, 'rgba(148,184,214,0.12)');
-  reflejo.addColorStop(1, 'rgba(148,184,214,0)');
+  reflejo.addColorStop(0, `rgba(${paisaje.colores.reflejo},0.12)`);
+  reflejo.addColorStop(1, `rgba(${paisaje.colores.reflejo},0)`);
   ctx.fillStyle = reflejo;
   ctx.fillRect(0, horizonte, ancho, alto * 0.12);
 
@@ -1084,11 +1155,11 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     const a2 = P(borde + s * 0.8, camZ + 1.2);
     if (!a || !b || !a2) continue;
     // Se usan los puntos proyectados de verdad: con la cámara alta el borde cercano cae muy por debajo del lienzo.
-    ctx.fillStyle = '#6E6450';
+    ctx.fillStyle = paisaje.colores.arena3d;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(a2.x, a2.y); ctx.fill();
     const lado = s < 0 ? Math.min(0, a2.x) : Math.max(ancho, a2.x);
-    ctx.fillStyle = '#22362B';
+    ctx.fillStyle = paisaje.colores.tierra3d;
     ctx.beginPath();
     ctx.moveTo(lado, Math.max(alto, a2.y));
     ctx.lineTo(a2.x, a2.y);
@@ -1216,9 +1287,10 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
 
   // Orilla: árboles, rocas, casas y juncos anclados al mundo, del más lejano al más cercano.
   // Con el atlas de Blender cargado se pintan sus piezas; mientras tanto, las formas sencillas de antes.
-  const atlas = imagen(ORILLA_SRC);
+  const orilla = paisaje.orilla;
+  const atlas = imagen(orilla.src);
   const pieza = (nombre, x, zz, espejo, alfa = 1) => {
-    const q = ORILLA[nombre];
+    const q = orilla.piezas[nombre];
     const base = P(x, zz);
     if (!q || !base) return;
     const h = q.m * base.s;
@@ -1244,14 +1316,13 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
       const x = bordes[s] + s * (1.5 + r1 * 5);
       const zz = z + ruido(semilla + 3) * PASO_ARBOL;
       if (atlas) {
-        // Lejos se funden con la bruma del fiordo
-        const alfa = Math.max(0, Math.min(1, (camZ + 230 - zz) / 60));
+        // Lejos se funden con la bruma del paisaje
+        const alfa = Math.max(0, Math.min(1, (camZ + paisaje.colores.bruma - zz) / 60));
         const r2 = ruido(semilla + 9);
-        const nombre = r1 < 0.1 ? 'roca' : r1 < 0.16 ? 'roca_grande' : r1 < 0.19 && r2 < 0.5 ? 'casa'
-          : r1 < 0.38 ? (r2 < 0.5 ? 'abedul' : 'abedul_verde') : r2 < 0.35 ? 'pino_alto' : r2 < 0.7 ? 'pino_medio' : 'pino_bajo';
-        pieza(nombre, nombre === 'casa' ? x + s * 4 : x, zz, s > 0 && r2 > 0.5, alfa);
-        // Un segundo árbol más atrás para que el bosque se vea tupido
-        if (r2 > 0.3) pieza(r2 > 0.65 ? 'pino_alto' : 'pino_medio', x + s * (4 + r2 * 4), zz + PASO_ARBOL * 0.5, r1 > 0.5, alfa);
+        const nombre = orilla.elegir(r1, r2);
+        pieza(nombre, x + s * (orilla.apartar[nombre] || 0), zz, orilla.espejo(s, r2), alfa);
+        // Un segundo árbol más atrás para que la orilla se vea tupida
+        if (r2 > 0.3) pieza(orilla.fondo(r2), x + s * (4 + r2 * 4), zz + PASO_ARBOL * 0.5, orilla.espejo(s, r1), alfa);
         continue;
       }
       const base = P(x, zz);
@@ -1286,7 +1357,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   for (let z = Math.ceil((camZ + 2) / 2) * 2; z < camZ + 60; z += 2) {
     for (const s of [-1, 1]) {
       if (ruido(z * 1.3 + s) < 0.5) continue;
-      if (atlas) { pieza('juncos', bordes[s] + s * 0.4, z, ruido(z) > 0.5); continue; }
+      if (atlas) { pieza(orilla.borde, bordes[s] + s * 0.4, z, ruido(z) > 0.5); continue; }
       const a = P(bordes[s] + s * 0.3, z);
       const b = P(bordes[s] + s * 0.3, z, 0.9);
       if (!a || !b) continue;
