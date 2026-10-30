@@ -12,8 +12,8 @@ const HEROES = CLASES.flatMap((c) => RANGOS.flatMap((r) => [`assets/heroes/${c}_
 // sin ellos se dibujan las formas sencillas.
 const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp', 'assets/carrera/fiordo_mini.webp',
   'assets/carrera/laguna.webp', 'assets/carrera/laguna_orilla.webp', 'assets/carrera/laguna_costa.webp', 'assets/carrera/laguna_mini.webp',
-  // vista realista del vikingo remando (tools/blender/remo_agua, ~700 KB el apaisado y ~450 KB el vertical)
-  'assets/carrera/remo_vikingo.mp4', 'assets/carrera/remo_vikingo_v.mp4'];
+  // vista realista del vikingo remando (tools/blender/remo_agua, ~700 KB el apaisado, ~450 KB el vertical y 300 KB los rivales)
+  'assets/carrera/remo_vikingo.mp4', 'assets/carrera/remo_vikingo_v.mp4', 'assets/carrera/rival_vikingo.webp'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION)

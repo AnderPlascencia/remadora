@@ -1,7 +1,7 @@
 # Vista realista de la carrera: el vikingo remando en el fiordo
 
 Clip renderizado en Blender (Cycles) del vikingo remando en una barca de madera por el fiordo, con remos, agua,
-reflejos, espuma y salpicaduras. La carrera lo muestra como tercera vista (2D → 3D → realista) cuando tu héroe es
+reflejos, espuma y salpicaduras, y los rivales remando en sus carriles detrás de ti. La carrera lo muestra como tercera vista (2D → 3D → realista) cuando tu héroe es
 el vikingo. Con otra clase, el ciclo es 2D → 3D y, si tenías elegida la realista, se ve la 3D.
 
 ![Fases de la palada](img/remo_realista.webp)
@@ -12,6 +12,8 @@ el vikingo. Con otra clase, el ciclo es 2D → 3D y, si tenías elegida la reali
 python tools/blender/vikingo/vikingo.py --salida /tmp/vk                     # .blend y texturas del vikingo
 python tools/blender/remo_agua/remo_agua.py --blend /tmp/vk/vikingo.blend --salida /tmp/remo --res 960x540 --muestras 32
 python tools/blender/remo_agua/remo_agua.py --blend /tmp/vk/vikingo.blend --salida /tmp/remo_v --camara vertical --res 540x720 --muestras 32
+python tools/blender/remo_agua/remo_agua.py --blend /tmp/vk/vikingo.blend --salida /tmp/rival --sprite --frames 1-48 --res 960x540 --muestras 24
+python3 tools/blender/remo_agua/atlas_rival.py /tmp/rival assets/carrera/rival_vikingo.webp 0.55   # imprime RIVAL_REAL
 tools/blender/remo_agua/codificar.sh /tmp/remo 960      # → assets/carrera/remo_vikingo.mp4
 tools/blender/remo_agua/codificar.sh /tmp/remo_v 540    # → assets/carrera/remo_vikingo_v.mp4
 ```
@@ -40,16 +42,25 @@ Para que no atraviesen la barca se ocultan la capa, la falda, las rodilleras y e
 ## En la app
 
 - `carrera.js` (`pintarReal`) descarga el clip como blob (pasa por la caché del service worker y funciona sin
-  conexión y en Safari), lo dibuja en el lienzo cubriéndolo entero con el remero bajo la cabecera y pone encima la
-  cabecera, el minimapa y la tabla de diferencias con los rivales.
+  conexión y en Safari) y lo dibuja cubriendo el lienzo.
+- **Rivales** (`rivalesReal`): el bote rival es el mismo render sin agua sobre fondo transparente (`--sprite`), una
+  palada de 48 fotogramas empaquetada en `rival_vikingo.webp` (~300 KB). Cada rival va en su carril (el primero a 6 m de ti y los demás 4,5 m más lejos cada uno)
+  y se proyecta con la cámara del clip (`camara.json` → `CLIPS_REAL`): delante de ti queda a la
+  derecha y detrás a la izquierda. La distancia se comprime (`distReal`, tanh) para que quepan todos; la etiqueta
+  sobre la cabeza dice la diferencia real. Rema con su propia fase y lleva un reflejo tenue en el agua. Si se sale
+  del cuadro, una flecha en el borde. Sustituye a la tabla de diferencias de las otras vistas.
+- El encuadre centra bajo la cabecera el recuadro que ocupan tu bote y los rivales.
 - La velocidad del clip es tus golpes por minuto / 37,5 (entre 0,4× y 2,5×). En pausa, sin paladas o con
   «reducir movimiento», el clip se queda quieto, y se pausa cuando no se ve.
-- Con el lienzo apaisado se usa `remo_vikingo.mp4` (960×540, ~730 KB) y con el lienzo vertical
-  `remo_vikingo_v.mp4` (540×720). Mientras carga se ve la vista 3D.
+- Con el lienzo apaisado se usa `remo_vikingo.mp4` (960×540, ~500 KB) y con el lienzo vertical
+  `remo_vikingo_v.mp4` (540×720, ~310 KB). Mientras carga se ve la vista 3D.
 
 ## Límites
 
 - Solo existe para el vikingo y el fiordo: con la laguna tropical se ve el fiordo igualmente.
-- Los rivales no salen en el clip, solo en la tabla, la cabecera y el minimapa.
+- Todos los rivales usan el mismo bote con el vikingo (no hay modelos 3D de las otras clases); se distinguen por la
+  etiqueta de su color.
+- Los rivales se pintan encima del clip: si uno queda justo detrás de tu popa, sus remos pueden pisar tu bote.
+- Las distancias entre botes no están a escala más allá de unos metros (la etiqueta sí dice la real).
 - La palada del clip va a su ritmo, no sincronizada con tu palada real (la remadora da golpes/min, no la fase).
 - La animación no es captura de movimiento y el personaje es el vikingo estilizado del pipeline.

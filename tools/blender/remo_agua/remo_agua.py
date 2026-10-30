@@ -18,8 +18,9 @@ ap.add_argument('--salida', default='salida')
 ap.add_argument('--frames', default='1-96')
 ap.add_argument('--res', default='960x540')
 ap.add_argument('--muestras', type=int, default=64)
-ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'popa', 'cerca'))
+ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'cine', 'popa', 'cerca'))
 ap.add_argument('--paisaje', default='fiordo')
+ap.add_argument('--sprite', action='store_true', help='solo barca y remero sobre fondo transparente (rivales de la carrera)')
 A = ap.parse_args([a for a in _argv if not a.endswith('.py')])
 SAL = os.path.abspath(A.salida)
 os.makedirs(os.path.join(SAL, 'frames'), exist_ok=True)
@@ -642,8 +643,10 @@ sol.rotation_euler = (Vector((0, 0, 0)) - Vector((3.0, -4.0, 2.6))).to_track_qua
 cam_d = bpy.data.cameras.new('Camara')
 cam = bpy.data.objects.new('Camara', cam_d); col.objects.link(cam); esc.camera = cam
 VISTAS = {
-    'lado': ((6.0, -3.3, 2.0), (0.0, -0.05, 0.80), 46),
-    'vertical': ((5.4, -3.9, 2.5), (0.35, -0.25, 0.45), 46),
+    # vistas de la carrera: altas, para que los carriles de los rivales (más lejos, en -X) queden por encima de ti
+    'lado': ((7.5, -4.0, 3.6), (-6.0, 1.0, 1.0), 36),
+    'vertical': ((7.0, -4.6, 3.9), (-6.0, 0.8, 0.5), 34),
+    'cine': ((6.0, -3.3, 2.0), (0.0, -0.05, 0.80), 46),
     'popa': ((3.2, -6.2, 1.35), (0.0, -0.3, 0.60), 40),
     'cerca': ((3.4, -2.6, 1.05), (0.0, -0.35, 0.70), 40),
 }
@@ -656,7 +659,13 @@ w, h = (int(x) for x in A.res.split('x'))
 esc.render.resolution_x, esc.render.resolution_y = w, h
 esc.render.resolution_percentage = 100
 esc.render.engine = 'CYCLES'
-esc.render.film_transparent = False
+esc.render.film_transparent = A.sprite
+if A.sprite:
+    agua.hide_render = True
+# cámara para la app: con ella carrera.js proyecta los botes rivales sobre el clip
+import json
+json.dump({'camara': list(cl), 'mira': list(mira), 'lente': lente, 'res': [w, h], 'agua': AGUA_Z},
+          open(os.path.join(SAL, 'camara.json'), 'w'))
 cy = esc.cycles
 cy.device = 'CPU'
 cy.samples = A.muestras
