@@ -16,7 +16,7 @@ import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
 
-const VERSION = '0.29.0';
+const VERSION = '0.30.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -506,16 +506,21 @@ async function fantasmaPerso(ent, sesiones) {
   return { ...F.simular(ent, { ftp: w }, ftp()), nombre: `Fantasma ${w} W` };
 }
 
-// Dos lienzos de carrera animada: el de Entrenar y el del modo remo. Tocar alterna 2D y 3D.
+// Dos lienzos de carrera animada: el de Entrenar y el del modo remo. Tocar alterna 2D, 3D y, con el vikingo,
+// la vista realista (clip renderizado en Blender de tu personaje remando).
 const carreraEnt = crearCarrera($('#carrera'));
 const carreraRemo = crearCarrera($('#mr-grafica'));
+const conVistaReal = () => J.claseDe(leerPersonaje().clase)?.clave === 'vikingo';
 function aplicarModoCarrera() {
-  const m = ajustes.leer('vistaCarrera', '2d') === '3d' ? '3d' : '2d';
+  let m = ajustes.leer('vistaCarrera', '2d');
+  if (m !== '3d' && m !== 'real') m = '2d';
+  if (m === 'real' && !conVistaReal()) m = '3d';
   carreraEnt.modo = m;
   carreraRemo.modo = m;
 }
 function alternarCarrera() {
-  ajustes.escribir('vistaCarrera', carreraEnt.modo === '3d' ? '2d' : '3d');
+  const m = carreraEnt.modo;
+  ajustes.escribir('vistaCarrera', m === '2d' ? '3d' : m === '3d' && conVistaReal() ? 'real' : '2d');
   aplicarModoCarrera();
   if (hayCarrera() && !$('#modo-remo').hidden && vistaRemo() === 'carrera') pintarGraficaRemo(sesion.t);
 }

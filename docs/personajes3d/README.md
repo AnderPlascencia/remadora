@@ -9,6 +9,7 @@ generar renders.
 | [PIPELINE.md](PIPELINE.md) | Cómo se construye el personaje en Blender: cuerpo, equipo, materiales, rig y animaciones |
 | [EXPORTACION.md](EXPORTACION.md) | Convenciones del GLB, optimización y medidas reales |
 | [LIMITACIONES.md](LIMITACIONES.md) | Lo que falta y decisiones tomadas |
+| [REMO_REALISTA.md](REMO_REALISTA.md) | Vista realista de la carrera: clip en Cycles del vikingo remando en el fiordo (sí se usa en la app) |
 
 ![Vistas frente, perfil, espalda y victoria (Cycles)](img/vistas_blender.webp)
 ![Palada completa (rowing)](img/remo_blender.webp)

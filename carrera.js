@@ -183,11 +183,15 @@ function arrancar() {
 
 function cuadro(ahora) {
   let alguna = false;
+  realPintado = false;
   for (const c of carreras) {
     if (!c.estado || !c.canvas.isConnected || c.canvas.hidden || c.canvas.offsetParent === null) continue;
     alguna = true;
     pintarCarrera(c, ahora);
   }
+  // El clip realista no sigue sonando por detrás (gasta batería) si ningún lienzo lo ha pintado.
+  // Los que aún cargan siguen en autoplay: pausarlos dejaría el clip sin imagen.
+  if (!realPintado) for (const v of Object.values(videos)) if (v && !v.paused && v.readyState >= 2) v.pause();
   if (alguna) requestAnimationFrame(cuadro);
   else animando = false;
 }
@@ -292,7 +296,8 @@ export function pintarCarrera(c, ahora = performance.now()) {
   if (!p) return;
   const datos = interpolar(c, ahora);
   const arriba = altoCabecera(c);
-  if (c.modo === '3d') pintar3d(c, p, datos, arriba);
+  if (c.modo === 'real' && c.estado.yoClase === 'vikingo' && pintarReal(c, p, datos, arriba)) { /* clip listo */ }
+  else if (c.modo === '3d' || c.modo === 'real') pintar3d(c, p, datos, arriba);
   else pintar2d(c, p, datos, arriba);
   sprintFinal(c, p, datos, arriba);
   avisos(c, p, datos, arriba);
@@ -303,7 +308,8 @@ export function pintarCarrera(c, ahora = performance.now()) {
 
 // Pequeña pastilla en la esquina que recuerda que tocar cambia de vista.
 function insignia(c, { ctx, ancho }) {
-  const txt = c.modo === '3d' ? 'Toca: 2D' : 'Toca: 3D';
+  const real = c.estado?.yoClase === 'vikingo';
+  const txt = c.modo === '2d' ? 'Toca: 3D' : c.modo === '3d' && real ? 'Toca: realista' : 'Toca: 2D';
   ctx.font = '600 11px system-ui, sans-serif';
   const w = ctx.measureText(txt).width + 14;
   const x = ancho - w - 6;
@@ -1066,6 +1072,184 @@ function espuma2d(ctx, x, y, ancho, largo, t) {
   }
 }
 
+// ---------- Realista: tu vikingo remando en el fiordo, renderizado en Cycles ----------
+// Clip en bucle de dos paladas (3,2 s a 37,5 golpes/min) de tools/blender/remo_agua; se reproduce a tu ritmo
+// (spm / 37,5) y se para en la pausa. Uno apaisado y otro vertical, cada uno con su cámara (camara.json del render)
+// para proyectar encima a los rivales: tu bote está en x = 0 y los carriles rivales detrás, en x = carrilReal(i).
+export const CLIPS_REAL = {
+  ancho: { src: 'assets/carrera/remo_vikingo.mp4', margen: [-1.8, 4], camara: { camara: [7.5, -4.0, 3.6], mira: [-6.0, 1.0, 1.0], lente: 36, res: [960, 540] } },
+  alto: { src: 'assets/carrera/remo_vikingo_v.mp4', margen: [-0.8, 3.5], camara: { camara: [7.0, -4.6, 3.9], mira: [-6.0, 0.8, 0.5], lente: 34, res: [540, 720] } },
+};
+// Bote rival: el mismo render sin agua sobre fondo transparente (remo_agua.py --sprite + atlas_rival.py), una palada.
+export const RIVAL_REAL = {
+  src: 'assets/carrera/rival_vikingo.webp', w: 465, h: 112, cols: 8, n: 48, ancla: [291.9, 70.7], escala: 0.55,
+  camara: { camara: [7.5, -4.0, 3.6], mira: [-6.0, 1.0, 1.0], lente: 36, res: [960, 540] },
+};
+const AGUA_REAL = 0.2;
+// El primer carril va más lejos para que los remos del rival no crucen por delante de tu remero.
+const carrilReal = (i) => -(6 + 4.5 * (i - 1));
+const SPM_CLIP = 37.5;
+// Distancia a la que se pinta un rival: comprimida al margen que deja ver cada cámara (por detrás hay menos sitio,
+// porque tu bote está a la derecha del cuadro) para que todos quepan; su etiqueta dice la diferencia real.
+const distReal = (d, [atras, delante]) => (d >= 0 ? delante : atras) * Math.tanh(Math.abs(d) / 8);
+const videos = {};
+let realPintado = false;
+// Se descarga entero como blob (pasa por la caché del service worker y se reproduce sin conexión y en Safari,
+// que pide rangos que la caché no sirve).
+function video(clave) {
+  const v = videos[clave];
+  if (v !== undefined) return v && v.readyState >= 2 ? v : null;
+  if (typeof document === 'undefined' || typeof fetch !== 'function') return null;
+  const el = document.createElement('video');
+  // autoplay: sin él algunos navegadores solo cargan los metadatos y el clip nunca llega a tener imagen
+  el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'auto'; el.autoplay = true;
+  el.setAttribute('muted', ''); el.setAttribute('playsinline', '');
+  videos[clave] = el;
+  fetch(CLIPS_REAL[clave].src)
+    .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(r.status))))
+    .then((b) => { el.src = URL.createObjectURL(b); el.load(); })
+    .catch(() => { videos[clave] = null; });
+  return null;
+}
+
+// Proyección de la cámara de Blender (sensor de 36 mm en el lado mayor): punto del mundo → píxel del render.
+export function proyectarReal(cam, [px, py, pz]) {
+  const [cx, cy, cz] = cam.camara;
+  let f = [cam.mira[0] - cx, cam.mira[1] - cy, cam.mira[2] - cz];
+  const nf = Math.hypot(...f); f = f.map((a) => a / nf);
+  let r = [f[1], -f[0], 0];
+  const nr = Math.hypot(...r); r = r.map((a) => a / nr);
+  const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+  const d = [px - cx, py - cy, pz - cz];
+  const z = d[0] * f[0] + d[1] * f[1] + d[2] * f[2];
+  const [W, H] = cam.res;
+  const fpx = (cam.lente / 36) * Math.max(W, H);
+  return { x: W / 2 + (fpx * (d[0] * r[0] + d[1] * r[1])) / z, y: H / 2 - (fpx * (d[0] * u[0] + d[1] * u[1] + d[2] * u[2])) / z, z, s: fpx / z };
+}
+
+// Devuelve false mientras el clip carga (se pinta la 3D en su lugar).
+function pintarReal(c, { ctx, ancho, alto }, { botes }, arriba) {
+  const util = alto - arriba;
+  const clave = ancho / alto >= 1.15 ? 'ancho' : 'alto';
+  for (const k of Object.keys(videos)) if (k !== clave && videos[k] && !videos[k].paused && videos[k].readyState >= 2) videos[k].pause();
+  const v = video(clave);
+  if (!v) return false;
+  realPintado = true;
+  const yo = botes[0];
+  const ritmo = yo.spm && !sinMovimiento ? Math.min(2.5, Math.max(0.4, yo.spm / SPM_CLIP)) : 0;
+  if (!ritmo) {
+    if (!v.paused) v.pause();
+  } else {
+    if (Math.abs(v.playbackRate - ritmo) > 0.02) v.playbackRate = ritmo;
+    if (v.paused) v.play().catch(() => {});
+  }
+  // Cubre todo el lienzo; tu remero abajo y algo a la derecha, y los carriles rivales encima, bajo la cabecera.
+  const { camara: cam, margen } = CLIPS_REAL[clave];
+  const vw = v.videoWidth, vh = v.videoHeight;
+  const a = vw / cam.res[0];
+  const k = Math.max(ancho / vw, alto / vh);
+  // Encuadre: el recuadro que ocupan tu bote y los rivales (con su etiqueta), centrado bajo la cabecera.
+  const pts = [[0, -2.4, 0], [0, 2.6, 0], [0, 0, 1.6]];
+  botes.forEach((b, i) => {
+    if (!b.yo) pts.push([carrilReal(i), distReal(b.dist - yo.dist, margen) - 1.5, 0], [carrilReal(i), distReal(b.dist - yo.dist, margen) + 1.5, 2.3]);
+  });
+  const ps = pts.map((p) => proyectarReal(cam, p));
+  const cx = (Math.min(...ps.map((p) => p.x)) + Math.max(...ps.map((p) => p.x))) / 2;
+  const arribaRivales = Math.min(...ps.map((p) => p.y));
+  const tuAgua = proyectarReal(cam, [0, 0, AGUA_REAL]).y;
+  // Si no cabe todo, manda que se vean los rivales (con sitio para la etiqueta) sin perder tu bote.
+  const yCabe = arriba + util / 2 - ((arribaRivales + tuAgua) / 2) * a * k;
+  const yRivales = Math.min(yCabe, arriba + 26 - arribaRivales * a * k);
+  const yTu = alto - 24 - tuAgua * a * k;
+  const x = Math.min(0, Math.max(ancho - vw * k, ancho / 2 - cx * a * k));
+  const y = Math.min(0, Math.max(alto - vh * k, Math.max(yRivales, yTu)));
+  ctx.drawImage(v, x, y, vw * k, vh * k);
+  const aLienzo = (p) => ({ x: x + p.x * a * k, y: y + p.y * a * k, s: p.s * a * k });
+  rivalesReal(ctx, botes, cam, margen, aLienzo, ancho, alto, arriba);
+  // Sombra arriba para que la cabecera se lea sobre el agua clara
+  const sombra = ctx.createLinearGradient(0, 0, 0, arriba + 40);
+  sombra.addColorStop(0, 'rgba(2,6,23,0.55)');
+  sombra.addColorStop(1, 'rgba(2,6,23,0)');
+  ctx.fillStyle = sombra;
+  ctx.fillRect(0, 0, ancho, arriba + 40);
+  const cabeza = aLienzo(proyectarReal(cam, [0, 0, 1.5]));
+  c.yoPantalla = { x: cabeza.x, y: cabeza.y };
+  return true;
+}
+
+// Rivales en sus carriles, detrás de tu bote: el más lejano primero. Remando con su propia fase, con reflejo en el
+// agua y etiqueta de nombre y diferencia (sustituye a la tabla de las otras vistas); si se salen por un lado, una
+// flecha en el borde.
+function rivalesReal(ctx, botes, cam, margen, aLienzo, ancho, alto, arriba) {
+  const atlas = imagen(RIVAL_REAL.src);
+  const ref = proyectarReal(RIVAL_REAL.camara, [0, 0, AGUA_REAL]);
+  const lista = botes.map((b, i) => ({ b, i })).filter((x) => !x.b.yo).reverse();
+  ctx.font = '700 12px system-ui, sans-serif';
+  const etiquetas = [];
+  const pendientes = [];
+  for (const { b, i } of lista) {
+    const d = b.dist - botes[0].dist;
+    const carril = carrilReal(i);
+    const dv = distReal(d, margen);
+    const p = aLienzo(proyectarReal(cam, [carril, dv, AGUA_REAL]));
+    const esc = p.s / (ref.s * RIVAL_REAL.escala);
+    const w = RIVAL_REAL.w * esc, h = RIVAL_REAL.h * esc;
+    const x0 = p.x - RIVAL_REAL.ancla[0] * esc, y0 = p.y - RIVAL_REAL.ancla[1] * esc;
+    const dif = Math.round(d);
+    const txtDif = dif === 0 ? 'parejos' : `${dif > 0 ? '+' : '−'}${Math.abs(dif).toLocaleString('es-MX')} m`;
+    if (x0 + w < 0 || x0 > ancho || p.y < arriba - h * 0.2) {
+      // Fuera de cuadro: flecha en el borde, a la altura de su carril
+      const izq = x0 + w < 0;
+      const yy = Math.max(arriba + 14, Math.min(alto - 14, p.y));
+      const txt = `${izq ? '◀ ' : ''}${b.nombre} ${txtDif}${izq ? '' : ' ▶'}`;
+      const tw = ctx.measureText(txt).width + 14;
+      const xx = izq ? 6 : ancho - tw - 6;
+      ctx.fillStyle = 'rgba(2,6,23,0.72)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(xx, yy - 10, tw, 20, 10) : ctx.rect(xx, yy - 10, tw, 20);
+      ctx.fill();
+      ctx.fillStyle = b.color;
+      ctx.textAlign = 'left';
+      ctx.fillText(txt, xx + 7, yy + 4);
+      continue;
+    }
+    if (atlas) {
+      const n = RIVAL_REAL.n;
+      const f = b.spm && !sinMovimiento ? Math.floor((b.fase || 0) * n) % n : 0;
+      const sx = (f % RIVAL_REAL.cols) * RIVAL_REAL.w, sy = Math.floor(f / RIVAL_REAL.cols) * RIVAL_REAL.h;
+      // Reflejo: el mismo fotograma volteado bajo la línea de flotación, tenue
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.translate(0, 2 * p.y);
+      ctx.scale(1, -1);
+      ctx.drawImage(atlas, sx, sy, RIVAL_REAL.w, RIVAL_REAL.h, x0, y0, w, h);
+      ctx.restore();
+      ctx.drawImage(atlas, sx, sy, RIVAL_REAL.w, RIVAL_REAL.h, x0, y0, w, h);
+    }
+    pendientes.push({ b, cab: aLienzo(proyectarReal(cam, [carril, dv, 1.85])), txtDif });
+  }
+  // Etiquetas sobre la cabeza, después de todos los botes para que ninguno las tape
+  for (const { b, cab, txtDif } of pendientes) {
+    const txt = `${b.nombre} ${txtDif}`;
+    const tw = ctx.measureText(txt).width + 12;
+    const tx = Math.max(4, Math.min(ancho - tw - 4, cab.x - tw / 2));
+    let ty = Math.max(arriba + 4, cab.y - 20);
+    // Si pisa otra etiqueta, baja hasta quedar libre
+    while (etiquetas.some((e) => tx < e.x + e.w && e.x < tx + tw && ty < e.y + 20 && e.y < ty + 20)) ty += 21;
+    etiquetas.push({ x: tx, y: ty, w: tw });
+    ctx.fillStyle = 'rgba(2,6,23,0.7)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(tx, ty, tw, 18, 9) : ctx.rect(tx, ty, tw, 18);
+    ctx.fill();
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = b.color;
+    ctx.textAlign = 'left';
+    ctx.fillText(txt, tx + 6, ty + 13);
+  }
+}
+
 // ---------- 3D: cámara detrás de tu bote ----------
 // Número pseudoaleatorio fijo para cada posición del mundo (árboles, rocas).
 const ruido = (n) => {
@@ -1399,7 +1583,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
 
 // Diferencias de la vista 3D: todas juntas en la esquina, ordenadas por posición (también los que van detrás
 // y no salen en cámara). Sobre cada bote solo queda una marca de su color.
-function tabla3d(ctx, botes, yo, arriba, ancho) {
+function tabla3d(ctx, botes, yo, arriba, ancho, medir = false) {
   const filas = [...botes].sort((a, b) => b.dist - a.dist);
   const alto = 19;
   const r = 6.5;
@@ -1417,6 +1601,7 @@ function tabla3d(ctx, botes, yo, arriba, ancho) {
   const w = 8 + r * 2 + 6 + wNombre + 10 + wDif + 8;
   const x0 = 6;
   const y0 = arriba + 6;
+  if (medir) return { derecha: x0 + w, abajo: y0 + filas.length * alto + 6 };
   ctx.fillStyle = 'rgba(2,6,23,0.7)';
   ctx.beginPath();
   ctx.roundRect ? ctx.roundRect(x0, y0, w, filas.length * alto + 6, 10) : ctx.rect(x0, y0, w, filas.length * alto + 6);
