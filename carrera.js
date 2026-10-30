@@ -1118,8 +1118,12 @@ function pintarReal(c, { ctx, ancho, alto }, { botes }, arriba) {
   const vw = v.videoWidth, vh = v.videoHeight;
   const k = Math.max(ancho / vw, alto / vh, util / (vh * 0.8));
   const [fx, fy] = CLIPS_REAL[clave].foco;
-  const x = Math.min(0, Math.max(ancho - vw * k, ancho * 0.58 - fx * vw * k));
+  // Si la cabeza quedaría a la altura de la tabla de rivales, el remero se corre a la derecha de la tabla.
+  const tabla = tabla3d(ctx, botes, yo, arriba, ancho, true);
   const y = Math.min(0, Math.max(alto - vh * k, arriba + util / 2 - fy * vh * k));
+  const cabeza = y + (fy - 0.12) * vh * k;
+  const xFoco = cabeza < tabla.abajo + 10 ? Math.max(ancho * 0.58, tabla.derecha + 0.07 * vh * k) : ancho * 0.58;
+  const x = Math.min(0, Math.max(ancho - vw * k, xFoco - fx * vw * k));
   ctx.drawImage(v, x, y, vw * k, vh * k);
   // Sombra arriba para que la cabecera se lea sobre el cielo claro
   const sombra = ctx.createLinearGradient(0, 0, 0, arriba + 40);
@@ -1465,7 +1469,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
 
 // Diferencias de la vista 3D: todas juntas en la esquina, ordenadas por posición (también los que van detrás
 // y no salen en cámara). Sobre cada bote solo queda una marca de su color.
-function tabla3d(ctx, botes, yo, arriba, ancho) {
+function tabla3d(ctx, botes, yo, arriba, ancho, medir = false) {
   const filas = [...botes].sort((a, b) => b.dist - a.dist);
   const alto = 19;
   const r = 6.5;
@@ -1483,6 +1487,7 @@ function tabla3d(ctx, botes, yo, arriba, ancho) {
   const w = 8 + r * 2 + 6 + wNombre + 10 + wDif + 8;
   const x0 = 6;
   const y0 = arriba + 6;
+  if (medir) return { derecha: x0 + w, abajo: y0 + filas.length * alto + 6 };
   ctx.fillStyle = 'rgba(2,6,23,0.7)';
   ctx.beginPath();
   ctx.roundRect ? ctx.roundRect(x0, y0, w, filas.length * alto + 6, 10) : ctx.rect(x0, y0, w, filas.length * alto + 6);
