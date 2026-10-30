@@ -1412,3 +1412,40 @@ details.mas-detalle[hidden] { display: none; }
 .atributos-guia .atr-valor { flex-direction: row-reverse; align-items: baseline; gap: 8px; }
 .atributos-guia .atr-valor b { font-size: 17px; }
 #hp-ficha .armario-vista img, #hp-ficha .armario-vista svg { max-height: 150px; width: auto; }
+
+/* ---------- Nada se sale de su caja (vertical de 360 px y horizontal de 740 px) ---------- */
+.sin-corte { white-space: nowrap; }
+/* Resumen de la semana: si la meta no cabe junto a «Esta semana · 2 sesiones», baja de renglón sin salirse de la tarjeta. */
+.rs-meta .tm-fila > span:last-child { flex-shrink: 1; min-width: 0; }
+/* Tarjeta del héroe en Progreso: si no cabe, cada dato baja entero, sin partir «la pasada +0». */
+.ph-texto b, .ph-texto small { line-height: 1.3; }
+@media (max-width: 380px) {
+  .ph-barras { width: 52px; gap: 2px; }
+  .resumen-semana { grid-template-columns: minmax(0, 1fr); }
+}
+/* «Opciones de carrera»: la flecha siempre a la derecha, aunque el resumen baje de renglón. */
+.opciones-carrera > summary { position: relative; padding-right: 24px; }
+.opciones-carrera > summary::after { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); }
+.opciones-carrera[open] > summary::after { transform: translateY(-50%) rotate(90deg); }
+/* Pastilla de conexión: si aun así no cabe, termina en «…» en vez de cortarse contra el borde. */
+.pastilla { display: inline-block; line-height: 20px; }
+.pastilla::before { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+@media (max-width: 380px) {
+  .barra { gap: 8px; }
+  .barra h1 .marca { height: 20px; }
+  .barra-acciones { gap: 4px; }
+  .barra-boton { min-width: 42px; min-height: 42px; }
+  .pastilla { font-size: 12px; padding: 4px 9px; }
+}
+/* Modo remo: en pantallas angostas «Pausar» y «Terminar» se quedan sin ícono para que el texto quepa entero. */
+@media (max-width: 420px) {
+  .mr-botones .boton { padding-left: 6px; padding-right: 6px; }
+}
+@media (max-width: 380px) {
+  .mr-botones { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 52px 52px; }
+  #mr-pausa .ico, #mr-terminar .ico { display: none; }
+  .mr-atr { font-size: 13px; }
+}
+@media (orientation: landscape) and (max-height: 560px) and (max-width: 860px) {
+  #mr-pausa .ico, #mr-terminar .ico { display: none; }
+}

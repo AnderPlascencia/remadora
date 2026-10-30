@@ -16,7 +16,7 @@ import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
 
-const VERSION = '0.30.0';
+const VERSION = '0.30.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -2487,7 +2487,7 @@ function pintarHeroeProgreso(lista) {
   const max = Math.max(1, ...semanas.map((x) => x.xp));
   const [pasada, esta] = semanas.slice(-2);
   caja.innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="44" height="44" alt="">
-    <span class="ph-texto"><b>Nivel ${h.nivel} · ${h.titulo}</b><small>+${miles(esta.xp)} XP esta semana · la pasada +${miles(pasada.xp)}</small></span>
+    <span class="ph-texto"><b><span class="sin-corte">Nivel ${h.nivel}</span> · <span class="sin-corte">${h.titulo}</span></b><small><span class="sin-corte">+${miles(esta.xp)} XP esta semana,</span> <span class="sin-corte">la pasada +${miles(pasada.xp)}</span></small></span>
     <span class="ph-barras" role="img" aria-label="XP por semana, últimas 8 semanas">${semanas.map((x, i) => `<i class="${i === 7 ? 'actual' : ''}" style="height:${Math.max(4, (100 * x.xp) / max)}%" title="${fechaCorta(x.desde)}: ${miles(x.xp)} XP"></i>`).join('')}</span>
     <span aria-hidden="true">›</span>`;
 }
@@ -2509,7 +2509,9 @@ async function pintarHistorial() {
   const semana = E.resumenPeriodos(lista, 'semana', 1)[0];
   const meta = ajustes.num('metaSemana', 10);
   const km = semana.metros / 1000;
-  $('#semana-texto').textContent = `${km.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de ${miles(meta)} km${km >= meta ? ' ✓' : ''} · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
+  // Las sesiones van junto a «Esta semana» para que los km quepan enteros a la derecha.
+  $('#semana-etq').textContent = `Esta semana · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
+  $('#semana-texto').textContent = `${km.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de ${miles(meta)} km${km >= meta ? ' ✓' : ''}`;
   $('#semana-barra').style.width = `${Math.min(100, (100 * km) / meta)}%`;
   pintarAvisoRespaldo(lista.length);
   pintarHeroeProgreso(lista);
