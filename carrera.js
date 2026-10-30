@@ -183,11 +183,14 @@ function arrancar() {
 
 function cuadro(ahora) {
   let alguna = false;
+  realPintado = false;
   for (const c of carreras) {
     if (!c.estado || !c.canvas.isConnected || c.canvas.hidden || c.canvas.offsetParent === null) continue;
     alguna = true;
     pintarCarrera(c, ahora);
   }
+  // El clip realista no sigue sonando por detrás (gasta batería) si ningún lienzo lo ha pintado.
+  if (!realPintado) for (const v of Object.values(videos)) if (v && !v.paused) v.pause();
   if (alguna) requestAnimationFrame(cuadro);
   else animando = false;
 }
@@ -292,7 +295,8 @@ export function pintarCarrera(c, ahora = performance.now()) {
   if (!p) return;
   const datos = interpolar(c, ahora);
   const arriba = altoCabecera(c);
-  if (c.modo === '3d') pintar3d(c, p, datos, arriba);
+  if (c.modo === 'real' && c.estado.yoClase === 'vikingo' && pintarReal(c, p, datos, arriba)) { /* clip listo */ }
+  else if (c.modo === '3d' || c.modo === 'real') pintar3d(c, p, datos, arriba);
   else pintar2d(c, p, datos, arriba);
   sprintFinal(c, p, datos, arriba);
   avisos(c, p, datos, arriba);
@@ -303,7 +307,8 @@ export function pintarCarrera(c, ahora = performance.now()) {
 
 // Pequeña pastilla en la esquina que recuerda que tocar cambia de vista.
 function insignia(c, { ctx, ancho }) {
-  const txt = c.modo === '3d' ? 'Toca: 2D' : 'Toca: 3D';
+  const real = c.estado?.yoClase === 'vikingo';
+  const txt = c.modo === '2d' ? 'Toca: 3D' : c.modo === '3d' && real ? 'Toca: realista' : 'Toca: 2D';
   ctx.font = '600 11px system-ui, sans-serif';
   const w = ctx.measureText(txt).width + 14;
   const x = ancho - w - 6;
@@ -1064,6 +1069,67 @@ function espuma2d(ctx, x, y, ancho, largo, t) {
     ctx.arc(x + dx, y + lado * (ancho * 0.9 + Math.abs(Math.sin(a)) * ancho * 0.8), 1.2 + (i % 3) * 0.6, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+// ---------- Realista: tu vikingo remando en el fiordo, renderizado en Cycles ----------
+// Clip en bucle de dos paladas (3,2 s a 37,5 golpes/min) de tools/blender/remo_agua; se reproduce a tu ritmo
+// (spm / 37,5) y se para en la pausa. Uno apaisado y otro vertical; foco = dónde está el remero en el clip.
+export const CLIPS_REAL = {
+  ancho: { src: 'assets/carrera/remo_vikingo.mp4', foco: [0.47, 0.5] },
+  alto: { src: 'assets/carrera/remo_vikingo_v.mp4', foco: [0.45, 0.48] },
+};
+const SPM_CLIP = 37.5;
+const videos = {};
+let realPintado = false;
+// Se descarga entero como blob (pasa por la caché del service worker y se reproduce sin conexión y en Safari,
+// que pide rangos que la caché no sirve).
+function video(clave) {
+  const v = videos[clave];
+  if (v !== undefined) return v && v.readyState >= 2 ? v : null;
+  if (typeof document === 'undefined' || typeof fetch !== 'function') return null;
+  const el = document.createElement('video');
+  el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'auto';
+  el.setAttribute('muted', ''); el.setAttribute('playsinline', '');
+  videos[clave] = el;
+  fetch(CLIPS_REAL[clave].src)
+    .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(r.status))))
+    .then((b) => { el.src = URL.createObjectURL(b); el.load(); })
+    .catch(() => { videos[clave] = null; });
+  return null;
+}
+
+// Devuelve false mientras el clip carga (se pinta la 3D en su lugar).
+function pintarReal(c, { ctx, ancho, alto }, { botes }, arriba) {
+  const util = alto - arriba;
+  const clave = ancho / Math.max(1, util) >= 1 ? 'ancho' : 'alto';
+  for (const k of Object.keys(videos)) if (k !== clave && videos[k] && !videos[k].paused) videos[k].pause();
+  const v = video(clave);
+  if (!v) return false;
+  realPintado = true;
+  const yo = botes[0];
+  const ritmo = yo.spm && !sinMovimiento ? Math.min(2.5, Math.max(0.4, yo.spm / SPM_CLIP)) : 0;
+  if (!ritmo) {
+    if (!v.paused) v.pause();
+  } else {
+    if (Math.abs(v.playbackRate - ritmo) > 0.02) v.playbackRate = ritmo;
+    if (v.paused) v.play().catch(() => {});
+  }
+  // Cubre todo el lienzo y pone al remero bajo la cabecera, algo a la derecha para no quedar tras la tabla.
+  const vw = v.videoWidth, vh = v.videoHeight;
+  const k = Math.max(ancho / vw, alto / vh, util / (vh * 0.8));
+  const [fx, fy] = CLIPS_REAL[clave].foco;
+  const x = Math.min(0, Math.max(ancho - vw * k, ancho * 0.58 - fx * vw * k));
+  const y = Math.min(0, Math.max(alto - vh * k, arriba + util / 2 - fy * vh * k));
+  ctx.drawImage(v, x, y, vw * k, vh * k);
+  // Sombra arriba para que la cabecera se lea sobre el cielo claro
+  const sombra = ctx.createLinearGradient(0, 0, 0, arriba + 40);
+  sombra.addColorStop(0, 'rgba(2,6,23,0.55)');
+  sombra.addColorStop(1, 'rgba(2,6,23,0)');
+  ctx.fillStyle = sombra;
+  ctx.fillRect(0, 0, ancho, arriba + 40);
+  c.yoPantalla = { x: x + fx * vw * k, y: y + (fy - 0.12) * vh * k };
+  tabla3d(ctx, botes, yo, arriba, ancho);
+  return true;
 }
 
 // ---------- 3D: cámara detrás de tu bote ----------

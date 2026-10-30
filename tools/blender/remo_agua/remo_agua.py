@@ -18,7 +18,7 @@ ap.add_argument('--salida', default='salida')
 ap.add_argument('--frames', default='1-96')
 ap.add_argument('--res', default='960x540')
 ap.add_argument('--muestras', type=int, default=64)
-ap.add_argument('--camara', default='lado', choices=('lado', 'popa', 'cerca'))
+ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'popa', 'cerca'))
 ap.add_argument('--paisaje', default='fiordo')
 A = ap.parse_args([a for a in _argv if not a.endswith('.py')])
 SAL = os.path.abspath(A.salida)
@@ -643,6 +643,7 @@ cam_d = bpy.data.cameras.new('Camara')
 cam = bpy.data.objects.new('Camara', cam_d); col.objects.link(cam); esc.camera = cam
 VISTAS = {
     'lado': ((6.0, -3.3, 2.0), (0.0, -0.05, 0.80), 46),
+    'vertical': ((5.4, -3.9, 2.5), (0.35, -0.25, 0.45), 46),
     'popa': ((3.2, -6.2, 1.35), (0.0, -0.3, 0.60), 40),
     'cerca': ((3.4, -2.6, 1.05), (0.0, -0.35, 0.70), 40),
 }
