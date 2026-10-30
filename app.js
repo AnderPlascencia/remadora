@@ -444,7 +444,15 @@ function bloqueAtributos(ent, hip, est, sesiones) {
   const p = previsionDe(plan, { ...o, libre: !ent });
   if (!p || !Object.keys(p.seguro).length) return '';
   return `<div class="xp-atributos"><small>${ent ? 'Lo que ganas seguro si lo terminas' : 'Lo que ganarías remando como sueles'}:</small>${chipsAtr(p.seguro, o.debil, 6)}
-    <small class="sumar-titulo">Y puedes sumar más:</small><ul class="lista-cond">${p.extras.map((x) => filaCond(x)).join('')}${p.riesgo ? filaCond(p.riesgo, 'riesgo') : ''}</ul></div>`;
+    ${extrasPlegados([...p.extras.map((x) => filaCond(x)), ...(p.riesgo ? [filaCond(p.riesgo, 'riesgo')] : [])])}</div>`;
+}
+
+// «Y puedes sumar más»: un reto a la vista y los demás al tocar, para que la tarjeta no empuje el botón de empezar.
+function extrasPlegados(filas) {
+  if (!filas.length) return '';
+  const resto = filas.slice(1);
+  return `<small class="sumar-titulo">Y puedes sumar más:</small><ul class="lista-cond">${filas[0]}</ul>${resto.length
+    ? `<details class="mas-detalle"><summary>${resto.length === 1 ? 'Otro reto' : `${resto.length} retos más`}</summary><ul class="lista-cond">${resto.join('')}</ul></details>` : ''}`;
 }
 
 // FTP automático: sin FTP (o con uno estimado), cada sesión de 10 min o más lo calcula o lo sube.
@@ -832,6 +840,8 @@ async function iniciarSesion() {
   if (rival) sesion.ventaja = crearVentaja(entrenamientoActivo, await rachaConHoy());
   actualizarBotones();
   $('#bloque-actual').hidden = !entrenamientoActivo;
+  // Paladas y calorías solo se ven con «Datos avanzados» o si el entrenamiento las pide como meta.
+  for (const el of document.querySelectorAll('[data-metrica]')) el.classList.toggle('pide', entrenamientoActivo?.objetivo?.metrica === el.dataset.metrica);
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* opcional */ }
   pitido(880, 0.15);
   const contra = rivales.length > 1 ? `. Remas contra ${rivales.length} fantasmas` : rival ? '. Remas contra tu fantasma' : '';
@@ -1115,7 +1125,8 @@ function pintarAtrVivo(v) {
   const anillo = `<span class="anillo" style="--p:${Math.round(r.progreso * 100)}%" aria-hidden="true"></span>`;
   const meta = r.faltanSeg ? `+1 ${n} en ${r.faltanSeg} s` : r.corto || `Suma ${n}`;
   $('#atr-vivo').hidden = false;
-  $('#atr-vivo-chips').innerHTML = ATR_VIVO.map((k) => `<span class="${k === r.atributo ? 'activo' : ''}">${nombreAtributo(k)} <b>+${v.puntos[k]}</b></span>`).join('');
+  // Solo los atributos que ya sumaron hoy (o el del reto en curso): seis chips en +0 son ruido.
+  $('#atr-vivo-chips').innerHTML = ATR_VIVO.filter((k) => v.puntos[k] > 0 || k === r.atributo).map((k) => `<span class="${k === r.atributo ? 'activo' : ''}">${nombreAtributo(k)} <b>+${v.puntos[k]}</b></span>`).join('');
   $('#atr-reto').innerHTML = `${anillo}<div><b>${escaparHtml(r.titulo)}</b><small>${escaparHtml(r.detalle)}</small></div><span class="cond-pts">${meta}</span>`;
   const mr = $('#mr-atr');
   mr.hidden = false;
@@ -2457,7 +2468,7 @@ function pintarAvisoRespaldo(total) {
   }
 }
 
-let sesionesVisibles = 50;
+let sesionesVisibles = 10;
 // Tarjeta del héroe en Progreso: nivel, XP de esta semana y de las 8 anteriores.
 function pintarHeroeProgreso(lista) {
   const caja = $('#progreso-heroe');
@@ -2520,8 +2531,15 @@ async function pintarHistorial() {
     <b>${x.nombre}</b><small>${x.ganada ? fechaCorta(x.fecha) : x.detalle}</small></div>`).join('');
 
   const recs = E.calcularRecords(lista);
-  $('#records').innerHTML = E.RECORDS.filter((r) => recs[r.clave]).map((r) => `<div class="record"><div class="etq">${r.nombre}</div>
-    <div class="valor">${formatoRecord(r, recs[r.clave].valor)}</div><div class="sub">${fechaCorta(recs[r.clave].fecha)}</div></div>`).join('');
+  // Cuatro récords a la vista; el resto, al tocar «Ver todos».
+  const PRINCIPALES = ['t2000', 't500', 'w20', 'dist'];
+  const hay = E.RECORDS.filter((r) => recs[r.clave]).sort((a, b) => (PRINCIPALES.indexOf(a.clave) + 1 || 9) - (PRINCIPALES.indexOf(b.clave) + 1 || 9));
+  const tarjeta = (r) => `<div class="record"><div class="etq">${r.nombre}</div>
+    <div class="valor">${formatoRecord(r, recs[r.clave].valor)}</div><div class="sub">${fechaCorta(recs[r.clave].fecha)}</div></div>`;
+  $('#records').innerHTML = hay.slice(0, 4).map(tarjeta).join('');
+  $('#records-mas').hidden = hay.length <= 4;
+  $('#records-resto').innerHTML = hay.slice(4).map(tarjeta).join('');
+  $('#records-mas-texto').textContent = `Ver los ${hay.length} récords`;
 
   const visibles = lista.filter(filtroCoincide);
   const ul = $('#lista-sesiones');
@@ -2542,7 +2560,7 @@ async function pintarHistorial() {
     li.innerHTML = `<div class="info"><div class="titulo"></div><div class="suave"></div></div>${ico('i-baja')}`;
     li.querySelector('.ico').style.transform = 'rotate(-90deg)';
     li.querySelector('.titulo').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${s.entrenamiento || 'Remo libre'}`;
-    if (s.rpe) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip">Esfuerzo ${s.rpe}</span>`);
+    if (s.rpe) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip solo-avanzado">Esfuerzo ${s.rpe}</span>`);
     li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoTiempo(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
     li.addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') li.click(); });
@@ -2552,8 +2570,8 @@ async function pintarHistorial() {
   if (quedan > 0) {
     const li = document.createElement('li');
     li.className = 'separador-plan';
-    li.innerHTML = `<button type="button" class="boton">Ver ${Math.min(50, quedan)} más (quedan ${miles(quedan)})</button>`;
-    li.querySelector('button').addEventListener('click', () => { sesionesVisibles += 50; pintarHistorial(); });
+    li.innerHTML = `<button type="button" class="boton">Ver ${Math.min(20, quedan)} más (quedan ${miles(quedan)})</button>`;
+    li.querySelector('button').addEventListener('click', () => { sesionesVisibles += 20; pintarHistorial(); });
     ul.append(li);
   }
 }
@@ -2735,8 +2753,8 @@ function pintarAvisosHeroe(h, sesiones) {
   if (Date.now() >= J.XP_LENTA_DESDE && veterano && !ajustes.si('avisoXpLenta', false)) {
     avisos.push(`<div class="aviso heroe-aviso"><span>Desde el 29 de octubre cada sesión, misión y logro da <b>la mitad de XP</b>. Tu nivel no cambia: solo cuesta más subir.</span><button type="button" class="boton chico" data-aviso-xp>Entendido</button></div>`);
   }
-  if (h.talentosLibres > 0 && seccionHeroe !== 'talentos') {
-    avisos.push(`<div class="aviso heroe-aviso"><span>Tienes <b>${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento</b> sin usar. Dan más XP por sesión o ventaja en las carreras.</span><button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></div>`);
+  if (h.talentosLibres > 0 && seccionHeroe === 'ficha') {
+    avisos.push(`<div class="aviso heroe-aviso"><span>Tienes <b>${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento</b> sin usar.</span><button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></div>`);
   }
   $('#heroe-avisos').innerHTML = avisos.join('');
 }
@@ -2746,13 +2764,12 @@ $('#heroe-avisos').addEventListener('click', (e) => {
 });
 
 function pintarFicha(h, per, clase, sesiones) {
-  $('#ficha-figura').innerHTML = figuraHeroe(per, h.nivel, 180);
+  $('#ficha-figura').innerHTML = figuraHeroe(per, h.nivel, 140);
   // Lo que te dan ahora los talentos aprendidos, en una línea cada uno.
   const arbol = per.arbol?.[clase.clave] || {};
   const tal = J.talentosDe(clase.clave).map((t) => ({ t, g: J.grado(arbol, clase.clave, t.slot) })).filter((x) => x.g > 0);
-  $('#ficha-talentos').innerHTML = tal.length
-    ? tal.map(({ t, g }) => `<li><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span><span>${t.textoGrado(g)}</span></li>`).join('')
-    : `<li class="vacio">Aún no tienes talentos. ${h.talentosLibres > 0 ? `Tienes ${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'}: repártelos en la pestaña Talentos.` : 'Ganas 1 punto cada 3 niveles.'}</li>`;
+  $('#ficha-talentos-caja').hidden = !tal.length;
+  $('#ficha-talentos').innerHTML = tal.map(({ t, g }) => `<li><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span><span>${t.textoGrado(g)}</span></li>`).join('');
   $('#heroe-radar').innerHTML = radarAtributos(h.atributos, clase.favorito);
   // Sin banda de pulso, Recuperación casi no crece: no se recomienda (se explica en su ficha).
   const sinPulso = !sesiones.some((x) => x.fcProm > 0);
@@ -2764,7 +2781,7 @@ function pintarFicha(h, per, clase, sesiones) {
     const r = J.RECOMENDACION_ATRIBUTO[a.clave];
     const sube = semana[a.clave];
     const nota = a.clave === 'recuperacion' && sinPulso ? '<p class="suave">Sin banda de pulso solo crece con descansos y sesiones suaves.</p>' : '';
-    return `<details class="atributo"${rec?.atributo.clave === a.clave ? ' open' : ''}>
+    return `<details class="atributo">
       <summary><span class="atr-nombre">${a.nombre}${a.clave === clase.favorito ? ' <span class="fav" title="Favorito de tu clase: crece un 15 % más">★ +15 %</span>' : ''}</span>
         <span class="atr-valor"><b>${miles(h.atributos[a.clave])}</b><small class="${sube ? 'sube' : ''}">${sube ? `+${miles(sube)} esta semana` : 'sin cambios esta semana'}</small></span>
         <span class="atr-barra" aria-hidden="true"><i style="width:${(100 * h.atributos[a.clave]) / maximo}%"></i></span>
@@ -2774,19 +2791,22 @@ function pintarFicha(h, per, clase, sesiones) {
     </details>`;
   }).join('');
   pintarSemanaHeroe(h, sesiones, f);
-  $('#heroe-recomienda').innerHTML = rec ? `<p>Tu atributo más bajo es <b>${rec.atributo.nombre}</b>${semana[rec.atributo.clave] ? ` (+${miles(semana[rec.atributo.clave])} esta semana)` : ''}. ${rec.texto}</p>
+  $('#heroe-recomienda').innerHTML = rec ? `<p>Te conviene subir <b>${rec.atributo.nombre}</b>, tu atributo más bajo.<span class="solo-avanzado"> ${rec.texto}</span></p>
     <div class="fila-botones"><button type="button" class="boton primario" data-preparar="${rec.base || ''}" data-reto="${rec.reto}">
     Preparar: ${escaparHtml(rec.entrenamiento || 'Remo libre')} en ${J.DIFICULTADES[J.DIFICULTAD_RETO[rec.reto]].nombre}</button></div>`
     : '<p class="suave">Rema tu primera sesión y te diré qué te conviene trabajar.</p>';
   // Los premios de capítulos y logros son insignias.
   const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
+  const ganadas = premios.filter(([id]) => h.insignias.has(id)).length;
+  $('#insignias-historia-resumen').textContent = `${ganadas} de ${premios.length}`;
+  premios.sort(([a], [b]) => h.insignias.has(b) - h.insignias.has(a));
   $('#ficha-insignias').innerHTML = premios.map(([id, de]) => `<div class="insignia${h.insignias.has(id) ? '' : ' bloqueada'}"><span class="medalla">${ico('i-trofeo')}</span>
     <b>${O.objeto(id).nombre}</b><small>${de}</small></div>`).join('');
-  const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 5);
+  const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 3);
   $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
     const g = h.porSesion.get(x.fecha);
     return `<li><div><b>${fechaCorta(x.fecha)} · ${escaparHtml(x.entrenamiento || 'Remo libre')}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
-      <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
+      <div class="chips-ganancia solo-avanzado">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
 
@@ -2819,7 +2839,7 @@ function pintarSemanaHeroe(h, sesiones, f) {
   }).join('');
   const cercano = J.ATRIBUTOS.map((a) => ({ a, t: J.tituloAtributo(a.clave, h.atributos[a.clave]) })).filter((x) => x.t.siguiente)
     .sort((x, y) => x.t.siguiente.faltan - y.t.siguiente.faltan)[0];
-  caja.innerHTML = `${meta}<p class="etq-campo">Semana sugerida para equilibrarte</p><ul class="semana-sugerida">${filas}</ul>
+  caja.innerHTML = `${meta}<div class="solo-avanzado"><p class="etq-campo">Semana sugerida para equilibrarte</p><ul class="semana-sugerida">${filas}</ul></div>
     ${cercano ? `<p class="titulo-cerca">${ico('i-trofeo')}<span>${cercano.a.nombre} ${miles(h.atributos[cercano.a.clave] || 0)} → título <b>«${cercano.t.siguiente.nombre}»</b>. Te faltan ${miles(cercano.t.siguiente.faltan)}.</span></p>` : ''}`;
 }
 
@@ -2910,8 +2930,10 @@ function filaMision(m) {
 }
 
 function pintarMisiones(h) {
-  $('#mis-diarias').innerHTML = h.diarias.map((m) => filaMision(m)).join('');
-  $('#mis-semanales').innerHTML = h.semanales.map((m) => filaMision(m)).join('');
+  // Lo pendiente arriba; lo hecho baja y se ve como una sola línea.
+  const pendientesPrimero = (l) => [...l].sort((a, b) => a.hecha - b.hecha);
+  $('#mis-diarias').innerHTML = pendientesPrimero(h.diarias).map((m) => filaMision(m)).join('');
+  $('#mis-semanales').innerHTML = pendientesPrimero(h.semanales).map((m) => filaMision(m)).join('');
   const c = h.capitulo;
   $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p></div>
     <ul class="lista misiones">${c.progreso.map((r) => filaMision({ texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
@@ -2922,7 +2944,11 @@ function pintarMisiones(h) {
     : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
   // Logros: primero los que te faltan, del más cercano al más lejano; los hechos al final.
   const avance = (x) => (x.hecha ? -1 : x.valor / x.meta);
-  $('#mis-hazanas').innerHTML = [...h.hazanas].sort((a, b) => avance(b) - avance(a)).map((x) => filaMision({ nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas + (x.objeto ? J.PREMIO_INSIGNIA : 0), premio: x.objeto ? `insignia ${O.objeto(x.objeto).nombre}` : '', hecha: x.hecha })).join('');
+  const logro = (x) => filaMision({ nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas + (x.objeto ? J.PREMIO_INSIGNIA : 0), premio: x.objeto ? `insignia ${O.objeto(x.objeto).nombre}` : '', hecha: x.hecha });
+  // Los logros hechos se guardan en un desplegable: arriba quedan solo los que te faltan.
+  const hechos = h.hazanas.filter((x) => x.hecha);
+  $('#mis-hazanas').innerHTML = h.hazanas.filter((x) => !x.hecha).sort((a, b) => avance(b) - avance(a)).map(logro).join('')
+    + (hechos.length ? `<li class="hechos-grupo"><details><summary>${ico('i-check')}Completados <span class="seccion-resumen">${hechos.length}</span></summary><ul class="lista misiones">${hechos.map(logro).join('')}</ul></details></li>` : '');
 }
 
 const ICONO_VENTAJA = { salida: 'i-play', viento: 'i-sube', ancla: 'i-baja', segunda: 'i-corazon', estandarte: 'i-trofeo', mapa: 'i-fantasma' };
@@ -3086,7 +3112,7 @@ function pintarAtrSesion(s, previas, resumen) {
   }
   caja.hidden = !r.logros.length && !r.cerca.length && !prox;
   caja.innerHTML = `${r.logros.length ? `<h3>Lo que lograste</h3><ul class="lista-cond">${r.logros.map((x) => filaCond(x, 'hecho')).join('')}</ul>` : ''}
-    ${r.cerca.length ? `<h3>Te quedaste cerca</h3><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul>` : ''}${prox}`;
+    ${r.cerca.length ? `<details class="mas-detalle"><summary>Te quedaste cerca <span class="seccion-resumen">${r.cerca.length}</span></summary><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul></details>` : ''}${prox}`;
 }
 $('#hoja-atr').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-prox]');
@@ -3559,7 +3585,8 @@ $('#btn-quitar-programa').addEventListener('click', () => {
 async function pintarRecomendacion() {
   const r = E.recomendacion(await db.listar('sesiones'), ftp());
   const el = $('#recomendacion');
-  el.hidden = !r;
+  // «Vas equilibrado» no pide nada: solo se muestra cuando hay algo que cambiar hoy.
+  el.hidden = !r || r.tipo === 'normal';
   if (r) { el.textContent = r.texto; el.className = `recomendacion ${r.tipo}`; }
 }
 

@@ -1339,3 +1339,76 @@ body:has(#modo-remo:not([hidden])) .toast { bottom: auto; top: calc(12px + env(s
   .atr-pop > .ico { width: 24px; height: 24px; padding: 3px; }
   @keyframes pop-atr { from { opacity: 0; } to { opacity: 1; } }
 }
+
+/* ---------- Limpieza 0.29: menos ruido y más aire ---------- */
+/* Ritmo vertical: secciones separadas por 32 px y tarjetas por 12 px. */
+main h2 { margin: 32px 0 10px; }
+.lista { gap: 10px; }
+.heroe-semana { gap: 12px; margin-bottom: 12px; }
+.atributos-guia { gap: 10px; }
+.h2-nota { font-weight: 500; font-size: 12px; color: var(--texto-tenue); margin-left: 6px; letter-spacing: 0; }
+
+/* Cabecera del héroe compacta: retrato, nombre, nivel y XP en una sola tarjeta. */
+.heroe-tarjeta { flex-wrap: wrap; gap: 4px 12px; padding: 12px 14px; }
+.heroe-tarjeta .heroe-avatar, .heroe-tarjeta .heroe-avatar > img { width: 60px; height: 60px; border-radius: 16px; }
+.heroe-tarjeta .heroe-avatar .emblema.mini { width: 20px; height: 20px; border-radius: 6px; }
+.heroe-tarjeta .heroe-avatar .emblema.mini svg { width: 12px; height: 12px; }
+.heroe-tarjeta .crece { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.heroe-nombre { font-size: 18px; }
+.heroe-tarjeta #heroe-clase { font-size: 14px; }
+.heroe-datos { display: flex; flex-wrap: wrap; gap: 0 10px; align-items: baseline; font-size: 13px; }
+.heroe-datos .aguas { font-size: 12px; }
+.heroe-nivel b { font-size: 30px; }
+.heroe-xp-caja { flex-basis: 100%; }
+.heroe-xp-caja .heroe-xp { margin-top: 8px; height: 6px; }
+.heroe-xp-caja .heroe-xp-fila { margin: 4px 0 0; font-size: 12px; }
+.heroe-aviso { padding: 8px 12px; font-size: 13px; }
+.heroe-tabs { margin: 12px 0 8px; }
+
+/* Ficha: figura más baja y secciones plegadas. */
+#hp-ficha .armario-vista { padding: 6px; margin: 8px 0 0; }
+#ficha-talentos-caja[hidden] { display: none; }
+.insignias-seccion { margin-top: 24px; }
+.insignias-seccion > summary h2 { margin: 0; }
+
+/* «Ver más» genérico: un enlace con flecha, sin caja. */
+details.mas-detalle > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; font-weight: 700; color: var(--primario-claro); }
+details.mas-detalle > summary::-webkit-details-marker { display: none; }
+details.mas-detalle > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform .2s; }
+details.mas-detalle[open] > summary::after { transform: rotate(-135deg); }
+details.mas-detalle .seccion-resumen { margin-left: 2px; }
+details.mas-detalle[hidden] { display: none; }
+.hoja-mas { margin-top: 4px; }
+.hoja-mas .fila-botones { margin-top: 4px; }
+.hoja-atr details.mas-detalle > summary { color: var(--texto-suave); }
+
+/* Misiones: las hechas se ven como una línea, sin barra; los logros hechos van plegados. */
+.misiones li.hecha .progreso, .misiones li.hecha .mision-pie { display: none; }
+.misiones li.hecha { padding-top: 10px; padding-bottom: 10px; }
+.misiones li.hechos-grupo { background: none; padding: 0; opacity: 1; }
+.misiones li.hechos-grupo summary { display: flex; align-items: center; gap: 8px; min-height: 48px; cursor: pointer; font-weight: 700; color: var(--texto-suave); list-style: none; }
+.misiones li.hechos-grupo summary::-webkit-details-marker { display: none; }
+.misiones li.hechos-grupo summary .ico { color: var(--exito); width: 18px; height: 18px; }
+.misiones li.hechos-grupo .lista { margin-top: 6px; }
+
+/* En vivo: paladas y calorías solo con datos avanzados o si son la meta; quedan 2 × 2 cifras. */
+:root:not([data-avanzado]) .metrica.extra-vivo:not(.pide) { display: none; }
+@media (min-width: 380px) {
+  :root:not([data-avanzado]) #en-vivo .metrica:not(.destacada) { grid-column: span 3; }
+}
+.metricas { gap: 10px; }
+
+/* Horizontal bajo: menos alto en la barra y el podio para que se vea el contenido. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .podio-puesto img, .podio-ico { width: 36px; height: 36px; }
+  .p1 .podio-escalon { height: 40px; }
+  .p2 .podio-escalon { height: 30px; }
+  .p3 .podio-escalon { height: 22px; }
+  main h2 { margin-top: 24px; }
+}
+/* Atributos: una fila por atributo (nombre, lo de esta semana y el valor), barra y título debajo. */
+.atributos-guia .atributo { padding: 0; }
+.atributos-guia .atributo summary { padding: 10px 14px; gap: 6px 10px; }
+.atributos-guia .atr-valor { flex-direction: row-reverse; align-items: baseline; gap: 8px; }
+.atributos-guia .atr-valor b { font-size: 17px; }
+#hp-ficha .armario-vista img, #hp-ficha .armario-vista svg { max-height: 150px; width: auto; }
