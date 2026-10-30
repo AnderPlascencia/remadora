@@ -16,7 +16,7 @@ import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
 
-const VERSION = '0.29.0';
+const VERSION = '0.30.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
