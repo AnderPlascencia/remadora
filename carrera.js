@@ -307,9 +307,14 @@ export function pintarCarrera(c, ahora = performance.now()) {
 }
 
 // Pequeña pastilla en la esquina que recuerda que tocar cambia de vista.
+const textoInsignia = (c) => (c.modo === '2d' ? 'Toca: 3D' : c.modo === '3d' && c.estado?.yoClase === 'vikingo' ? 'Toca: realista' : 'Toca: 2D');
+// Ancho que ocupa la pastilla con su margen (el reloj de la derecha empieza antes).
+function anchoInsignia(c, ctx) {
+  ctx.font = '600 11px system-ui, sans-serif';
+  return Math.max(76, ctx.measureText(textoInsignia(c)).width + 14 + 6);
+}
 function insignia(c, { ctx, ancho }) {
-  const real = c.estado?.yoClase === 'vikingo';
-  const txt = c.modo === '2d' ? 'Toca: 3D' : c.modo === '3d' && real ? 'Toca: realista' : 'Toca: 2D';
+  const txt = textoInsignia(c);
   ctx.font = '600 11px system-ui, sans-serif';
   const w = ctx.measureText(txt).width + 14;
   const x = ancho - w - 6;
@@ -376,12 +381,13 @@ function partesReloj(r) {
 // En horizontal: reloj y línea extra alineados a la derecha. Devuelve hasta dónde puede llegar lo de la izquierda.
 function ladoDerecho(c, ctx, ancho, l2) {
   const e = c.estado;
-  let izq = ancho - 82;
+  const borde = ancho - anchoInsignia(c, ctx) - 6;
+  let izq = borde;
   if (e.reloj) {
     const partes = partesReloj(e.reloj);
     const w = trozos(ctx, partes, 0, 0, true);
-    izq = Math.min(izq, ancho - 82 - w - 10);
-    trozos(ctx, partes, ancho - 82 - w, 20);
+    izq = Math.min(izq, borde - w - 10);
+    trozos(ctx, partes, borde - w, 20);
   }
   if (l2) {
     ctx.font = '600 11px system-ui, sans-serif';
@@ -403,7 +409,7 @@ function cabecera(c, { ctx, ancho }) {
   ctx.fillStyle = 'rgba(2, 6, 23, 0.78)';
   ctx.fillRect(0, 0, ancho, alto + MINIMAPA);
   const color = { adelante: '#4ADE80', atras: '#FCA5A5' }[e.tono] || '#F8FAFC';
-  const insigniaW = 74;
+  const insigniaW = anchoInsignia(c, ctx) - 2;
   let y = 0;
   ctx.textAlign = 'left';
   if (e.lugar) {
