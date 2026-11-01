@@ -122,15 +122,19 @@ export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana =
 }
 
 // ---------- Plan por objetivo: la app decide intensidades, ritmos y volúmenes ----------
-// Las intensidades van en % de tu FTP (o en tu ritmo actual), así el plan se ajusta solo cuando mejoras.
+// Cinco planes, uno por capacidad física. Las intensidades van en % de tu FTP, así el plan se ajusta solo
+// cuando mejoras. Con más de 3 días por semana se añaden fondos en zona 2, nunca más intensidad (80/20).
 // Los mismos nombres en el inicio guiado y en el asistente de Planes; «tema» es lo que va en el nombre del plan.
 export const OBJETIVOS_PLAN = [
-  { clave: 'nivel', nombre: 'Subir de nivel y ponerme en forma', tema: 'forma', texto: 'Un poco de todo: fondo, umbral y ritmo, con la prueba que abre la historia del héroe.', prueba: 'Prueba 500 m' },
-  { clave: 'distancia', nombre: 'Remar más lejos', tema: 'distancia', texto: 'Aguantar más tiempo sin parar: fondo largo y tempo.', prueba: null },
-  { clave: 'ritmo', nombre: 'Bajar mi tiempo en 2000 m', tema: 'ritmo', texto: 'Ir más rápido: series a ritmo de carrera y umbral.', prueba: 'Prueba 2000 m' },
-  { clave: 'potencia', nombre: 'Más fuerza y potencia', tema: 'potencia', texto: 'Sacar más watts: series cortas y fuertes, umbral y sprints.', prueba: 'Prueba FTP 20 min' },
-  { clave: 'tecnica', nombre: 'Mejorar mi técnica', tema: 'técnica', texto: 'Más metros por palada y un ritmo parejo.', prueba: 'Prueba 500 m' },
+  { clave: 'base', nombre: 'Base aeróbica', tema: 'base aeróbica', texto: 'Aguantar más y mejor: fondos en zona 2 guiados por tu pulso. El plan que mejor va con un reloj.', prueba: 'Prueba de pulso fijo 30 min' },
+  { clave: 'vo2', nombre: 'Subir mi VO₂máx', tema: 'VO₂máx', texto: 'Más capacidad de oxígeno: series de 2 a 4 min fuertes, fondo y umbral.', prueba: 'Prueba 5 min' },
+  { clave: 'umbral', nombre: 'Subir mi FTP', tema: 'umbral', texto: 'Más potencia sostenida: bloques largos de umbral y sweet spot.', prueba: 'Prueba FTP 20 min' },
+  { clave: 'potencia', nombre: 'Más fuerza y potencia', tema: 'potencia', texto: 'Más watts por palada: sprints, fuerza a cadencia baja y arranques.', prueba: 'Prueba de potencia' },
+  { clave: 'calorias', nombre: 'Quemar calorías', tema: 'calorías', texto: 'Una meta semanal de calorías que sube poco a poco: mucho fondo y un día de series.', prueba: null },
 ];
+// Planes de antes de la v0.35 → el plan nuevo con el mismo espíritu (para «Siguiente plan» y «Ajustar»).
+export const OBJETIVOS_ANTIGUOS = { nivel: 'base', distancia: 'base', ritmo: 'umbral', tecnica: 'base' };
+export const objetivoPlan = (clave) => OBJETIVOS_PLAN.find((o) => o.clave === (OBJETIVOS_ANTIGUOS[clave] || clave)) || null;
 export const NIVELES_PLAN = [
   { clave: 'inicio', nombre: 'Estoy empezando', volumen: 0.7 },
   { clave: 'medio', nombre: 'Remo a veces', volumen: 1 },
@@ -146,67 +150,115 @@ const ronda = (x, paso) => Math.max(paso, Math.round(x / paso) * paso);
 const series = (reps, trabajo, descanso) => Array.from({ length: reps }, (_, i) => [
   { ...trabajo, nombre: `${trabajo.nombre} ${i + 1}/${reps}` }, ...(i < reps - 1 ? [SUAVE(descanso)] : []),
 ]).flat();
+// Escoge de una progresión según el avance del plan (p de 0 a 1).
+const paso = (lista, p) => lista[Math.min(lista.length - 1, Math.floor(p * lista.length))];
+const reps = (n, k) => Math.max(2, Math.round(n * k));
 
-// Cada tipo de sesión según la carga de la semana (c ≈ 0.7 … 1.6).
+// Cada sesión recibe el avance del plan (p: 0 la primera semana, 1 la última), k (volumen del nivel,
+// un 30 % menos en semana de descarga), el contexto (kcalHabitual) y el número de semana.
 const SESIONES = {
-  vo2: (c) => { const r = Math.round(4 + 3 * c); return { nombre: `VO2 ${r} × 1 min`, bloques: [CAL, ...series(r, { nombre: 'Fuerte', duracion: 60, metrica: 'ftp', min: 110, max: 120 }, 60), ENF] }; },
-  sprints: (c) => { const r = Math.round(5 + 3 * c); return { nombre: `Sprints ${r} × 20 s`, bloques: [CAL, ...series(r, { nombre: 'Sprint', duracion: 20, metrica: 'ftp', min: 130, max: 160 }, 100), ENF] }; },
-  umbral: (c) => { const m = Math.min(12, Math.round(4 + 4 * c)); return { nombre: `Umbral 3 × ${m} min`, bloques: [CAL, ...series(3, { nombre: 'Umbral', duracion: m * 60, metrica: 'ftp', min: 91, max: 105 }, 180), ENF] }; },
-  tempo: (c) => { const m = ronda(12 + 12 * c, 2); return { nombre: `Tempo ${m} min`, bloques: [CAL, { nombre: 'Tempo', duracion: m * 60, metrica: 'ftp', min: 76, max: 90 }, ENF] }; },
-  fondo: (c) => { const m = ronda(15 + 20 * c, 5); return { nombre: `Fondo ${m} min (zona 2)`, bloques: [CAL, { nombre: 'Fondo', duracion: m * 60, metrica: 'ftp', min: 56, max: 75 }, ENF] }; },
-  largo: (c, ctx) => { const d = ronda(ctx.distHabitual * (0.8 + 0.5 * c), 500); return { tipo: 'objetivo', nombre: `${d} m seguidos`, objetivo: { metrica: 'distancia', valor: d } }; },
-  ritmo: (c, ctx) => {
-    const r = Math.round(3 + 2 * c); const sp = Math.round(ctx.split2k - 4 * (c - 0.8));
-    return { nombre: `Ritmo ${mmss(sp)} · ${r} × 500 m`, bloques: [CAL, ...series(r, { nombre: '500 m', fin: 'distancia', cantidad: 500, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 2 }, 120), ENF] };
+  fondo: (min) => (p, k) => { const m = ronda((min[0] + (min[1] - min[0]) * p) * k, 5); return { nombre: `Fondo ${m} min (zona 2)`, enfoque: 'distancia', bloques: [CAL, { nombre: 'Fondo', duracion: m * 60, metrica: 'ftp', min: 56, max: 75 }, ENF] }; },
+  // Fondo con techo de pulso (70 % del máximo): con un reloj de muñeca es lo más fiable.
+  fondoPulso: (min) => (p, k) => { const m = ronda((min[0] + (min[1] - min[0]) * p) * k, 5); return { nombre: `Fondo ${m} min a pulso suave`, enfoque: 'distancia', bloques: [CAL, { nombre: 'Fondo a pulso suave', duracion: m * 60, metrica: 'fcpct', min: 60, max: 70 }, ENF] }; },
+  fondoTempo: (min) => (p, k) => {
+    const m = ronda((min[0] + (min[1] - min[0]) * p) * k, 5); const n = p < 0.5 ? 3 : 2; const t = p < 0.5 ? 5 : 10;
+    const resto = Math.max(5, m - n * t);
+    return { nombre: `Fondo ${m} min con ${n} × ${t} min de tempo`, enfoque: 'distancia', bloques: [CAL, { nombre: 'Fondo', duracion: Math.round((resto / 2) * 60), metrica: 'ftp', min: 56, max: 75 }, ...series(n, { nombre: 'Tempo', duracion: t * 60, metrica: 'ftp', min: 76, max: 90 }, 180), { nombre: 'Fondo', duracion: Math.round((resto / 2) * 60), metrica: 'ftp', min: 56, max: 75 }, ENF] };
   },
-  paladas: (c) => { const r = Math.round(3 + 2 * c); return { nombre: `Control de paladas ${r} × 3 min`, bloques: [CAL, ...series(r, { nombre: 'A 20-22 paladas/min', duracion: 180, metrica: 'spm', min: 20, max: 22 }, 60), ENF] }; },
-  cadencia: (c) => { const r = Math.round(4 + 2 * c); return { nombre: `Cambios de cadencia ${r} × 2 min`, bloques: [CAL, ...Array.from({ length: r }, (_, i) => ({ nombre: `${i % 2 ? 28 : 22} paladas/min ${i + 1}/${r}`, duracion: 120, metrica: 'spm', min: i % 2 ? 27 : 21, max: i % 2 ? 29 : 23 })), ENF] }; },
+  vo2: (p, k) => {
+    const [n, dur, min, max] = paso([[5, 2, 110, 115], [6, 2, 110, 115], [5, 3, 108, 112], [4, 4, 106, 110]], p);
+    const r = reps(n, k);
+    return { nombre: `VO₂ ${r} × ${dur} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerte', duracion: dur * 60, metrica: 'ftp', min, max }, Math.min(180, dur * 60)), ENF] };
+  },
+  // Series de 30 s fuertes y 15 s suaves: mucho tiempo cerca del VO₂máx con poco desgaste.
+  treinta15: (p, k) => {
+    const n = reps(p < 0.5 ? 10 : 12, k);
+    const serie = Array.from({ length: n }, (_, i) => [{ nombre: `30 s fuerte ${i + 1}/${n}`, duracion: 30, metrica: 'ftp', min: 115, max: 130 }, { nombre: 'Descanso', duracion: 15, metrica: 'ftp', min: 40, max: 55 }]).flat();
+    return { nombre: `3 series de ${n} × 30/15`, enfoque: 'potencia', bloques: [CAL, ...serie, SUAVE(180), ...serie, SUAVE(180), ...serie, ENF] };
+  },
+  umbral: (p, k) => {
+    const [n, min, lo, hi] = paso([[3, 8, 95, 100], [3, 10, 95, 100], [3, 12, 95, 100], [2, 15, 95, 100], [2, 20, 95, 100], [1, 30, 93, 97]], p);
+    const r = n === 1 ? 1 : reps(n, k);
+    return { nombre: `Umbral ${r} × ${min} min`, enfoque: 'potencia', bloques: [CAL, ...(r === 1 ? [{ nombre: 'Umbral', duracion: min * 60, metrica: 'ftp', min: lo, max: hi }] : series(r, { nombre: 'Umbral', duracion: min * 60, metrica: 'ftp', min: lo, max: hi }, 180)), ENF] };
+  },
+  umbralCorto: (p, k) => { const m = p < 0.5 ? 8 : 10; const r = reps(3, k); return { nombre: `Umbral ${r} × ${m} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Umbral', duracion: m * 60, metrica: 'ftp', min: 91, max: 100 }, 180), ENF] }; },
+  // Sweet spot (88–94 % del FTP): casi tanto estímulo como el umbral con menos fatiga.
+  sweet: (p, k) => { const [n, m] = paso([[2, 12], [2, 15], [3, 12], [3, 15]], p); const r = reps(n, k); return { nombre: `Sweet spot ${r} × ${m} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Sweet spot', duracion: m * 60, metrica: 'ftp', min: 88, max: 94 }, 240), ENF] }; },
+  vo2Corto: (p, k) => { const r = reps(5, k); return { nombre: `VO₂ ${r} × 3 min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerte', duracion: 180, metrica: 'ftp', min: 108, max: 112 }, 180), ENF] }; },
+  sprints: (p, k) => {
+    const [n, seg, minutos] = paso([[6, 15, 0], [8, 15, 0], [6, 20, 4], [8, 20, 5]], p);
+    const r = reps(n, k);
+    const extra = minutos ? [SUAVE(180), ...series(reps(minutos, k), { nombre: '1 min fuerte', duracion: 60, metrica: 'ftp', min: 120, max: 130 }, 120)] : [];
+    return { nombre: `Sprints ${r} × ${seg} s${minutos ? ` + ${reps(minutos, k)} × 1 min` : ''}`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Sprint a tope', duracion: seg, metrica: 'ftp', min: 140, max: 250, nivel: 18 }, 120), ...extra, ENF] };
+  },
+  // Fuerza-resistencia: cerca del umbral pero a cadencia baja, para que cada palada pese.
+  fuerza: (p, k) => { const [n, m] = paso([[4, 3], [5, 3], [4, 4], [5, 4]], p); const r = reps(n, k); return { nombre: `Fuerza ${r} × ${m} min a 18 paladas/min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerza a 18-20 paladas/min', duracion: m * 60, metrica: 'ftp', min: 88, max: 95, nivel: 16 }, 120), ENF] }; },
+  arranques: (p, k) => {
+    const m = ronda((30 + 15 * p) * k, 5); const n = p < 0.5 ? 4 : 6;
+    const fondo = (min) => ({ nombre: 'Fondo', duracion: min * 60, metrica: 'ftp', min: 56, max: 75 });
+    const arr = Array.from({ length: n }, (_, i) => [{ nombre: `Arranque ${i + 1}/${n}: 10 paladas a tope`, duracion: 20, metrica: 'ftp', min: 140, max: 250 }, { nombre: 'Suave', duracion: 100, metrica: 'ftp', min: 40, max: 60 }]).flat();
+    return { nombre: `Fondo ${m} min + ${n} arranques`, enfoque: 'potencia', bloques: [CAL, fondo(Math.max(5, m - n * 2)), ...arr, ENF] };
+  },
+  kcalSeries: (p, k) => { const r = reps(8, k); const m = ronda(20 * k, 5); return { nombre: `${r} × 1 min + ${m} min de fondo`, enfoque: 'calorias', bloques: [CAL, ...series(r, { nombre: '1 min fuerte', duracion: 60, metrica: 'ftp', min: 105, max: 115 }, 60), SUAVE(120), { nombre: 'Fondo', duracion: m * 60, metrica: 'ftp', min: 56, max: 75 }, ENF] }; },
+  kcalMeta: (p, k, ctx) => { const v = ronda((ctx.kcalHabitual || 250) * (1.1 + 0.6 * p) * Math.min(1, k + 0.2), 50); return { tipo: 'objetivo', nombre: `Quema ${v} kcal`, enfoque: 'calorias', objetivo: { metrica: 'kcal', valor: v } }; },
 };
-const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
-// Orden de prioridad de las sesiones de cada objetivo: con 2 días se usan las 2 primeras, con 5 todas.
+// Sesiones de cada plan por orden de prioridad: con 3 días se usan las 3 primeras, con 5 todas.
+// La 4.ª y la 5.ª son siempre fondos suaves (80/20). Una función de la semana permite alternar sesiones.
 const SEMANA_TIPO = {
-  potencia: ['vo2', 'umbral', 'fondo', 'sprints', 'tempo'],
-  ritmo: ['ritmo', 'umbral', 'fondo', 'tempo', 'vo2'],
-  distancia: ['largo', 'fondo', 'tempo', 'fondo', 'umbral'],
-  tecnica: ['paladas', 'fondo', 'cadencia', 'tempo', 'paladas'],
-  nivel: ['fondo', 'umbral', 'ritmo', 'largo', 'tempo'],
+  base: [SESIONES.fondoPulso([30, 60]), (p, k, c) => (p >= 0.25 ? SESIONES.fondoTempo([35, 60]) : SESIONES.fondoPulso([35, 50]))(p, k, c), SESIONES.fondo([40, 75]), SESIONES.fondoPulso([30, 45]), SESIONES.fondo([30, 40])],
+  vo2: [SESIONES.vo2, SESIONES.fondo([30, 45]), (p, k, c) => (p >= 0.34 ? SESIONES.treinta15 : SESIONES.umbralCorto)(p, k, c), SESIONES.fondo([30, 40]), SESIONES.fondoPulso([25, 35])],
+  umbral: [SESIONES.umbral, SESIONES.fondo([40, 60]), (p, k, c, s) => (s >= 4 && s % 2 === 0 ? SESIONES.vo2Corto : SESIONES.sweet)(p, k, c), SESIONES.fondo([30, 45]), SESIONES.fondoPulso([30, 40])],
+  potencia: [SESIONES.sprints, SESIONES.fuerza, SESIONES.arranques, SESIONES.fondo([30, 45]), SESIONES.fondoPulso([25, 35])],
+  calorias: [SESIONES.fondo([40, 70]), SESIONES.fondo([30, 45]), SESIONES.kcalSeries, SESIONES.kcalMeta, SESIONES.fondoPulso([30, 50])],
 };
-const ENFOQUE_SESION = { vo2: 'potencia', sprints: 'potencia', umbral: 'potencia', tempo: 'distancia', fondo: 'distancia', largo: 'distancia', ritmo: 'ritmo', paladas: 'tecnica', cadencia: 'tecnica' };
 
-// ctx = { split2k: segundos/500 m de tu ritmo actual, distHabitual: metros de una sesión normal }
-export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx }) {
-  const obj = OBJETIVOS_PLAN.find((o) => o.clave === objetivo);
+// ctx = { kcalHabitual: kcal de una sesión normal, kcalSemana: kcal de una semana normal, sinHistorial }
+export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx = {} }) {
+  const obj = objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
   const vol = NIVELES_PLAN.find((n) => n.clave === nivel)?.volumen ?? 1;
-  const tipos = SEMANA_TIPO[objetivo].slice(0, dias);
+  const tipos = SEMANA_TIPO[obj.clave].slice(0, dias);
   const entrenamientos = [];
-  const crear = (tipo, carga) => {
-    const e = SESIONES[tipo](carga, ctx);
-    const ent = { tipo: e.tipo || 'intervalos', ...e, enfoque: ENFOQUE_SESION[tipo] };
+  const agregar = (ent) => {
     if (!entrenamientos.some((x) => x.nombre === ent.nombre)) entrenamientos.push(ent);
     return ent.nombre;
   };
-  const prueba = (nombre) => { if (!entrenamientos.some((x) => x.nombre === nombre)) entrenamientos.push({ ...EJEMPLO_PRUEBA[nombre], enfoque: 'pruebas' }); return nombre; };
+  const crear = (fn, p, k, s) => { const e = fn(p, k, ctx, s); return agregar({ tipo: e.tipo || 'intervalos', ...e }); };
+  const prueba = (nombre) => agregar({ ...EJEMPLO_PRUEBA[nombre], enfoque: 'pruebas' });
   const semanasPlan = Array.from({ length: semanas }, (_, s) => {
-    // Sube la carga cada semana y descarga una de cada 4 (un 30 % menos).
+    // Descarga una de cada 4 semanas: la carga de la primera semana y un 30 % menos de volumen.
     const descarga = (s + 1) % 4 === 0 && s < semanas - 1;
-    const carga = vol * (0.8 + 0.6 * (s / Math.max(1, semanas - 1))) * (descarga ? 0.7 : 1);
-    const lista = tipos.map((t) => crear(t, carga));
+    const p = descarga ? 0 : s / Math.max(1, semanas - 1);
+    const k = vol * (descarga ? 0.7 : 1);
+    const lista = tipos.map((fn) => crear(fn, p, k, s));
     const conPrueba = obj.prueba && (s === semanas - 1 || (semanas >= 6 && s === Math.floor(semanas / 2) - 1));
     if (conPrueba) lista[lista.length - 1] = prueba(obj.prueba);
-    if (objetivo === 'distancia' && s === semanas - 1) lista[0] = crear('largo', vol * 1.9);
     return lista;
   });
   const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
   // Lo elegido queda en el plan: sirve para armar el siguiente y para ajustarlo cuando haya historial.
-  Object.assign(programa, { objetivo, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial });
+  Object.assign(programa, { objetivo: obj.clave, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial });
+  // Plan de calorías: meta semanal que arranca en tu promedio y sube un 10 % por semana (un 20 % menos en la descarga).
+  if (obj.clave === 'calorias') {
+    const base = Math.max(300, ctx.kcalSemana || (ctx.kcalHabitual || 250) * dias);
+    programa.metaKcal = Array.from({ length: semanas }, (_, s) => ronda(base * 1.1 ** s * ((s + 1) % 4 === 0 && s < semanas - 1 ? 0.8 : 1), 50));
+  }
   return { programa, entrenamientos };
 }
 const EJEMPLO_PRUEBA = {
   'Prueba FTP 20 min': { tipo: 'intervalos', nombre: 'Prueba FTP 20 min', pruebaFtp: true, bloques: [
     { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
     { nombre: 'Prueba: máximo sostenido', duracion: 1200, metrica: '', min: 0, max: 0, prueba: true }, ENF] },
-  'Prueba 2000 m': { tipo: 'objetivo', nombre: 'Prueba 2000 m', prueba: true, objetivo: { metrica: 'distancia', valor: 2000 } },
-  'Prueba 500 m': { tipo: 'objetivo', nombre: 'Prueba 500 m', prueba: true, objetivo: { metrica: 'distancia', valor: 500 } },
+  'Prueba 5 min': { tipo: 'intervalos', nombre: 'Prueba 5 min', prueba: true, bloques: [
+    { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
+    { nombre: 'Prueba: 5 min a tope', duracion: 300, metrica: '', min: 0, max: 0, prueba: true }, ENF] },
+  'Prueba de potencia': { tipo: 'intervalos', nombre: 'Prueba de potencia', prueba: true, bloques: [
+    { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
+    { nombre: 'Prueba: 10 paladas a tope', duracion: 20, metrica: '', min: 0, max: 0, prueba: true, nivel: 18 },
+    SUAVE(240),
+    { nombre: 'Prueba: 1 min a tope', duracion: 60, metrica: '', min: 0, max: 0, prueba: true }, ENF] },
+  'Prueba de pulso fijo 30 min': { tipo: 'intervalos', nombre: 'Prueba de pulso fijo 30 min', prueba: true, bloques: [
+    { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 70 },
+    { nombre: 'Prueba: 30 min al 70 % de tu pulso máximo', duracion: 1800, metrica: 'fcpct', min: 68, max: 72, prueba: true }, ENF] },
 };
 
 // Grupo de cada entrenamiento para ordenar la lista.
@@ -228,4 +280,11 @@ export function enfoqueDe(ent) {
   if (trabajo.some((b) => b.fin === 'paladas')) return 'tecnica';
   const intenso = trabajo.some((b) => (b.metrica === 'ftp' && b.min >= 88) || b.metrica === 'watts');
   return intenso ? 'potencia' : 'distancia';
+}
+
+// Meta de calorías de la semana de una fecha (o null si el plan no tiene).
+export function metaKcalDe(programa, ahora = Date.now()) {
+  if (!programa?.metaKcal) return null;
+  const s = Math.floor((ahora - aFecha(programa.inicio).getTime()) / (7 * DIA));
+  return s >= 0 && s < programa.metaKcal.length ? programa.metaKcal[s] : null;
 }

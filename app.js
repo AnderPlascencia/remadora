@@ -17,7 +17,7 @@ import * as B from './base.js';
 import * as C from './consejos.js';
 import * as Cap from './capacidades.js';
 
-const VERSION = '0.34.0';
+const VERSION = '0.35.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -2616,8 +2616,10 @@ function pintarGasto() {
   dibujarBarras($('#grafica-gasto'), datos.map((d, i) => ({ etiqueta: fechaCorta(d.inicio), valor: d.kcal, resaltar: i === datos.length - 1 })), { color: color('--primario'), formato: (v) => miles(v) });
   const esta = datos.at(-1).kcal;
   const prom = Math.round(datos.slice(-5, -1).reduce((a, d) => a + d.kcal, 0) / 4);
-  $('#gasto-resumen').textContent = `${miles(esta)} kcal`;
-  $('#gasto-texto').textContent = prom ? `Esta semana ${miles(esta)} kcal; tu promedio es ${miles(prom)}.` : 'Tus calorías de cada semana aparecerán aquí.';
+  const meta = P.metaKcalDe(leerPrograma());
+  $('#gasto-resumen').textContent = meta ? `${miles(esta)} de ${miles(meta)} kcal` : `${miles(esta)} kcal`;
+  $('#gasto-texto').textContent = meta ? `Meta de tu plan esta semana: ${miles(meta)} kcal${esta >= meta ? '. ¡Cumplida!' : `; te faltan ${miles(meta - esta)}`}.`
+    : prom ? `Esta semana ${miles(esta)} kcal; tu promedio es ${miles(prom)}.` : 'Tus calorías de cada semana aparecerán aquí.';
 }
 
 function pintarAvisoRespaldo(total) {
@@ -3656,7 +3658,13 @@ async function contextoPlan() {
   if (!split2k) split2k = w ? F.splitDeWatts(w * 1.05) : 135;
   const dists = sesiones.slice(-10).map((x) => x.distancia).filter((d) => d > 0).sort((a, b) => a - b);
   const recientes = sesiones.filter((x) => x.fecha > Date.now() - 30 * 864e5).length;
-  return { split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000, nivelSugerido: recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto', sinHistorial: sesiones.length < 3 };
+  const kcals = sesiones.slice(-10).map((x) => x.kcal).filter((k) => k > 0).sort((a, b) => a - b);
+  const kcalMes = sesiones.filter((x) => x.fecha > Date.now() - 28 * 864e5).reduce((a, x) => a + (x.kcal || 0), 0);
+  return {
+    split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000,
+    kcalHabitual: kcals[Math.floor(kcals.length / 2)] || 250, kcalSemana: Math.round(kcalMes / 4),
+    nivelSugerido: recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto', sinHistorial: sesiones.length < 3,
+  };
 }
 // El plan por tiempo meta es una opción más del asistente: cambia las preguntas 2 a 4 por distancia y tiempo.
 const OBJETIVOS_ASISTENTE = [...P.OBJETIVOS_PLAN, { clave: 'meta', nombre: 'Un tiempo meta', texto: 'Remar una distancia en un tiempo, por ejemplo 2000 m en 7:45.' }];
@@ -3679,10 +3687,10 @@ async function pintarAsistente() {
   const { programa } = P.planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx });
   const primera = programa.dias.slice(0, asistente.dias).map((d) => d.ent);
   const ultima = programa.dias.slice(-asistente.dias).map((d) => d.ent);
-  const o = P.OBJETIVOS_PLAN.find((x) => x.clave === asistente.objetivo);
+  const o = P.objetivoPlan(asistente.objetivo);
   res.innerHTML = `<b>Tu plan: ${programa.dias.length} sesiones</b>
     <p>Semana 1: ${primera.join(' · ')}</p><p>Última semana: ${ultima.join(' · ')}</p>
-    <small>La carga sube cada semana y cada 4 semanas hay una más suave para recuperar.${o.prueba ? ` Harás la «${o.prueba}» para medir tu avance.` : ''} Las intensidades van según tu FTP${asistente.objetivo === 'ritmo' ? ` y tu ritmo actual (${Ent.formatoMmss(ctx.split2k)} /500 m)` : ''}${asistente.objetivo === 'distancia' ? ` y tu distancia habitual (${miles(ctx.distHabitual)} m)` : ''}.</small>`;
+    <small>La carga sube cada semana y cada 4 semanas hay una más suave para recuperar.${o.prueba ? ` Harás la «${o.prueba}» para medir tu avance.` : ''} Las intensidades van según tu FTP${asistente.objetivo === 'base' ? ' y tu pulso máximo' : ''}${asistente.objetivo === 'calorias' ? `; la meta de la primera semana parte de lo que quemas ahora (${miles(Math.max(300, ctx.kcalSemana || ctx.kcalHabitual * asistente.dias))} kcal)` : ''}. Si te cansas o mejoras, el plan se ajusta solo.</small>`;
 }
 $('#asistente').addEventListener('click', (e) => {
   const b = e.target.closest('[data-v]');
