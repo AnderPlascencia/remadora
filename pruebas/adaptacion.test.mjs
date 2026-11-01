@@ -65,6 +65,11 @@ assert.equal(r6.programa.dias.length, largo.dias.length + 3);
 assert.equal(r6.programa.dias.at(-1).fecha, claveDia(Date.parse(`${largo.dias.at(-1).fecha}T12:00`) + 7 * DIA));
 assert.match(r6.avisos.at(-1), /0 de 3/);
 
+// Regresión: hoy sin sesión en el plan y una dura perdida ayer → se añade el día de hoy sin romper el paso 5.
+const sinHoy = { ...structuredClone(base), inicio: dia(-20), dias: [{ fecha: dia(-1), ent: 'Umbral 3 × 8 min' }, { fecha: dia(2), ent: 'Sweet spot 2 × 12 min' }] };
+const r7 = A.revisarPlan({ programa: sinHoy, sesiones: [], entrenamientos, ftp: 200, ahora });
+assert.equal(r7.programa.dias.find((d) => d.fecha === hoy).ent, 'Umbral 3 × 8 min');
+
 // Pulso de calentamiento: 8 lpm más que en tres sesiones anteriores a los mismos watts.
 const cal = (fc) => ({ muestras: Array.from({ length: 400 }, (_, t) => ({ t, w: 120, fc })) });
 assert.equal(A.pulsoDeMas(cal(118).muestras, [cal(110), cal(110), cal(111)]), 8);

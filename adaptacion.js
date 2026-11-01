@@ -112,7 +112,8 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
 
   // 5. Semana floja (menos de la mitad de lo planeado): el resto del plan se corre una semana para repetirla.
   const lunes = E.inicioPeriodo(ahora, 'semana');
-  const semanaPasada = p.dias.map((d, i) => [d, estados[i].estado]).filter(([d]) => { const t = new Date(`${d.fecha}T12:00`).getTime(); return t >= lunes - 7 * DIA && t < lunes; });
+  // Se recalcula: el paso 4 puede haber añadido o reordenado días.
+  const semanaPasada = estadoDias(p, orden, ahora).map((d) => [d, d.estado]).filter(([d]) => { const t = new Date(`${d.fecha}T12:00`).getTime(); return t >= lunes - 7 * DIA && t < lunes; });
   const claveSemana = E.claveDia(lunes);
   if (semanaPasada.length >= 2 && p.repetida !== claveSemana && new Date(`${p.inicio}T12:00`).getTime() < lunes - 7 * DIA) {
     const hechas = semanaPasada.filter(([, e]) => e === 'hecho').length;

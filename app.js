@@ -18,7 +18,7 @@ import * as C from './consejos.js';
 import * as Cap from './capacidades.js';
 import * as A from './adaptacion.js';
 
-const VERSION = '0.36.0';
+const VERSION = '0.37.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -2791,7 +2791,7 @@ function figuraHeroe(per, nivel, ancho) {
   return `<div class="heroe-figura" style="width:${ancho}px;height:${alto}px"><svg class="aura" viewBox="0 0 200 200" aria-hidden="true">${O.auraHeroe(per)}</svg>
     <img src="${srcHeroe(c.clave, nivel)}" width="${ancho}" height="${alto}" alt="${c.nombre} ${J.rangoDe(nivel).nombre}"></div>`;
 }
-// Gráfico de radar de los 6 atributos (SVG, se adapta al tema con currentColor y variables).
+// Gráfico de radar de los atributos (SVG, se adapta al tema con currentColor y variables).
 function radarAtributos(at, fav) {
   const A = J.ATRIBUTOS;
   const R = 92;
