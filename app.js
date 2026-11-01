@@ -20,7 +20,7 @@ import * as A from './adaptacion.js';
 import * as Pf from './perfil.js';
 import * as G from './guia.js';
 
-const VERSION = '0.41.0';
+const VERSION = '0.41.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -924,6 +924,9 @@ async function iniciarSesion() {
     wBal: pc?.wPrima ?? 0,
     t: 0,
     dist: 0,
+    // La distancia que cuenta es la de los watts (como la de los fantasmas); la de la consola se guarda aparte.
+    distFuente: 'watts',
+    distConsola: 0,
     distPrevia: actual.distancia,
     muestras: [],
     rr: [],
@@ -1011,7 +1014,7 @@ function guardarSesionEnCurso() {
   if (!s || s.muestras.length < 10) return;
   const ent = entrenamientoActivo;
   const copia = {
-    inicio: s.inicio, t: s.t, dist: s.dist, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
+    inicio: s.inicio, t: s.t, dist: s.dist, distConsola: s.distConsola, distFuente: s.distFuente, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
     segConMeta: s.segConMeta, segEnRango: s.segEnRango, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
     pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, guardada: Date.now(),
     ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
@@ -1061,6 +1064,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     fecha: s.inicio,
     duracion: m.at(-1).t,
     distancia: m.at(-1).dist,
+    // Sin distFuente (una sesión a medias de una versión anterior) se pasa a watts al reparar sesiones.
+    ...(s.distFuente === 'watts' ? { distFuente: 'watts', distanciaConsola: Math.round(s.distConsola || 0) } : {}),
     kcal: Math.round(s.kcal),
     paladas: Math.round(s.paladas),
     wattsProm: prom('w'),
@@ -1196,12 +1201,12 @@ function avanzarSesion() {
   sesion.sinRemar = remando ? 0 : sesion.sinRemar + 1;
   if (remando) sesion.empezo = true;
 
-  // Distancia acumulada aunque la consola reinicie su contador (por ejemplo tras reconectar).
+  // Distancia de la consola, acumulada aunque reinicie su contador (por ejemplo tras reconectar). Solo informativa.
   if (actual.distancia != null) {
     if (sesion.distPrevia == null) sesion.distPrevia = actual.distancia;
     const m = E.metrosNuevos(sesion.distPrevia, actual.distancia);
     if (m === 0 && actual.distancia !== sesion.distPrevia) agregarLog(`distancia ignorada: ${sesion.distPrevia} → ${actual.distancia} m`);
-    sesion.dist += m;
+    sesion.distConsola = (sesion.distConsola || 0) + m;
     sesion.distPrevia = actual.distancia;
   }
 
@@ -1215,6 +1220,7 @@ function avanzarSesion() {
 
   sesion.t += 1;
   const t = sesion.t;
+  sesion.dist += E.metrosPorWatts(actual.watts);
   // Basal por segundo de tu perfil (Mifflin-St Jeor con edad, sexo y altura; si no, 1 kcal por kg y hora).
   sesion.basal ??= Pf.basalPorHora(perfil()) / 3600;
   sesion.kcal += kcalPorSegundo(actual.watts) + sesion.basal;
@@ -4343,17 +4349,31 @@ pintarInfoRespaldo();
 repararSesiones();
 
 // Sesiones guardadas con saltos falsos de distancia de la consola: se recortan a los metros reales una sola vez.
+// Después, cada sesión guardada con la distancia de la consola pasa a la distancia según watts (una sola vez).
 async function repararSesiones() {
   let n = 0;
+  let pasadas = 0;
   for (const s of await db.listar('sesiones')) {
-    const r = E.repararSaltos(s);
-    if (!r) continue;
-    await db.guardar('sesiones', r);
-    agregarLog(`sesión reparada: ${s.distancia} → ${r.distancia} m`);
-    n++;
+    let r = E.repararSaltos(s);
+    if (r) {
+      agregarLog(`sesión reparada: ${s.distancia} → ${r.distancia} m`);
+      n++;
+    } else if (E.debeQuedarSinTerminar(s)) {
+      // Reparada antes de que la reparación marcara la carrera sin terminar.
+      r = { ...s, carreraSinTerminar: true };
+      agregarLog(`carrera sin terminar: sesión ${s.id}`);
+    }
+    const w = E.distanciaPorWatts(r || s);
+    if (w) {
+      agregarLog(`distancia según watts: ${(r || s).distancia} → ${w.distancia} m`);
+      r = w;
+      pasadas++;
+    }
+    if (r) await db.guardar('sesiones', r);
   }
-  if (!n) return;
-  toast(n === 1 ? 'Reparé una sesión con metros falsos de la consola' : `Reparé ${n} sesiones con metros falsos de la consola`);
+  if (!n && !pasadas) return;
+  if (n) toast(n === 1 ? 'Reparé una sesión con metros falsos de la consola' : `Reparé ${n} sesiones con metros falsos de la consola`);
+  else toast('Tu distancia ahora se calcula con tus watts, igual que la de los fantasmas', 5000);
   if (vistaActiva('historial')) pintarHistorial();
 }
 
