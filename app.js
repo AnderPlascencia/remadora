@@ -20,7 +20,7 @@ import * as A from './adaptacion.js';
 import * as Pf from './perfil.js';
 import * as G from './guia.js';
 
-const VERSION = '0.40.1';
+const VERSION = '0.41.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
