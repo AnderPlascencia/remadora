@@ -1584,3 +1584,45 @@ details.mas-detalle[hidden] { display: none; }
 .semana-plan li[data-estado="hecho"] .sp-info b { color: var(--texto-suave); }
 .semana-plan li[data-estado="hoy"] { outline: 2px solid var(--primario); }
 .semana-plan li[data-estado="perdido"] small { color: var(--aviso); }
+
+/* ---------- v0.40: bienvenida, guía rápida, consejos y perfil ---------- */
+.inicio-como { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
+.inicio-como li { display: flex; gap: 12px; align-items: flex-start; background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 12px 14px; }
+.inicio-como .ico { color: var(--primario-claro); width: 26px; height: 26px; margin-top: 2px; }
+.inicio-como span { display: flex; flex-direction: column; gap: 2px; color: var(--texto-tenue); font-size: 14px; line-height: 1.4; }
+.inicio-como b { color: var(--texto); font-size: 16px; }
+.inicio-paso .etq-campo { display: block; font-weight: 700; color: var(--texto-suave); margin: 14px 0 0; }
+.inicio-numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; margin-top: 8px; }
+.inicio-numeros .campo small { color: var(--texto-tenue); font-weight: 500; }
+.inicio-nota { color: var(--primario-claro); font-weight: 600; font-size: 14px; min-height: 1.4em; margin: 8px 0 0; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .inicio-como { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inicio-numeros { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.consejo { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; margin: 4px 0 12px; padding: 12px 14px; border-radius: var(--radio); border: 1px solid color-mix(in srgb, var(--primario) 55%, var(--borde)); background: color-mix(in srgb, var(--primario) 12%, var(--panel)); animation: subir .25s ease-out; }
+.consejo > .ico { color: var(--primario-claro); width: 26px; height: 26px; margin-top: 2px; }
+.consejo-texto { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--texto-suave); line-height: 1.4; }
+.consejo-texto b { color: var(--texto); font-size: 15px; }
+.consejo-botones { grid-column: 2; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.consejo .enlace-boton { border: 0; background: transparent; min-height: 40px; padding: 0 4px; color: var(--texto-suave); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+
+.guia-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.guia-chips .chip { flex: 0 0 auto; }
+.guia-tema { margin-top: 10px; }
+.guia-cab { display: flex; gap: 12px; align-items: flex-start; }
+.guia-cab .ico { width: 32px; height: 32px; color: var(--primario-claro); margin-top: 4px; }
+.guia-cab h3 { margin: 0; font-size: 20px; color: var(--texto); }
+.guia-cab p { margin: 2px 0 0; color: var(--texto-suave); }
+.guia-tema ul { margin: 12px 0; padding-left: 20px; display: grid; gap: 8px; color: var(--texto-suave); line-height: 1.45; }
+.guia-tema .fila-botones { flex-wrap: wrap; }
+.guia-pie { text-align: center; color: var(--texto-tenue); font-size: 13px; margin: 10px 0 0; }
+
+.perfil-usos .ayuda { margin-bottom: 4px; }
+.lista-perfil { margin: 0 0 8px; padding-left: 20px; color: var(--texto-tenue); font-size: 14px; display: grid; gap: 4px; }
+.aviso.perfil-plan { display: flex; gap: 10px; align-items: center; justify-content: space-between; text-align: left; }
+.perfil-plan .boton { flex: none; }
+@media (min-width: 640px) {
+  .consejo { grid-template-columns: auto 1fr auto; align-items: center; }
+  .consejo-botones { grid-column: 3; }
+}
