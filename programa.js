@@ -343,3 +343,77 @@ export function sesionFondo(m, { pulso = false } = {}) {
   const e = (pulso ? SESIONES.fondoPulso : SESIONES.fondo)([m, m])(0, 1);
   return { tipo: 'intervalos', ...e };
 }
+
+// ---------- Vista previa del plan: semana a semana ----------
+// Minutos estimados de una sesión. Las de meta (calorías, distancia) no tienen duración fija: se aproxima.
+export function minutosSesion(e) {
+  if (!e) return 0;
+  const s = duracionPlan(e);
+  if (s) return Math.round(s / 60);
+  const o = e.objetivo || {};
+  if (o.metrica === 'kcal') return Math.round(o.valor / 10); // ~600 kcal por hora a ritmo de fondo
+  if (o.metrica === 'distancia') return Math.round(o.valor / 4 / 60); // ~2:05 cada 500 m
+  if (o.metrica === 'tiempo') return Math.round(o.valor / 60);
+  return 30;
+}
+// Esfuerzo de una sesión en puntos (como el TSS: 100 = una hora a tu FTP). Sirve para comparar semanas.
+export function esfuerzoSesion(e) {
+  if (!e) return 0;
+  const bloques = e.bloques?.length ? e.bloques : [{ duracion: minutosSesion(e) * 60, intensidad: 0.75 }];
+  const pts = bloques.reduce((a, b) => {
+    let i = b.intensidad;
+    if (i == null) {
+      if (b.metrica === 'ftp') i = Math.min(1.5, (b.min + Math.min(b.max, b.min + 30)) / 200); // los sprints «a tope» no se disparan
+      else if (b.metrica === 'fcpct') i = ((b.min + b.max) / 200) * 0.95;
+      else if (b.prueba) i = b.duracion <= 120 ? 1.3 : b.duracion <= 600 ? 1.1 : 1;
+      else i = 0.5;
+    }
+    return a + ((b.duracion || 0) / 3600) * i * i * 100;
+  }, 0);
+  return Math.round(pts);
+}
+// «Umbral 3 × 8 min» y «Umbral 3 × 10 min» son la misma familia: sirve para decir qué subió cada semana.
+const familia = (n) => n.replace(/\d+([.,]\d+)?/g, '#');
+
+// Semanas del plan con lo que toca cada día, sus minutos y su esfuerzo, para mostrar cómo progresa.
+// buscar(nombre) → el entrenamiento. Devuelve [{ n, lunes, dias: [{ fecha, ent, estado, min, esfuerzo, dura,
+// prueba, antes }], minutos, esfuerzo, descarga, prueba, actual, pasada }]; antes: la sesión de la misma familia
+// de la semana anterior cuando cambió (p. ej. «Umbral 3 × 8 min» → «Umbral 3 × 10 min»).
+export function semanasPlan(programa, sesiones, buscar, ahora = Date.now()) {
+  if (!programa?.dias?.length) return [];
+  const ini = aFecha(programa.inicio);
+  const lunes0 = ini.getTime() - ((ini.getDay() + 6) % 7) * DIA;
+  const hoy = aFecha(claveDia(ahora)).getTime();
+  const actual = Math.floor((hoy - lunes0) / (7 * DIA));
+  const semanas = [];
+  for (const d of estadoDias(programa, sesiones, ahora)) {
+    const i = Math.floor((aFecha(d.fecha).getTime() - lunes0) / (7 * DIA));
+    while (semanas.length <= i) {
+      const n = semanas.length;
+      semanas.push({ n: n + 1, lunes: claveDia(lunes0 + n * 7 * DIA), dias: [], actual: n === actual, pasada: n < actual });
+    }
+    const e = buscar(d.ent);
+    const prueba = /^Prueba/.test(d.ent) || !!e?.prueba || !!e?.pruebaFtp;
+    semanas[i].dias.push({ ...d, min: minutosSesion(e), esfuerzo: esfuerzoSesion(e), dura: prueba || (!!e && esDura(e)), prueba });
+  }
+  const total = semanas.length;
+  semanas.forEach((s, i) => {
+    // Una sesión que la adaptación pasó a otro día (movido) no cuenta dos veces.
+    const cuentan = s.dias.filter((d) => !d.movido);
+    s.minutos = cuentan.reduce((a, d) => a + d.min, 0);
+    s.esfuerzo = cuentan.reduce((a, d) => a + d.esfuerzo, 0);
+    s.sesiones = cuentan.length;
+    s.prueba = s.dias.some((d) => d.prueba);
+    s.descarga = !!programa.objetivo && s.n % 4 === 0 && s.n < total;
+    const previa = semanas[i - 1];
+    if (!previa) return;
+    const usados = new Set();
+    for (const d of s.dias) {
+      const j = previa.dias.findIndex((x, k) => !usados.has(k) && familia(x.ent) === familia(d.ent));
+      if (j < 0) continue;
+      usados.add(j);
+      if (previa.dias[j].ent !== d.ent) d.antes = previa.dias[j].ent;
+    }
+  });
+  return semanas;
+}

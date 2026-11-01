@@ -79,6 +79,7 @@
         <p id="hoy-porque" class="hoy-porque" hidden></p>
         <p id="hoy-cuerpo" class="hoy-cuerpo" hidden></p>
         <p id="hoy-ajuste" class="hoy-ajuste" hidden></p>
+        <button type="button" id="btn-ver-plan" class="enlace-boton ver-plan" hidden>Ver tu plan: hoy y lo que sigue ›</button>
         <button type="button" id="btn-hoy-detalle" class="enlace-boton hoy-detalle" aria-controls="hoy-detalle-caja" aria-expanded="false" hidden>Ver detalles</button>
         <div id="hoy-detalle-caja" class="hoy-detalle-caja" hidden>
           <div id="hoy-leyenda" class="leyenda"></div>
@@ -247,9 +248,25 @@
       <div id="programa-activo" hidden>
         <div class="tm-fila"><b id="prog-nombre"></b><span id="prog-cumple"></span></div>
         <div class="progreso" role="progressbar" aria-label="Avance del programa"><div id="prog-barra"></div></div>
+        <section id="plan-hoy" class="plan-hoy" aria-labelledby="plan-hoy-etq">
+          <span id="plan-hoy-etq" class="ph-etq">Hoy</span>
+          <b id="plan-hoy-nombre" class="ph-nombre"></b>
+          <span id="plan-hoy-resumen" class="ph-resumen"></span>
+          <div id="plan-hoy-tira" class="tira-bloques" aria-hidden="true"></div>
+          <p id="plan-hoy-porque" class="ph-porque"></p>
+          <button type="button" id="plan-hoy-btn" class="boton primario">Entrenar</button>
+        </section>
         <p id="prog-esquema" class="ayuda"></p>
         <h3 id="semana-plan-titulo" class="etq-campo">Esta semana</h3>
         <ol id="semana-plan" class="semana-plan"></ol>
+        <h3 class="etq-campo">Cómo sube tu plan</h3>
+        <div id="plan-curva" class="plan-curva" role="img"></div>
+        <p id="plan-curva-texto" class="ayuda"></p>
+        <div class="leyenda plan-leyenda"><span class="pl-actual">Esta semana</span><span class="pl-futura">Próximas</span><span class="pl-descarga">Descarga</span><span class="pl-prueba">Con prueba</span></div>
+        <h3 id="plan-sigue-titulo" class="etq-campo">Lo que sigue</h3>
+        <p class="aviso suave-aviso plan-estimado">Lo que viene es una vista previa. El plan se ajusta solo: si te cuestan o te sobran las sesiones fuertes, los rangos bajan o suben un 3 %; si vienes cansado, una dura se cambia por fondo; y si una semana remas poco, se repite. Los watts de cada sesión salen de tu FTP del día. <span id="plan-factor"></span></p>
+        <div id="plan-sigue" class="plan-sigue"></div>
+        <h3 class="etq-campo">Calendario</h3>
         <div class="cal-cabecera"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
         <div id="calendario" class="calendario"></div>
         <p id="prog-dia" class="ayuda" aria-live="polite"></p>
