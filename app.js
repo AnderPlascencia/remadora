@@ -3818,6 +3818,8 @@ async function pintarPrograma() {
     return `<li data-estado="${d.estado}"><span class="sp-dia">${d.diaCorto}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b><small>${tipo}${e ? ` · ${B.resumenEnt(e).split(' · ')[0]}` : ''} · ${ESTADO[d.estado]}${d.estado === 'hecho' ? ' ✓' : ''}</small></span>${
       v && d.estado !== 'hecho' ? `<button type="button" class="boton chico" data-entrenar="${v}">Entrenar</button>` : ''}</li>`;
   }).join('') : '<li class="vacio">Esta semana no hay sesiones en tu plan.</li>';
+  pintarPlanHoy(prog, sesiones, todos);
+  pintarPlanFuturo(prog, sesiones, buscarEnt);
   const porSemana = prog.porSemana || Math.round(prog.dias.length / Math.max(1, prog.semanas || 1));
   const primeras = prog.dias.slice(0, porSemana).map((d) => buscarEnt(d.ent)).filter(Boolean);
   const duras = primeras.filter((e) => P.esDura(e)).length;
@@ -3853,6 +3855,104 @@ async function pintarPrograma() {
   });
   const hoyK = E.claveDia(Date.now());
   describirDia(porFecha.has(hoyK) ? hoyK : (P.proximo(prog)?.fecha || hoyK));
+}
+
+// Tira de bloques de una sesión: el ancho es el tiempo y la altura y el color, lo fuerte que es.
+function tiraBloques(ent) {
+  const bloques = (ent?.bloques || []).filter((b) => b.duracion > 0);
+  if (!bloques.length) return '';
+  const pct = (b) => (b.metrica === 'ftp' ? (b.min + Math.min(b.max, b.min + 30)) / 2
+    : b.metrica === 'fcpct' ? (b.min + b.max) / 2 - 5 : b.prueba ? (b.duracion <= 120 ? 130 : 105) : 45);
+  return bloques.map((b) => {
+    const v = pct(b);
+    const z = Ent.ZONAS.findIndex((x) => v <= x.max);
+    return `<i style="flex-grow:${b.duracion};height:${Math.round(25 + Math.min(75, (v / 140) * 75))}%;background:${COLOR_ZONA[z < 0 ? 5 : z]}"></i>`;
+  }).join('');
+}
+const minTexto = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
+const diaPlan = (k) => { const d = new Date(`${k}T12:00`); const f = (o) => d.toLocaleDateString('es-MX', o).replace('.', ''); return `${f({ weekday: 'short' })} ${d.getDate()} ${f({ month: 'short' })}`; };
+
+// Programa › Hoy: la sesión del día (ya con lo que ajustó el plan) o el descanso y la próxima.
+async function pintarPlanHoy(prog, sesiones, todos) {
+  const caja = $('#plan-hoy');
+  const dia = await calcularDia(sesiones, todos);
+  const buscar = (n) => todos.find((e) => e.nombre === n) || baseActual.find((e) => e.nombre === n);
+  const ETQ = { plan: 'Hoy toca', hecho: 'Hoy · ya lo hiciste ✓', recuperar: 'Hoy, para recuperar', descanso: 'Hoy descansas', terminado: 'Plan terminado' };
+  caja.dataset.fuente = dia?.fuente || '';
+  $('#plan-hoy-etq').textContent = ETQ[dia?.fuente] || 'Hoy';
+  const prox = P.proximo(prog);
+  const ent = dia?.ent ? buscar(dia.ent) : null;
+  const mostrado = ent || (dia?.fuente === 'descanso' && prox ? buscar(prox.ent) : null);
+  $('#plan-hoy-nombre').textContent = dia?.ent || (dia?.fuente === 'terminado' ? prog.nombre : 'Descanso');
+  $('#plan-hoy-resumen').textContent = ent ? B.resumenEnt(ent)
+    : dia?.fuente === 'descanso' && prox ? `Próxima: ${prox.ent} · ${diaPlan(prox.fecha)}` : '';
+  $('#plan-hoy-tira').innerHTML = tiraBloques(mostrado);
+  $('#plan-hoy-tira').classList.toggle('apagada', !ent);
+  $('#plan-hoy-porque').textContent = dia?.motivo || '';
+  $('#plan-hoy-porque').hidden = !dia?.motivo;
+  const v = ent && dia.fuente !== 'hecho' ? valorDe(dia.ent, todos) : null;
+  const btn = $('#plan-hoy-btn');
+  btn.hidden = !v && dia?.fuente !== 'descanso';
+  btn.textContent = v ? 'Entrenar' : 'Remar suave igual';
+  btn.classList.toggle('primario', !!v);
+  btn.onclick = async () => { const e = await obtenerEnt(v || dia.alternativa || 'base:dis-suave'); if (e) usarEnt(e); };
+}
+
+// Programa › Cómo sube tu plan y Lo que sigue: el esfuerzo de cada semana y las sesiones de las que vienen.
+function pintarPlanFuturo(prog, sesiones, buscar) {
+  const semanas = P.semanasPlan(prog, sesiones, buscar);
+  const max = Math.max(1, ...semanas.map((s) => s.esfuerzo));
+  const curva = $('#plan-curva');
+  curva.style.setProperty('--n', semanas.length);
+  curva.setAttribute('aria-label', `Esfuerzo por semana: ${semanas.map((s) => `semana ${s.n}, ${minTexto(s.minutos)}${s.descarga ? ', descarga' : ''}${s.prueba ? ', con prueba' : ''}`).join('; ')}`);
+  curva.innerHTML = semanas.map((s) => `<button type="button" class="pc-semana${s.actual ? ' actual' : s.pasada ? ' pasada' : ''}${s.descarga ? ' descarga' : ''}" data-semana="${s.n}" title="Semana ${s.n}: ${minTexto(s.minutos)}">
+      <span class="pc-min">${s.minutos >= 60 ? `${Math.round(s.minutos / 6) / 10}`.replace('.', ',') + ' h' : `${s.minutos}′`}</span>
+      <span class="pc-barra" style="height:${Math.max(6, Math.round((s.esfuerzo / max) * 100))}%">${s.prueba ? '<b class="pc-prueba" aria-hidden="true">★</b>' : ''}</span>
+      <span class="pc-n">${s.actual ? 'Hoy' : `S${s.n}`}</span></button>`).join('');
+  const actual = semanas.find((s) => s.actual);
+  const pico = semanas.reduce((a, s) => (s.esfuerzo > a.esfuerzo ? s : a), semanas[0]);
+  const ultima = semanas.at(-1);
+  $('#plan-curva-texto').textContent = [
+    actual ? `Esta semana: ${minTexto(actual.minutos)} en ${actual.sesiones} ${actual.sesiones === 1 ? 'sesión' : 'sesiones'}.` : '',
+    pico && pico !== actual ? `La semana más exigente es la ${pico.n} (${minTexto(pico.minutos)}).` : actual && pico === actual ? 'Esta es la semana más exigente del plan.' : '',
+    ultima?.prueba ? `En la última (semana ${ultima.n}) mides cuánto mejoraste con una prueba.` : '',
+  ].filter(Boolean).join(' ');
+  // Lo que sigue: de la próxima semana al final. Con el plan terminado no queda nada.
+  const futuras = semanas.filter((s) => !s.pasada && !s.actual);
+  $('#plan-sigue-titulo').hidden = !futuras.length;
+  document.querySelector('.plan-estimado').hidden = !futuras.length;
+  const f = prog.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;
+  $('#plan-factor').textContent = f ? `Ahora mismo tus rangos van un ${Math.abs(f)} % más ${f > 0 ? 'altos' : 'bajos'} según cómo te fue.` : '';
+  const ESTADO = { hecho: 'Hecha ✓', perdido: 'No se hizo' };
+  $('#plan-sigue').innerHTML = futuras.map((s, i) => {
+    // Se compara con la última semana normal: tras una descarga, subir es lo esperado y no dice nada.
+    const previa = semanas.slice(0, s.n - 1).reverse().find((x) => !x.descarga);
+    const cambio = previa?.esfuerzo ? Math.round(((s.esfuerzo - previa.esfuerzo) / previa.esfuerzo) * 100) : 0;
+    const chips = [
+      s.descarga ? '<span class="ps-chip descarga">Descarga: más suave para asimilar</span>' : '',
+      s.prueba ? '<span class="ps-chip prueba">★ Prueba</span>' : '',
+      !s.descarga && cambio >= 3 ? `<span class="ps-chip sube">+${cambio} % de carga</span>` : '',
+      !s.descarga && cambio <= -3 ? `<span class="ps-chip baja">−${-cambio} % de carga</span>` : '',
+    ].join('');
+    const dias = s.dias.map((d) => {
+      const e = buscar(d.ent);
+      const tipo = d.prueba ? 'Prueba' : d.dura ? 'Dura' : 'Suave';
+      return `<li data-tipo="${tipo.toLowerCase()}"><span class="sp-dia">${diaPlan(d.fecha).replace(/^(\S+) /, '$1<br>')}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b>
+        <small>${tipo} · ${d.min} min${d.antes ? ` · <span class="ps-antes">antes: ${escaparHtml(d.antes)}</span>` : ''}${ESTADO[d.estado] ? ` · ${ESTADO[d.estado]}` : ''}</small>
+        <span class="tira-bloques chica" aria-hidden="true">${tiraBloques(e)}</span></span></li>`;
+    }).join('');
+    return `<details class="ps-semana${s.descarga ? ' descarga' : ''}" data-semana="${s.n}"${i === 0 ? ' open' : ''}>
+      <summary><span class="ps-tit"><b>Semana ${s.n}</b><small>${diaPlan(s.lunes).replace(/^\S+ /, '')} · ${s.sesiones} ${s.sesiones === 1 ? 'sesión' : 'sesiones'} · ${minTexto(s.minutos)}</small></span><span class="ps-chips">${chips}</span></summary>
+      <ol class="semana-plan">${dias}</ol></details>`;
+  }).join('');
+  curva.onclick = (ev) => {
+    const b = ev.target.closest('[data-semana]');
+    if (!b) return;
+    const n = b.dataset.semana;
+    const det = $('#plan-sigue').querySelector(`[data-semana="${n}"]`);
+    if (det) { det.open = true; det.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    (actual && Number(n) === actual.n ? $('#semana-plan-titulo') : $('#calendario')).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 }
 
 // ---------- Asistente de plan por objetivo ----------
@@ -4035,6 +4135,7 @@ async function pintarHoy(ent = entrenamientoPrevio) {
   const porque = dia?.motivo && (esDelDia || (!ent && dia.fuente === 'descanso')) ? dia.motivo : '';
   $('#hoy-porque').hidden = !porque;
   $('#hoy-porque').textContent = porque;
+  $('#btn-ver-plan').hidden = !prog || !dia || !['plan', 'hecho', 'recuperar', 'descanso'].includes(dia.fuente);
   // Lo que la adaptación cambió hoy, y si tus rangos del plan van más bajos o más altos.
   const avisosHoy = (prog?.avisos || []).filter((x) => x.dia === E.claveDia(Date.now())).map((x) => x.texto);
   const factor = prog?.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;
@@ -4144,6 +4245,7 @@ $('#btn-cambiar').addEventListener('click', () => {
   $('#btn-cambiar').setAttribute('aria-expanded', String(abierto));
   $('#btn-cambiar').textContent = abierto ? 'Listo' : 'Cambiar';
 });
+$('#btn-ver-plan').addEventListener('click', () => { ajustes.escribir('pestanaPlanes', 'programa'); ajustes.escribir('subirAtr', ''); irA('entrenamientos'); });
 $('#btn-hoy-detalle').addEventListener('click', () => {
   ajustes.escribir('hoyDetalle', ajustes.si('hoyDetalle', false) ? '0' : '1');
   pintarHoy();

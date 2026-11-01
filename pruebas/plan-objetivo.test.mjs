@@ -58,3 +58,26 @@ assert.equal(g['5000 m'], 'distancia');
   assert.deepEqual([programa.objetivo, programa.porSemana, programa.semanas, programa.sinHistorial], ['base', 1, 6, true]);
 }
 console.log('plan por objetivo OK');
+
+// Vista previa del plan: semanas con minutos y esfuerzo, la descarga marcada y qué subió respecto a la anterior.
+{
+  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
+  const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
+  const sem = P.semanasPlan(programa, [], buscar, new Date('2026-11-03T10:00').getTime());
+  assert.equal(sem.length, 8);
+  assert.equal(sem[0].lunes, '2026-11-02');
+  assert.ok(sem[0].actual && !sem[1].actual && !sem[0].pasada);
+  assert.ok(sem.every((s) => s.sesiones === 3 && s.minutos > 0 && s.esfuerzo > 0));
+  assert.ok(sem[3].descarga && sem[3].esfuerzo < sem[2].esfuerzo, 'semana 4 de descarga, más suave');
+  assert.ok(sem[7].prueba, 'termina con prueba');
+  assert.equal(sem[1].dias.find((d) => /^Umbral/.test(d.ent)).antes, undefined, 'igual que la semana anterior');
+  assert.equal(sem[2].dias.find((d) => /^Umbral/.test(d.ent)).antes, 'Umbral 3 × 8 min');
+  assert.ok(sem[5].esfuerzo > sem[1].esfuerzo, 'la carga sube');
+  // Una sesión que la adaptación pasó a otro día no cuenta dos veces.
+  const movido = structuredClone(programa);
+  movido.dias[0].movido = true;
+  movido.dias.push({ fecha: '2026-11-03', ent: movido.dias[0].ent });
+  movido.dias.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  assert.equal(P.semanasPlan(movido, [], buscar, new Date('2026-11-03T10:00').getTime())[0].sesiones, 3);
+  assert.equal(P.minutosSesion({ tipo: 'objetivo', objetivo: { metrica: 'kcal', valor: 300 } }), 30);
+}
