@@ -2,36 +2,59 @@ import assert from 'node:assert/strict';
 import * as P from '../programa.js';
 import { EJEMPLOS } from '../entrenamientos.js';
 
-const ctx = { split2k: 125, distHabitual: 6000 };
+const ctx = { kcalHabitual: 300, kcalSemana: 900 };
+const fcpctOFtp = (b) => !b.metrica || ['ftp', 'fcpct'].includes(b.metrica);
 for (const o of P.OBJETIVOS_PLAN) {
-  for (const dias of [2, 3, 4, 5]) {
+  for (const dias of [1, 2, 3, 4, 5]) {
     const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: o.clave, dias, semanas: 8, inicio: '2026-11-02', ctx });
     assert.equal(programa.dias.length, 8 * dias, `${o.clave} ${dias}`);
     const nombres = new Set(entrenamientos.map((e) => e.nombre));
     assert.ok(programa.dias.every((d) => nombres.has(d.ent)), 'cada día tiene su entrenamiento');
     if (o.prueba) assert.equal(programa.dias.at(-1).ent, o.prueba, 'termina con prueba');
+    // Todo va en % del FTP o del pulso máximo: el plan se ajusta solo cuando cambian.
+    assert.ok(entrenamientos.every((e) => (e.bloques || []).every(fcpctOFtp)), `${o.clave}: intensidades relativas`);
+    assert.equal(programa.objetivo, o.clave);
   }
 }
-// La carga sube: la última semana pesa más que la primera
-const { programa: pp } = P.planPorObjetivo({ objetivo: 'potencia', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
-assert.equal(pp.dias[0].ent, 'VO2 6 × 1 min');
-assert.equal(pp.dias[15].ent, 'VO2 8 × 1 min');
-const { programa: pd } = P.planPorObjetivo({ objetivo: 'distancia', nivel: 'inicio', dias: 3, semanas: 4, inicio: '2026-11-02', ctx });
-assert.equal(pd.dias[0].ent, '6500 m seguidos');
-assert.equal(pd.dias.at(-3).ent, '9000 m seguidos', 'termina con la distancia más larga');
+// 80/20: con 5 días, la 4.ª y 5.ª sesión de cada semana son suaves.
+for (const o of P.OBJETIVOS_PLAN) {
+  const { programa } = P.planPorObjetivo({ objetivo: o.clave, dias: 5, semanas: 4, inicio: '2026-11-02', ctx });
+  const extras = programa.dias.filter((_, i) => i % 5 >= 3 && i < 15).map((d) => d.ent);
+  assert.ok(extras.every((n) => /^Fondo|^Quema/.test(n)), `${o.clave}: ${extras}`); // «Quema N kcal» es al ritmo que quieras
+}
+// La carga sube y la semana 4 descarga.
+const { programa: pv } = P.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
+assert.equal(pv.dias[0].ent, 'VO₂ 5 × 2 min');
+assert.equal(pv.dias[9].ent, 'VO₂ 4 × 2 min', 'semana 4 de descarga');
+assert.equal(pv.dias[18].ent, 'VO₂ 4 × 4 min');
+const { programa: pu } = P.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
+assert.equal(pu.dias[0].ent, 'Umbral 3 × 8 min');
+assert.equal(pu.dias[18].ent, 'Umbral 1 × 30 min');
+assert.ok(pu.dias.filter((d) => d.ent === 'Prueba FTP 20 min').length === 2, 'prueba a mitad y al final');
+// Nivel: empezar pide menos volumen.
+const { programa: pi } = P.planPorObjetivo({ objetivo: 'base', nivel: 'inicio', dias: 3, semanas: 4, inicio: '2026-11-02', ctx });
+assert.equal(pi.dias[0].ent, 'Fondo 20 min a pulso suave');
+// Calorías: meta semanal que sube un 10 % y baja en la descarga.
+const { programa: pc, entrenamientos: ec } = P.planPorObjetivo({ objetivo: 'calorias', dias: 4, semanas: 6, inicio: '2026-11-02', ctx });
+assert.deepEqual(pc.metaKcal, [900, 1000, 1100, 950, 1300, 1450]);
+assert.equal(P.metaKcalDe(pc, Date.parse('2026-11-10T12:00')), 1000);
+assert.equal(P.metaKcalDe(pc, Date.parse('2026-10-10T12:00')), null);
+assert.ok(ec.some((e) => e.objetivo?.metrica === 'kcal'), 'incluye una sesión con meta de calorías');
+assert.equal(P.metaKcalDe(pv), null);
+// Los planes de antes se rehacen con el plan nuevo equivalente.
+assert.equal(P.objetivoPlan('ritmo').clave, 'umbral');
+assert.equal(P.objetivoPlan('nivel').clave, 'base');
+assert.equal(P.planPorObjetivo({ objetivo: 'distancia', dias: 2, semanas: 2, inicio: '2026-11-02', ctx }).programa.objetivo, 'base');
 // Agrupación de los ejemplos
 const g = Object.fromEntries(EJEMPLOS.map((e) => [e.nombre, P.enfoqueDe(e)]));
 assert.equal(g['Prueba FTP 20 min'], 'pruebas');
 assert.equal(g['Umbral 3 × 8 min (zona 4)'], 'potencia');
-assert.equal(g['Ritmo 2:10 × 20 min'], 'ritmo');
 assert.equal(g['Pirámide de paladas'], 'tecnica');
 assert.equal(g['150 kcal'], 'calorias');
 assert.equal(g['5000 m'], 'distancia');
-console.log('plan por objetivo OK', g);
-// v0.24: 1 día por semana y objetivo «Subir de nivel», con lo elegido guardado en el plan
 {
-  const { programa } = P.planPorObjetivo({ objetivo: 'nivel', dias: 1, semanas: 6, inicio: '2026-11-02', ctx: { ...ctx, sinHistorial: true } });
+  const { programa } = P.planPorObjetivo({ objetivo: 'base', dias: 1, semanas: 6, inicio: '2026-11-02', ctx: { ...ctx, sinHistorial: true } });
   assert.equal(programa.dias.length, 6);
-  assert.ok(programa.dias.some((d) => d.ent === 'Prueba 500 m'), 'incluye la prueba que abre la historia');
-  assert.deepEqual([programa.objetivo, programa.porSemana, programa.semanas, programa.sinHistorial], ['nivel', 1, 6, true]);
+  assert.deepEqual([programa.objetivo, programa.porSemana, programa.semanas, programa.sinHistorial], ['base', 1, 6, true]);
 }
+console.log('plan por objetivo OK');

@@ -15,8 +15,10 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
+import * as Cap from './capacidades.js';
+import * as A from './adaptacion.js';
 
-const VERSION = '0.32.0';
+const VERSION = '0.38.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -682,6 +684,9 @@ for (const d of document.querySelectorAll('details.seccion')) {
     if (!d.open) return;
     if (d.dataset.seccion === 'forma') pintarForma();
     if (d.dataset.seccion === 'tendencia') pintarTendencia();
+    if (d.dataset.seccion === 'curva') pintarCurva();
+    if (d.dataset.seccion === 'motor') pintarMotor();
+    if (d.dataset.seccion === 'gasto') pintarGasto();
   });
 }
 document.addEventListener('click', (e) => {
@@ -798,14 +803,23 @@ async function iniciarSesion() {
   entrenamientoActivo = await obtenerEnt($('#sel-entrenamiento').value);
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
-  const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftp(), fcMaxima()) : null;
+  const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftpDelPlan(entrenamientoActivo), fcMaxima()) : null;
   $('#perfil-vivo').hidden = !plan;
   if (plan) $('#vivo-leyenda').innerHTML = leyendaPerfil(entrenamientoActivo.bloques, true);
   const rivales = await crearRivales(entrenamientoActivo);
   const referencias = await crearReferencias(entrenamientoActivo);
   const rival = rivales[0] || null;
+  // Potencia crítica y W′ con lo mejor de los últimos 90 días: alimentan la batería anaeróbica en vivo.
+  const recientes = (await db.listar('sesiones')).filter((x) => x.fecha > Date.now() - 90 * 864e5);
+  const pc = E.potenciaCritica(E.curvaHistorial(recientes));
+  // Calentamientos de las últimas sesiones con pulso: para notar si hoy vas más cargado que de costumbre.
+  const calentamientos = recientes.filter((x) => x.muestras?.some((m) => m.fc)).slice(-15).map((x) => ({ muestras: x.muestras.slice(240, 301) }));
   sesion = {
     inicio: Date.now(),
+    tipoPlan: Cap.tipoPlan(entrenamientoActivo),
+    pc,
+    calentamientos,
+    wBal: pc?.wPrima ?? 0,
     t: 0,
     dist: 0,
     distPrevia: actual.distancia,
@@ -954,6 +968,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     fcProm: m.some((x) => x.fc) ? Math.round(m.filter((x) => x.fc).reduce((a, x) => a + x.fc, 0) / m.filter((x) => x.fc).length) : 0,
     fcMax: m.reduce((a, x) => Math.max(a, x.fc || 0), 0),
     entrenamiento: s.entrenamiento,
+    enfoque: ent ? P.enfoqueDe(ent) : null,
     tiempoMeta: s.tiempoMeta,
     delPrograma: delProgramaHoy(s),
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
@@ -972,6 +987,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     derivaFc: E.derivaCardiaca(m),
   });
   if (s.rr?.length) registro.rr = s.rr;
+  if (s.ajusteCalentamiento) registro.ajusteCalentamiento = s.ajusteCalentamiento;
   if (s.pruebaFtp && ent) {
     let desde = 0;
     for (const b of ent.bloques) {
@@ -1031,6 +1047,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   const recs = E.nuevosRecords(registro, previas);
   if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
+  await revisarPlanAuto();
   pintarHoy();
   pintarLineaNivel();
   if (!recuperada) medirRecuperacionPulso(registro);
@@ -1102,7 +1119,9 @@ function avanzarSesion() {
   sesion.muestras.push({
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
+  sesion.wMax = Math.max(sesion.wMax || 0, actual.watts);
   coachRitmo(t);
+  vigilarTipoSesion(t);
   if (t % 10 === 0) guardarSesionEnCurso();
   if (sesion.ventaja) {
     const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
@@ -1606,15 +1625,8 @@ function pintar() {
   // Modo remo
   $('#mr-watts').textContent = actual.watts;
   cambiarTexto($('#mr-split'), formatoSplit(actual.split));
-  $('#mr-spm').textContent = actual.spm;
-  $('#mr-tiempo').textContent = formatoTiempo(t);
-  $('#mr-dist').textContent = dist;
-  $('#mr-fc').textContent = actual.fc || '-';
-  $('#mr-fc').style.color = zfc ? COLOR_ZONA[zfc.n] : '';
+  pintarCasillasRemo(t, dist, zfc);
   $('#mr-estado').textContent = $('#pausa-aviso').textContent;
-  const objPaladas = entrenamientoActivo?.objetivo?.metrica === 'paladas';
-  $('#mr-extra-etq').textContent = objPaladas ? 'Calorías' : (entrenamientoActivo?.objetivo ? 'Paladas' : 'Calorías');
-  $('#mr-extra').textContent = sesion ? Math.round(objPaladas || !entrenamientoActivo?.objetivo ? sesion.kcal : sesion.paladas) : 0;
   pintarRival();
 
   if (sesion && entrenamientoActivo) {
@@ -1630,6 +1642,74 @@ function pintar() {
   }
   if (vistaActiva('entrenar')) dibujarVivo();
   if (!$('#modo-remo').hidden && vistaGrafica()) pintarGraficaRemo(t);
+}
+
+// Casillas del modo remo según lo que entrenas: en un fondo manda el pulso, en VO₂ la batería anaeróbica,
+// en técnica los metros por palada… El split va siempre en la primera.
+function valorCasilla(clave, t, dist, zfc) {
+  const m = sesion?.muestras || [];
+  const objPaladas = entrenamientoActivo?.objetivo?.metrica === 'paladas';
+  switch (clave) {
+    case 'spm': return ['Golpes/min', actual.spm];
+    case 'tiempo': return ['Tiempo', formatoTiempo(t)];
+    case 'dist': return ['Distancia', dist];
+    case 'kcal': return ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
+    case 'extra': return entrenamientoActivo?.objetivo && !objPaladas ? ['Paladas', sesion ? Math.round(sesion.paladas) : 0] : ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
+    case 'fc': return [zfc ? `Pulso · Z${zfc.n}` : 'Pulso', actual.fc || '-'];
+    case 'kcalh': return ['Calorías/hora', t >= 60 ? Math.round((sesion.kcal * 3600) / t) : '-'];
+    case 'wmax': return ['Watts máx', sesion?.wMax || 0];
+    case 'jpp': return ['Trabajo/palada', actual.spm ? `${Math.round((actual.watts * 60) / actual.spm)} J` : '-'];
+    case 'mpp': {
+      // Metros por palada de los últimos 30 s: responde a cómo remas ahora, no a toda la sesión.
+      const v = m.slice(-30);
+      const paladas = v.reduce((a, x) => a + x.spm / 60, 0);
+      return ['Metros/palada', v.length >= 10 && paladas >= 3 ? ((v.at(-1).dist - v[0].dist) / paladas).toFixed(1) : '-'];
+    }
+    case 'bateria': return [avanzado() ? 'Batería (W′)' : 'Batería', sesion?.pc ? `${Math.max(0, Math.round((100 * sesion.wBal) / sesion.pc.wPrima))}%` : '-'];
+    default: return ['', ''];
+  }
+}
+
+function pintarCasillasRemo(t, dist, zfc) {
+  const claves = Cap.CASILLAS_REMO[sesion?.tipoPlan || 'libre'];
+  claves.forEach((clave, i) => {
+    const [etq, valor] = valorCasilla(clave, t, dist, zfc);
+    $(`#mr-c${i + 1}-etq`).textContent = etq;
+    $(`#mr-c${i + 1}`).textContent = valor;
+    $(`#mr-c${i + 1}`).style.color = clave === 'fc' && zfc ? COLOR_ZONA[zfc.n] : '';
+  });
+}
+
+// Avisos por voz propios del tipo de sesión y saldo de la batería anaeróbica (W′), una vez por segundo.
+function vigilarTipoSesion(t) {
+  if (sesion.pc) {
+    const { cp, wPrima } = sesion.pc;
+    const w = actual.watts;
+    sesion.wBal = Math.min(wPrima, w > cp ? sesion.wBal - (w - cp) : sesion.wBal + ((wPrima - sesion.wBal) * (cp - w)) / wPrima);
+    const pct = (100 * sesion.wBal) / wPrima;
+    if (pct < 20 && !sesion.avisoBateria) { sesion.avisoBateria = true; hablar('Batería anaeróbica al 20 por ciento. Dosifica', { clave: 'bateria', cadaSeg: 60 }); }
+    if (pct > 60) sesion.avisoBateria = false;
+  }
+  // Al minuto 5: si el pulso va 5 lpm o más por encima de lo normal a los mismos watts, hoy los rangos bajan un 5 %.
+  if (t === 300 && sesion.plan && sesion.calentamientos?.length) {
+    const deMas = A.pulsoDeMas(sesion.muestras, sesion.calentamientos);
+    if (deMas != null && deMas >= 5) {
+      for (const b of sesion.plan) if (b.metrica === 'watts') { b.min = Math.round(b.min * 0.95); b.max = Math.round(b.max * 0.95); }
+      sesion.ajusteCalentamiento = deMas;
+      hablar(`Hoy vas cargado: tu pulso va ${deMas} pulsaciones más alto de lo normal. Bajé los rangos un 5 por ciento`, { urgente: true });
+      toast(`Hoy vas cargado (+${deMas} lpm): bajé los rangos un 5 %`, 5000);
+    }
+  }
+  const tipo = sesion.tipoPlan;
+  if (tipo === 'fondo' && fcMaxima() && actual.fc) {
+    // En un fondo el pulso no debería pasar del 75 % del máximo (zona 2) más de un minuto seguido.
+    sesion.fcAltaSeg = actual.fc > fcMaxima() * 0.75 ? (sesion.fcAltaSeg || 0) + 1 : 0;
+    if (sesion.fcAltaSeg === 60) hablar('Pulso alto para un fondo. Baja un poco los watts', { clave: 'fc-fondo', cadaSeg: 180 });
+  }
+  if (tipo === 'calorias') {
+    const cien = Math.floor(sesion.kcal / 100);
+    if (cien > (sesion.kcalAvisadas || 0)) { sesion.kcalAvisadas = cien; hablar(`${cien * 100} calorías`, { clave: 'kcal', cadaSeg: 30 }); }
+  }
 }
 
 // Vista del modo remo: 'numeros', 'grafica' o 'carrera' (esta solo si hay fantasma).
@@ -2483,10 +2563,128 @@ function pintarForma() {
     let consejo = 'Vas equilibrado: cualquier entrenamiento del plan te queda bien.';
     if (hoy.frescura < -20) consejo = 'Vienes cansado: hoy toca algo suave o descansar.';
     else if (hoy.frescura > 10) consejo = 'Estás fresco: buen día para una prueba o una sesión fuerte.';
-    $('#forma-texto').textContent = avanzado() ? `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}` : consejo;
+    $('#forma-texto').textContent = (avanzado() ? `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}` : consejo) + textoCarga();
   }
   const estado = () => (hoy.frescura < -20 ? 'Cansado' : hoy.frescura > 10 ? 'Fresco' : 'Equilibrado');
   $('#forma-resumen').textContent = !(ftp() && hay) ? '' : avanzado() ? `Frescura ${hoy.frescura > 0 ? '+' : ''}${hoy.frescura}` : estado();
+}
+
+// Ratio agudo:crónico y reparto 80/20 de la semana, en una o dos frases.
+function textoCarga() {
+  const r = E.ratioCarga(cacheSesiones, ftp());
+  const d = E.distribucionIntensidad(cacheSesiones, ftp());
+  let t = '';
+  if (r != null) {
+    const zona = r > 1.5 ? 'muy por encima de lo seguro: baja la carga unos días' : r > 1.3 ? 'por encima de lo seguro (0,8–1,3): no subas más esta semana' : r < 0.8 ? 'por debajo de tu carga habitual: puedes subir un poco' : 'en la zona segura para progresar';
+    t += avanzado() ? ` Ratio agudo:crónico ${r.toLocaleString('es-MX')}, ${zona}.` : ` Tu carga de esta semana está ${zona}.`;
+  }
+  if (d && d.segundos >= 1200) {
+    t += avanzado() ? ` Reparto de 7 días: ${d.suave} % suave, ${d.medio} % medio, ${d.fuerte} % fuerte (lo ideal ronda 80 / 5 / 15).`
+      : d.suave < 70 ? ' Esta semana casi todo fue fuerte: añade algún fondo suave.' : '';
+  }
+  return t;
+}
+
+// Mini gráfica (SVG) de una capacidad en las últimas semanas; se adapta al tema con currentColor.
+function miniLinea(puntos) {
+  const vals = puntos.map((p) => p.valor);
+  const con = vals.map((v, i) => [i, v]).filter(([, v]) => v != null);
+  if (con.length < 2) return '';
+  const min = Math.min(...con.map(([, v]) => v));
+  const max = Math.max(...con.map(([, v]) => v));
+  const W = 100, H = 28;
+  const x = (i) => (i / (vals.length - 1)) * W;
+  const y = (v) => (max === min ? H / 2 : H - 3 - ((v - min) / (max - min)) * (H - 6));
+  const d = con.map(([i, v], k) => `${k ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+  const [ui, uv] = con.at(-1);
+  return `<svg class="mini-linea" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${x(ui)}" cy="${y(uv)}" r="2.5" fill="currentColor"/></svg>`;
+}
+
+// Cómo has mejorado: cada capacidad con su % frente a las 6 semanas anteriores y su evolución de 12 semanas.
+// En sencillo se ve el nombre fácil y el %; con «Datos avanzados», también el valor técnico y cómo se mide.
+function pintarCapacidades() {
+  const opc = { ftp: ftp(), peso: ajustes.num('peso', 75), fcMax: fcMaxima() };
+  const caps = Cap.capacidades(cacheSesiones, opc);
+  const hist = Cap.historialCapacidades(cacheSesiones, opc);
+  const fmt = (c, v) => (c.unidad === 'm/palada' ? v.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : c.unidad === 'ml/kg/min' || c.unidad === 'kJ' ? v.toLocaleString('es-MX', { minimumFractionDigits: 1 }) : miles(v));
+  $('#capacidades').innerHTML = caps.map((c) => {
+    const titulo = avanzado() ? c.nombre : c.simple;
+    const sub = avanzado() || c.nombre === c.simple ? '' : `<span class="tecnico">${c.nombre}</span>`;
+    if (c.valor == null) return `<div class="capacidad vacia"><div class="etq">${titulo}${sub}</div><div class="sub">${c.falta}</div></div>`;
+    const pct = c.pct == null ? '<span class="igual">Nueva</span>'
+      : c.pct === 0 ? '<span class="igual">= igual</span>'
+        : `<span class="${c.pct > 0 ? 'mejor' : 'peor'}">${c.pct > 0 ? '▲ +' : '▼ '}${c.pct}%</span>`;
+    const valor = `<div class="sub solo-avanzado">${fmt(c, c.valor)} ${c.unidad} · ${c.como}</div>`;
+    return `<details class="capacidad ${c.pct > 0 ? 'sube' : c.pct < 0 ? 'baja' : ''}"><summary><div class="etq">${titulo}${sub}</div>
+      <div class="valor">${pct}</div>${miniLinea(hist[c.clave])}${valor}</summary>
+      <div class="sub como-subir">Para subirla: ${c.entrena.toLowerCase()}.</div></details>`;
+  }).join('');
+  const suben = caps.filter((c) => c.mejora).length;
+  $('#capacidades-resumen').textContent = suben ? `${suben} ${suben === 1 ? 'sube' : 'suben'}` : '';
+}
+
+// Tu cuerpo hoy: semáforo de fatiga, horas hasta estar recuperado, consejo y carga de la semana contra tu rango seguro.
+function pintarCuerpoHoy() {
+  const caja = $('#cuerpo-hoy');
+  const c = ftp() ? Cap.estadoCuerpo(cacheSesiones, ftp()) : null;
+  caja.hidden = !c;
+  if (!c) return;
+  caja.dataset.estado = c.clave;
+  $('#cuerpo-estado').textContent = c.nombre;
+  $('#cuerpo-recuperacion').textContent = Cap.textoRecuperacion(c.horas);
+  $('#cuerpo-consejo').textContent = c.consejo + (avanzado() ? ` Condición ${c.condicion}, fatiga ${c.fatiga}, frescura ${c.frescura > 0 ? '+' : ''}${c.frescura}.` : '');
+  const barra = (etq, valor, max, zona, nota) => `<div class="tm-fila"><span>${etq}</span><span>${nota}</span></div>
+    <div class="ch-barra">${zona ? `<i class="ch-zona" style="left:${zona[0]}%;width:${zona[1] - zona[0]}%"></i>` : ''}<b style="width:${Math.min(100, valor)}%"></b></div>`;
+  if (c.seguro) {
+    const tope = c.seguro.max * 1.4;
+    const pos = (v) => Math.round((100 * v) / tope);
+    const zona = c.semana > c.seguro.max ? 'Pasada: baja unos días' : c.semana < c.seguro.min ? 'Puedes subir un poco' : 'En tu zona segura';
+    $('#cuerpo-carga').innerHTML = barra('Esfuerzo de 7 días', pos(c.semana), 100, [pos(c.seguro.min), pos(c.seguro.max)], avanzado() ? `${c.semana} TSS · ratio ${c.ratio.toLocaleString('es-MX')}` : zona);
+  } else $('#cuerpo-carga').innerHTML = '<p class="ayuda">Con 2 o 3 semanas de sesiones te diré cuánto esfuerzo aguantas sin pasarte.</p>';
+  const r = c.reparto;
+  $('#cuerpo-reparto').innerHTML = r && r.segundos >= 600
+    ? barra('Suave (7 días)', r.suave, 100, [75, 85], r.suave < 70 ? 'Poco suave: añade un fondo' : `${r.suave}% (ideal cerca de 80%)`)
+    : '';
+}
+
+// Curva de potencia: eje X por duraciones (5 s … 60 min), últimas 6 semanas contra lo anterior.
+function pintarCurva() {
+  const { ahora, antes } = Cap.curvasComparadas(cacheSesiones);
+  const idx = (segs) => E.DURACIONES_CURVA.indexOf(segs);
+  const etq = (segs) => (segs < 60 ? `${segs} s` : `${segs / 60} min`);
+  dibujar($('#grafica-curva'), [
+    { color: color('--watts'), eje: 'izq', puntos: ahora.map((p) => [idx(p.segs), p.w]) },
+    { color: color('--split'), eje: 'izq', puntos: antes.map((p) => [idx(p.segs), p.w]) },
+  ], { marcas: true, formatoX: (t) => etq(E.DURACIONES_CURVA[Math.round(t)] ?? 5) });
+  const pc = E.potenciaCritica(ahora);
+  $('#curva-texto').textContent = !ahora.length ? 'Rema unas sesiones para ver tu curva.'
+    : pc && !avanzado() ? `Tu mejor media para cada duración. Puedes aguantar unos ${pc.cp} W casi sin cansarte; por encima gastas tu batería, que llega para unos ${Math.round(pc.wPrima / Math.max(1, pc.cp * 0.2))} s a ${Math.round(pc.cp * 1.2)} W.`
+    : pc ? `Tu potencia crítica es ${pc.cp} W y tu batería anaeróbica (W′) ${(pc.wPrima / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} kJ. Por encima de ${pc.cp} W la gastas; por debajo se recarga.`
+      : 'Cada punto es tu mejor media para esa duración. Con marcas de 3 y 12 min calculo tu potencia crítica.';
+}
+
+// Mi motor: watts a un pulso fijo (70 % del máximo), semana a semana. Si suben, el corazón rinde más.
+function pintarMotor() {
+  const fcRef = fcMaxima() ? Math.round(fcMaxima() * 0.7) : 0;
+  const datos = Cap.motorSemanal(cacheSesiones, fcRef);
+  dibujarBarras($('#grafica-motor'), datos.map((d, i) => ({ etiqueta: fechaCorta(d.inicio), valor: d.w || 0, resaltar: i === datos.length - 1 })), { color: color('--fc'), formato: (v) => `${v}` });
+  const con = datos.filter((d) => d.w);
+  $('#motor-resumen').textContent = con.length ? `${con.at(-1).w} W` : '';
+  $('#motor-texto').textContent = !fcRef ? 'Pon tu edad en Ajustes › Pulso y zonas para medir tu motor.'
+    : con.length < 2 ? `Watts que mueves a ${fcRef} lpm. Rema fondos con el reloj para ver cómo cambian.`
+      : `Watts que mueves a ${fcRef} lpm. ${con.at(-1).w > con[0].w ? 'Suben: tu corazón rinde más con el mismo esfuerzo.' : 'Para que suban, suma fondos suaves en zona 2.'}`;
+}
+
+// Calorías por semana, con el promedio de las 4 anteriores.
+function pintarGasto() {
+  const datos = Cap.gastoSemanal(cacheSesiones);
+  dibujarBarras($('#grafica-gasto'), datos.map((d, i) => ({ etiqueta: fechaCorta(d.inicio), valor: d.kcal, resaltar: i === datos.length - 1 })), { color: color('--primario'), formato: (v) => miles(v) });
+  const esta = datos.at(-1).kcal;
+  const prom = Math.round(datos.slice(-5, -1).reduce((a, d) => a + d.kcal, 0) / 4);
+  const meta = P.metaKcalDe(leerPrograma());
+  $('#gasto-resumen').textContent = meta ? `${miles(esta)} de ${miles(meta)} kcal` : `${miles(esta)} kcal`;
+  $('#gasto-texto').textContent = meta ? `Meta de tu plan esta semana: ${miles(meta)} kcal${esta >= meta ? '. ¡Cumplida!' : `; te faltan ${miles(meta - esta)}`}.`
+    : prom ? `Esta semana ${miles(esta)} kcal; tu promedio es ${miles(prom)}.` : 'Tus calorías de cada semana aparecerán aquí.';
 }
 
 function pintarAvisoRespaldo(total) {
@@ -2550,6 +2748,11 @@ async function pintarHistorial() {
   pintarHeroeProgreso(lista);
   pintarPeriodos();
   pintarForma();
+  pintarCuerpoHoy();
+  pintarCapacidades();
+  for (const [sec, fn] of [['curva', pintarCurva], ['motor', pintarMotor], ['gasto', pintarGasto]]) {
+    if (document.querySelector(`details[data-seccion="${sec}"]`).open) fn();
+  }
 
   // Filtro por entrenamiento
   const sel = $('#filtro-ent');
@@ -2638,7 +2841,7 @@ function figuraHeroe(per, nivel, ancho) {
   return `<div class="heroe-figura" style="width:${ancho}px;height:${alto}px"><svg class="aura" viewBox="0 0 200 200" aria-hidden="true">${O.auraHeroe(per)}</svg>
     <img src="${srcHeroe(c.clave, nivel)}" width="${ancho}" height="${alto}" alt="${c.nombre} ${J.rangoDe(nivel).nombre}"></div>`;
 }
-// Gráfico de radar de los 6 atributos (SVG, se adapta al tema con currentColor y variables).
+// Gráfico de radar de los atributos (SVG, se adapta al tema con currentColor y variables).
 function radarAtributos(at, fav) {
   const A = J.ATRIBUTOS;
   const R = 92;
@@ -3313,6 +3516,8 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
     };
   }
 
+  pintarCapacidadSesion(s);
+
   const tec = E.tecnica(s);
   const estres = s.estres ?? E.estres(s, s.ftp || ftp());
   const stats = [
@@ -3366,6 +3571,16 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
     : 'Ver detalle y métricas';
   if (det.open) requestAnimationFrame(() => dibujarHojaGraficas(s));
   $('#hoja-cerrar').focus();
+}
+// Qué capacidad entrenó la sesión, sus tres datos clave y una frase que los lee.
+function pintarCapacidadSesion(s) {
+  const caja = $('#hoja-capacidad');
+  caja.hidden = !s.muestras?.length;
+  if (caja.hidden) return;
+  const a = Cap.analisisSesion(s, { ftp: ftp(), fcMax: fcMaxima() });
+  caja.innerHTML = `<div class="hc-cabecera"><span class="etq">Entrenaste</span><b>${avanzado() ? a.nombre : a.simple}</b></div>
+    <div class="metricas compacta">${a.datos.map((d) => `<div class="metrica" title="${escaparHtml(d.ayuda)}"><span class="etq">${escaparHtml(d.etq)}</span><span class="valor">${d.valor}</span></div>`).join('')}</div>
+    <p class="ayuda">${a.lectura}</p>`;
 }
 $('#hoja-detalle').addEventListener('toggle', () => {
   if ($('#hoja-detalle').open && sesionAbierta) requestAnimationFrame(() => dibujarHojaGraficas(sesionAbierta));
@@ -3509,7 +3724,13 @@ async function contextoPlan() {
   if (!split2k) split2k = w ? F.splitDeWatts(w * 1.05) : 135;
   const dists = sesiones.slice(-10).map((x) => x.distancia).filter((d) => d > 0).sort((a, b) => a - b);
   const recientes = sesiones.filter((x) => x.fecha > Date.now() - 30 * 864e5).length;
-  return { split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000, nivelSugerido: recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto', sinHistorial: sesiones.length < 3 };
+  const kcals = sesiones.slice(-10).map((x) => x.kcal).filter((k) => k > 0).sort((a, b) => a - b);
+  const kcalMes = sesiones.filter((x) => x.fecha > Date.now() - 28 * 864e5).reduce((a, x) => a + (x.kcal || 0), 0);
+  return {
+    split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000,
+    kcalHabitual: kcals[Math.floor(kcals.length / 2)] || 250, kcalSemana: Math.round(kcalMes / 4),
+    nivelSugerido: recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto', sinHistorial: sesiones.length < 3,
+  };
 }
 // El plan por tiempo meta es una opción más del asistente: cambia las preguntas 2 a 4 por distancia y tiempo.
 const OBJETIVOS_ASISTENTE = [...P.OBJETIVOS_PLAN, { clave: 'meta', nombre: 'Un tiempo meta', texto: 'Remar una distancia en un tiempo, por ejemplo 2000 m en 7:45.' }];
@@ -3532,10 +3753,10 @@ async function pintarAsistente() {
   const { programa } = P.planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx });
   const primera = programa.dias.slice(0, asistente.dias).map((d) => d.ent);
   const ultima = programa.dias.slice(-asistente.dias).map((d) => d.ent);
-  const o = P.OBJETIVOS_PLAN.find((x) => x.clave === asistente.objetivo);
+  const o = P.objetivoPlan(asistente.objetivo);
   res.innerHTML = `<b>Tu plan: ${programa.dias.length} sesiones</b>
     <p>Semana 1: ${primera.join(' · ')}</p><p>Última semana: ${ultima.join(' · ')}</p>
-    <small>La carga sube cada semana y cada 4 semanas hay una más suave para recuperar.${o.prueba ? ` Harás la «${o.prueba}» para medir tu avance.` : ''} Las intensidades van según tu FTP${asistente.objetivo === 'ritmo' ? ` y tu ritmo actual (${Ent.formatoMmss(ctx.split2k)} /500 m)` : ''}${asistente.objetivo === 'distancia' ? ` y tu distancia habitual (${miles(ctx.distHabitual)} m)` : ''}.</small>`;
+    <small>La carga sube cada semana y cada 4 semanas hay una más suave para recuperar.${o.prueba ? ` Harás la «${o.prueba}» para medir tu avance.` : ''} Las intensidades van según tu FTP${asistente.objetivo === 'base' ? ' y tu pulso máximo' : ''}${asistente.objetivo === 'calorias' ? `; la meta de la primera semana parte de lo que quemas ahora (${miles(Math.max(300, ctx.kcalSemana || ctx.kcalHabitual * asistente.dias))} kcal)` : ''}. Si te cansas o mejoras, el plan se ajusta solo.</small>`;
 }
 $('#asistente').addEventListener('click', (e) => {
   const b = e.target.closest('[data-v]');
@@ -3646,6 +3867,19 @@ async function pintarHoy(ent = entrenamientoPrevio) {
   $('#hoy-nombre').textContent = ent ? ent.nombre : libreConFantasmas() ? 'Remo libre contra 3 fantasmas' : 'Remo libre';
   $('#hoy-resumen').textContent = ent ? [B.resumenEnt(ent), ent.proposito].filter(Boolean).join(' · ')
     : libreConFantasmas() ? 'Rema a tu aire: la carrera cuenta desde los 5 min.' : 'Rema a tu aire, sin meta.';
+  // Lo que la adaptación cambió hoy, y si tus rangos del plan van más bajos o más altos.
+  const avisosHoy = (prog?.avisos || []).filter((x) => x.dia === E.claveDia(Date.now())).map((x) => x.texto);
+  const factor = prog?.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;
+  if (factor && esDeHoy) avisosHoy.push(`Tus rangos del plan van un ${Math.abs(factor)} % más ${factor > 0 ? 'altos' : 'bajos'} según cómo te fue.`);
+  // Semáforo de fatiga en una línea, para no apretar de más.
+  const cuerpo = ftp() ? Cap.estadoCuerpo(sesiones, ftp()) : null;
+  $('#hoy-cuerpo').hidden = !cuerpo;
+  if (cuerpo) {
+    $('#hoy-cuerpo').dataset.estado = cuerpo.clave;
+    $('#hoy-cuerpo').textContent = `${cuerpo.nombre} · ${cuerpo.horas ? Cap.textoRecuperacion(cuerpo.horas).toLowerCase() : 'puedes entrenar'}`;
+  }
+  $('#hoy-ajuste').hidden = !avisosHoy.length;
+  $('#hoy-ajuste').textContent = avisosHoy.join(' ');
   $('#btn-hoy-detalle').hidden = !ent;
   const abierto = !!ent && ajustes.si('hoyDetalle', false);
   $('#btn-hoy-detalle').textContent = abierto ? 'Ocultar detalles' : 'Ver detalles';
@@ -3687,6 +3921,28 @@ async function pintarHoy(ent = entrenamientoPrevio) {
     boton.onclick = sug.accion || null;
   }
 }
+// Adaptación automática: revisa el plan al abrir la app y después de cada sesión, y lo cambia sin preguntar.
+// Lo que cambió se explica en la tarjeta Hoy.
+async function revisarPlanAuto() {
+  const prog = leerPrograma();
+  if (!prog?.dias?.length || sesion) return;
+  const [sesiones, ents] = await Promise.all([db.listar('sesiones'), db.listar('entrenamientos')]);
+  const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp() });
+  if (!r) return;
+  for (const e of r.entrenamientos) if (!ents.some((x) => x.nombre === e.nombre)) await db.guardar('entrenamientos', { ...e, dePlan: true });
+  guardarPrograma(r.programa);
+  if (r.avisos.length) {
+    agregarLog(`plan ajustado: ${r.avisos.join(' | ')}`);
+    if (r.entrenamientos.length || r.avisos.some((x) => /hoy/.test(x))) { elegirLoDeHoy = true; await llenarSelectorEntrenamientos(); }
+    pintarHoy();
+  }
+}
+// FTP con el que se calculan los watts de un entrenamiento del plan: la adaptación lo sube o baja un 3 % cada vez.
+function ftpDelPlan(ent) {
+  const f = leerPrograma()?.factor;
+  return ent && esDePlan(ent) && f ? Math.round(ftp() * f) : ftp();
+}
+
 // Siguiente plan (un poco más de carga) o el mismo ajustado a tu historial, desde hoy.
 async function rehacerPlan(prog, { ajustar = false } = {}) {
   const ctx = await contextoPlan();
@@ -4110,7 +4366,7 @@ window.addEventListener('resize', () => {
   if (vistaActiva('entrenamientos')) pintarPrograma();
 });
 actualizarBotones();
-llenarSelectorEntrenamientos();
+llenarSelectorEntrenamientos().then(revisarPlanAuto);
 dibujarVivo();
 pintarLineaNivel();
 
