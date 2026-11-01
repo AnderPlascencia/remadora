@@ -467,3 +467,201 @@ export function esfuerzoPorPulso(muestras, fcMax) {
   if (muestras.length > 2700 && pct >= 70) rpe += 1;
   return { rpe: Math.max(1, Math.min(10, rpe)), pct: Math.round(pct) };
 }
+
+// ---------- Métricas avanzadas: potencia ----------
+// Muestras a 1 Hz. Las funciones devuelven null cuando no hay datos suficientes para que la cifra signifique algo.
+
+const media = (xs) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0);
+const dosDec = (x) => Math.round(x * 100) / 100;
+
+// Índice de variabilidad: potencia normalizada / media. 1,00–1,05 = esfuerzo parejo; más alto = tirones.
+export function variabilidadPotencia(muestras) {
+  if (!muestras || muestras.length < 30) return null;
+  const prom = media(muestras.map((x) => x.w));
+  return prom ? dosDec(potenciaNormalizada(muestras) / prom) : null;
+}
+
+// Factor de intensidad: potencia normalizada / FTP (0,75 suave, 1,0 una prueba de una hora).
+export function factorIntensidad(muestras, ftp) {
+  if (!ftp || !muestras || muestras.length < 30) return null;
+  return dosDec(potenciaNormalizada(muestras) / ftp);
+}
+
+// Trabajo mecánico entregado al volante, en kJ.
+export function trabajoKj(muestras) {
+  return Math.round((muestras || []).reduce((a, x) => a + (x.w || 0), 0) / 1000);
+}
+
+// Curva de potencia: mejor media para cada duración (s) que quepa en la sesión.
+export const DURACIONES_CURVA = [5, 10, 30, 60, 120, 180, 300, 600, 720, 1200, 1800, 3600];
+export function curvaPotencia(muestras) {
+  return DURACIONES_CURVA.map((segs) => ({ segs, w: mejorPotencia(muestras || [], segs) })).filter((p) => p.w);
+}
+
+// Curva con lo mejor de varias sesiones: { segs, w, fecha }.
+export function curvaHistorial(sesiones) {
+  const mejor = new Map();
+  for (const s of sesiones) {
+    for (const p of curvaPotencia(s.muestras)) {
+      if (!mejor.has(p.segs) || p.w > mejor.get(p.segs).w) mejor.set(p.segs, { ...p, fecha: s.fecha });
+    }
+  }
+  return DURACIONES_CURVA.filter((d) => mejor.has(d)).map((d) => mejor.get(d));
+}
+
+// Potencia crítica (W) y W′ (J) con el modelo trabajo = CP × t + W′, ajustado por mínimos cuadrados
+// con los puntos de la curva entre 2 y 20 min (fuera de ese rango el modelo se desvía).
+export function potenciaCritica(curva) {
+  const pts = (curva || []).filter((p) => p.segs >= 120 && p.segs <= 1200 && p.w > 0);
+  if (pts.length < 2) return null;
+  const xs = pts.map((p) => p.segs);
+  const ys = pts.map((p) => p.w * p.segs);
+  const mx = media(xs);
+  const my = media(ys);
+  const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  if (!sxx) return null;
+  const cp = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / sxx;
+  const wPrima = my - cp * mx;
+  if (cp <= 0 || wPrima <= 0) return null;
+  return { cp: Math.round(cp), wPrima: Math.round(wPrima) };
+}
+
+// Saldo de W′ segundo a segundo (modelo diferencial de Skiba): se gasta por encima de CP
+// y se recarga por debajo, más rápido cuanto más lejos de CP.
+export function saldoWPrima(muestras, cp, wPrima) {
+  if (!cp || !wPrima) return [];
+  let saldo = wPrima;
+  return (muestras || []).map((x) => {
+    const w = x.w || 0;
+    if (w > cp) saldo -= w - cp;
+    else saldo += ((wPrima - saldo) * (cp - w)) / wPrima;
+    saldo = Math.min(wPrima, saldo);
+    return Math.round(saldo);
+  });
+}
+
+// VO₂máx aproximado (ml/kg/min) desde la potencia de 5 min, con la ecuación de ergómetro del ACSM.
+export function vo2maxEstimado(w5, peso) {
+  if (!w5 || !peso) return null;
+  return Math.round(((10.8 * w5) / peso + 7) * 10) / 10;
+}
+
+// ---------- Métricas avanzadas: potencia + pulso ----------
+// Los primeros 5 min se descartan: el pulso todavía está subiendo y falsearía la comparación.
+const CALENTAMIENTO = 300;
+const conPulso = (muestras) => (muestras || []).filter((x) => x.t > CALENTAMIENTO && x.fc > 0 && x.w > 0);
+
+// Desacople aeróbico (%): cuánto cae la relación watts/pulso de la primera a la segunda mitad.
+// Menos de 5 % en una sesión continua de 40 min o más = buena base aeróbica.
+export function desacople(muestras, minSeg = 1200) {
+  const m = conPulso(muestras);
+  if (m.length < minSeg) return null;
+  const mitad = Math.floor(m.length / 2);
+  const ef = (xs) => media(xs.map((x) => x.w)) / media(xs.map((x) => x.fc));
+  const a = ef(m.slice(0, mitad));
+  const b = ef(m.slice(mitad));
+  return Math.round(((a - b) / a) * 1000) / 10;
+}
+
+// Deriva cardíaca (lpm/min): pendiente del pulso en los tramos a potencia estable (±10 % de la mediana).
+export function derivaCardiaca(muestras) {
+  const m = conPulso(muestras);
+  if (m.length < 600) return null;
+  const orden = m.map((x) => x.w).sort((a, b) => a - b);
+  const med = orden[Math.floor(orden.length / 2)];
+  const estables = m.filter((x) => Math.abs(x.w - med) <= med * 0.1);
+  if (estables.length < 600) return null;
+  const mt = media(estables.map((x) => x.t));
+  const mf = media(estables.map((x) => x.fc));
+  const sxx = estables.reduce((a, x) => a + (x.t - mt) ** 2, 0);
+  const pend = estables.reduce((a, x) => a + (x.t - mt) * (x.fc - mf), 0) / sxx;
+  return dosDec(pend * 60);
+}
+
+// Pulso medio a una potencia dada (±margen W). Si baja semana a semana, el motor mejora.
+export function pulsoAWatts(muestras, watts, margen = 10) {
+  const m = conPulso(muestras).filter((x) => Math.abs(x.w - watts) <= margen);
+  return m.length >= 120 ? Math.round(media(m.map((x) => x.fc))) : null;
+}
+
+// Watts medios a un pulso dado (±margen lpm). Lo mismo al revés: si sube, el motor mejora.
+export function wattsAPulso(muestras, fc, margen = 3) {
+  const m = conPulso(muestras).filter((x) => Math.abs(x.fc - fc) <= margen);
+  return m.length >= 120 ? Math.round(media(m.map((x) => x.w))) : null;
+}
+
+// Índice de eficiencia: potencia normalizada / pulso medio.
+export function indiceEficiencia(muestras) {
+  const m = conPulso(muestras);
+  if (m.length < 300) return null;
+  return dosDec(potenciaNormalizada(m) / media(m.map((x) => x.fc)));
+}
+
+// Recuperación de pulso: lo que baja en el minuto siguiente a terminar (>12 lpm normal, >30 muy bueno).
+export function recuperacionPulso(fcFin, fc60) {
+  if (!(fcFin >= 30 && fc60 >= 30)) return null;
+  return fcFin - fc60;
+}
+
+// Pulso máximo observado: el mejor promedio de 5 s de todo el historial, para no fiarse de un pico suelto.
+export function fcMaxObservada(sesiones) {
+  let mejor = 0;
+  for (const s of sesiones) {
+    const fcs = (s.muestras || []).map((x) => x.fc || 0);
+    for (let i = 4; i < fcs.length; i++) {
+      const v = fcs.slice(i - 4, i + 1);
+      if (v.every((x) => x > 0)) mejor = Math.max(mejor, media(v));
+    }
+  }
+  return mejor ? Math.round(mejor) : null;
+}
+
+// RMSSD (ms) de una lista de intervalos RR en ms. Se descartan los RR imposibles (< 300 o > 2000 ms)
+// y los saltos de más del 20 % respecto al anterior (latidos perdidos o dobles).
+export function rmssd(rr) {
+  const v = (rr || []).filter((x) => x >= 300 && x <= 2000);
+  const difs = [];
+  for (let i = 1; i < v.length; i++) {
+    if (Math.abs(v[i] - v[i - 1]) <= v[i - 1] * 0.2) difs.push((v[i] - v[i - 1]) ** 2);
+  }
+  return difs.length >= 30 ? Math.round(Math.sqrt(media(difs))) : null;
+}
+
+// ---------- Métricas avanzadas: carga ----------
+
+// Ratio agudo:crónico (fatiga / condición). 0,8–1,3 = progreso seguro; más de 1,5 = riesgo.
+export function ratioCarga(sesiones, ftp, ahora = Date.now()) {
+  const hoy = forma(sesiones, ftp, 1, ahora).at(-1);
+  if (!hoy || hoy.condicion < 5) return null;
+  return dosDec(hoy.fatiga / hoy.condicion);
+}
+
+// Monotonía de Foster en los últimos 7 días (media diaria / desviación) y tensión (carga semanal × monotonía).
+// Monotonía > 2 con mucha carga = riesgo de sobrecarga.
+export function monotonia(sesiones, ftp, ahora = Date.now()) {
+  const dias = forma(sesiones, ftp, 7, ahora).map((d) => d.carga);
+  const m = media(dias);
+  const sd = Math.sqrt(media(dias.map((x) => (x - m) ** 2)));
+  if (!m || !sd) return null;
+  const mono = dosDec(m / sd);
+  return { monotonia: mono, tension: Math.round(m * 7 * mono) };
+}
+
+// Reparto de la intensidad en los últimos `dias`: % del tiempo suave (≤ 75 % FTP), medio (76–90 %) y fuerte (> 90 %).
+// Lo recomendado para progresar es cerca de 80 / 5 / 15.
+export function distribucionIntensidad(sesiones, ftp, dias = 7, ahora = Date.now()) {
+  const desde = ahora - dias * 864e5;
+  const seg = [0, 0, 0];
+  for (const s of sesiones) {
+    const f = s.ftp || ftp;
+    if (!f || s.fecha < desde || s.fecha > ahora) continue;
+    for (const x of s.muestras || []) {
+      if (!(x.w > 0)) continue;
+      const pct = x.w / f;
+      seg[pct <= 0.75 ? 0 : pct <= 0.9 ? 1 : 2]++;
+    }
+  }
+  const total = seg[0] + seg[1] + seg[2];
+  if (!total) return null;
+  return { suave: Math.round((100 * seg[0]) / total), medio: Math.round((100 * seg[1]) / total), fuerte: Math.round((100 * seg[2]) / total), segundos: total };
+}

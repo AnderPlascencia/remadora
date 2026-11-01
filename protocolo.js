@@ -88,3 +88,22 @@ export function formatoTiempo(seg) {
   const mm = String(m).padStart(h ? 2 : 1, '0');
   return (h ? `${h}:` : '') + `${mm}:${String(s).padStart(2, '0')}`;
 }
+
+// Medición de pulso estándar (característica 0x2A37 del servicio Heart Rate).
+// Byte 0 = banderas: bit 0 pulso en 16 bits, bits 1-2 contacto con la piel, bit 3 energía, bit 4 intervalos RR.
+// contacto: true/false si el sensor lo informa, null si no. rr en ms (llegan en 1/1024 s).
+export function parseMedidaPulso(dv) {
+  if (!dv || dv.byteLength < 2) return null;
+  const banderas = dv.getUint8(0);
+  let i = 1;
+  const fc = banderas & 1 ? dv.getUint16(i, true) : dv.getUint8(i);
+  i += banderas & 1 ? 2 : 1;
+  const contacto = banderas & 0b100 ? !!(banderas & 0b10) : null;
+  let energia = null;
+  if (banderas & 0b1000) { energia = dv.getUint16(i, true); i += 2; }
+  const rr = [];
+  if (banderas & 0b10000) {
+    for (; i + 1 < dv.byteLength; i += 2) rr.push(Math.round((dv.getUint16(i, true) * 1000) / 1024));
+  }
+  return { fc, contacto, energia, rr };
+}
