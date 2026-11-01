@@ -18,7 +18,7 @@ import * as C from './consejos.js';
 import * as Cap from './capacidades.js';
 import * as A from './adaptacion.js';
 
-const VERSION = '0.38.0';
+const VERSION = '0.39.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -1907,7 +1907,8 @@ async function vistaPrevia() {
   $('#bloque-siguiente').textContent = '';
   $('#bloque-indicador').textContent = remadora.conectada ? 'Pulsa Empezar' : 'Pulsa Conectar y empezar';
 }
-$('#sel-entrenamiento').addEventListener('change', () => { ajustes.escribir('ultimoEnt', $('#sel-entrenamiento').value); vistaPrevia(); });
+// Lo que eliges a mano manda el resto del día: al volver a abrir la app no se cambia por la sesión del día.
+$('#sel-entrenamiento').addEventListener('change', () => { ajustes.escribir('ultimoEnt', $('#sel-entrenamiento').value); ajustes.escribir('eleccionDia', E.claveDia(Date.now())); vistaPrevia(); });
 
 // Dos modos: Remo libre (sin entrenamiento) o Por objetivo (eliges un entrenamiento de tus planes).
 function modoEnt() { return $('#sel-entrenamiento').value ? 'objetivo' : ajustes.leer('modoEnt', 'libre'); }
@@ -1924,6 +1925,7 @@ $('#modo-ent').addEventListener('click', (e) => {
   if (!b || sesion) return;
   const sel = $('#sel-entrenamiento');
   ajustes.escribir('modoEnt', b.dataset.modo);
+  ajustes.escribir('eleccionDia', E.claveDia(Date.now()));
   if (b.dataset.modo === 'libre') {
     if (sel.value) ajustes.escribir('ultimoEntObjetivo', sel.value);
     sel.value = '';
@@ -2026,6 +2028,7 @@ const propios = (lista) => lista.filter((x) => !B.NOMBRES_PRUEBA.has(x.nombre));
 const SECCIONES_ENT = [...P.GRUPOS_ENT.map((g) => ({ clave: g.clave, nombre: g.clave === 'distancia' ? 'Distancia' : g.clave === 'tecnica' ? 'Paladas' : g.nombre })), { clave: 'mios', nombre: 'Míos' }];
 
 function usarEnt(ent) {
+  ajustes.escribir('eleccionDia', E.claveDia(Date.now()));
   $('#sel-entrenamiento').value = String(ent.id);
   ajustes.escribir('ultimoEnt', String(ent.id));
   ajustes.escribir('modoEnt', 'objetivo');
@@ -2041,7 +2044,6 @@ function copiarBase(ent) {
   abrirEditor(copia);
 }
 
-let verDelPlan = false;
 async function pintarEntrenamientos() {
   pintarPrograma();
   const pestana = ajustes.leer('pestanaPlanes', 'entrenamientos');
@@ -2076,20 +2078,18 @@ async function pintarEntrenamientos() {
   // Tus entrenamientos: los de la sección, o todos en «Míos»
   const mios = seccion === 'mios' ? lista : lista.filter((x) => P.enfoqueDe(x) === seccion);
   $('#mios-titulo').textContent = seccion === 'mios' ? 'Tus entrenamientos' : `Tus entrenamientos de ${SECCIONES_ENT.find((x) => x.clave === seccion).nombre.toLowerCase()}`;
-  // Los del plan van al final y plegados: son muchos y ya se ven en la pestaña Plan.
+  // Los que arma un plan no se listan aquí (cambian cada semana y llenarían la lista): están en Programa.
   const prog = leerPrograma();
-  const delPlan = mios.filter((x) => esDePlan(x, prog));
-  const tuyos = mios.filter((x) => !esDePlan(x, prog));
+  const tuyos = mios.filter((x) => !x.dePlan);
   const ul = $('#lista-ent');
-  const fila = (x) => `<li data-id="${x.id}"${esDePlan(x, prog) ? ` class="de-plan"${verDelPlan ? '' : ' hidden'}` : ''}>
+  const fila = (x) => `<li data-id="${x.id}">
       <div class="info clic" role="button" tabindex="0" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${B.resumenEnt(x)}</div></div>
       <details class="menu-fila"><summary class="boton icono chico" aria-label="Opciones de ${escaparHtml(x.nombre)}">⋯</summary>
         <div class="menu-fila-caja"><button type="button" data-a="editar">${ico('i-editar')} Editar</button><button type="button" data-a="duplicar">${ico('i-copiar')} Duplicar</button>
         <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`;
   const vacio = `<li class="vacio">${seccion === 'mios' ? 'Aún no has creado entrenamientos.' : 'Aún no tienes entrenamientos propios aquí.'} Toca «+ Nuevo» o «Copiar y editar» en uno base.</li>`;
-  ul.innerHTML = mios.length ? (tuyos.length ? tuyos.map(fila).join('') : vacio)
-    + (delPlan.length ? `<li class="separador-plan"><button type="button" class="enlace-boton" id="btn-ver-del-plan" aria-expanded="${verDelPlan}">${verDelPlan ? 'Ocultar' : 'Ver'} los ${delPlan.length} de tu plan</button></li>${delPlan.map(fila).join('')}` : '')
-    : vacio;
+  ul.innerHTML = (tuyos.length ? tuyos.map(fila).join('') : vacio)
+    + (prog ? '<li class="separador-plan"><button type="button" class="enlace-boton" id="btn-ver-del-plan">Las sesiones de tu plan están en Programa ›</button></li>' : '');
   await llenarSelectorEntrenamientos();
 }
 
@@ -2175,8 +2175,9 @@ $('#pt-entrenamientos').addEventListener('click', async (e) => {
 });
 $('#lista-ent').addEventListener('click', (e) => {
   if (!e.target.closest('#btn-ver-del-plan')) return;
-  verDelPlan = !verDelPlan;
+  ajustes.escribir('pestanaPlanes', 'programa');
   pintarEntrenamientos();
+  window.scrollTo({ top: 0 });
 });
 $('#lista-ent').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ver]')) { e.preventDefault(); e.target.click(); } });
 // Un solo menú «⋯» abierto a la vez.
@@ -2185,16 +2186,30 @@ $('#lista-ent').addEventListener('toggle', (e) => {
 }, true);
 
 async function llenarSelectorEntrenamientos(lista) {
-  lista = propios(lista || (await db.listar('entrenamientos')));
+  const todos = lista || (await db.listar('entrenamientos'));
+  lista = propios(todos);
   if (!baseActual.length) await actualizarBase();
+  const sesiones = await db.listar('sesiones');
+  const prog = leerPrograma();
   const sel = $('#sel-entrenamiento');
   const previo = sel.value || ajustes.leer('ultimoEnt', '');
   sel.length = 1;
   sel.querySelectorAll('optgroup').forEach((g) => g.remove());
-  // Por sección: primero los base de tu nivel y luego los tuyos.
+  // Primero tu plan, solo lo de esta semana (con el día): las variantes de otras semanas no se listan.
+  const semana = prog ? semanaDelPlan(prog, sesiones) : [];
+  if (semana.length) {
+    const og = document.createElement('optgroup');
+    og.label = 'Tu plan esta semana';
+    for (const d of semana) {
+      const v = valorDe(d.ent, todos);
+      if (v) og.append(new Option(`${d.diaCorto} · ${d.ent}${d.estado === 'hecho' ? ' ✓' : ''}`, v));
+    }
+    if (og.children.length) sel.append(og);
+  }
+  // Por sección: primero los base de tu nivel y luego los tuyos (sin los del plan).
   for (const g of P.GRUPOS_ENT) {
     const bases = baseActual.filter((x) => x.enfoque === g.clave);
-    const ents = lista.filter((ent) => P.enfoqueDe(ent) === g.clave);
+    const ents = lista.filter((ent) => P.enfoqueDe(ent) === g.clave && !ent.dePlan);
     if (!bases.length && !ents.length) continue;
     const og = document.createElement('optgroup');
     og.label = g.nombre;
@@ -2204,15 +2219,39 @@ async function llenarSelectorEntrenamientos(lista) {
   }
   sel.value = previo;
   if (sel.value !== String(previo)) sel.value = '';
-  // Al abrir la app (o al crear un plan), lo que toca hoy queda elegido: solo falta pulsar Empezar.
+  // Al abrir la app (o al crear un plan), la sesión del día queda elegida: solo falta pulsar Empezar.
+  // Si hoy ya elegiste otra cosa a mano, se respeta.
   if (elegirLoDeHoy && !sesion) {
     elegirLoDeHoy = false;
-    const hoy = P.deHoy(leerPrograma());
-    const opcion = hoy && [...sel.options].find((o) => o.textContent === hoy.ent);
-    const hecho = hoy && (await db.listar('sesiones')).some((x) => E.claveDia(x.fecha) === hoy.fecha && x.entrenamiento === hoy.ent);
-    if (opcion && !hecho) { sel.value = opcion.value; ajustes.escribir('ultimoEnt', sel.value); ajustes.escribir('modoEnt', 'objetivo'); }
+    const dia = await calcularDia(sesiones, todos);
+    const v = dia && ['plan', 'recuperar', 'sugerida'].includes(dia.fuente) ? (dia.id || valorDe(dia.ent, todos)) : null;
+    if (v && ajustes.leer('eleccionDia', '') !== E.claveDia(Date.now()) && [...sel.options].some((o) => o.value === v)) {
+      sel.value = v; ajustes.escribir('ultimoEnt', sel.value); ajustes.escribir('modoEnt', 'objetivo');
+    }
   }
   vistaPrevia();
+}
+// Valor del selector para un entrenamiento por su nombre: las pruebas son las base; el resto, los guardados.
+function valorDe(nombre, todos = []) {
+  if (!nombre) return null;
+  const b = baseActual.find((x) => x.enfoque === 'pruebas' && x.nombre === nombre);
+  if (b) return b.id;
+  const e = todos.find((x) => x.nombre === nombre);
+  return e ? String(e.id) : null;
+}
+// Días del plan de la semana actual (de lunes a domingo), con su estado.
+function semanaDelPlan(prog, sesiones) {
+  const lunes = E.claveDia(E.inicioPeriodo(Date.now(), 'semana'));
+  const domingo = E.claveDia(E.inicioPeriodo(Date.now(), 'semana') + 6.5 * 864e5);
+  return P.estadoDias(prog, sesiones).filter((d) => d.fecha >= lunes && d.fecha <= domingo)
+    .map((d) => ({ ...d, diaCorto: new Date(`${d.fecha}T12:00`).toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '') }));
+}
+// La sesión del día (ver adaptacion.js): lo que toca según tu plan o, sin plan, según tu semana y tu cuerpo.
+async function calcularDia(sesiones, todos) {
+  sesiones ??= await db.listar('sesiones');
+  todos ??= await db.listar('entrenamientos');
+  const f = ftp();
+  return A.sesionDelDia({ programa: leerPrograma(), sesiones, entrenamientos: [...todos, ...baseActual], ftp: f, cuerpo: f ? Cap.estadoCuerpo(sesiones, f) : null });
 }
 let elegirLoDeHoy = true;
 
@@ -3618,6 +3657,8 @@ function leerPrograma() {
   try { return JSON.parse(ajustes.leer('programa', 'null')); } catch { return null; }
 }
 function guardarPrograma(p) {
+  // Un plan nuevo elige su sesión de hoy aunque antes hubieras elegido otra cosa a mano.
+  if (p && p.inicio !== leerPrograma()?.inicio) ajustes.escribir('eleccionDia', '');
   if (p) ajustes.escribir('programa', JSON.stringify(p));
   else { try { localStorage.removeItem('programa'); } catch { /* nada */ } }
 }
@@ -3638,31 +3679,11 @@ async function guardarEntrenamientosDePlan(entrenamientos) {
 }
 const esDePlan = (e, prog = leerPrograma()) => !!e.dePlan || !!prog?.dias.some((d) => d.ent === e.nombre);
 
-// Agrega los entrenamientos de ejemplo que el programa necesita y aún no existen.
-async function asegurarEntrenamientos(nombres) {
-  const existentes = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
-  for (const n of new Set(nombres)) {
-    const ej = Ent.EJEMPLOS.find((e) => e.nombre === n);
-    if (ej && !existentes.has(n)) await db.guardar('entrenamientos', structuredClone(ej));
-  }
-}
-
 async function pintarPrograma() {
   const prog = leerPrograma();
   $('#programa-vacio').hidden = !!prog;
   $('#programa-activo').hidden = !prog;
   if (!prog) {
-    $('#plantillas-programa').innerHTML = P.PLANTILLAS.map((p, i) => `<div class="plantilla"><div class="info"><b>${p.nombre}</b><div class="suave">${p.descripcion}</div></div>
-      <button type="button" class="boton primario chico" data-p="${i}">Empezar</button></div>`).join('');
-    $('#plantillas-programa').querySelectorAll('[data-p]').forEach((b) => {
-      b.onclick = async () => {
-        const p = P.PLANTILLAS[b.dataset.p];
-        await asegurarEntrenamientos(p.semanas.flat());
-        guardarPrograma(P.desdePlantilla(p, E.claveDia(Date.now())));
-        toast('Programa creado');
-        pintarEntrenamientos();
-      };
-    });
     pintarAsistente();
     if (!$('#p-inicio').value) $('#p-inicio').value = E.claveDia(Date.now());
     const ents = await db.listar('entrenamientos');
@@ -3679,6 +3700,25 @@ async function pintarPrograma() {
   $('#prog-nombre').textContent = prog.nombre;
   $('#prog-cumple').textContent = `${c.hechos} de ${c.total} sesiones`;
   $('#prog-barra').style.width = `${(100 * c.hechos) / (c.total || 1)}%`;
+  // La semana actual con lo que toca cada día, y el esquema del plan en una línea.
+  const todos = await db.listar('entrenamientos');
+  const semana = semanaDelPlan(prog, sesiones);
+  const sem = P.semanaDe(prog);
+  $('#semana-plan-titulo').textContent = sem.n >= 1 && sem.n <= sem.total ? `Semana ${sem.n} de ${sem.total}${sem.descarga ? ' · de descarga, más suave' : ''}` : 'Esta semana';
+  const ESTADO = { hecho: 'Hecha', perdido: 'No se hizo', hoy: 'Hoy', pendiente: 'Próxima' };
+  const buscarEnt = (n) => todos.find((e) => e.nombre === n) || baseActual.find((e) => e.nombre === n);
+  $('#semana-plan').innerHTML = semana.length ? semana.map((d) => {
+    const e = buscarEnt(d.ent);
+    const v = valorDe(d.ent, todos);
+    const tipo = /^Prueba/.test(d.ent) ? 'Prueba' : e && P.esDura(e) ? 'Dura' : 'Suave';
+    return `<li data-estado="${d.estado}"><span class="sp-dia">${d.diaCorto}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b><small>${tipo}${e ? ` · ${B.resumenEnt(e).split(' · ')[0]}` : ''} · ${ESTADO[d.estado]}${d.estado === 'hecho' ? ' ✓' : ''}</small></span>${
+      v && d.estado !== 'hecho' ? `<button type="button" class="boton chico" data-entrenar="${v}">Entrenar</button>` : ''}</li>`;
+  }).join('') : '<li class="vacio">Esta semana no hay sesiones en tu plan.</li>';
+  const porSemana = prog.porSemana || Math.round(prog.dias.length / Math.max(1, prog.semanas || 1));
+  const primeras = prog.dias.slice(0, porSemana).map((d) => buscarEnt(d.ent)).filter(Boolean);
+  const duras = primeras.filter((e) => P.esDura(e)).length;
+  $('#prog-esquema').hidden = !prog.objetivo;
+  $('#prog-esquema').textContent = `Cada semana: ${duras} ${duras === 1 ? 'sesión dura' : 'sesiones duras'} y ${porSemana - duras} ${porSemana - duras === 1 ? 'suave' : 'suaves'}, nunca dos duras seguidas. La carga sube semana a semana y cada 4 hay una de descarga.`;
   const porFecha = new Map(estados.map((d) => [d.fecha, d]));
   const primero = new Date(`${estados[0].fecha}T12:00`);
   const ultimo = new Date(`${estados.at(-1).fecha}T12:00`);
@@ -3832,11 +3872,25 @@ $('#btn-crear-programa').addEventListener('click', async () => {
   toast('Programa creado');
   pintarEntrenamientos();
 });
-$('#btn-quitar-programa').addEventListener('click', () => {
+$('#btn-quitar-programa').addEventListener('click', async () => {
   if (!confirm('¿Quitar el programa? Tus sesiones no se borran.')) return;
   guardarPrograma(null);
+  await limpiarSobrantesDePlan();
   pintarEntrenamientos();
 });
+$('#semana-plan').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-entrenar]');
+  if (!b) return;
+  const ent = await obtenerEnt(b.dataset.entrenar);
+  if (ent) usarEnt(ent);
+});
+// Borra los entrenamientos que dejó un plan anterior y que el de ahora ya no usa (tus sesiones no se tocan).
+async function limpiarSobrantesDePlan() {
+  const sobran = A.sobrantesDePlan(leerPrograma(), await db.listar('entrenamientos'));
+  for (const e of sobran) await db.borrar('entrenamientos', e.id);
+  if (sobran.length) agregarLog(`limpieza: ${sobran.length} entrenamientos de planes anteriores`);
+  return sobran.length;
+}
 
 async function pintarRecomendacion() {
   const r = E.recomendacion(await db.listar('sesiones'), ftp());
@@ -3856,21 +3910,28 @@ function delProgramaHoy(s) {
 let hoyTurno = 0;
 async function pintarHoy(ent = entrenamientoPrevio) {
   const turno = ++hoyTurno;
-  const sesiones = await db.listar('sesiones');
+  const [sesiones, todos] = await Promise.all([db.listar('sesiones'), db.listar('entrenamientos')]);
   if (turno !== hoyTurno) return;
-  pintarRecomendacion();
   const prog = leerPrograma();
-  const hoyProg = P.deHoy(prog);
-  const hecho = hoyProg && sesiones.some((x) => E.claveDia(x.fecha) === hoyProg.fecha && x.entrenamiento === hoyProg.ent);
-  const esDeHoy = !!(ent && hoyProg && ent.nombre === hoyProg.ent);
-  $('#hoy-etq').textContent = esDeHoy ? (hecho ? 'Hoy toca · ya lo hiciste' : 'Hoy toca') : ent ? 'Tu entrenamiento' : 'Hoy';
+  const dia = await calcularDia(sesiones, todos);
+  if (turno !== hoyTurno) return;
+  // La sesión del día ya tiene en cuenta tu frescura: la recomendación general solo sale sin ella.
+  if (dia) $('#recomendacion').hidden = true; else pintarRecomendacion();
+  const valorDia = dia ? (dia.id || valorDe(dia.ent, todos)) : null;
+  const esDelDia = !!(ent && valorDia && String(ent.id) === valorDia);
+  const ETQ = { plan: 'Hoy toca', hecho: 'Hoy toca · ya lo hiciste', recuperar: 'Para recuperar hoy', sugerida: 'Sugerido para hoy' };
+  $('#hoy-etq').textContent = esDelDia ? ETQ[dia.fuente] || 'Hoy' : ent ? 'Tu entrenamiento' : dia?.fuente === 'descanso' ? 'Hoy descansas' : 'Hoy';
   $('#hoy-nombre').textContent = ent ? ent.nombre : libreConFantasmas() ? 'Remo libre contra 3 fantasmas' : 'Remo libre';
   $('#hoy-resumen').textContent = ent ? [B.resumenEnt(ent), ent.proposito].filter(Boolean).join(' · ')
     : libreConFantasmas() ? 'Rema a tu aire: la carrera cuenta desde los 5 min.' : 'Rema a tu aire, sin meta.';
+  // Por qué toca esto hoy (o por qué hoy se descansa).
+  const porque = dia?.motivo && (esDelDia || (!ent && dia.fuente === 'descanso')) ? dia.motivo : '';
+  $('#hoy-porque').hidden = !porque;
+  $('#hoy-porque').textContent = porque;
   // Lo que la adaptación cambió hoy, y si tus rangos del plan van más bajos o más altos.
   const avisosHoy = (prog?.avisos || []).filter((x) => x.dia === E.claveDia(Date.now())).map((x) => x.texto);
   const factor = prog?.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;
-  if (factor && esDeHoy) avisosHoy.push(`Tus rangos del plan van un ${Math.abs(factor)} % más ${factor > 0 ? 'altos' : 'bajos'} según cómo te fue.`);
+  if (factor && esDelDia && dia.ent) avisosHoy.push(`Tus rangos del plan van un ${Math.abs(factor)} % más ${factor > 0 ? 'altos' : 'bajos'} según cómo te fue.`);
   // Semáforo de fatiga en una línea, para no apretar de más.
   const cuerpo = ftp() ? Cap.estadoCuerpo(sesiones, ftp()) : null;
   $('#hoy-cuerpo').hidden = !cuerpo;
@@ -3886,32 +3947,35 @@ async function pintarHoy(ent = entrenamientoPrevio) {
   $('#btn-hoy-detalle').setAttribute('aria-expanded', String(abierto));
   $('#hoy-detalle-caja').hidden = !abierto;
   if (abierto) pintarBloquesEnt(ent, $('#hoy-perfil'), $('#hoy-bloques'), $('#hoy-leyenda'));
-  // Sugerencia: lo del programa, afinar el FTP o crear un plan.
+  // Sugerencia: volver a lo del día, ajustar o seguir el plan, un jefe en un día libre, afinar el FTP o crear un plan.
   const caja = $('#hoy-sugerencia');
   const [texto, boton] = [caja.querySelector('span'), caja.querySelector('button')];
   let sug = null;
-  const prox = prog && !hoyProg ? P.proximo(prog) : null;
   const h = J.estadoJuego(sesiones, { ftp: ftp(), per: leerPersonaje() });
   const jefe = J.claseDe(leerPersonaje().clase) && h.capitulo?.listo ? h.capitulo : null;
+  // El jefe es una prueba a tope: solo se propone si hoy no toca otra cosa del plan y estás fresco.
+  const jefeHoy = jefe && ent?.id !== jefe.preparar && !['plan', 'recuperar'].includes(dia?.fuente)
+    && !(cuerpo && ['cargado', 'agotado'].includes(cuerpo.clave)) && !(dia?.fuente === 'sugerida' && /suave|dis-mant/.test(dia.id));
   // Un plan armado sin historial se ajusta a lo que remas cuando ya hay 4 sesiones desde que empezó.
   const desdePlan = prog ? sesiones.filter((x) => E.claveDia(x.fecha) >= prog.inicio).length : 0;
-  if (prog?.sinHistorial && prog.objetivo && desdePlan >= 4 && (hoyProg || prox)) {
+  if (prog?.sinHistorial && prog.objetivo && desdePlan >= 4 && dia?.fuente !== 'terminado') {
     sug = { texto: 'Tu plan se armó sin historial. ¿Lo ajusto a lo que remas ahora?', boton: 'Ajustar', accion: () => rehacerPlan(prog, { ajustar: true }) };
-  } else if (hoyProg && !hecho && !esDeHoy) {
-    const opcion = [...$('#sel-entrenamiento').options].find((o) => o.textContent === hoyProg.ent);
-    if (opcion) sug = { texto: `Tu plan dice: ${hoyProg.ent}`, boton: 'Elegir', accion: () => elegirEnt(opcion.value) };
-  } else if (prog && !hoyProg && !prox) {
+  } else if (valorDia && !esDelDia && dia.fuente !== 'hecho') {
+    const que = { plan: 'Tu plan dice', recuperar: 'Puedes recuperar', sugerida: 'Te sugiero' }[dia.fuente] || 'Hoy';
+    const nombre = dia.ent || baseActual.find((x) => x.id === dia.id)?.nombre || '';
+    sug = { texto: `${que}: ${nombre}.${dia.fuente === 'sugerida' ? ` ${dia.motivo}` : ''}`, boton: 'Elegir', accion: () => elegirEnt(valorDia) };
+  } else if (dia?.fuente === 'terminado') {
     sug = prog.objetivo
       ? { texto: `Terminaste «${prog.nombre}». ¡Bien hecho! El siguiente sube un poco la carga.`, boton: 'Siguiente plan', accion: () => rehacerPlan(prog) }
       : { texto: `Terminaste «${prog.nombre}». ¡Bien hecho!`, boton: 'Nuevo plan', accion: () => { ajustes.escribir('pestanaPlanes', 'programa'); irA('entrenamientos'); } };
-  } else if (jefe && ent?.id !== jefe.preparar) {
+  } else if (jefeHoy) {
     sug = { texto: `${jefe.jefe.nombre} te espera: ${jefe.jefe.texto.charAt(0).toLowerCase()}${jefe.jefe.texto.slice(1)} (+${miles(jefe.xp)} XP).`, boton: 'Enfrentar', accion: () => prepararEntrenamiento(jefe.preparar) };
-  } else if (prog && !hoyProg) {
-    sug = { texto: `Hoy descansas en tu plan. Próximo: ${prox.ent} (${new Date(`${prox.fecha}T12:00`).toLocaleDateString('es-MX', { weekday: 'long' })}).` };
+  } else if (dia?.fuente === 'descanso' && dia.alternativa && !ent) {
+    sug = { texto: '¿Te apetece remar igual? Que sea suave.', boton: 'Fondo suave', accion: () => elegirEnt(dia.alternativa) };
   } else if (!prog && ajustes.si('ftpEstimado', false) && sesiones.length >= 3 && !sesiones.some((x) => x.pruebaWatts) && ent?.id !== 'base:prueba-ftp') {
     sug = { texto: 'Tu FTP es estimado. Afínalo con la Prueba FTP 20 min.', boton: 'Elegir', accion: () => elegirEnt('base:prueba-ftp') };
-  } else if (!prog && sesiones.length >= 1 && !ent) {
-    sug = { texto: '¿Quieres un plan? Se arma en un minuto.', boton: 'Crear plan', accion: () => { ajustes.escribir('pestanaPlanes', 'programa'); irA('entrenamientos'); } };
+  } else if (!prog && sesiones.length >= 3) {
+    sug = { texto: 'Con un plan, cada día sabrás qué remar y la carga subirá sola.', boton: 'Crear plan', accion: () => { ajustes.escribir('pestanaPlanes', 'programa'); irA('entrenamientos'); } };
   }
   caja.hidden = !sug;
   if (sug) {
@@ -3962,6 +4026,7 @@ async function rehacerPlan(prog, { ajustar = false } = {}) {
 function elegirEnt(valor) {
   const sel = $('#sel-entrenamiento');
   sel.value = valor;
+  ajustes.escribir('eleccionDia', E.claveDia(Date.now()));
   ajustes.escribir('ultimoEnt', sel.value);
   ajustes.escribir('modoEnt', sel.value ? 'objetivo' : 'libre');
   vistaPrevia();
@@ -4366,7 +4431,7 @@ window.addEventListener('resize', () => {
   if (vistaActiva('entrenamientos')) pintarPrograma();
 });
 actualizarBotones();
-llenarSelectorEntrenamientos().then(revisarPlanAuto);
+limpiarSobrantesDePlan().then(() => llenarSelectorEntrenamientos()).then(revisarPlanAuto);
 dibujarVivo();
 pintarLineaNivel();
 

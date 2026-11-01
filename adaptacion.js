@@ -2,11 +2,11 @@
 // Cada cambio deja una frase en programa.avisos para explicarlo en la pantalla Hoy.
 // Sin dependencias de la interfaz: recibe el plan y devuelve el plan nuevo.
 import * as E from './estadisticas.js';
-import { estadoDias, sesionFondo } from './programa.js';
+import { estadoDias, sesionFondo, semanaDe, TIPOS_DUROS } from './programa.js';
 import { tipoPlan, tipoSesion } from './capacidades.js';
 
 const DIA = 864e5;
-const DURO = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
+const DURO = TIPOS_DUROS;
 const FACTOR_MIN = 0.85;
 const FACTOR_MAX = 1.15;
 const media = (xs) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0);
@@ -129,4 +129,82 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
 
   if (avisos.length) p.avisos = [...(p.avisos || []), ...avisos.map((texto) => ({ dia: hoy, texto }))].slice(-10);
   return { programa: p, entrenamientos: nuevos, avisos, cambio: avisos.length > 0 || p.ultimaSesion !== programa.ultimaSesion };
+}
+
+// ---------- Sesión del día ----------
+// Decide qué remar hoy. Con plan, manda el plan: la sesión de hoy, o en un día libre una sesión de esta semana
+// que se quedó sin hacer (si no junta dos duras). Sin plan, elige de los entrenamientos base con un esquema
+// sencillo: como mucho 2 sesiones duras por semana, nunca dos duras seguidas, un fondo largo cada semana y
+// suave cuando vienes cargado.
+// Devuelve { fuente, ent (nombre, con plan) o id (base, sin plan), motivo, alternativa? } o null.
+//   fuente: 'plan' | 'hecho' | 'recuperar' | 'descanso' | 'terminado' | 'sugerida'
+// cuerpo: el resultado de estadoCuerpo (capacidades.js), o null si no hay FTP o datos.
+const DIA_SEM = (clave) => new Date(`${clave}T12:00`).toLocaleDateString('es-MX', { weekday: 'long' });
+export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp = 0, cuerpo = null, ahora = Date.now() }) {
+  const hoy = E.claveDia(ahora);
+  const ayer = E.claveDia(ahora - DIA);
+  const manana = E.claveDia(ahora + DIA);
+  const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
+  const duro = (n) => DURO.has(tipoPlan(buscar(n))) || /^Prueba/.test(n);
+  const remadoHoy = sesiones.some((s) => E.claveDia(s.fecha) === hoy);
+  const ayerDuro = sesiones.some((s) => E.claveDia(s.fecha) === ayer && DURO.has(tipoSesion(s, ftp)));
+  const cansado = cuerpo && (cuerpo.clave === 'cargado' || cuerpo.clave === 'agotado');
+
+  if (programa?.dias?.length) {
+    const dias = estadoDias(programa, sesiones, ahora);
+    const diaHoy = dias.find((d) => d.fecha === hoy);
+    const prox = dias.find((d) => d.fecha > hoy);
+    const textoProx = prox ? `Próxima: ${prox.ent} (${DIA_SEM(prox.fecha)}).` : 'Era la última sesión del plan.';
+    const sem = semanaDe(programa, ahora);
+    const enSemana = sem.n >= 1 && sem.n <= sem.total ? `Semana ${sem.n} de ${sem.total}${sem.descarga ? ', de descarga: menos volumen para asimilar' : ''}` : '';
+    if (diaHoy) {
+      if (diaHoy.estado === 'hecho') return { fuente: 'hecho', ent: diaHoy.ent, motivo: `Ya remaste lo de hoy. ${textoProx}` };
+      const rol = /^Prueba/.test(diaHoy.ent) ? 'Prueba: mide cuánto has mejorado'
+        : duro(diaHoy.ent) ? 'La sesión clave de la semana: aquí se gana capacidad'
+          : 'Suave: suma base aeróbica y te deja fresco para la próxima dura';
+      return { fuente: 'plan', ent: diaHoy.ent, motivo: [rol, enSemana].filter(Boolean).join(' · ') };
+    }
+    if (!prox) return { fuente: 'terminado', ent: null, motivo: '' };
+    if (remadoHoy) return { fuente: 'descanso', ent: null, motivo: `Hoy ya remaste. ${textoProx}` };
+    // Sesiones de esta semana que no se hicieron (ni otro día): la más importante primero.
+    const lunes = E.claveDia(E.inicioPeriodo(ahora, 'semana'));
+    const hechas = new Set(sesiones.map((s) => s.entrenamiento));
+    const pendientes = dias.filter((d) => d.estado === 'perdido' && d.fecha >= lunes && !d.movido && !hechas.has(d.ent))
+      .sort((a, b) => Number(duro(b.ent)) - Number(duro(a.ent)) || (a.fecha < b.fecha ? 1 : -1));
+    const mananaDuro = prox.fecha === manana && duro(prox.ent);
+    for (const d of pendientes) {
+      if (duro(d.ent) && (ayerDuro || mananaDuro || cansado)) continue;
+      return { fuente: 'recuperar', ent: d.ent, motivo: `Se quedó sin hacer el ${DIA_SEM(d.fecha)}: hoy es buen día para recuperarla. ${textoProx}` };
+    }
+    const saltada = pendientes[0];
+    const porque = saltada ? (mananaDuro ? 'mañana toca otra dura' : ayerDuro ? 'ayer fue dura' : 'vienes cargado') : '';
+    return {
+      fuente: 'descanso', ent: null, alternativa: 'base:dis-suave',
+      motivo: saltada
+        ? `Te quedó «${saltada.ent}», pero ${porque}: mejor no juntar dos duras. Hoy descansa o rema suave. ${textoProx}`
+        : `Hoy descansas: el cuerpo mejora mientras se recupera. ${textoProx}`,
+    };
+  }
+
+  // Sin plan: un esquema sencillo con los entrenamientos base.
+  if (!sesiones.length) return null;
+  const sugerir = (id, motivo) => ({ fuente: 'sugerida', id, motivo });
+  if (remadoHoy) return sugerir('base:dis-suave', 'Ya remaste hoy: si quieres más, que sea suave.');
+  if (cuerpo?.clave === 'agotado') return sugerir('base:dis-suave', 'Vienes muy cargado: hoy descansa o rema 20 min muy suave.');
+  if (ayerDuro) return sugerir('base:dis-suave', 'Ayer fue una sesión dura: hoy suave para asimilarla.');
+  if (cansado) return sugerir('base:dis-suave', 'Vas cargado: hoy suave y la próxima dura te saldrá mejor.');
+  const semana = sesiones.filter((s) => s.fecha > ahora - 7 * DIA);
+  const duras = semana.filter((s) => DURO.has(tipoSesion(s, ftp)));
+  if (duras.length >= 2) return sugerir('base:dis-mant', `Ya llevas ${duras.length} sesiones duras en 7 días: hoy fondo (lo ideal es 80 % suave y 20 % duro).`);
+  const fondoLargo = semana.some((s) => !DURO.has(tipoSesion(s, ftp)) && (s.duracion || 0) >= 40 * 60);
+  if (semana.length >= 2 && !fondoLargo) return sugerir('base:dis-mejora', 'Esta semana aún no haces un fondo largo: es lo que más sube tu base.');
+  const ultimaDura = [...sesiones].sort((a, b) => b.fecha - a.fecha).find((s) => DURO.has(tipoSesion(s, ftp)));
+  const id = ultimaDura && tipoSesion(ultimaDura, ftp) === 'vo2' ? 'base:pot-mant' : 'base:pot-mejora';
+  return sugerir(id, 'Estás descansado: buen día para una sesión fuerte.');
+}
+
+// Entrenamientos que dejó un plan y que el plan de ahora ya no usa (para borrarlos y no llenar tu lista).
+export function sobrantesDePlan(programa, entrenamientos) {
+  const usados = new Set((programa?.dias || []).flatMap((d) => [d.ent, d.original]).filter(Boolean));
+  return entrenamientos.filter((e) => e.dePlan && !usados.has(e.nombre));
 }

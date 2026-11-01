@@ -1571,3 +1571,16 @@ details.mas-detalle[hidden] { display: none; }
 .hoy-cuerpo[data-estado="listo"] { --ch-color: var(--cond); }
 .hoy-cuerpo[data-estado="cargado"] { --ch-color: var(--aviso); }
 .hoy-cuerpo[data-estado="agotado"] { --ch-color: var(--peligro, #EF4444); }
+
+/* Por qué toca hoy esta sesión */
+.hoy-porque { margin: 6px 0 0; font-size: 14px; color: var(--texto); line-height: 1.4; }
+/* Plan: la semana actual con su estado */
+.semana-plan { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 6px; }
+.semana-plan li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: var(--radio); min-width: 0; }
+.semana-plan .sp-dia { width: 34px; flex: none; font-size: 13px; font-weight: 700; color: var(--texto-tenue); text-transform: capitalize; }
+.semana-plan .sp-info { flex: 1; min-width: 0; }
+.semana-plan .sp-info b { display: block; overflow-wrap: anywhere; }
+.semana-plan .sp-info small { color: var(--texto-suave); }
+.semana-plan li[data-estado="hecho"] .sp-info b { color: var(--texto-suave); }
+.semana-plan li[data-estado="hoy"] { outline: 2px solid var(--primario); }
+.semana-plan li[data-estado="perdido"] small { color: var(--aviso); }

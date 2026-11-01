@@ -96,3 +96,5 @@ esqueleto y los ojos de [MakeHuman](https://makehumancommunity.org) (CC0) y opti
 
 El formato de los mensajes se tomó como referencia del proyecto
 [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift). El código de esta app es propio.
+- Sesión del día: con plan, la de hoy (o en un día libre, una de la semana que quedó sin hacer, sin juntar dos duras); sin plan, una sugerida con un esquema 80/20 según tu semana y tu cansancio. Siempre dice por qué toca.
+- Planes ordenados: nunca dos sesiones duras en días seguidos, la prueba sustituye a una dura, y en Programa ves la semana actual con su estado. Las variantes de cada semana ya no llenan tu lista y los restos de planes anteriores se borran solos.

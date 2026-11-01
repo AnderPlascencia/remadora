@@ -34,7 +34,7 @@ const est = P.estadoDias(prog, [{ fecha: Date.parse('2026-10-26T09:00'), entrena
 assert.deepEqual(est.map((d) => d.estado), ['hecho', 'perdido', 'pendiente', 'pendiente']);
 assert.deepEqual(P.cumplimiento(est), { hechos: 1, pasados: 2, total: 4 });
 assert.equal(P.deHoy(prog, Date.parse('2026-10-28T20:00')).ent, 'B');
-const p2k = P.desdePlantilla(P.PLANTILLAS[0], '2026-10-26');
+const p2k = P.desdePlantilla({ nombre: 'P', semanas: Array.from({ length: 6 }, (_, i) => ['A', 'B', i === 5 ? '2000 m' : 'C']), diasSemana: [0, 2, 5] }, '2026-10-26');
 assert.equal(p2k.dias.length, 18);
 assert.equal(p2k.dias[0].fecha, '2026-10-26');
 assert.equal(p2k.dias.at(-1).ent, '2000 m');
