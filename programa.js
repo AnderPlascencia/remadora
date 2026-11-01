@@ -166,7 +166,7 @@ const SESIONES = {
     const r = n === 1 ? 1 : reps(n, k);
     return { nombre: `Umbral ${r} × ${min} min`, enfoque: 'potencia', bloques: [CAL, ...(r === 1 ? [{ nombre: 'Umbral', duracion: min * 60, metrica: 'ftp', min: lo, max: hi }] : series(r, { nombre: 'Umbral', duracion: min * 60, metrica: 'ftp', min: lo, max: hi }, 180)), ENF] };
   },
-  umbralCorto: (p, k) => { const m = p < 0.5 ? 8 : 10; const r = reps(3, k); return { nombre: `Umbral ${r} × ${m} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Umbral', duracion: m * 60, metrica: 'ftp', min: 91, max: 100 }, 180), ENF] }; },
+  umbralCorto: (p, k) => { const m = p < 0.5 || k < 0.4 ? 8 : 10; const r = reps(3, k); return { nombre: `Umbral ${r} × ${m} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Umbral', duracion: m * 60, metrica: 'ftp', min: 91, max: 100 }, 180), ENF] }; },
   // Sweet spot (88–94 % del FTP): casi tanto estímulo como el umbral con menos fatiga.
   sweet: (p, k) => { const [n, m] = paso([[2, 12], [2, 15], [3, 12], [3, 15]], p); const r = reps(n, k); return { nombre: `Sweet spot ${r} × ${m} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Sweet spot', duracion: m * 60, metrica: 'ftp', min: 88, max: 94 }, 240), ENF] }; },
   vo2Corto: (p, k) => { const r = reps(5, k); return { nombre: `VO₂ ${r} × 3 min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerte', duracion: 180, metrica: 'ftp', min: 108, max: 112 }, 180), ENF] }; },
@@ -196,6 +196,9 @@ const SEMANA_TIPO = {
   potencia: [SESIONES.sprints, SESIONES.fuerza, SESIONES.arranques, SESIONES.fondo([30, 45]), SESIONES.fondoPulso([25, 35])],
   calorias: [SESIONES.fondo([40, 70]), SESIONES.fondo([30, 45]), SESIONES.kcalSeries, SESIONES.kcalMeta, SESIONES.fondoPulso([30, 50])],
 };
+
+const CAL_CORTO = { ...CAL, duracion: 300 };
+const ENF_CORTO = { ...ENF, duracion: 180 };
 
 // Tipos de sesión que cansan: entre dos de ellos conviene al menos un día de descanso o de fondo.
 export const TIPOS_DUROS = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
@@ -228,7 +231,11 @@ export function ordenarSemana(nombres, diasSemana, buscar, domingoDuro = false) 
   return mejor.orden.map((i) => nombres[i]);
 }
 
-// ctx = { kcalHabitual: kcal de una sesión normal, kcalSemana: kcal de una semana normal, sinHistorial }
+// Duración de una sesión del plan en segundos (las de meta de calorías van a tu ritmo: no cuentan).
+export const duracionPlan = (e) => (e.bloques || []).reduce((a, b) => a + (b.duracion || 0), 0);
+
+// ctx = { kcalHabitual: kcal de una sesión normal, kcalSemana: kcal de una semana normal, sinHistorial,
+//         minutosMax: tope de minutos por sesión (de tu perfil) }
 export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx = {} }) {
   const obj = objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
   const vol = NIVELES_PLAN.find((n) => n.clave === nivel)?.volumen ?? 1;
@@ -238,7 +245,28 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     if (!entrenamientos.some((x) => x.nombre === ent.nombre)) entrenamientos.push(ent);
     return ent.nombre;
   };
-  const crear = (fn, p, k, s) => { const e = fn(p, k, ctx, s); return agregar({ tipo: e.tipo || 'intervalos', ...e }); };
+  // Con tope de minutos (tu perfil), una sesión que se pasa se rehace con menos volumen hasta que quepa.
+  const tope = ctx.minutosMax > 0 ? ctx.minutosMax * 60 : 0;
+  const ajustar = (fn, p, k, s) => {
+    let e = fn(p, k, ctx, s);
+    for (let i = 0, kk = k; tope && i < 6 && duracionPlan(e) > tope; i++) {
+      kk = Math.max(0.25, kk * Math.min(0.9, tope / duracionPlan(e)));
+      e = fn(p, kk, ctx, s);
+    }
+    // Aún largo: calentamiento de 5 min y enfriamiento de 3 (el nombre no cambia, no los menciona).
+    if (tope && duracionPlan(e) > tope) {
+      e = { ...e, bloques: e.bloques.map((b) => (b === CAL ? CAL_CORTO : b === ENF ? ENF_CORTO : b)) };
+    }
+    return e;
+  };
+  const crear = (fn, p, k, s) => {
+    let e = ajustar(fn, p, k, s);
+    // Último recurso: una sesión más corta del mismo tipo (umbral largo → umbral corto, fondo con tempo → fondo).
+    // Las pruebas no se recortan: miden siempre lo mismo.
+    const otra = /^(Umbral|Sweet spot)/.test(e.nombre) ? SESIONES.umbralCorto : /^Fondo .*tempo/.test(e.nombre) ? SESIONES.fondo([20, 30]) : null;
+    if (tope && duracionPlan(e) > tope && otra) e = ajustar(otra, p, k, s);
+    return agregar({ tipo: e.tipo || 'intervalos', ...e });
+  };
   const prueba = (nombre) => agregar({ ...structuredClone(PRUEBAS[nombre]), enfoque: 'pruebas' });
   let domingoDuro = false;
   const semanasPlan = Array.from({ length: semanas }, (_, s) => {
@@ -262,7 +290,7 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
   });
   const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
   // Lo elegido queda en el plan: sirve para armar el siguiente y para ajustarlo cuando haya historial.
-  Object.assign(programa, { objetivo: obj.clave, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial });
+  Object.assign(programa, { objetivo: obj.clave, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial, ...(tope ? { minutosMax: ctx.minutosMax } : {}) });
   // Plan de calorías: meta semanal que arranca en tu promedio y sube un 10 % por semana (un 20 % menos en la descarga).
   if (obj.clave === 'calorias') {
     const base = Math.max(300, ctx.kcalSemana || (ctx.kcalHabitual || 250) * dias);

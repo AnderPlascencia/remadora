@@ -92,12 +92,14 @@ export const CLASIFICACIONES = [
   { id: 'oficial', nombre: 'Primer oficial', wkg: 2.5, w: 200, perfil: { variacion: 0.017, fatiga: 0.035, spm: 27 }, altamar: 1.03 },
   { id: 'capitan', nombre: 'Capitán', wkg: 3, w: 250, perfil: { variacion: 0.012, fatiga: 0.025, spm: 28 }, altamar: 1.03 },
 ];
-export function clasificacionDe(ftp, peso = 0) {
+// factor: referencias más bajas para mujeres (perfil.factorClasificacion), 1 para el resto.
+export function clasificacionDe(ftp, peso = 0, factor = 1) {
   const porPeso = peso > 0;
   const valor = porPeso ? ftp / peso : ftp;
-  const i = CLASIFICACIONES.reduce((a, c, k) => (valor >= (porPeso ? c.wkg : c.w) ? k : a), 0);
+  const umbral = (c) => (porPeso ? c.wkg : c.w) * factor;
+  const i = CLASIFICACIONES.reduce((a, c, k) => (valor >= umbral(c) ? k : a), 0);
   const sig = CLASIFICACIONES[i + 1];
-  const falta = sig ? Math.max(0, Math.ceil((porPeso ? sig.wkg * peso : sig.w) - ftp)) : null;
+  const falta = sig ? Math.max(0, Math.ceil(umbral(sig) * (porPeso ? peso : 1) - ftp)) : null;
   return { ...CLASIFICACIONES[i], indice: i, valor: Math.round(valor * 100) / 100, porPeso, siguiente: sig || null, faltaW: falta };
 }
 // Dificultad de los rivales en «Por objetivo» (en Remo libre siempre es Costa).
@@ -116,13 +118,13 @@ export function rivalDeLaSemana(lunes, miClase) {
   return otras[Math.floor(azar(`r${lunes}`)() * otras.length)];
 }
 // n rivales de clases distintas: el primero es siempre el de la semana. Su rango sale de tu nivel y su FTP del tuyo.
-export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0, dificultad = 'costa', lunes, semilla = '' } = {}) {
+export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0, factor = 1, dificultad = 'costa', lunes, semilla = '' } = {}) {
   const semana = rivalDeLaSemana(lunes, miClase);
   const r = azar(`n${lunes}${semilla}`);
   const resto = otrasClases(miClase).filter((k) => k !== semana).sort(() => r() - 0.5);
   const clases = [semana, ...resto];
   const dif = DIFICULTADES[dificultad] || DIFICULTADES.costa;
-  const cl = clasificacionDe(ftp, peso);
+  const cl = clasificacionDe(ftp, peso, factor);
   const mio = RANGOS.indexOf(rangoDe(nivel));
   const rango = RANGOS[Math.max(0, Math.min(RANGOS.length - 1, mio + dif.rango))];
   return Array.from({ length: n }, (_, i) => {
@@ -132,7 +134,7 @@ export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0,
     // Los rivales oscilan alrededor del nivel elegido: el de la semana justo en él, otro un poco por debajo y otro un poco por encima.
     const ftpRival = Math.round(ftp * (dif.ftp(cl) + [0, -1, 1][i % 3] * dif.oscila));
     return {
-      dificultad, clase, rango: rango.id, ftp: ftpRival, clasificacion: clasificacionDe(ftpRival, peso).nombre, perfil: cl.perfil,
+      dificultad, clase, rango: rango.id, ftp: ftpRival, clasificacion: clasificacionDe(ftpRival, peso, factor).nombre, perfil: cl.perfil,
       nombre: `${nombre} (${claseDe(clase).nombre} ${rango.nombre})`,
     };
   });

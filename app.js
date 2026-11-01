@@ -17,8 +17,10 @@ import * as B from './base.js';
 import * as C from './consejos.js';
 import * as Cap from './capacidades.js';
 import * as A from './adaptacion.js';
+import * as Pf from './perfil.js';
+import * as G from './guia.js';
 
-const VERSION = '0.39.0';
+const VERSION = '0.40.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -36,6 +38,15 @@ const ajustes = {
 };
 const ftp = () => ajustes.num('ftp', 0);
 const fcMaxima = () => ajustes.num('fcMax', 0);
+// Tu perfil (Ajustes › Tu perfil y la bienvenida). minutos: null si no lo has elegido, 0 = sin límite.
+function perfil() {
+  const min = ajustes.leer('minutosSesion', '');
+  return {
+    edad: ajustes.num('edad', 0), sexo: ajustes.leer('sexo', ''), peso: Number(ajustes.leer('peso', '')) || 0,
+    altura: ajustes.num('altura', 0), experiencia: ajustes.leer('experiencia', ''),
+    dias: Math.min(5, Math.max(1, ajustes.num('diasSemana', 3))), minutos: min === '' ? null : Number(min) || 0,
+  };
+}
 
 // Los nombres los escribe el usuario: siempre escapados al meterlos en HTML.
 function escaparHtml(t) { return String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -76,7 +87,8 @@ function irA(vista) {
   if (vista === 'entrenamientos') pintarEntrenamientos();
   if (vista === 'entrenar') { dibujarVivo(); vistaPrevia(); }
   if (vista === 'ajustes') pintarClasificacion();
-  if (vista === 'ajustes') $('#log').textContent = lineasLog.slice(-300).join('\n');
+  if (vista === 'ajustes') { $('#log').textContent = lineasLog.slice(-300).join('\n'); pintarPerfil(); }
+  mostrarConsejo(vista);
 }
 document.querySelectorAll('.nav-inferior button').forEach((b) => b.addEventListener('click', () => irA(b.dataset.vista)));
 
@@ -131,19 +143,63 @@ function campoNumero(sel, clave, defecto, alCambiar) {
     alCambiar?.();
   });
 }
-campoNumero('#in-peso', 'peso', '75', () => { pintarClasificacion(); vistaPrevia(); });
-campoNumero('#in-ftp', 'ftp', '', () => { ajustes.escribir('ftpEstimado', '0'); pintarFtpEstado(); pintarZonas(); pintarClasificacion(); vistaPrevia(); });
+campoNumero('#in-peso', 'peso', '75', () => { pintarClasificacion(); vistaPrevia(); alCambiarPerfil(); });
+campoNumero('#in-ftp', 'ftp', '', () => { ajustes.escribir('ftpEstimado', '0'); ajustes.escribir('ftpDePerfil', '0'); pintarFtpEstado(); pintarZonas(); pintarClasificacion(); vistaPrevia(); });
+campoNumero('#in-altura', 'altura', '', () => alCambiarPerfil());
 campoNumero('#in-meta-semana', 'metaSemana', '10');
 campoNumero('#in-fcmax', 'fcMax', '');
 // La edad rellena el pulso máximo (220 − edad) si no lo has puesto a mano.
-campoNumero('#in-edad', 'edad', '', () => {
+function aplicarEdad() {
   const edad = ajustes.num('edad', 0);
   if (!edad || (ajustes.num('fcMax', 0) && !ajustes.si('fcMaxDeEdad', false))) return;
-  ajustes.escribir('fcMax', String(220 - edad));
+  ajustes.escribir('fcMax', String(Pf.fcMaxDeEdad(edad)));
   ajustes.escribir('fcMaxDeEdad', '1');
-  $('#in-fcmax').value = 220 - edad;
-});
+  $('#in-fcmax').value = Pf.fcMaxDeEdad(edad);
+}
+campoNumero('#in-edad', 'edad', '', () => { aplicarEdad(); alCambiarPerfil(); });
 $('#in-fcmax').addEventListener('change', () => ajustes.escribir('fcMaxDeEdad', '0'));
+function campoSelect(sel, clave, defecto, alCambiar) {
+  const el = $(sel);
+  el.value = ajustes.leer(clave, defecto);
+  el.addEventListener('change', () => { ajustes.escribir(clave, el.value); alCambiar?.(); });
+}
+campoSelect('#sel-sexo', 'sexo', '', () => { pintarClasificacion(); alCambiarPerfil(); });
+campoSelect('#sel-experiencia', 'experiencia', '', () => alCambiarPerfil());
+campoSelect('#sel-dias-perfil', 'diasSemana', '3', () => { asistente.dias = perfil().dias; alCambiarPerfil(); });
+campoSelect('#sel-minutos', 'minutosSesion', '', () => alCambiarPerfil());
+// Vuelve a escribir los campos de Ajustes (tras la bienvenida o un respaldo).
+function rellenarPerfil() {
+  for (const [sel, clave, def] of [['#in-edad', 'edad', ''], ['#in-peso', 'peso', '75'], ['#in-altura', 'altura', ''], ['#in-ftp', 'ftp', ''], ['#in-fcmax', 'fcMax', ''],
+    ['#sel-sexo', 'sexo', ''], ['#sel-experiencia', 'experiencia', ''], ['#sel-dias-perfil', 'diasSemana', '3'], ['#sel-minutos', 'minutosSesion', '']]) $(sel).value = ajustes.leer(clave, def);
+}
+function alCambiarPerfil() { pintarPerfil(); ofrecerFtpInicial(); }
+// Qué falta del perfil y para qué sirve; si tu plan no coincide con tus días o tu tiempo, ofrece rehacerlo.
+function pintarPerfil() {
+  const p = perfil();
+  const c = Pf.completitud(p);
+  $('#perfil-resumen').textContent = c.faltan.length ? `${c.hechos} de ${c.total} datos` : 'Completo';
+  const prog = leerPrograma();
+  const distinto = prog?.objetivo && prog.dias?.length && (prog.porSemana !== p.dias || (p.minutos != null && (prog.minutosMax || 0) !== (p.minutos || 0)));
+  $('#perfil-usos').innerHTML = (c.faltan.length
+    ? `<p class="ayuda">Completa tu perfil para afinar la app:</p><ul class="lista-perfil">${c.faltan.map((u) => `<li>${escaparHtml(u.texto)}</li>`).join('')}</ul>`
+    : '<p class="ayuda">Tu perfil se usa para tus calorías, pulso máximo, FTP inicial, puesto en la tripulación y para armar y ajustar tus planes.</p>')
+    + (distinto ? `<div class="aviso suave-aviso perfil-plan"><span>Tu plan es de ${prog.porSemana} días${prog.minutosMax ? ` y sesiones de hasta ${prog.minutosMax} min` : ''}. ¿Lo rehago con ${p.dias} ${p.dias === 1 ? 'día' : 'días'}${p.minutos ? ` y hasta ${p.minutos} min` : ''}?</span><button type="button" id="btn-plan-perfil" class="boton chico">Rehacer plan</button></div>` : '');
+}
+$('#perfil-usos').addEventListener('click', async (e) => {
+  if (!e.target.closest('#btn-plan-perfil')) return;
+  const prog = leerPrograma();
+  if (prog) { await rehacerPlan(prog, { ajustar: true, dias: perfil().dias, aviso: 'Rehice tu plan con tu perfil' }); pintarPerfil(); }
+});
+// Sin sesiones ni FTP, el perfil da un FTP de arranque para que el plan y los rivales tengan watts con sentido.
+// Queda como estimado y la primera sesión de 10 min o más lo reemplaza, suba o baje.
+async function ofrecerFtpInicial() {
+  if (ftp() && !ajustes.si('ftpDePerfil', false)) return;
+  if ((await db.listar('sesiones')).length) return;
+  const v = Pf.ftpInicial(perfil());
+  if (!v || v === ftp()) return;
+  guardarFtp(v, true);
+  ajustes.escribir('ftpDePerfil', '1');
+}
 
 function interruptor(sel, clave, defecto, alCambiar) {
   const el = $(sel);
@@ -201,7 +257,7 @@ setTimeout(() => $('#bienvenida')?.remove(), 1700);
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
 // Respuestas del asistente de plan por objetivo (en Planes).
-const asistente = { objetivo: null, nivel: null, dias: 3, semanas: 6 };
+const asistente = { objetivo: null, nivel: null, dias: perfil().dias, semanas: 6 };
 // En «Por objetivo» siempre se compite contra 3 rivales de otras clases; en Remo libre, solo si lo activas.
 const libreConFantasmas = () => modoEnt() === 'libre' && ajustes.leer('libreFantasmas', '1') === '1';
 const conRivales = () => modoEnt() === 'objetivo' || libreConFantasmas();
@@ -340,7 +396,7 @@ async function crearRivales(ent, { vista = false } = {}) {
     const per = leerPersonaje();
     const h = J.estadoJuego(await sesiones(), { ftp: ftp(), per });
     const base = ftp() || estimarFtp(await sesiones()) || 150;
-    deClase = J.rivalesPara(nClase, { miClase: per.clase, nivel: h.nivel, ftp: base, peso: ajustes.num('peso', 75), dificultad: dificultadActual(), lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString() });
+    deClase = J.rivalesPara(nClase, { miClase: per.clase, nivel: h.nivel, ftp: base, peso: ajustes.num('peso', 75), factor: Pf.factorClasificacion(ajustes.leer('sexo', '')), dificultad: dificultadActual(), lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString() });
   }
   for (const clave of elegidos) {
     let r = null;
@@ -465,9 +521,11 @@ function ftpAutomatico(s) {
   if (ftp() && !estimado) return null;
   const p10 = E.mejorPotencia(s.muestras || [], 600);
   const nuevo = E.ftpSugerido(s) || (p10 ? Math.round(p10 * 0.9) : 0);
-  if (!nuevo || nuevo <= ftp()) return null;
+  const dePerfil = ajustes.si('ftpDePerfil', false);
+  if (!nuevo || (nuevo <= ftp() && !dePerfil)) return null;
   const antes = ftp();
   guardarFtp(nuevo, true);
+  ajustes.escribir('ftpDePerfil', '0');
   return { nuevo, antes };
 }
 function guardarFtp(valor, estimado) {
@@ -545,7 +603,7 @@ function pintarClasificacion(sesiones = null) {
     $('#heroe-aguas').textContent = '';
     return;
   }
-  const c = J.clasificacionDe(w, peso);
+  const c = J.clasificacionDe(w, peso, Pf.factorClasificacion(ajustes.leer('sexo', '')));
   const medida = c.porPeso ? `${c.valor.toFixed(1)} W/kg` : `${w} W`;
   const detalle = avanzado() ? ` (${medida}${ftp() ? '' : ', FTP estimado'})` : '';
   caja.textContent = `Tu puesto en la tripulación (sale de tu FTP, no del nivel): ${c.nombre}${detalle}.${c.siguiente ? ` Te faltan ${c.faltaW} W de FTP para ${c.siguiente.nombre}.` : ' Es el puesto más alto.'} Ajusta cómo reman tus rivales.`;
@@ -1113,8 +1171,9 @@ function avanzarSesion() {
 
   sesion.t += 1;
   const t = sesion.t;
-  const peso = ajustes.num('peso', 75);
-  sesion.kcal += kcalPorSegundo(actual.watts) + peso / 3600;
+  // Basal por segundo de tu perfil (Mifflin-St Jeor con edad, sexo y altura; si no, 1 kcal por kg y hora).
+  sesion.basal ??= Pf.basalPorHora(perfil()) / 3600;
+  sesion.kcal += kcalPorSegundo(actual.watts) + sesion.basal;
   sesion.paladas += actual.spm / 60;
   sesion.muestras.push({
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
@@ -1944,6 +2003,7 @@ $('#mr-salir').addEventListener('click', cerrarModoRemo);
 
 function abrirModoRemo() {
   $('#modo-remo').hidden = false;
+  if (!ajustes.si('consejoModoRemo', false)) { ajustes.escribir('consejoModoRemo', '1'); toast('Doble toque para pausar · desliza a los lados para cambiar de vista', 5000); }
   const intervalos = !!sesion?.bloques || (!sesion && !!entrenamientoPrevio && Ent.tipoDe(entrenamientoPrevio) === 'intervalos');
   $('#mr-perfil').hidden = !intervalos;
   if (!sesion) {
@@ -3766,10 +3826,13 @@ async function contextoPlan() {
   const recientes = sesiones.filter((x) => x.fecha > Date.now() - 30 * 864e5).length;
   const kcals = sesiones.slice(-10).map((x) => x.kcal).filter((k) => k > 0).sort((a, b) => a - b);
   const kcalMes = sesiones.filter((x) => x.fecha > Date.now() - 28 * 864e5).reduce((a, x) => a + (x.kcal || 0), 0);
+  // Tu perfil: la experiencia decide el volumen mientras no hay historial, y el tiempo por sesión pone un tope.
+  const pf = Pf.ctxPlanDePerfil(perfil(), { sinHistorial: sesiones.length < 3 });
   return {
+    minutosMax: pf.minutosMax || 0,
     split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000,
     kcalHabitual: kcals[Math.floor(kcals.length / 2)] || 250, kcalSemana: Math.round(kcalMes / 4),
-    nivelSugerido: recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto', sinHistorial: sesiones.length < 3,
+    nivelSugerido: pf.nivel || (recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto'), sinHistorial: sesiones.length < 3,
   };
 }
 // El plan por tiempo meta es una opción más del asistente: cambia las preguntas 2 a 4 por distancia y tiempo.
@@ -3796,7 +3859,7 @@ async function pintarAsistente() {
   const o = P.objetivoPlan(asistente.objetivo);
   res.innerHTML = `<b>Tu plan: ${programa.dias.length} sesiones</b>
     <p>Semana 1: ${primera.join(' · ')}</p><p>Última semana: ${ultima.join(' · ')}</p>
-    <small>La carga sube cada semana y cada 4 semanas hay una más suave para recuperar.${o.prueba ? ` Harás la «${o.prueba}» para medir tu avance.` : ''} Las intensidades van según tu FTP${asistente.objetivo === 'base' ? ' y tu pulso máximo' : ''}${asistente.objetivo === 'calorias' ? `; la meta de la primera semana parte de lo que quemas ahora (${miles(Math.max(300, ctx.kcalSemana || ctx.kcalHabitual * asistente.dias))} kcal)` : ''}. Si te cansas o mejoras, el plan se ajusta solo.</small>`;
+    <small>La carga sube cada semana y cada 4 semanas hay una más suave para recuperar.${o.prueba ? ` Harás la «${o.prueba}» para medir tu avance.` : ''} ${ctx.minutosMax ? ` Ninguna sesión pasa de ${ctx.minutosMax} min, como pusiste en tu perfil.` : ''} Las intensidades van según tu FTP${asistente.objetivo === 'base' ? ' y tu pulso máximo' : ''}${asistente.objetivo === 'calorias' ? `; la meta de la primera semana parte de lo que quemas ahora (${miles(Math.max(300, ctx.kcalSemana || ctx.kcalHabitual * asistente.dias))} kcal)` : ''}. Si te cansas o mejoras, el plan se ajusta solo.</small>`;
 }
 $('#asistente').addEventListener('click', (e) => {
   const b = e.target.closest('[data-v]');
@@ -4008,17 +4071,17 @@ function ftpDelPlan(ent) {
 }
 
 // Siguiente plan (un poco más de carga) o el mismo ajustado a tu historial, desde hoy.
-async function rehacerPlan(prog, { ajustar = false } = {}) {
+async function rehacerPlan(prog, { ajustar = false, dias = null, aviso = '' } = {}) {
   const ctx = await contextoPlan();
   const orden = P.NIVELES_PLAN.map((n) => n.clave);
   const nivel = ajustar ? ctx.nivelSugerido : orden[Math.min(orden.length - 1, orden.indexOf(prog.nivel) + 1)] || 'medio';
   const restantes = Math.ceil((new Date(`${prog.dias.at(-1).fecha}T12:00`) - Date.now()) / (7 * 864e5));
   const semanas = ajustar ? Math.max(2, restantes) : prog.semanas || 6;
-  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: prog.objetivo, nivel, dias: prog.porSemana || 3, semanas, inicio: E.claveDia(Date.now()), ctx });
+  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: prog.objetivo, nivel, dias: dias || prog.porSemana || 3, semanas, inicio: E.claveDia(Date.now()), ctx });
   await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
   elegirLoDeHoy = true;
-  toast(ajustar ? `Ajusté tu plan a lo que remas: ${programa.dias.length} sesiones` : `Plan nuevo: ${programa.dias.length} sesiones en ${semanas} semanas`, 4000);
+  toast(aviso ? `${aviso}: ${programa.dias.length} sesiones` : ajustar ? `Ajusté tu plan a lo que remas: ${programa.dias.length} sesiones` : `Plan nuevo: ${programa.dias.length} sesiones en ${semanas} semanas`, 4000);
   await llenarSelectorEntrenamientos();
   pintarHoy();
 }
@@ -4043,7 +4106,7 @@ $('#btn-hoy-detalle').addEventListener('click', () => {
 });
 
 // ---------- Respaldo ----------
-const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'edad', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'atrVivo', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje', 'avanzado'];
+const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'ftpDePerfil', 'edad', 'sexo', 'altura', 'experiencia', 'diasSemana', 'minutosSesion', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'atrVivo', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje', 'avanzado'];
 
 async function guardarRespaldo() {
   const datos = {
@@ -4101,7 +4164,7 @@ async function restaurarRespaldo(archivo) {
   const distintos = [];
   if (datos.programa && leerPrograma() && JSON.stringify(leerPrograma()) !== JSON.stringify(datos.programa)) distintos.push('el plan');
   if (ajustesResp.some(([k, v]) => k === 'personaje' && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('el héroe');
-  if (ajustesResp.some(([k, v]) => ['peso', 'ftp', 'edad', 'fcMax', 'metaSemana'].includes(k) && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('tus ajustes');
+  if (ajustesResp.some(([k, v]) => ['peso', 'ftp', 'edad', 'fcMax', 'metaSemana', 'sexo', 'altura', 'experiencia', 'diasSemana', 'minutosSesion'].includes(k) && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('tus ajustes');
   const reemplazar = distintos.length > 0 && confirm(`El respaldo trae ${distintos.join(', ').replace(/, ([^,]*)$/, ' y $1')} distintos a los de ahora. ¿Usar los del respaldo?`);
   if (datos.programa && (reemplazar || !leerPrograma())) guardarPrograma(datos.programa);
   for (const [k, v] of ajustesResp) {
@@ -4110,6 +4173,8 @@ async function restaurarRespaldo(archivo) {
   toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos${reemplazar ? ', con el héroe, el plan y los ajustes del respaldo' : ''}`);
   // Con el héroe y los ajustes cambiados, lo más simple y seguro es volver a cargar la app.
   if (reemplazar) setTimeout(() => location.reload(), 1500);
+  rellenarPerfil();
+  pintarPerfil();
   llenarSelectorEntrenamientos();
   pintarHoy();
 }
@@ -4224,6 +4289,7 @@ $('#hoja').addEventListener('click', (e) => { if (e.target === $('#hoja')) cerra
 // Cierra lo que esté encima (detalle, hoja, modo remo). Devuelve false si no había nada abierto.
 function cerrarLoDeEncima() {
   if (!$('#fin-dialogo').hidden) cerrarFin();
+  else if (!$('#guia').hidden) cerrarGuia();
   else if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
   else if (!$('#hoja').hidden) cerrarHoja();
   else if (!$('#modo-remo').hidden) cerrarModoRemo();
@@ -4337,25 +4403,57 @@ document.addEventListener('visibilitychange', async () => {
   }
 });
 
-// ---------- Primer inicio: héroe, objetivo y conexión en 3 pasos ----------
-const inicio = { paso: 1, clase: null, objetivo: null, dias: 3 };
+// ---------- Bienvenida: qué es la app, héroe, objetivo, perfil y conexión en 5 pasos ----------
+// La primera vez sale sola; desde Ajustes › Ayuda se repite (sin el paso de conectar) con lo que ya tienes.
+const inicio = { paso: 1, clase: null, objetivo: null, dias: 3, minutos: null, experiencia: '', sexo: '', repetir: false, objAntes: null };
 const OBJETIVOS_INICIO = [...P.OBJETIVOS_PLAN, { clave: 'libre', nombre: 'Solo remar', texto: 'Sin plan: remo libre contra fantasmas.' }];
+const ultimoPasoInicio = () => (inicio.repetir ? 4 : 5);
+// Lee un número de la bienvenida: vacío o fuera de rango → null.
+function numeroInicio(sel) {
+  const el = $(sel);
+  const v = Number(el.value);
+  return el.value.trim() !== '' && Number.isFinite(v) && v >= Number(el.min) && v <= Number(el.max) ? Math.round(v) : null;
+}
+function perfilInicio() {
+  return { ...perfil(), experiencia: inicio.experiencia, sexo: inicio.sexo, edad: numeroInicio('#inicio-edad') || 0, peso: numeroInicio('#inicio-peso') || 0, altura: numeroInicio('#inicio-altura') || 0 };
+}
+// Lo que la app hará con lo que escribes, en vivo.
+function notaPerfilInicio() {
+  const p = perfilInicio();
+  const partes = [];
+  if (p.edad) partes.push(`pulso máximo ${ajustes.si('fcMaxDeEdad', true) || !fcMaxima() ? Pf.fcMaxDeEdad(p.edad) : fcMaxima()} lpm`);
+  const f = numeroInicio('#inicio-ftp');
+  const fi = Pf.ftpInicial(p);
+  if (f) partes.push(`FTP ${f} W`);
+  else if (fi && (!ftp() || ajustes.si('ftpDePerfil', false)) && !(cacheSesiones || []).length) partes.push(`FTP para empezar ≈ ${fi} W (lo afino con tu primera sesión)`);
+  if (p.peso && p.edad && p.altura && (p.sexo === 'h' || p.sexo === 'm')) partes.push(`gasto en reposo ${miles(Math.round(Pf.basalPorHora(p) * 24))} kcal al día`);
+  $('#inicio-perfil-nota').textContent = partes.length ? `Con esto: ${partes.join(' · ')}.` : '';
+}
 function pintarInicio() {
   const p = inicio.paso;
+  const ultimo = ultimoPasoInicio();
   document.querySelectorAll('.inicio-paso').forEach((x) => { x.hidden = Number(x.dataset.paso) !== p; });
-  document.querySelectorAll('#inicio-puntos span').forEach((x, i) => x.classList.toggle('activo', i < p));
+  document.querySelectorAll('#inicio-puntos span').forEach((x, i) => { x.classList.toggle('activo', i < p); x.hidden = i >= ultimo; });
   $('#inicio-clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase-mini" role="radio" aria-checked="${c.clave === inicio.clase}" data-clase="${c.clave}">
     <img src="${srcHeroe(c.clave, 1, true)}" width="56" height="56" alt=""><b>${c.nombre}</b><small>+15 % ${nombreAtributo(c.favorito)}</small><span class="lema">${c.para}</span></button>`).join('');
   $('#inicio-objetivos').innerHTML = OBJETIVOS_INICIO.map((o) => `<button type="button" role="radio" class="opcion" data-obj="${o.clave}" aria-checked="${o.clave === inicio.objetivo}"><b>${o.nombre}</b><small>${o.texto}</small></button>`).join('');
   $('#inicio-dias').innerHTML = [1, 2, 3, 4, 5].map((d) => `<button type="button" role="radio" class="chip" data-dias="${d}" aria-pressed="${inicio.dias === d}">${d} ${d === 1 ? 'día' : 'días'}</button>`).join('');
+  $('#inicio-minutos').innerHTML = Pf.MINUTOS.map((m) => `<button type="button" role="radio" class="chip" data-minutos="${m}" aria-pressed="${inicio.minutos === m}">${m ? `Hasta ${m} min` : 'Sin límite'}</button>`).join('');
+  $('#inicio-experiencia').innerHTML = Pf.EXPERIENCIAS.map((x) => `<button type="button" role="radio" class="chip" data-exp="${x.clave}" aria-pressed="${inicio.experiencia === x.clave}" title="${x.texto}">${x.nombre}</button>`).join('');
+  $('#inicio-sexo').innerHTML = Pf.SEXOS.map((x) => `<button type="button" role="radio" class="chip" data-sexo="${x.clave}" aria-pressed="${inicio.sexo === x.clave}">${x.nombre}</button>`).join('');
   $('#inicio-dias-campo').hidden = !inicio.objetivo || inicio.objetivo === 'libre';
+  $('#inicio-obj-ayuda').textContent = inicio.repetir && leerPrograma()?.dias?.length
+    ? 'Ya tienes un plan: si cambias el objetivo, los días o el tiempo, armo uno nuevo desde hoy.'
+    : 'Con tu respuesta armo un plan de 6 semanas. Lo puedes cambiar cuando quieras en Planes.';
+  notaPerfilInicio();
   const sig = $('#inicio-siguiente');
-  sig.disabled = (p === 1 && !inicio.clase) || (p === 2 && !inicio.objetivo);
-  sig.textContent = p === 3 ? 'Lo haré después' : 'Siguiente';
-  sig.classList.toggle('primario', p !== 3);
+  sig.disabled = (p === 2 && !inicio.clase) || (p === 3 && !inicio.objetivo);
+  sig.textContent = p === 1 ? (inicio.repetir ? 'Repasar' : 'Empezar') : p === 5 ? 'Lo haré después' : p === ultimo ? 'Guardar' : 'Siguiente';
+  sig.classList.toggle('primario', p !== 5);
   $('#inicio-atras').hidden = p === 1;
-  $('#inicio-saltar').hidden = p === 3;
-  if (p === 3 && !Remadora.soportado()) {
+  $('#inicio-saltar').hidden = p === 5;
+  $('#inicio-saltar').textContent = inicio.repetir ? 'Cerrar' : 'Saltar';
+  if (p === 5 && !Remadora.soportado()) {
     $('#inicio-bt-texto').textContent = 'Este navegador no tiene Bluetooth web: para conectar la remadora abre la app en Chrome para Android. Mientras, pruébala en modo demo.';
     $('#inicio-conectar').hidden = true;
     $('#inicio-demo').classList.add('primario', 'grande');
@@ -4365,18 +4463,25 @@ $('#inicio').addEventListener('click', (e) => {
   const c = e.target.closest('[data-clase]');
   const o = e.target.closest('[data-obj]');
   const d = e.target.closest('[data-dias]');
+  const m = e.target.closest('[data-minutos]');
+  const x = e.target.closest('[data-exp]');
+  const sx = e.target.closest('[data-sexo]');
   if (c) inicio.clase = c.dataset.clase;
   if (o) inicio.objetivo = o.dataset.obj;
   if (d) inicio.dias = Number(d.dataset.dias);
-  if (c || o || d) pintarInicio();
+  if (m) inicio.minutos = Number(m.dataset.minutos);
+  if (x) inicio.experiencia = x.dataset.exp;
+  if (sx) inicio.sexo = sx.dataset.sexo;
+  if (c || o || d || m || x || sx) pintarInicio();
   // Al elegir objetivo aparece la pregunta de los días: se trae a la vista (en horizontal quedaba oculta abajo).
   if (o && !$('#inicio-dias-campo').hidden) $('#inicio-dias-campo').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 });
+$('#inicio').addEventListener('input', (e) => { if (e.target.matches('.inicio-numeros input')) notaPerfilInicio(); });
 $('#inicio-siguiente').addEventListener('click', () => {
-  if (inicio.paso < 3) { inicio.paso++; pintarInicio(); $('#inicio .inicio-cuerpo').scrollTop = 0; } else terminarInicio();
+  if (inicio.paso < ultimoPasoInicio()) { inicio.paso++; pintarInicio(); $('#inicio .inicio-cuerpo').scrollTop = 0; } else terminarInicio();
 });
 $('#inicio-atras').addEventListener('click', () => { inicio.paso = Math.max(1, inicio.paso - 1); pintarInicio(); });
-$('#inicio-saltar').addEventListener('click', () => terminarInicio({ saltar: true }));
+$('#inicio-saltar').addEventListener('click', () => (inicio.repetir ? cerrarInicio() : terminarInicio({ saltar: true })));
 $('#inicio-demo').addEventListener('click', () => { remadora.iniciarDemo(); terminarInicio(); });
 $('#inicio-conectar').addEventListener('click', async () => {
   try {
@@ -4390,33 +4495,137 @@ $('#inicio-conectar').addEventListener('click', async () => {
   }
   if (remadora.conectada) terminarInicio();
 });
-// Guarda lo elegido (al saltar, solo el héroe) y deja la app lista para pulsar Empezar.
+function cerrarInicio() { $('#inicio').hidden = true; }
+// Guarda el perfil de la bienvenida (solo lo que escribiste; lo vacío no borra lo que ya tenías).
+async function guardarPerfilInicio() {
+  for (const [sel, clave] of [['#inicio-edad', 'edad'], ['#inicio-peso', 'peso'], ['#inicio-altura', 'altura']]) {
+    const v = numeroInicio(sel);
+    if (v != null) ajustes.escribir(clave, String(v));
+  }
+  if (inicio.experiencia) ajustes.escribir('experiencia', inicio.experiencia);
+  if (inicio.sexo) ajustes.escribir('sexo', inicio.sexo);
+  if (inicio.objetivo && inicio.objetivo !== 'libre') {
+    ajustes.escribir('diasSemana', String(inicio.dias));
+    if (inicio.minutos != null) ajustes.escribir('minutosSesion', String(inicio.minutos));
+    asistente.dias = inicio.dias;
+  }
+  aplicarEdad();
+  const f = numeroInicio('#inicio-ftp');
+  if (f) { guardarFtp(f, false); ajustes.escribir('ftpDePerfil', '0'); } else await ofrecerFtpInicial();
+  rellenarPerfil();
+  pintarPerfil();
+  pintarClasificacion();
+}
+// Guarda lo elegido (al saltar: héroe y perfil, sin plan) y deja la app lista para pulsar Empezar.
 async function terminarInicio({ saltar = false } = {}) {
+  const repetir = inicio.repetir;
   ajustes.escribir('inicioHecho', '1');
-  $('#inicio').hidden = true;
-  if (inicio.clase) guardarPersonaje({ clase: inicio.clase, nombre: $('#inicio-nombre').value.trim() });
-  let texto = inicio.clase ? '¡Listo! Pulsa Empezar cuando quieras remar' : '';
-  if (!saltar && inicio.objetivo && inicio.objetivo !== 'libre') {
+  cerrarInicio();
+  const per = leerPersonaje();
+  if (inicio.clase && (inicio.clase !== per.clase || $('#inicio-nombre').value.trim() !== (per.nombre || ''))) guardarPersonaje({ clase: inicio.clase, nombre: $('#inicio-nombre').value.trim() });
+  await guardarPerfilInicio();
+  let texto = inicio.clase && !repetir ? '¡Listo! Pulsa Empezar cuando quieras remar' : repetir ? 'Guardé tus cambios' : '';
+  // Al repetir, el plan solo se rehace si cambió algo que lo define.
+  const prog = leerPrograma();
+  const cambia = !repetir || !prog?.dias?.length || inicio.objetivo !== inicio.objAntes || prog.porSemana !== inicio.dias || (inicio.minutos != null && (prog.minutosMax || 0) !== (inicio.minutos || 0));
+  if (!saltar && inicio.objetivo && inicio.objetivo !== 'libre' && cambia) {
     const ctx = await contextoPlan();
     const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: inicio.objetivo, nivel: ctx.nivelSugerido, dias: inicio.dias, semanas: 6, inicio: E.claveDia(Date.now()), ctx });
     await guardarEntrenamientosDePlan(entrenamientos);
     guardarPrograma(programa);
     elegirLoDeHoy = true;
-    texto = `Tu plan está listo: ${programa.dias.length} sesiones en 6 semanas`;
+    texto = `Tu plan está listo: ${programa.dias.length} sesiones en 6 semanas${ctx.minutosMax ? `, de hasta ${ctx.minutosMax} min` : ''}`;
   }
   irA('entrenar');
   await llenarSelectorEntrenamientos();
   pintarLineaNivel();
-  if (inicio.clase) confeti(1200);
+  pintarPerfil();
+  if (inicio.clase && !repetir) confeti(1200);
   if (texto) toast(texto, 4000);
 }
-(async () => {
-  if (ajustes.si('inicioHecho', false)) { ofrecerRecuperar(); return; }
-  // Solo para quien empieza de cero: con héroe o sesiones guardadas, ya pasó por aquí.
-  if (leerPersonaje().clase || (await db.listar('sesiones')).length) { ajustes.escribir('inicioHecho', '1'); return; }
+function abrirInicio({ repetir = false } = {}) {
+  const p = perfil();
+  const per = leerPersonaje();
+  const prog = leerPrograma();
+  const obj = prog?.dias?.length ? P.objetivoPlan(prog.objetivo)?.clave || null : null;
+  Object.assign(inicio, {
+    paso: 1, repetir, clase: repetir ? per.clase || null : null, objetivo: repetir ? obj || 'libre' : null, objAntes: repetir ? obj || 'libre' : null,
+    dias: repetir && prog?.porSemana ? prog.porSemana : p.dias, minutos: p.minutos, experiencia: p.experiencia, sexo: p.sexo,
+  });
+  $('#inicio-nombre').value = repetir ? per.nombre || '' : '';
+  for (const [sel, v] of [['#inicio-edad', p.edad], ['#inicio-peso', p.peso], ['#inicio-altura', p.altura], ['#inicio-ftp', ftp() && !ajustes.si('ftpEstimado', false) ? ftp() : 0]]) $(sel).value = v || '';
   pintarInicio();
   $('#inicio').hidden = false;
+  $('#inicio .inicio-cuerpo').scrollTop = 0;
+}
+(async () => {
+  if (ajustes.si('inicioHecho', false)) { ofrecerRecuperar(); mostrarConsejo('entrenar'); return; }
+  // Solo para quien empieza de cero: con héroe o sesiones guardadas, ya pasó por aquí.
+  if (leerPersonaje().clase || (await db.listar('sesiones')).length) { ajustes.escribir('inicioHecho', '1'); mostrarConsejo('entrenar'); return; }
+  abrirInicio();
 })();
+
+// ---------- Guía rápida y consejos de la primera visita a cada pestaña ----------
+const NOMBRE_VISTA = { entrenar: 'Entrenar', entrenamientos: 'Planes', heroe: 'Héroe', historial: 'Progreso', ajustes: 'Ajustes' };
+let temaGuia = G.TEMAS[0].clave;
+function pintarGuia() {
+  const t = G.tema(temaGuia) || G.TEMAS[0];
+  const i = G.TEMAS.indexOf(t);
+  const sig = G.TEMAS[i + 1];
+  $('#guia-chips').innerHTML = G.TEMAS.map((x) => `<button type="button" class="chip" role="tab" data-tema="${x.clave}" aria-pressed="${x === t}" aria-selected="${x === t}">${x.titulo}</button>`).join('');
+  $('#guia-lista').innerHTML = `<article class="guia-tema">
+    <div class="guia-cab">${ico(t.icono)}<div><h3>${t.titulo}</h3><p>${t.resumen}</p></div></div>
+    <ul>${t.puntos.map((x) => `<li>${x}</li>`).join('')}</ul>
+    <div class="fila-botones">
+      <button type="button" class="boton" data-ir="${t.vista}">Ir a ${NOMBRE_VISTA[t.vista]}</button>
+      ${sig ? `<button type="button" class="boton primario" data-tema="${sig.clave}">Siguiente: ${sig.titulo}</button>` : '<button type="button" class="boton primario" data-fin>Entendido</button>'}
+    </div>
+    <p class="guia-pie">${i + 1} de ${G.TEMAS.length}</p>
+  </article>`;
+  $('#guia-chips [aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+function abrirGuia(clave = G.TEMAS[0].clave) {
+  temaGuia = clave;
+  pintarGuia();
+  $('#guia').hidden = false;
+  $('#guia .hoja').focus();
+}
+function cerrarGuia() { $('#guia').hidden = true; }
+$('#guia').addEventListener('click', (e) => {
+  if (e.target === $('#guia') || e.target.closest('#guia-cerrar, [data-fin]')) { cerrarGuia(); return; }
+  const t = e.target.closest('[data-tema]');
+  if (t) { temaGuia = t.dataset.tema; pintarGuia(); $('#guia .hoja').scrollTop = 0; return; }
+  const ir = e.target.closest('[data-ir]');
+  if (ir) { cerrarGuia(); irA(ir.dataset.ir); }
+});
+$('#btn-guia').addEventListener('click', () => abrirGuia());
+$('#btn-repetir-inicio').addEventListener('click', () => abrirInicio({ repetir: true }));
+$('#btn-consejos').addEventListener('click', () => {
+  for (const v of Object.keys(G.CONSEJO_DE_VISTA)) ajustes.escribir(`consejo-${v}`, '0');
+  ajustes.escribir('consejoModoRemo', '0');
+  toast('Los consejos vuelven a salir al abrir cada pestaña');
+  mostrarConsejo('ajustes');
+});
+// Una tarjeta arriba de la pestaña la primera vez que la abres: qué hay aquí, con un botón a la guía.
+function mostrarConsejo(vista) {
+  document.querySelectorAll('.consejo').forEach((x) => x.remove());
+  const t = G.consejoDe(vista);
+  if (!t || ajustes.si(`consejo-${vista}`, false) || !$('#inicio').hidden) return;
+  const el = document.createElement('div');
+  el.className = 'consejo';
+  el.setAttribute('role', 'note');
+  el.innerHTML = `${ico(t.icono)}<div class="consejo-texto"><b>${t.titulo}</b><span>${t.resumen}</span></div>
+    <div class="consejo-botones"><button type="button" class="boton chico" data-guia="${t.clave}">Cómo funciona</button><button type="button" class="enlace-boton" data-entendido>Entendido</button></div>`;
+  el.addEventListener('click', (e) => {
+    const g = e.target.closest('[data-guia]');
+    if (!g && !e.target.closest('[data-entendido]')) return;
+    ajustes.escribir(`consejo-${vista}`, '1');
+    el.remove();
+    if (g) abrirGuia(g.dataset.guia);
+  });
+  $(`#vista-${vista}`).prepend(el);
+}
+pintarPerfil();
 
 const horizontalTel = matchMedia('(orientation: landscape) and (max-height: 520px)');
 // Al girar a horizontal a mitad de una carrera, la pista se lleva a la vista igual que al empezar.

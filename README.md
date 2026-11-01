@@ -59,6 +59,9 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Mientras remas: lo que llevas de cada atributo, cuánto falta para el siguiente punto (sin sacarte de tu tramo) y un aviso al sumar; se apaga en Ajustes.
 - Al terminar: lo que lograste, lo que te quedó cerca con sus puntos y qué entrenar la próxima vez.
 - Semana de héroe: meta semanal para tu atributo más bajo (con XP y monedas), semana sugerida para equilibrarte y títulos por atributo («Experto de la técnica»).
+- Bienvenida en 5 pasos (qué hace la app, héroe, objetivo con días y tiempo por sesión, tu perfil y conexión) que se puede repetir desde Ajustes › Ayuda.
+- Guía rápida con 8 temas (primeros pasos, entrenar, modo remo, carrera, planes, héroe, progreso y ajustes) y un consejo la primera vez que abres cada pestaña.
+- Tu perfil (edad, sexo, peso, altura, experiencia, días y tiempo por sesión): calorías con tu metabolismo basal, pulso máximo, FTP para empezar sin historial, puesto en la tripulación, volumen del primer plan y planes que no pasan del tiempo que tienes.
 
 ## Archivos
 
@@ -77,6 +80,8 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `consejos.js` | Qué atributos sube cada entrenamiento, extras con puntos, reto en vivo y análisis al terminar |
 | `juego.js` | Héroe: clases, atributos, XP, niveles, talentos, misiones, capítulos y monedas, calculados con tu historial |
 | `objetos.js` | Vestimenta, colecciones y dibujo vectorial del héroe |
+| `perfil.js` | Tu perfil: basal, FTP inicial, qué falta y lo que aporta al plan |
+| `guia.js` | Temas de la guía rápida y consejos de cada pestaña |
 | `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
 | `db.js` | Almacenamiento local |
