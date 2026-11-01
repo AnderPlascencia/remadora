@@ -15,8 +15,9 @@ import * as O from './objetos.js';
 import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
+import * as Cap from './capacidades.js';
 
-const VERSION = '0.32.0';
+const VERSION = '0.33.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -682,6 +683,9 @@ for (const d of document.querySelectorAll('details.seccion')) {
     if (!d.open) return;
     if (d.dataset.seccion === 'forma') pintarForma();
     if (d.dataset.seccion === 'tendencia') pintarTendencia();
+    if (d.dataset.seccion === 'curva') pintarCurva();
+    if (d.dataset.seccion === 'motor') pintarMotor();
+    if (d.dataset.seccion === 'gasto') pintarGasto();
   });
 }
 document.addEventListener('click', (e) => {
@@ -954,6 +958,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     fcProm: m.some((x) => x.fc) ? Math.round(m.filter((x) => x.fc).reduce((a, x) => a + x.fc, 0) / m.filter((x) => x.fc).length) : 0,
     fcMax: m.reduce((a, x) => Math.max(a, x.fc || 0), 0),
     entrenamiento: s.entrenamiento,
+    enfoque: ent ? P.enfoqueDe(ent) : null,
     tiempoMeta: s.tiempoMeta,
     delPrograma: delProgramaHoy(s),
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
@@ -2483,10 +2488,77 @@ function pintarForma() {
     let consejo = 'Vas equilibrado: cualquier entrenamiento del plan te queda bien.';
     if (hoy.frescura < -20) consejo = 'Vienes cansado: hoy toca algo suave o descansar.';
     else if (hoy.frescura > 10) consejo = 'Estás fresco: buen día para una prueba o una sesión fuerte.';
-    $('#forma-texto').textContent = avanzado() ? `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}` : consejo;
+    $('#forma-texto').textContent = (avanzado() ? `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}` : consejo) + textoCarga();
   }
   const estado = () => (hoy.frescura < -20 ? 'Cansado' : hoy.frescura > 10 ? 'Fresco' : 'Equilibrado');
   $('#forma-resumen').textContent = !(ftp() && hay) ? '' : avanzado() ? `Frescura ${hoy.frescura > 0 ? '+' : ''}${hoy.frescura}` : estado();
+}
+
+// Ratio agudo:crónico y reparto 80/20 de la semana, en una o dos frases.
+function textoCarga() {
+  const r = E.ratioCarga(cacheSesiones, ftp());
+  const d = E.distribucionIntensidad(cacheSesiones, ftp());
+  let t = '';
+  if (r != null) {
+    const zona = r > 1.5 ? 'muy por encima de lo seguro: baja la carga unos días' : r > 1.3 ? 'por encima de lo seguro (0,8–1,3): no subas más esta semana' : r < 0.8 ? 'por debajo de tu carga habitual: puedes subir un poco' : 'en la zona segura para progresar';
+    t += avanzado() ? ` Ratio agudo:crónico ${r.toLocaleString('es-MX')}, ${zona}.` : ` Tu carga de esta semana está ${zona}.`;
+  }
+  if (d && d.segundos >= 1200) {
+    t += avanzado() ? ` Reparto de 7 días: ${d.suave} % suave, ${d.medio} % medio, ${d.fuerte} % fuerte (lo ideal ronda 80 / 5 / 15).`
+      : d.suave < 70 ? ' Esta semana casi todo fue fuerte: añade algún fondo suave.' : '';
+  }
+  return t;
+}
+
+// Una tarjeta por capacidad física: valor, cambio contra las 6 semanas anteriores y cómo se mide.
+function pintarCapacidades() {
+  const caps = Cap.capacidades(cacheSesiones, { ftp: ftp(), peso: ajustes.num('peso', 75), fcMax: fcMaxima() });
+  const fmt = (c, v) => (c.unidad === 'm/palada' ? v.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : c.unidad === 'ml/kg/min' || c.unidad === 'kJ' ? v.toLocaleString('es-MX', { minimumFractionDigits: 1 }) : miles(v));
+  $('#capacidades').innerHTML = caps.map((c) => {
+    const nombre = avanzado() ? c.nombre : c.simple;
+    if (c.valor == null) return `<div class="capacidad vacia"><div class="etq">${nombre}</div><div class="sub">${c.falta}</div></div>`;
+    const cambio = c.cambio ? `<span class="${c.mejora ? 'mejor' : 'peor'}">${c.mejora ? '▲' : '▼'} ${fmt(c, Math.abs(Math.round(c.cambio * 100) / 100))}</span>` : '';
+    return `<div class="capacidad"><div class="etq">${nombre}</div><div class="valor">${fmt(c, c.valor)} <small>${c.unidad}</small> ${cambio}</div><div class="sub">${c.como}</div></div>`;
+  }).join('');
+  const suben = caps.filter((c) => c.mejora).length;
+  $('#capacidades-resumen').textContent = suben ? `${suben} ${suben === 1 ? 'sube' : 'suben'}` : '';
+}
+
+// Curva de potencia: eje X por duraciones (5 s … 60 min), últimas 6 semanas contra lo anterior.
+function pintarCurva() {
+  const { ahora, antes } = Cap.curvasComparadas(cacheSesiones);
+  const idx = (segs) => E.DURACIONES_CURVA.indexOf(segs);
+  const etq = (segs) => (segs < 60 ? `${segs} s` : `${segs / 60} min`);
+  dibujar($('#grafica-curva'), [
+    { color: color('--watts'), eje: 'izq', puntos: ahora.map((p) => [idx(p.segs), p.w]) },
+    { color: color('--split'), eje: 'izq', puntos: antes.map((p) => [idx(p.segs), p.w]) },
+  ], { marcas: true, formatoX: (t) => etq(E.DURACIONES_CURVA[Math.round(t)] ?? 5) });
+  const pc = E.potenciaCritica(ahora);
+  $('#curva-texto').textContent = !ahora.length ? 'Rema unas sesiones para ver tu curva.'
+    : pc ? `Tu potencia crítica es ${pc.cp} W y tu batería anaeróbica (W′) ${(pc.wPrima / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} kJ. Por encima de ${pc.cp} W la gastas; por debajo se recarga.`
+      : 'Cada punto es tu mejor media para esa duración. Con marcas de 3 y 12 min calculo tu potencia crítica.';
+}
+
+// Mi motor: watts a un pulso fijo (70 % del máximo), semana a semana. Si suben, el corazón rinde más.
+function pintarMotor() {
+  const fcRef = fcMaxima() ? Math.round(fcMaxima() * 0.7) : 0;
+  const datos = Cap.motorSemanal(cacheSesiones, fcRef);
+  dibujarBarras($('#grafica-motor'), datos.map((d, i) => ({ etiqueta: fechaCorta(d.inicio), valor: d.w || 0, resaltar: i === datos.length - 1 })), { color: color('--fc'), formato: (v) => `${v}` });
+  const con = datos.filter((d) => d.w);
+  $('#motor-resumen').textContent = con.length ? `${con.at(-1).w} W` : '';
+  $('#motor-texto').textContent = !fcRef ? 'Pon tu edad en Ajustes › Pulso y zonas para medir tu motor.'
+    : con.length < 2 ? `Watts que mueves a ${fcRef} lpm. Rema fondos con el reloj para ver cómo cambian.`
+      : `Watts que mueves a ${fcRef} lpm. ${con.at(-1).w > con[0].w ? 'Suben: tu corazón rinde más con el mismo esfuerzo.' : 'Para que suban, suma fondos suaves en zona 2.'}`;
+}
+
+// Calorías por semana, con el promedio de las 4 anteriores.
+function pintarGasto() {
+  const datos = Cap.gastoSemanal(cacheSesiones);
+  dibujarBarras($('#grafica-gasto'), datos.map((d, i) => ({ etiqueta: fechaCorta(d.inicio), valor: d.kcal, resaltar: i === datos.length - 1 })), { color: color('--primario'), formato: (v) => miles(v) });
+  const esta = datos.at(-1).kcal;
+  const prom = Math.round(datos.slice(-5, -1).reduce((a, d) => a + d.kcal, 0) / 4);
+  $('#gasto-resumen').textContent = `${miles(esta)} kcal`;
+  $('#gasto-texto').textContent = prom ? `Esta semana ${miles(esta)} kcal; tu promedio es ${miles(prom)}.` : 'Tus calorías de cada semana aparecerán aquí.';
 }
 
 function pintarAvisoRespaldo(total) {
@@ -2550,6 +2622,10 @@ async function pintarHistorial() {
   pintarHeroeProgreso(lista);
   pintarPeriodos();
   pintarForma();
+  pintarCapacidades();
+  for (const [sec, fn] of [['curva', pintarCurva], ['motor', pintarMotor], ['gasto', pintarGasto]]) {
+    if (document.querySelector(`details[data-seccion="${sec}"]`).open) fn();
+  }
 
   // Filtro por entrenamiento
   const sel = $('#filtro-ent');
@@ -3313,6 +3389,8 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
     };
   }
 
+  pintarCapacidadSesion(s);
+
   const tec = E.tecnica(s);
   const estres = s.estres ?? E.estres(s, s.ftp || ftp());
   const stats = [
@@ -3366,6 +3444,16 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
     : 'Ver detalle y métricas';
   if (det.open) requestAnimationFrame(() => dibujarHojaGraficas(s));
   $('#hoja-cerrar').focus();
+}
+// Qué capacidad entrenó la sesión, sus tres datos clave y una frase que los lee.
+function pintarCapacidadSesion(s) {
+  const caja = $('#hoja-capacidad');
+  caja.hidden = !s.muestras?.length;
+  if (caja.hidden) return;
+  const a = Cap.analisisSesion(s, { ftp: ftp(), fcMax: fcMaxima() });
+  caja.innerHTML = `<div class="hc-cabecera"><span class="etq">Entrenaste</span><b>${avanzado() ? a.nombre : a.simple}</b></div>
+    <div class="metricas compacta">${a.datos.map((d) => `<div class="metrica" title="${escaparHtml(d.ayuda)}"><span class="etq">${escaparHtml(d.etq)}</span><span class="valor">${d.valor}</span></div>`).join('')}</div>
+    <p class="ayuda">${a.lectura}</p>`;
 }
 $('#hoja-detalle').addEventListener('toggle', () => {
   if ($('#hoja-detalle').open && sesionAbierta) requestAnimationFrame(() => dibujarHojaGraficas(sesionAbierta));

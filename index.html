@@ -428,6 +428,31 @@
       <p id="forma-texto" class="ayuda"></p>
       </details>
 
+      <details class="seccion" data-seccion="capacidades">
+      <summary><h2>Mis capacidades</h2><span id="capacidades-resumen" class="seccion-resumen"></span></summary>
+      <p class="ayuda">Tus últimas 6 semanas contra las 6 anteriores.</p>
+      <div id="capacidades" class="capacidades"></div>
+      </details>
+
+      <details class="seccion" data-seccion="curva">
+      <summary><h2>Curva de potencia</h2></summary>
+      <div class="leyenda"><span class="lw">Últimas 6 semanas</span><span class="lt">Antes</span></div>
+      <canvas id="grafica-curva" class="grafica baja" role="img" aria-label="Mejor potencia para cada duración"></canvas>
+      <p id="curva-texto" class="ayuda"></p>
+      </details>
+
+      <details class="seccion" data-seccion="motor">
+      <summary><h2>Mi motor</h2><span id="motor-resumen" class="seccion-resumen"></span></summary>
+      <canvas id="grafica-motor" class="grafica baja" role="img" aria-label="Watts a pulso fijo por semana"></canvas>
+      <p id="motor-texto" class="ayuda"></p>
+      </details>
+
+      <details class="seccion" data-seccion="gasto">
+      <summary><h2>Calorías</h2><span id="gasto-resumen" class="seccion-resumen"></span></summary>
+      <canvas id="grafica-gasto" class="grafica baja" role="img" aria-label="Calorías por semana"></canvas>
+      <p id="gasto-texto" class="ayuda"></p>
+      </details>
+
       <details class="seccion" data-seccion="tendencia">
       <summary><h2>Tendencia</h2></summary>
       <div class="segmentado" role="group" aria-label="Tendencia" id="seg-tendencia">
@@ -616,6 +641,7 @@
       </div>
       <p id="hoja-sub" class="ayuda"></p>
       <div id="hoja-podio" class="podio" hidden></div>
+      <div id="hoja-capacidad" class="hoja-capacidad" hidden></div>
       <div id="hoja-xp" class="hoja-xp" hidden></div>
       <div id="hoja-atr" class="hoja-atr" hidden></div>
       <div id="hoja-ftp" class="aviso exito" hidden></div>
