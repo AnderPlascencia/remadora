@@ -18,7 +18,7 @@ import * as C from './consejos.js';
 import * as Cap from './capacidades.js';
 import * as A from './adaptacion.js';
 
-const VERSION = '0.37.0';
+const VERSION = '0.38.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -2585,18 +2585,66 @@ function textoCarga() {
   return t;
 }
 
-// Una tarjeta por capacidad física: valor, cambio contra las 6 semanas anteriores y cómo se mide.
+// Mini gráfica (SVG) de una capacidad en las últimas semanas; se adapta al tema con currentColor.
+function miniLinea(puntos) {
+  const vals = puntos.map((p) => p.valor);
+  const con = vals.map((v, i) => [i, v]).filter(([, v]) => v != null);
+  if (con.length < 2) return '';
+  const min = Math.min(...con.map(([, v]) => v));
+  const max = Math.max(...con.map(([, v]) => v));
+  const W = 100, H = 28;
+  const x = (i) => (i / (vals.length - 1)) * W;
+  const y = (v) => (max === min ? H / 2 : H - 3 - ((v - min) / (max - min)) * (H - 6));
+  const d = con.map(([i, v], k) => `${k ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+  const [ui, uv] = con.at(-1);
+  return `<svg class="mini-linea" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${x(ui)}" cy="${y(uv)}" r="2.5" fill="currentColor"/></svg>`;
+}
+
+// Cómo has mejorado: cada capacidad con su % frente a las 6 semanas anteriores y su evolución de 12 semanas.
+// En sencillo se ve el nombre fácil y el %; con «Datos avanzados», también el valor técnico y cómo se mide.
 function pintarCapacidades() {
-  const caps = Cap.capacidades(cacheSesiones, { ftp: ftp(), peso: ajustes.num('peso', 75), fcMax: fcMaxima() });
+  const opc = { ftp: ftp(), peso: ajustes.num('peso', 75), fcMax: fcMaxima() };
+  const caps = Cap.capacidades(cacheSesiones, opc);
+  const hist = Cap.historialCapacidades(cacheSesiones, opc);
   const fmt = (c, v) => (c.unidad === 'm/palada' ? v.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : c.unidad === 'ml/kg/min' || c.unidad === 'kJ' ? v.toLocaleString('es-MX', { minimumFractionDigits: 1 }) : miles(v));
   $('#capacidades').innerHTML = caps.map((c) => {
-    const nombre = avanzado() ? c.nombre : c.simple;
-    if (c.valor == null) return `<div class="capacidad vacia"><div class="etq">${nombre}</div><div class="sub">${c.falta}</div></div>`;
-    const cambio = c.cambio ? `<span class="${c.mejora ? 'mejor' : 'peor'}">${c.mejora ? '▲' : '▼'} ${fmt(c, Math.abs(Math.round(c.cambio * 100) / 100))}</span>` : '';
-    return `<div class="capacidad"><div class="etq">${nombre}</div><div class="valor">${fmt(c, c.valor)} <small>${c.unidad}</small> ${cambio}</div><div class="sub">${c.como}</div></div>`;
+    const titulo = avanzado() ? c.nombre : c.simple;
+    const sub = avanzado() || c.nombre === c.simple ? '' : `<span class="tecnico">${c.nombre}</span>`;
+    if (c.valor == null) return `<div class="capacidad vacia"><div class="etq">${titulo}${sub}</div><div class="sub">${c.falta}</div></div>`;
+    const pct = c.pct == null ? '<span class="igual">Nueva</span>'
+      : c.pct === 0 ? '<span class="igual">= igual</span>'
+        : `<span class="${c.pct > 0 ? 'mejor' : 'peor'}">${c.pct > 0 ? '▲ +' : '▼ '}${c.pct}%</span>`;
+    const valor = `<div class="sub solo-avanzado">${fmt(c, c.valor)} ${c.unidad} · ${c.como}</div>`;
+    return `<details class="capacidad ${c.pct > 0 ? 'sube' : c.pct < 0 ? 'baja' : ''}"><summary><div class="etq">${titulo}${sub}</div>
+      <div class="valor">${pct}</div>${miniLinea(hist[c.clave])}${valor}</summary>
+      <div class="sub como-subir">Para subirla: ${c.entrena.toLowerCase()}.</div></details>`;
   }).join('');
   const suben = caps.filter((c) => c.mejora).length;
   $('#capacidades-resumen').textContent = suben ? `${suben} ${suben === 1 ? 'sube' : 'suben'}` : '';
+}
+
+// Tu cuerpo hoy: semáforo de fatiga, horas hasta estar recuperado, consejo y carga de la semana contra tu rango seguro.
+function pintarCuerpoHoy() {
+  const caja = $('#cuerpo-hoy');
+  const c = ftp() ? Cap.estadoCuerpo(cacheSesiones, ftp()) : null;
+  caja.hidden = !c;
+  if (!c) return;
+  caja.dataset.estado = c.clave;
+  $('#cuerpo-estado').textContent = c.nombre;
+  $('#cuerpo-recuperacion').textContent = Cap.textoRecuperacion(c.horas);
+  $('#cuerpo-consejo').textContent = c.consejo + (avanzado() ? ` Condición ${c.condicion}, fatiga ${c.fatiga}, frescura ${c.frescura > 0 ? '+' : ''}${c.frescura}.` : '');
+  const barra = (etq, valor, max, zona, nota) => `<div class="tm-fila"><span>${etq}</span><span>${nota}</span></div>
+    <div class="ch-barra">${zona ? `<i class="ch-zona" style="left:${zona[0]}%;width:${zona[1] - zona[0]}%"></i>` : ''}<b style="width:${Math.min(100, valor)}%"></b></div>`;
+  if (c.seguro) {
+    const tope = c.seguro.max * 1.4;
+    const pos = (v) => Math.round((100 * v) / tope);
+    const zona = c.semana > c.seguro.max ? 'Pasada: baja unos días' : c.semana < c.seguro.min ? 'Puedes subir un poco' : 'En tu zona segura';
+    $('#cuerpo-carga').innerHTML = barra('Esfuerzo de 7 días', pos(c.semana), 100, [pos(c.seguro.min), pos(c.seguro.max)], avanzado() ? `${c.semana} TSS · ratio ${c.ratio.toLocaleString('es-MX')}` : zona);
+  } else $('#cuerpo-carga').innerHTML = '<p class="ayuda">Con 2 o 3 semanas de sesiones te diré cuánto esfuerzo aguantas sin pasarte.</p>';
+  const r = c.reparto;
+  $('#cuerpo-reparto').innerHTML = r && r.segundos >= 600
+    ? barra('Suave (7 días)', r.suave, 100, [75, 85], r.suave < 70 ? 'Poco suave: añade un fondo' : `${r.suave}% (ideal cerca de 80%)`)
+    : '';
 }
 
 // Curva de potencia: eje X por duraciones (5 s … 60 min), últimas 6 semanas contra lo anterior.
@@ -2610,6 +2658,7 @@ function pintarCurva() {
   ], { marcas: true, formatoX: (t) => etq(E.DURACIONES_CURVA[Math.round(t)] ?? 5) });
   const pc = E.potenciaCritica(ahora);
   $('#curva-texto').textContent = !ahora.length ? 'Rema unas sesiones para ver tu curva.'
+    : pc && !avanzado() ? `Tu mejor media para cada duración. Puedes aguantar unos ${pc.cp} W casi sin cansarte; por encima gastas tu batería, que llega para unos ${Math.round(pc.wPrima / Math.max(1, pc.cp * 0.2))} s a ${Math.round(pc.cp * 1.2)} W.`
     : pc ? `Tu potencia crítica es ${pc.cp} W y tu batería anaeróbica (W′) ${(pc.wPrima / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} kJ. Por encima de ${pc.cp} W la gastas; por debajo se recarga.`
       : 'Cada punto es tu mejor media para esa duración. Con marcas de 3 y 12 min calculo tu potencia crítica.';
 }
@@ -2699,6 +2748,7 @@ async function pintarHistorial() {
   pintarHeroeProgreso(lista);
   pintarPeriodos();
   pintarForma();
+  pintarCuerpoHoy();
   pintarCapacidades();
   for (const [sec, fn] of [['curva', pintarCurva], ['motor', pintarMotor], ['gasto', pintarGasto]]) {
     if (document.querySelector(`details[data-seccion="${sec}"]`).open) fn();
@@ -3821,6 +3871,13 @@ async function pintarHoy(ent = entrenamientoPrevio) {
   const avisosHoy = (prog?.avisos || []).filter((x) => x.dia === E.claveDia(Date.now())).map((x) => x.texto);
   const factor = prog?.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;
   if (factor && esDeHoy) avisosHoy.push(`Tus rangos del plan van un ${Math.abs(factor)} % más ${factor > 0 ? 'altos' : 'bajos'} según cómo te fue.`);
+  // Semáforo de fatiga en una línea, para no apretar de más.
+  const cuerpo = ftp() ? Cap.estadoCuerpo(sesiones, ftp()) : null;
+  $('#hoy-cuerpo').hidden = !cuerpo;
+  if (cuerpo) {
+    $('#hoy-cuerpo').dataset.estado = cuerpo.clave;
+    $('#hoy-cuerpo').textContent = `${cuerpo.nombre} · ${cuerpo.horas ? Cap.textoRecuperacion(cuerpo.horas).toLowerCase() : 'puedes entrenar'}`;
+  }
   $('#hoy-ajuste').hidden = !avisosHoy.length;
   $('#hoy-ajuste').textContent = avisosHoy.join(' ');
   $('#btn-hoy-detalle').hidden = !ent;

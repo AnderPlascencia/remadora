@@ -1155,6 +1155,7 @@ body:has(#modo-remo:not([hidden])) .toast { bottom: auto; top: calc(12px + env(s
 
 /* Datos avanzados (apagado por defecto): lo técnico solo aparece si se activa en Ajustes › Apariencia. */
 :root:not([data-avanzado]) .solo-avanzado { display: none !important; }
+:root[data-avanzado] .solo-sencillo { display: none !important; }
 .ayuda.bloque { display: block; margin: 2px 0 0; font-weight: 400; }
 .prediccion-corta { margin: 16px 0 4px; padding: 12px 14px; border-radius: var(--radio); background: var(--panel); color: var(--texto-suave); }
 .prediccion-corta b { font-family: var(--num); font-size: 22px; color: var(--texto); }
@@ -1530,6 +1531,33 @@ details.mas-detalle[hidden] { display: none; }
 .capacidad .peor { color: var(--peligro, #EF4444); }
 .capacidad .sub { font-size: 12px; color: var(--texto-tenue); }
 .capacidad.vacia .sub { margin-top: 4px; }
+.capacidad > summary { display: block; list-style: none; cursor: pointer; }
+.capacidad > summary::-webkit-details-marker { display: none; }
+.capacidad .tecnico { display: block; font-size: 11px; font-weight: 500; color: var(--texto-tenue); opacity: .8; }
+.capacidad .igual { color: var(--texto-tenue); }
+.capacidad .mini-linea { display: block; width: 100%; height: 28px; margin-top: 4px; color: var(--texto-tenue); }
+.capacidad.sube .mini-linea { color: var(--exito); }
+.capacidad.baja .mini-linea { color: var(--peligro, #EF4444); }
+.capacidad .como-subir { margin-top: 6px; }
+.cuerpo-hoy, .mejoras { background: var(--panel); border-radius: var(--radio); padding: 14px 16px; margin: 12px 0; }
+.mejoras { background: none; padding: 0; }
+.mejoras .ayuda { margin: 4px 0 0; }
+.ch-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ch-cabecera h2 { margin: 0; font-size: 18px; }
+.ch-estado { font-weight: 800; font-size: 14px; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--ch-color) 18%, transparent); color: var(--ch-color); white-space: nowrap; }
+.cuerpo-hoy { --ch-color: var(--exito); border-left: 4px solid var(--ch-color); }
+.cuerpo-hoy[data-estado="listo"] { --ch-color: var(--cond); }
+.cuerpo-hoy[data-estado="cargado"] { --ch-color: var(--aviso); }
+.cuerpo-hoy[data-estado="agotado"] { --ch-color: var(--peligro, #EF4444); }
+.ch-recuperacion { font-size: 20px; font-weight: 800; margin: 10px 0 2px; }
+.ch-consejo { color: var(--texto-suave); margin: 0 0 10px; }
+.ch-carga { margin-top: 8px; font-size: 13px; color: var(--texto-tenue); }
+.ch-carga:empty { display: none; }
+.ch-carga .tm-fila { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.ch-carga .tm-fila span:last-child { color: var(--texto); font-weight: 600; text-align: right; }
+.ch-barra { position: relative; height: 10px; border-radius: 999px; background: var(--borde); overflow: hidden; }
+.ch-barra b { position: absolute; inset: 0 auto 0 0; background: var(--ch-color); border-radius: 999px; }
+.ch-zona { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--exito) 35%, transparent); border-left: 2px solid var(--exito); border-right: 2px solid var(--exito); z-index: 1; }
 .hoja-capacidad { background: var(--panel); border-radius: var(--radio); padding: 12px 14px; margin: 12px 0; border-left: 4px solid var(--primario); }
 .hoja-capacidad .hc-cabecera { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .hoja-capacidad .hc-cabecera .etq { font-size: 13px; color: var(--texto-tenue); font-weight: 600; }
@@ -1537,3 +1565,9 @@ details.mas-detalle[hidden] { display: none; }
 .hoja-capacidad .metricas { margin: 8px 0; }
 .hoja-capacidad .ayuda { margin: 0; }
 .hoy-ajuste { margin: 6px 0 0; font-size: 14px; color: var(--primario); font-weight: 600; }
+
+.hoy-cuerpo { --ch-color: var(--exito); margin: 8px 0 0; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.hoy-cuerpo::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--ch-color); flex: none; }
+.hoy-cuerpo[data-estado="listo"] { --ch-color: var(--cond); }
+.hoy-cuerpo[data-estado="cargado"] { --ch-color: var(--aviso); }
+.hoy-cuerpo[data-estado="agotado"] { --ch-color: var(--peligro, #EF4444); }

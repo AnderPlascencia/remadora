@@ -83,3 +83,48 @@ assert.equal(Cap.tipoPlan({ tipo: 'objetivo', objetivo: { metrica: 'distancia', 
 assert.equal(Cap.tipoPlan({ pruebaFtp: true, bloques: [] }), 'prueba');
 for (const claves of Object.values(Cap.CASILLAS_REMO)) assert.equal(claves.length, 5);
 console.log('tipo de plan OK');
+
+// Historial de capacidades, estado del cuerpo y recuperación.
+{
+  const DIA = 864e5;
+  const ahora = Date.parse('2026-11-03T18:00');
+  const mu = (segs, w) => Array.from({ length: segs }, (_, t) => ({ t, w, spm: 22, dist: t * 4 }));
+  const s = (d, segs, w) => ({ fecha: ahora - d * DIA, duracion: segs, distancia: segs * 4, paladas: segs / 3, muestras: mu(segs, w), ftp: 200 });
+  // 12 semanas de fondos que van subiendo de 130 a 160 W
+  const ses = Array.from({ length: 40 }, (_, i) => s(84 - i * 2, 1800, 130 + Math.round(i * 0.75)));
+  const h = Cap.historialCapacidades(ses, { ftp: 200, peso: 75, fcMax: 185, ahora });
+  assert.equal(h.potencia.length, 12);
+  const pot = h.potencia.filter((p) => p.valor != null).map((p) => p.valor);
+  assert.ok(pot.at(-1) > pot[0], 'la potencia sube en el historial');
+  const caps = Cap.capacidades(ses, { ftp: 200, peso: 75, ahora });
+  const p = caps.find((c) => c.clave === 'potencia');
+  assert.ok(p.pct > 0 && Number.isInteger(p.pct), `pct ${p.pct}`);
+  assert.ok(caps.every((c) => c.entrena), 'cada capacidad dice cómo subirla');
+
+  // Recuperación por carga de una sesión
+  assert.equal(Cap.horasPorCarga(0), 0);
+  assert.equal(Cap.horasPorCarga(50), 16);
+  assert.equal(Cap.horasPorCarga(120), 36);
+  assert.equal(Cap.textoRecuperacion(0), 'Listo para entrenar');
+  assert.equal(Cap.textoRecuperacion(20), 'Recuperado en unas 20 h');
+  assert.equal(Cap.textoRecuperacion(48), 'Recuperado en unos 2 días');
+
+  // Rutina regular y un día de descanso: listo o fresco, sin horas pendientes.
+  const regular = ses.filter((x) => x.fecha < ahora - 1.5 * DIA);
+  const e1 = Cap.estadoCuerpo(regular, 200, ahora);
+  assert.ok(['listo', 'fresco'].includes(e1.clave), e1.clave);
+  assert.equal(e1.horas, 0);
+  assert.ok(e1.seguro && e1.seguro.max > e1.seguro.min);
+  // Tres días seguidos de 2 h fuertes: muy cansado, con días de recuperación y carga por encima de lo seguro.
+  const duro = [...regular, ...[2, 1, 0.1].map((d) => s(d, 7200, 210))];
+  const e2 = Cap.estadoCuerpo(duro, 200, ahora);
+  assert.equal(e2.clave, 'agotado');
+  assert.ok(e2.horas >= 48 && e2.horas <= 96, `horas ${e2.horas}`);
+  assert.equal(Cap.textoRecuperacion(96), 'Necesitas unos 4 días suaves');
+  assert.ok(e2.semana > e2.seguro.max);
+  // Una sesión dura de hoy manda aunque la tendencia diga fresco.
+  const e3 = Cap.estadoCuerpo([...regular, s(0.05, 3600, 230)], 200, ahora);
+  assert.ok(e3.horas >= 12 && e3.clave !== 'fresco' && e3.clave !== 'listo', `${e3.clave} ${e3.horas}`);
+  assert.equal(Cap.estadoCuerpo([], 200, ahora), null);
+  console.log('cuerpo OK', e1.clave, e2.clave, e2.horas, e3.clave, e3.horas);
+}

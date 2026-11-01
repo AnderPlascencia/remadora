@@ -76,6 +76,7 @@
         </div>
         <b id="hoy-nombre" class="hoy-nombre">Remo libre</b>
         <span id="hoy-resumen" class="hoy-resumen"></span>
+        <p id="hoy-cuerpo" class="hoy-cuerpo" hidden></p>
         <p id="hoy-ajuste" class="hoy-ajuste" hidden></p>
         <button type="button" id="btn-hoy-detalle" class="enlace-boton hoy-detalle" aria-controls="hoy-detalle-caja" aria-expanded="false" hidden>Ver detalles</button>
         <div id="hoy-detalle-caja" class="hoy-detalle-caja" hidden>
@@ -412,6 +413,21 @@
 
       <button type="button" id="progreso-heroe" class="progreso-heroe" hidden></button>
 
+      <section id="cuerpo-hoy" class="cuerpo-hoy" hidden aria-labelledby="cuerpo-titulo">
+        <div class="ch-cabecera"><h2 id="cuerpo-titulo">Tu cuerpo hoy</h2><span id="cuerpo-estado" class="ch-estado"></span></div>
+        <p id="cuerpo-recuperacion" class="ch-recuperacion"></p>
+        <p id="cuerpo-consejo" class="ch-consejo"></p>
+        <div id="cuerpo-carga" class="ch-carga"></div>
+        <div id="cuerpo-reparto" class="ch-carga"></div>
+      </section>
+
+      <section class="mejoras" aria-labelledby="mejoras-titulo">
+        <div class="ch-cabecera"><h2 id="mejoras-titulo">Cómo has mejorado</h2><span id="capacidades-resumen" class="seccion-resumen"></span></div>
+        <p class="ayuda">Tus últimas 6 semanas contra las 6 anteriores. Toca una para ver cómo subirla.</p>
+        <div id="capacidades" class="capacidades"></div>
+      </section>
+
+
       <div id="aviso-respaldo" class="aviso" hidden></div>
 
       <div class="segmentado" role="group" aria-label="Periodo">
@@ -420,7 +436,7 @@
       </div>
       <canvas id="grafica-periodos" class="grafica baja" role="img" aria-label="Kilómetros por periodo"></canvas>
 
-      <details class="seccion" data-seccion="forma">
+      <details class="seccion solo-avanzado" data-seccion="forma">
       <summary><h2>Forma</h2><span id="forma-resumen" class="seccion-resumen"></span></summary>
       <div class="solo-avanzado">
       <div class="leyenda"><span class="lcond">Condición</span><span class="lfat">Fatiga</span><span class="lfres">Frescura</span></div>
@@ -429,14 +445,9 @@
       <p id="forma-texto" class="ayuda"></p>
       </details>
 
-      <details class="seccion" data-seccion="capacidades">
-      <summary><h2>Mis capacidades</h2><span id="capacidades-resumen" class="seccion-resumen"></span></summary>
-      <p class="ayuda">Tus últimas 6 semanas contra las 6 anteriores.</p>
-      <div id="capacidades" class="capacidades"></div>
-      </details>
 
       <details class="seccion" data-seccion="curva">
-      <summary><h2>Curva de potencia</h2></summary>
+      <summary><h2><span class="solo-avanzado">Curva de potencia</span><span class="solo-sencillo">Tus mejores marcas</span></h2></summary>
       <div class="leyenda"><span class="lw">Últimas 6 semanas</span><span class="lt">Antes</span></div>
       <canvas id="grafica-curva" class="grafica baja" role="img" aria-label="Mejor potencia para cada duración"></canvas>
       <p id="curva-texto" class="ayuda"></p>

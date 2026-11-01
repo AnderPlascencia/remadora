@@ -126,13 +126,13 @@ function medir(ss, { ftp, peso, fcRef }) {
 }
 
 export const CAPACIDADES = [
-  { clave: 'base', nombre: 'Base aeróbica', simple: 'Motor', unidad: 'W', como: (c) => `Watts a ${c.fcRef} lpm`, falta: 'Rema 20 min o más con el reloj para medirla.' },
-  { clave: 'umbral', nombre: 'Umbral (FTP)', simple: 'Ritmo sostenido', unidad: 'W', como: () => 'Potencia de una hora', falta: 'Haz la Prueba FTP 20 min o una sesión de 20 min.' },
-  { clave: 'vo2', nombre: 'VO₂máx', simple: 'Pulmones', unidad: 'ml/kg/min', como: () => 'Estimado con tu mejor 5 min', falta: 'Rema 5 min a fondo para estimarlo.' },
-  { clave: 'anaerobica', nombre: 'Capacidad anaeróbica', simple: 'Batería', unidad: 'kJ', como: () => 'W′ con tus mejores marcas de 2 a 20 min', falta: 'Necesita marcas de dos duraciones, por ejemplo 3 y 12 min.' },
-  { clave: 'potencia', nombre: 'Potencia y sprint', simple: 'Explosión', unidad: 'W', como: () => 'Mejor 10 s', falta: 'Haz un sprint de 10 s.' },
-  { clave: 'tecnica', nombre: 'Técnica', simple: 'Técnica', unidad: 'm/palada', como: () => 'Metros por palada', falta: 'Rema una sesión para medirla.' },
-  { clave: 'recuperacion', nombre: 'Recuperación', simple: 'Recuperación', unidad: 'lpm', como: () => 'Lo que baja el pulso en 1 min', falta: 'Deja el reloj conectado 1 min después de terminar.' },
+  { clave: 'base', nombre: 'Base aeróbica', simple: 'Motor', entrena: 'Fondos suaves largos', unidad: 'W', como: (c) => `Watts a ${c.fcRef} lpm`, falta: 'Rema 20 min o más con el reloj para medirla.' },
+  { clave: 'umbral', nombre: 'Umbral (FTP)', simple: 'Ritmo sostenido', entrena: 'Bloques largos a ritmo fuerte', unidad: 'W', como: () => 'Potencia de una hora', falta: 'Haz la Prueba FTP 20 min o una sesión de 20 min.' },
+  { clave: 'vo2', nombre: 'VO₂máx', simple: 'Pulmones', entrena: 'Series de 2 a 4 min muy fuertes', unidad: 'ml/kg/min', como: () => 'Estimado con tu mejor 5 min', falta: 'Rema 5 min a fondo para estimarlo.' },
+  { clave: 'anaerobica', nombre: 'Capacidad anaeróbica', simple: 'Batería', entrena: 'Series cortas por encima de tu ritmo', unidad: 'kJ', como: () => 'W′ con tus mejores marcas de 2 a 20 min', falta: 'Necesita marcas de dos duraciones, por ejemplo 3 y 12 min.' },
+  { clave: 'potencia', nombre: 'Potencia y sprint', simple: 'Explosión', entrena: 'Sprints de 10 a 20 s', unidad: 'W', como: () => 'Mejor 10 s', falta: 'Haz un sprint de 10 s.' },
+  { clave: 'tecnica', nombre: 'Técnica', simple: 'Técnica', entrena: 'Paladas largas y controladas', unidad: 'm/palada', como: () => 'Metros por palada', falta: 'Rema una sesión para medirla.' },
+  { clave: 'recuperacion', nombre: 'Recuperación', simple: 'Recuperación', entrena: 'Fondos suaves y descanso', unidad: 'lpm', como: () => 'Lo que baja el pulso en 1 min', falta: 'Deja el reloj conectado 1 min después de terminar.' },
 ];
 
 // Una tarjeta por capacidad: valor de las últimas 6 semanas, el de las 6 anteriores y si mejoró.
@@ -149,8 +149,82 @@ export function capacidades(sesiones, { ftp = 0, peso = 0, fcMax = 0, ahora = Da
     const valor = ya[c.clave];
     const previo = antes[c.clave];
     const cambio = valor != null && previo ? valor - previo : null;
-    return { ...c, como: c.como({ fcRef }), valor, antes: previo, cambio, mejora: cambio == null ? null : cambio > 0 };
+    const pct = cambio != null ? Math.round((100 * cambio) / previo) : null;
+    return { ...c, como: c.como({ fcRef }), valor, antes: previo, cambio, pct, mejora: cambio == null ? null : cambio > 0 };
   });
+}
+
+// Cada capacidad semana a semana: el valor de las 6 semanas que terminan ese domingo (null sin datos).
+// Sirve para las mini gráficas de «Cómo has mejorado».
+export function historialCapacidades(sesiones, { ftp = 0, peso = 0, fcMax = 0, semanas = 12, ahora = Date.now() } = {}) {
+  const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
+  const fcRef = fcMax ? Math.round(fcMax * 0.7) : 0;
+  const ventanas = lunes(semanas, ahora).map((ini, i, l) => {
+    const fin = i === l.length - 1 ? ahora + 1 : ini + 7 * DIA;
+    const ss = enVentana(orden, fin - VENTANA, fin);
+    const ftpV = i === l.length - 1 ? ftp : ss.map((s) => s.ftp).filter(Boolean).at(-1) || null;
+    return { inicio: ini, m: ss.length ? medir(ss, { ftp: ftpV, peso, fcRef }) : {} };
+  });
+  return Object.fromEntries(CAPACIDADES.map((c) => [c.clave, ventanas.map((v) => ({ inicio: v.inicio, valor: v.m[c.clave] ?? null }))]));
+}
+
+// ---------- Tu cuerpo hoy: fatiga, recuperación y carga segura ----------
+
+export const ESTADOS_CUERPO = {
+  fresco: { nombre: 'Fresco', consejo: 'Buen día para apretar o hacer una prueba.' },
+  listo: { nombre: 'Listo', consejo: 'Puedes hacer la sesión de tu plan.' },
+  cargado: { nombre: 'Cargado', consejo: 'Mejor algo suave o de técnica hoy.' },
+  agotado: { nombre: 'Muy cansado', consejo: 'Descansa o rema muy suave 20 min.' },
+};
+// Frescura (condición − fatiga) a partir de la cual estás listo para una sesión normal.
+const LISTO = -10;
+
+// Horas de recuperación que suele pedir una sesión según su carga (TSS).
+export function horasPorCarga(carga) {
+  if (!(carga > 0)) return 0;
+  return carga < 40 ? 8 : carga < 70 ? 16 : carga < 100 ? 24 : carga < 150 ? 36 : carga < 200 ? 48 : 72;
+}
+
+// Estado de hoy: nombre, horas hasta estar listo, carga de 7 días contra tu rango seguro y reparto suave/fuerte.
+export function estadoCuerpo(sesiones, ftp, ahora = Date.now()) {
+  const dias = E.forma(sesiones, ftp, 60, ahora);
+  const hoy = dias.at(-1);
+  if (!hoy || !dias.some((d) => d.carga > 0)) return null;
+  const cond = (hoy.condicion * 41 + hoy.carga) / 42; // tras sumar la carga de hoy
+  const fat = (hoy.fatiga * 6 + hoy.carga) / 7;
+  const fres = cond - fat;
+  const ratio = cond >= 5 ? fat / cond : null;
+  let clave = fres > 5 ? 'fresco' : fres >= LISTO ? 'listo' : fres >= -25 ? 'cargado' : 'agotado';
+  if (ratio != null && ratio > 1.5 && clave !== 'agotado') clave = 'cargado';
+  // Recuperación: lo que pide cada sesión de los últimos 4 días según su carga (la más exigente cuenta entera
+  // y las demás a la mitad), y como mínimo lo que tarda la fatiga acumulada en bajar, hasta 36 h. Tope: 4 días.
+  let c = cond, f = fat, horasForma = 0;
+  while (c - f < LISTO && horasForma < 36) { c -= c / 42 / 24; f -= f / 7 / 24; horasForma++; }
+  const restos = sesiones.filter((s) => s.fecha <= ahora && s.fecha > ahora - 4 * DIA).map((s) => {
+    const carga = s.estres ?? E.estres(s, s.ftp || ftp) ?? 0;
+    return Math.max(0, horasPorCarga(carga) - (ahora - s.fecha - (s.duracion || 0) * 1000) / 36e5);
+  }).sort((a, b) => b - a);
+  const horasSesiones = restos.length ? restos[0] + restos.slice(1).reduce((a, x) => a + x / 2, 0) : 0;
+  const horas = Math.min(96, Math.ceil(Math.max(horasForma, horasSesiones)));
+  // Una sesión dura reciente manda aunque la tendencia diga que estás fresco.
+  if (horas >= 12 && (clave === 'fresco' || clave === 'listo')) clave = 'cargado';
+  else if (horas > 0 && clave === 'fresco') clave = 'listo';
+  const semana = dias.slice(-7).reduce((a, d) => a + d.carga, 0);
+  const seguro = cond >= 5 ? { min: Math.round(cond * 7 * 0.8), max: Math.round(cond * 7 * 1.3) } : null;
+  const reparto = E.distribucionIntensidad(sesiones, ftp, 7, ahora);
+  return {
+    clave, ...ESTADOS_CUERPO[clave], horas, ratio: ratio == null ? null : Math.round(ratio * 100) / 100,
+    condicion: Math.round(cond), fatiga: Math.round(fat), frescura: Math.round(fres),
+    semana: Math.round(semana), seguro, reparto,
+  };
+}
+
+// Texto corto de recuperación: «Listo para entrenar» o «Recuperado en unas 20 h» / «en 2 días».
+export function textoRecuperacion(horas) {
+  if (!horas) return 'Listo para entrenar';
+  if (horas < 36) return `Recuperado en unas ${horas} h`;
+  if (horas >= 96) return 'Necesitas unos 4 días suaves';
+  return `Recuperado en unos ${Math.round(horas / 24)} días`;
 }
 
 // Lunes 00:00 de las últimas n semanas, del más antiguo al actual.
