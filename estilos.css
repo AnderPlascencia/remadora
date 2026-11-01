@@ -1536,3 +1536,4 @@ details.mas-detalle[hidden] { display: none; }
 .hoja-capacidad .hc-cabecera b { font-size: 18px; }
 .hoja-capacidad .metricas { margin: 8px 0; }
 .hoja-capacidad .ayuda { margin: 0; }
+.hoy-ajuste { margin: 6px 0 0; font-size: 14px; color: var(--primario); font-weight: 600; }

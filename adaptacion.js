@@ -1,0 +1,131 @@
+// Adaptación automática del plan: revisa tus sesiones y cambia el plan sin preguntar.
+// Cada cambio deja una frase en programa.avisos para explicarlo en la pantalla Hoy.
+// Sin dependencias de la interfaz: recibe el plan y devuelve el plan nuevo.
+import * as E from './estadisticas.js';
+import { estadoDias, sesionFondo } from './programa.js';
+import { tipoPlan, tipoSesion } from './capacidades.js';
+
+const DIA = 864e5;
+const DURO = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
+const FACTOR_MIN = 0.85;
+const FACTOR_MAX = 1.15;
+const media = (xs) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0);
+
+// Pulso y watts medios entre el minuto 4 y el 5 (todavía calentando).
+export function pulsoCalentamiento(muestras) {
+  const v = (muestras || []).filter((x) => x.t > 240 && x.t <= 300 && x.fc > 0 && x.w > 0);
+  if (v.length < 45) return null;
+  return { w: Math.round(media(v.map((x) => x.w))), fc: Math.round(media(v.map((x) => x.fc))) };
+}
+
+// Cuántos lpm más que de costumbre llevas en el calentamiento, a los mismos watts (±15 W).
+// Hacen falta al menos 3 sesiones anteriores comparables; si no, null.
+export function pulsoDeMas(muestras, previas) {
+  const hoy = pulsoCalentamiento(muestras);
+  if (!hoy) return null;
+  const otras = previas.map((s) => pulsoCalentamiento(s.muestras)).filter((c) => c && Math.abs(c.w - hoy.w) <= 15);
+  if (otras.length < 3) return null;
+  return Math.round(hoy.fc - media(otras.map((c) => c.fc)));
+}
+
+// Revisa el plan. Devuelve { programa, entrenamientos, avisos } con lo que cambió, o null si no cambió nada.
+// entrenamientos: los guardados (para saber qué toca cada día); los nuevos que haga falta crear vuelven en la respuesta.
+export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, ahora = Date.now() }) {
+  if (!programa?.dias?.length) return null;
+  const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
+  const revision = `${E.claveDia(ahora)}:${orden.length}`;
+  if (programa.revision === revision) return null;
+  const p = structuredClone(programa);
+  p.revision = revision;
+  p.factor ??= 1;
+  p.extraFondo ??= 0;
+  const nuevos = [];
+  const avisos = [];
+  const hoy = E.claveDia(ahora);
+  const porNombre = (n) => entrenamientos.find((e) => e.nombre === n) || nuevos.find((e) => e.nombre === n);
+  const tipoDe = (n) => tipoPlan(porNombre(n)) || (/^Fondo|^Quema/.test(n) ? 'fondo' : null);
+  const cambiarDia = (dia, ent, motivo) => {
+    if (!porNombre(ent.nombre)) nuevos.push(ent);
+    dia.original ??= dia.ent;
+    dia.ent = ent.nombre;
+    avisos.push(motivo);
+  };
+  // Sesiones nuevas desde la última revisión: cada regla de cumplimiento las cuenta una sola vez.
+  const ultima = p.ultimaSesion || 0;
+  const recientes = orden.filter((s) => s.fecha > ultima);
+  if (orden.length) p.ultimaSesion = orden.at(-1).fecha;
+  const diaHoy = p.dias.find((d) => d.fecha === hoy);
+  const hechoHoy = diaHoy && orden.some((s) => E.claveDia(s.fecha) === hoy && s.entrenamiento === diaHoy.ent);
+
+  // 1. Cansancio: frescura muy baja, carga disparada o mala recuperación de pulso → hoy fondo suave en vez de duro.
+  if (diaHoy && !hechoHoy && DURO.has(tipoDe(diaHoy.ent))) {
+    const forma = ftp ? E.forma(orden, ftp, 1, ahora).at(-1) : null;
+    const ratio = ftp ? E.ratioCarga(orden, ftp, ahora) : null;
+    const recs = orden.filter((s) => s.fcRec60 != null);
+    const recMala = recs.length >= 4 && recs.at(-1).fecha > ahora - 2 * DIA && recs.at(-1).fcRec60 < 0.8 * media(recs.slice(-6, -1).map((s) => s.fcRec60));
+    let motivo = null;
+    if (forma && forma.condicion >= 10 && forma.frescura < -30) motivo = `Vienes muy cansado (frescura ${forma.frescura})`;
+    else if (ratio != null && ratio > 1.5) motivo = 'Tu carga de esta semana se disparó';
+    else if (recMala) motivo = 'Tu pulso tardó más de lo normal en bajar la última vez';
+    if (motivo) cambiarDia(diaHoy, sesionFondo(30, { pulso: true }), `${motivo}: cambié «${diaHoy.ent}» por un fondo suave de 30 min.`);
+  }
+
+  // 2. Cumplimiento de las sesiones duras: dos seguidas fuera de rango bajan los rangos un 3 %; dos fáciles los suben.
+  const duras = orden.filter((s) => s.pctEnRango != null && DURO.has(tipoSesion(s, ftp)) && s.fecha >= new Date(`${p.inicio}T00:00`).getTime());
+  const [a, b] = duras.slice(-2);
+  if (a && b && recientes.includes(b)) {
+    const ratio = ftp ? E.ratioCarga(orden, ftp, ahora) : null;
+    if (a.pctEnRango < 60 && b.pctEnRango < 60 && p.factor > FACTOR_MIN) {
+      p.factor = Math.max(FACTOR_MIN, Math.round(p.factor * 0.97 * 100) / 100);
+      avisos.push('Dos sesiones fuertes seguidas te costó mantener el rango: bajé tus rangos un 3 %.');
+    } else if (a.pctEnRango > 95 && b.pctEnRango > 95 && (b.rpe ?? 10) <= 6 && (ratio == null || ratio <= 1.3) && p.factor < FACTOR_MAX) {
+      p.factor = Math.min(FACTOR_MAX, Math.round(p.factor * 1.03 * 100) / 100);
+      avisos.push('Tus dos últimas sesiones fuertes fueron fáciles: subí tus rangos un 3 %.');
+    }
+  }
+
+  // 3. Base aeróbica: dos fondos seguidos con desacople bajo el 5 % → el próximo fondo dura 10 min más.
+  const fondos = orden.filter((s) => s.desacople != null && tipoSesion(s, ftp) === 'fondo');
+  const [f1, f2] = fondos.slice(-2);
+  if (f1 && f2 && recientes.includes(f2) && f1.desacople < 5 && f2.desacople < 5 && p.extraFondo < 30) {
+    const prox = p.dias.find((d) => d.fecha > hoy && /^Fondo (\d+) min/.test(d.ent) && !d.alargado);
+    if (prox) {
+      const min = Number(prox.ent.match(/^Fondo (\d+) min/)[1]) + 10;
+      p.extraFondo += 10;
+      prox.alargado = true;
+      cambiarDia(prox, sesionFondo(min, { pulso: /pulso/.test(prox.ent) }), `Tu motor aeróbico va sobrado (desacople bajo el 5 %): tu próximo fondo dura ${min} min.`);
+    }
+  }
+
+  // 4. Sesión dura perdida en los últimos 3 días: pasa a hoy si hoy toca fondo o descanso y ayer no fue duro.
+  const estados = estadoDias(p, orden, ahora);
+  const perdida = p.dias.filter((d, i) => estados[i].estado === 'perdido' && d.fecha >= E.claveDia(ahora - 3 * DIA) && !d.movido && DURO.has(tipoDe(d.ent))).at(-1);
+  const ayerDuro = orden.some((s) => E.claveDia(s.fecha) === E.claveDia(ahora - DIA) && DURO.has(tipoSesion(s, ftp)));
+  const hoyLibre = !diaHoy || (!hechoHoy && !DURO.has(tipoDe(diaHoy.ent)) && !avisos.length);
+  if (perdida && hoyLibre && !ayerDuro && !orden.some((s) => E.claveDia(s.fecha) === hoy)) {
+    perdida.movido = true;
+    if (diaHoy) { diaHoy.original ??= diaHoy.ent; diaHoy.ent = perdida.ent; }
+    else p.dias.push({ fecha: hoy, ent: perdida.ent, original: null });
+    p.dias.sort((x, y) => (x.fecha < y.fecha ? -1 : 1));
+    avisos.push(`No remaste «${perdida.ent}» el ${new Date(`${perdida.fecha}T12:00`).toLocaleDateString('es-MX', { weekday: 'long' })}: la pasé a hoy${diaHoy ? ' en lugar del fondo' : ''}.`);
+  }
+
+  // 5. Semana floja (menos de la mitad de lo planeado): el resto del plan se corre una semana para repetirla.
+  const lunes = E.inicioPeriodo(ahora, 'semana');
+  const semanaPasada = p.dias.map((d, i) => [d, estados[i].estado]).filter(([d]) => { const t = new Date(`${d.fecha}T12:00`).getTime(); return t >= lunes - 7 * DIA && t < lunes; });
+  const claveSemana = E.claveDia(lunes);
+  if (semanaPasada.length >= 2 && p.repetida !== claveSemana && new Date(`${p.inicio}T12:00`).getTime() < lunes - 7 * DIA) {
+    const hechas = semanaPasada.filter(([, e]) => e === 'hecho').length;
+    if (hechas < semanaPasada.length / 2) {
+      p.repetida = claveSemana;
+      const repetir = semanaPasada.map(([d]) => ({ fecha: E.claveDia(new Date(`${d.fecha}T12:00`).getTime() + 7 * DIA), ent: d.ent, repetido: true }));
+      for (const d of p.dias) if (d.fecha >= claveSemana) d.fecha = E.claveDia(new Date(`${d.fecha}T12:00`).getTime() + 7 * DIA);
+      p.dias.push(...repetir);
+      p.dias.sort((x, y) => (x.fecha < y.fecha ? -1 : 1));
+      avisos.push(`La semana pasada hiciste ${hechas} de ${semanaPasada.length} sesiones: la repites esta semana y el plan termina una semana después.`);
+    }
+  }
+
+  if (avisos.length) p.avisos = [...(p.avisos || []), ...avisos.map((texto) => ({ dia: hoy, texto }))].slice(-10);
+  return { programa: p, entrenamientos: nuevos, avisos, cambio: avisos.length > 0 || p.ultimaSesion !== programa.ultimaSesion };
+}

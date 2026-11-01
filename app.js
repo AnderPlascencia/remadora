@@ -16,8 +16,9 @@ import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
 import * as Cap from './capacidades.js';
+import * as A from './adaptacion.js';
 
-const VERSION = '0.35.0';
+const VERSION = '0.36.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -802,7 +803,7 @@ async function iniciarSesion() {
   entrenamientoActivo = await obtenerEnt($('#sel-entrenamiento').value);
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
-  const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftp(), fcMaxima()) : null;
+  const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftpDelPlan(entrenamientoActivo), fcMaxima()) : null;
   $('#perfil-vivo').hidden = !plan;
   if (plan) $('#vivo-leyenda').innerHTML = leyendaPerfil(entrenamientoActivo.bloques, true);
   const rivales = await crearRivales(entrenamientoActivo);
@@ -811,10 +812,13 @@ async function iniciarSesion() {
   // Potencia crítica y W′ con lo mejor de los últimos 90 días: alimentan la batería anaeróbica en vivo.
   const recientes = (await db.listar('sesiones')).filter((x) => x.fecha > Date.now() - 90 * 864e5);
   const pc = E.potenciaCritica(E.curvaHistorial(recientes));
+  // Calentamientos de las últimas sesiones con pulso: para notar si hoy vas más cargado que de costumbre.
+  const calentamientos = recientes.filter((x) => x.muestras?.some((m) => m.fc)).slice(-15).map((x) => ({ muestras: x.muestras.slice(240, 301) }));
   sesion = {
     inicio: Date.now(),
     tipoPlan: Cap.tipoPlan(entrenamientoActivo),
     pc,
+    calentamientos,
     wBal: pc?.wPrima ?? 0,
     t: 0,
     dist: 0,
@@ -983,6 +987,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     derivaFc: E.derivaCardiaca(m),
   });
   if (s.rr?.length) registro.rr = s.rr;
+  if (s.ajusteCalentamiento) registro.ajusteCalentamiento = s.ajusteCalentamiento;
   if (s.pruebaFtp && ent) {
     let desde = 0;
     for (const b of ent.bloques) {
@@ -1042,6 +1047,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   const recs = E.nuevosRecords(registro, previas);
   if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
+  await revisarPlanAuto();
   pintarHoy();
   pintarLineaNivel();
   if (!recuperada) medirRecuperacionPulso(registro);
@@ -1683,6 +1689,16 @@ function vigilarTipoSesion(t) {
     const pct = (100 * sesion.wBal) / wPrima;
     if (pct < 20 && !sesion.avisoBateria) { sesion.avisoBateria = true; hablar('Batería anaeróbica al 20 por ciento. Dosifica', { clave: 'bateria', cadaSeg: 60 }); }
     if (pct > 60) sesion.avisoBateria = false;
+  }
+  // Al minuto 5: si el pulso va 5 lpm o más por encima de lo normal a los mismos watts, hoy los rangos bajan un 5 %.
+  if (t === 300 && sesion.plan && sesion.calentamientos?.length) {
+    const deMas = A.pulsoDeMas(sesion.muestras, sesion.calentamientos);
+    if (deMas != null && deMas >= 5) {
+      for (const b of sesion.plan) if (b.metrica === 'watts') { b.min = Math.round(b.min * 0.95); b.max = Math.round(b.max * 0.95); }
+      sesion.ajusteCalentamiento = deMas;
+      hablar(`Hoy vas cargado: tu pulso va ${deMas} pulsaciones más alto de lo normal. Bajé los rangos un 5 por ciento`, { urgente: true });
+      toast(`Hoy vas cargado (+${deMas} lpm): bajé los rangos un 5 %`, 5000);
+    }
   }
   const tipo = sesion.tipoPlan;
   if (tipo === 'fondo' && fcMaxima() && actual.fc) {
@@ -3801,6 +3817,12 @@ async function pintarHoy(ent = entrenamientoPrevio) {
   $('#hoy-nombre').textContent = ent ? ent.nombre : libreConFantasmas() ? 'Remo libre contra 3 fantasmas' : 'Remo libre';
   $('#hoy-resumen').textContent = ent ? [B.resumenEnt(ent), ent.proposito].filter(Boolean).join(' · ')
     : libreConFantasmas() ? 'Rema a tu aire: la carrera cuenta desde los 5 min.' : 'Rema a tu aire, sin meta.';
+  // Lo que la adaptación cambió hoy, y si tus rangos del plan van más bajos o más altos.
+  const avisosHoy = (prog?.avisos || []).filter((x) => x.dia === E.claveDia(Date.now())).map((x) => x.texto);
+  const factor = prog?.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;
+  if (factor && esDeHoy) avisosHoy.push(`Tus rangos del plan van un ${Math.abs(factor)} % más ${factor > 0 ? 'altos' : 'bajos'} según cómo te fue.`);
+  $('#hoy-ajuste').hidden = !avisosHoy.length;
+  $('#hoy-ajuste').textContent = avisosHoy.join(' ');
   $('#btn-hoy-detalle').hidden = !ent;
   const abierto = !!ent && ajustes.si('hoyDetalle', false);
   $('#btn-hoy-detalle').textContent = abierto ? 'Ocultar detalles' : 'Ver detalles';
@@ -3842,6 +3864,28 @@ async function pintarHoy(ent = entrenamientoPrevio) {
     boton.onclick = sug.accion || null;
   }
 }
+// Adaptación automática: revisa el plan al abrir la app y después de cada sesión, y lo cambia sin preguntar.
+// Lo que cambió se explica en la tarjeta Hoy.
+async function revisarPlanAuto() {
+  const prog = leerPrograma();
+  if (!prog?.dias?.length || sesion) return;
+  const [sesiones, ents] = await Promise.all([db.listar('sesiones'), db.listar('entrenamientos')]);
+  const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp() });
+  if (!r) return;
+  for (const e of r.entrenamientos) if (!ents.some((x) => x.nombre === e.nombre)) await db.guardar('entrenamientos', { ...e, dePlan: true });
+  guardarPrograma(r.programa);
+  if (r.avisos.length) {
+    agregarLog(`plan ajustado: ${r.avisos.join(' | ')}`);
+    if (r.entrenamientos.length || r.avisos.some((x) => /hoy/.test(x))) { elegirLoDeHoy = true; await llenarSelectorEntrenamientos(); }
+    pintarHoy();
+  }
+}
+// FTP con el que se calculan los watts de un entrenamiento del plan: la adaptación lo sube o baja un 3 % cada vez.
+function ftpDelPlan(ent) {
+  const f = leerPrograma()?.factor;
+  return ent && esDePlan(ent) && f ? Math.round(ftp() * f) : ftp();
+}
+
 // Siguiente plan (un poco más de carga) o el mismo ajustado a tu historial, desde hoy.
 async function rehacerPlan(prog, { ajustar = false } = {}) {
   const ctx = await contextoPlan();
@@ -4265,7 +4309,7 @@ window.addEventListener('resize', () => {
   if (vistaActiva('entrenamientos')) pintarPrograma();
 });
 actualizarBotones();
-llenarSelectorEntrenamientos();
+llenarSelectorEntrenamientos().then(revisarPlanAuto);
 dibujarVivo();
 pintarLineaNivel();
 

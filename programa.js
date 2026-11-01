@@ -159,7 +159,7 @@ const reps = (n, k) => Math.max(2, Math.round(n * k));
 const SESIONES = {
   fondo: (min) => (p, k) => { const m = ronda((min[0] + (min[1] - min[0]) * p) * k, 5); return { nombre: `Fondo ${m} min (zona 2)`, enfoque: 'distancia', bloques: [CAL, { nombre: 'Fondo', duracion: m * 60, metrica: 'ftp', min: 56, max: 75 }, ENF] }; },
   // Fondo con techo de pulso (70 % del máximo): con un reloj de muñeca es lo más fiable.
-  fondoPulso: (min) => (p, k) => { const m = ronda((min[0] + (min[1] - min[0]) * p) * k, 5); return { nombre: `Fondo ${m} min a pulso suave`, enfoque: 'distancia', bloques: [CAL, { nombre: 'Fondo a pulso suave', duracion: m * 60, metrica: 'fcpct', min: 60, max: 70 }, ENF] }; },
+  fondoPulso: (min) => (p, k) => { const m = ronda((min[0] + (min[1] - min[0]) * p) * k, 5); return { nombre: `Fondo ${m} min a pulso suave`, enfoque: 'distancia', bloques: [CAL, { nombre: 'Fondo a pulso controlado', duracion: m * 60, metrica: 'fcpct', min: 60, max: 70 }, ENF] }; },
   fondoTempo: (min) => (p, k) => {
     const m = ronda((min[0] + (min[1] - min[0]) * p) * k, 5); const n = p < 0.5 ? 3 : 2; const t = p < 0.5 ? 5 : 10;
     const resto = Math.max(5, m - n * t);
@@ -287,4 +287,10 @@ export function metaKcalDe(programa, ahora = Date.now()) {
   if (!programa?.metaKcal) return null;
   const s = Math.floor((ahora - aFecha(programa.inicio).getTime()) / (7 * DIA));
   return s >= 0 && s < programa.metaKcal.length ? programa.metaKcal[s] : null;
+}
+
+// Fondo suelto de m minutos (lo usa la adaptación del plan para cambiar o alargar una sesión).
+export function sesionFondo(m, { pulso = false } = {}) {
+  const e = (pulso ? SESIONES.fondoPulso : SESIONES.fondo)([m, m])(0, 1);
+  return { tipo: 'intervalos', ...e };
 }
