@@ -68,3 +68,18 @@ assert.equal(curvas.ahora.find((p) => p.segs === 300).w, 250);
 assert.equal(curvas.antes.find((p) => p.segs === 300).w, 230);
 
 console.log('capacidades OK');
+
+// ---------- Tipo del plan antes de remar ----------
+const bloque = (min, max, metrica = 'ftp') => ({ nombre: 'Trabajo', duracion: 60, metrica, min, max });
+const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'ftp', min: 56, max: 70 };
+assert.equal(Cap.tipoPlan(null), null);
+assert.equal(Cap.tipoPlan({ bloques: [cal, bloque(110, 120)] }), 'vo2');
+assert.equal(Cap.tipoPlan({ bloques: [cal, bloque(130, 160)] }), 'sprint');
+assert.equal(Cap.tipoPlan({ bloques: [cal, bloque(91, 105)] }), 'umbral');
+assert.equal(Cap.tipoPlan({ bloques: [cal, bloque(56, 75)] }), 'fondo');
+assert.equal(Cap.tipoPlan({ bloques: [cal, bloque(20, 22, 'spm')] }), 'tecnica');
+assert.equal(Cap.tipoPlan({ tipo: 'objetivo', objetivo: { metrica: 'kcal', valor: 300 } }), 'calorias');
+assert.equal(Cap.tipoPlan({ tipo: 'objetivo', objetivo: { metrica: 'distancia', valor: 5000 } }), 'fondo');
+assert.equal(Cap.tipoPlan({ pruebaFtp: true, bloques: [] }), 'prueba');
+for (const claves of Object.values(Cap.CASILLAS_REMO)) assert.equal(claves.length, 5);
+console.log('tipo de plan OK');

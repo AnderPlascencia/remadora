@@ -17,7 +17,7 @@ import * as B from './base.js';
 import * as C from './consejos.js';
 import * as Cap from './capacidades.js';
 
-const VERSION = '0.33.0';
+const VERSION = '0.34.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -808,8 +808,14 @@ async function iniciarSesion() {
   const rivales = await crearRivales(entrenamientoActivo);
   const referencias = await crearReferencias(entrenamientoActivo);
   const rival = rivales[0] || null;
+  // Potencia crítica y W′ con lo mejor de los últimos 90 días: alimentan la batería anaeróbica en vivo.
+  const recientes = (await db.listar('sesiones')).filter((x) => x.fecha > Date.now() - 90 * 864e5);
+  const pc = E.potenciaCritica(E.curvaHistorial(recientes));
   sesion = {
     inicio: Date.now(),
+    tipoPlan: Cap.tipoPlan(entrenamientoActivo),
+    pc,
+    wBal: pc?.wPrima ?? 0,
     t: 0,
     dist: 0,
     distPrevia: actual.distancia,
@@ -1107,7 +1113,9 @@ function avanzarSesion() {
   sesion.muestras.push({
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
+  sesion.wMax = Math.max(sesion.wMax || 0, actual.watts);
   coachRitmo(t);
+  vigilarTipoSesion(t);
   if (t % 10 === 0) guardarSesionEnCurso();
   if (sesion.ventaja) {
     const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
@@ -1611,15 +1619,8 @@ function pintar() {
   // Modo remo
   $('#mr-watts').textContent = actual.watts;
   cambiarTexto($('#mr-split'), formatoSplit(actual.split));
-  $('#mr-spm').textContent = actual.spm;
-  $('#mr-tiempo').textContent = formatoTiempo(t);
-  $('#mr-dist').textContent = dist;
-  $('#mr-fc').textContent = actual.fc || '-';
-  $('#mr-fc').style.color = zfc ? COLOR_ZONA[zfc.n] : '';
+  pintarCasillasRemo(t, dist, zfc);
   $('#mr-estado').textContent = $('#pausa-aviso').textContent;
-  const objPaladas = entrenamientoActivo?.objetivo?.metrica === 'paladas';
-  $('#mr-extra-etq').textContent = objPaladas ? 'Calorías' : (entrenamientoActivo?.objetivo ? 'Paladas' : 'Calorías');
-  $('#mr-extra').textContent = sesion ? Math.round(objPaladas || !entrenamientoActivo?.objetivo ? sesion.kcal : sesion.paladas) : 0;
   pintarRival();
 
   if (sesion && entrenamientoActivo) {
@@ -1635,6 +1636,64 @@ function pintar() {
   }
   if (vistaActiva('entrenar')) dibujarVivo();
   if (!$('#modo-remo').hidden && vistaGrafica()) pintarGraficaRemo(t);
+}
+
+// Casillas del modo remo según lo que entrenas: en un fondo manda el pulso, en VO₂ la batería anaeróbica,
+// en técnica los metros por palada… El split va siempre en la primera.
+function valorCasilla(clave, t, dist, zfc) {
+  const m = sesion?.muestras || [];
+  const objPaladas = entrenamientoActivo?.objetivo?.metrica === 'paladas';
+  switch (clave) {
+    case 'spm': return ['Golpes/min', actual.spm];
+    case 'tiempo': return ['Tiempo', formatoTiempo(t)];
+    case 'dist': return ['Distancia', dist];
+    case 'kcal': return ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
+    case 'extra': return entrenamientoActivo?.objetivo && !objPaladas ? ['Paladas', sesion ? Math.round(sesion.paladas) : 0] : ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
+    case 'fc': return [zfc ? `Pulso · Z${zfc.n}` : 'Pulso', actual.fc || '-'];
+    case 'kcalh': return ['Calorías/hora', t >= 60 ? Math.round((sesion.kcal * 3600) / t) : '-'];
+    case 'wmax': return ['Watts máx', sesion?.wMax || 0];
+    case 'jpp': return ['Trabajo/palada', actual.spm ? `${Math.round((actual.watts * 60) / actual.spm)} J` : '-'];
+    case 'mpp': {
+      // Metros por palada de los últimos 30 s: responde a cómo remas ahora, no a toda la sesión.
+      const v = m.slice(-30);
+      const paladas = v.reduce((a, x) => a + x.spm / 60, 0);
+      return ['Metros/palada', v.length >= 10 && paladas >= 3 ? ((v.at(-1).dist - v[0].dist) / paladas).toFixed(1) : '-'];
+    }
+    case 'bateria': return [avanzado() ? 'Batería (W′)' : 'Batería', sesion?.pc ? `${Math.max(0, Math.round((100 * sesion.wBal) / sesion.pc.wPrima))}%` : '-'];
+    default: return ['', ''];
+  }
+}
+
+function pintarCasillasRemo(t, dist, zfc) {
+  const claves = Cap.CASILLAS_REMO[sesion?.tipoPlan || 'libre'];
+  claves.forEach((clave, i) => {
+    const [etq, valor] = valorCasilla(clave, t, dist, zfc);
+    $(`#mr-c${i + 1}-etq`).textContent = etq;
+    $(`#mr-c${i + 1}`).textContent = valor;
+    $(`#mr-c${i + 1}`).style.color = clave === 'fc' && zfc ? COLOR_ZONA[zfc.n] : '';
+  });
+}
+
+// Avisos por voz propios del tipo de sesión y saldo de la batería anaeróbica (W′), una vez por segundo.
+function vigilarTipoSesion(t) {
+  if (sesion.pc) {
+    const { cp, wPrima } = sesion.pc;
+    const w = actual.watts;
+    sesion.wBal = Math.min(wPrima, w > cp ? sesion.wBal - (w - cp) : sesion.wBal + ((wPrima - sesion.wBal) * (cp - w)) / wPrima);
+    const pct = (100 * sesion.wBal) / wPrima;
+    if (pct < 20 && !sesion.avisoBateria) { sesion.avisoBateria = true; hablar('Batería anaeróbica al 20 por ciento. Dosifica', { clave: 'bateria', cadaSeg: 60 }); }
+    if (pct > 60) sesion.avisoBateria = false;
+  }
+  const tipo = sesion.tipoPlan;
+  if (tipo === 'fondo' && fcMaxima() && actual.fc) {
+    // En un fondo el pulso no debería pasar del 75 % del máximo (zona 2) más de un minuto seguido.
+    sesion.fcAltaSeg = actual.fc > fcMaxima() * 0.75 ? (sesion.fcAltaSeg || 0) + 1 : 0;
+    if (sesion.fcAltaSeg === 60) hablar('Pulso alto para un fondo. Baja un poco los watts', { clave: 'fc-fondo', cadaSeg: 180 });
+  }
+  if (tipo === 'calorias') {
+    const cien = Math.floor(sesion.kcal / 100);
+    if (cien > (sesion.kcalAvisadas || 0)) { sesion.kcalAvisadas = cien; hablar(`${cien * 100} calorías`, { clave: 'kcal', cadaSeg: 30 }); }
+  }
 }
 
 // Vista del modo remo: 'numeros', 'grafica' o 'carrera' (esta solo si hay fantasma).

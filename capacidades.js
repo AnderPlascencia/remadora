@@ -186,3 +186,32 @@ export function curvasComparadas(sesiones, ahora = Date.now()) {
     antes: E.curvaHistorial(sesiones.filter((s) => s.fecha < ahora - VENTANA)),
   };
 }
+
+// Tipo de un entrenamiento antes de remarlo (para elegir qué datos mostrar en el modo remo).
+// null = remo libre o sin meta clara: se usa la pantalla de siempre.
+export function tipoPlan(ent) {
+  if (!ent) return null;
+  if (ent.prueba || ent.pruebaFtp) return 'prueba';
+  if (ent.objetivo?.metrica === 'kcal' || ent.enfoque === 'calorias') return 'calorias';
+  const trabajo = (ent.bloques || []).filter((b) => b.metrica && !/calentamiento|enfriamiento|descanso/i.test(b.nombre || ''));
+  if (trabajo.some((b) => b.metrica === 'spm') || ent.enfoque === 'tecnica') return 'tecnica';
+  const pct = Math.max(0, ...trabajo.filter((b) => b.metrica === 'ftp').map((b) => b.max));
+  if (pct > 120) return 'sprint';
+  if (pct > 105) return 'vo2';
+  if (pct > 90) return 'umbral';
+  if (trabajo.some((b) => b.metrica === 'fc' || b.metrica === 'fcpct') || pct > 0) return 'fondo';
+  return ent.objetivo?.metrica === 'distancia' ? 'fondo' : null;
+}
+
+// Casillas del modo remo (además del split, que va siempre) para cada tipo de sesión.
+// Las de las posiciones 1 y 3 son las que quedan a la vista en las vistas compactas.
+export const CASILLAS_REMO = {
+  libre: ['spm', 'tiempo', 'dist', 'extra', 'fc'],
+  fondo: ['fc', 'tiempo', 'mpp', 'kcal', 'dist'],
+  umbral: ['spm', 'tiempo', 'fc', 'kcal', 'dist'],
+  vo2: ['bateria', 'tiempo', 'fc', 'dist', 'spm'],
+  sprint: ['wmax', 'tiempo', 'jpp', 'dist', 'spm'],
+  tecnica: ['spm', 'tiempo', 'mpp', 'dist', 'jpp'],
+  calorias: ['kcal', 'tiempo', 'kcalh', 'dist', 'fc'],
+  prueba: ['fc', 'tiempo', 'dist', 'spm', 'kcal'],
+};
