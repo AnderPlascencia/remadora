@@ -117,6 +117,16 @@ export function progresoObjetivo(ent, avance, t) {
   };
 }
 
+// Cómo acabaría la sesión si sigues al ritmo medio que llevas. hecho = { t, dist, kcal, distFinal? };
+// tFinal = segundos totales estimados. Antes de 30 s o sin metros todavía no hay ritmo fiable.
+export function estimarFin(hecho, tFinal) {
+  const { t, dist, kcal = 0 } = hecho;
+  if (!(t >= 30) || !(dist > 0) || !(tFinal > t)) return null;
+  const f = tFinal / t;
+  const d = hecho.distFinal ?? dist * f;
+  return { tiempo: Math.round(tFinal), dist: Math.round(d), kcal: Math.round(kcal * f), split: Math.round((500 * tFinal) / d) };
+}
+
 // Bloque que toca en el segundo t. Devuelve null cuando ya terminaron todos.
 export function bloqueEn(ent, t) {
   let desde = 0;

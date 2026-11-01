@@ -40,3 +40,18 @@ assert.ok(pr.filas[0].diferencia > 0);
 const pd = F.proyectar({ t: 100, dist: 300, v: 3 }, [s], { duracion: s.muestras.length });
 assert.equal(pd.tipo, 'duracion');
 console.log('fantasma realista OK');
+
+// Salida tras el calentamiento: el fantasma va a tu par y luego rema lo suyo desde tus metros.
+{
+  const F2 = await import('../fantasma.js');
+  assert.equal(F2.bloquesCalentamiento([{ nombre: 'Calentamiento guiado', guiado: true }, { nombre: 'Calentamiento' }, { nombre: 'Trabajo' }]), 2);
+  assert.equal(F2.bloquesCalentamiento([{ nombre: 'Trabajo' }]), 0);
+  const tuyas = [1, 2, 3, 4].map((t) => ({ t, dist: t * 3, spm: 20 }));
+  const rival = [1, 2, 3, 4, 5, 6].map((t) => ({ t, dist: t * 5, spm: 30 }));
+  const m = F2.alinearSalida(rival, tuyas, 4, 2);
+  assert.deepEqual(m.slice(0, 4).map((x) => x.dist), [3, 6, 9, 12]);
+  assert.deepEqual(m.slice(4).map((x) => [x.t, x.dist]), [[5, 17], [6, 22], [7, 27], [8, 32]]);
+  // Salida aún por llegar: completa con un punto en tSalida.
+  const p = F2.alinearSalida(rival, [...tuyas.slice(0, 2), { t: 4, dist: 12 }], 4, 2);
+  assert.equal(p.length, 7);
+}

@@ -20,7 +20,7 @@ import * as A from './adaptacion.js';
 import * as Pf from './perfil.js';
 import * as G from './guia.js';
 
-const VERSION = '0.41.0';
+const VERSION = '0.42.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -961,6 +961,7 @@ async function iniciarSesion() {
     retrato: rival ? await retratoPropio() : null,
   };
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
+  prepararSalida();
   await prepararAtrVivo();
   if (rival) sesion.ventaja = crearVentaja(entrenamientoActivo, await rachaConHoy());
   actualizarBotones();
@@ -1223,18 +1224,20 @@ function avanzarSesion() {
     t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
   sesion.wMax = Math.max(sesion.wMax || 0, actual.watts);
+  sincronizarSalida(t);
+  const calentando = sesion.salida && !sesion.salida.hecha;
   coachRitmo(t);
   vigilarTipoSesion(t);
   if (t % 10 === 0) guardarSesionEnCurso();
-  if (sesion.ventaja) {
+  if (sesion.ventaja && !calentando) {
     const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
     const detras = sesion.rivales.some((r) => E.distanciaEn(r.muestras, t) > miDist);
     V.avanzarVentaja(sesion.ventaja, { t, dist: sesion.dist, paladas: sesion.paladas, spm: actual.spm, detras });
   }
-  if (sesion.rivales.length) { vigilarAdelantos(t); tamborSprint(); }
+  if (sesion.rivales.length && !calentando) { vigilarAdelantos(t); tamborSprint(); }
   avisarTalentos();
   if (t % 5 === 0) actualizarAtrVivo();
-  if (sesion.rival && t % 60 === 0) {
+  if (sesion.rival && t % 60 === 0 && !calentando) {
     const dif = Math.round(sesion.dist + V.metrosVentaja(sesion.ventaja) - E.distanciaEn(sesion.rival.muestras, t));
     if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
   }
@@ -1310,6 +1313,49 @@ function avisarTalentos() {
     }
   }
   v.vistos = v.eventos.length;
+}
+
+// Salida tras el calentamiento: si el plan empieza calentando y hay fantasmas, durante el calentamiento van a tu
+// par y la carrera arranca cuando acaba. Cada segundo se rehacen sus muestras con la salida estimada; al llegar,
+// se fijan con la salida real.
+function prepararSalida() {
+  const n = sesion.plan ? F.bloquesCalentamiento(sesion.plan) : 0;
+  const fantasmas = [...sesion.rivales, ...sesion.referencias];
+  if (!n || !fantasmas.length) return;
+  const nSuyo = F.bloquesCalentamiento(entrenamientoActivo?.bloques);
+  for (const r of fantasmas) {
+    r.original = r.muestras;
+    // Simulados: su salida es el fin de su propio calentamiento. Sesiones guardadas: el mismo segundo que la tuya.
+    r.salidaPropia = r.cortes ? (nSuyo ? r.cortes[nSuyo - 1] : 0) : null;
+  }
+  sesion.salida = { n, hecha: false };
+  sincronizarSalida(0);
+}
+
+function sincronizarSalida(t) {
+  const s = sesion.salida;
+  if (!s || s.hecha) return;
+  const hecha = sesion.estadoAv.duraciones.length >= s.n;
+  const durs = hecha ? sesion.estadoAv.duraciones : Ent.bloquesConDuracion(sesion.estadoAv, sesion.plan, medidas()).map((b) => b.duracion);
+  let tS = Math.round(durs.slice(0, s.n).reduce((a, x) => a + x, 0));
+  let tuyas = sesion.muestras;
+  if (!hecha) {
+    // Hasta la salida se supone que sigues a tu velocidad de los últimos 10 s.
+    tS = Math.max(tS, t + 1);
+    const m = sesion.muestras;
+    const v = m.length > 10 ? (m.at(-1).dist - m.at(-11).dist) / 10 : 0;
+    tuyas = [...m, { t: tS, dist: sesion.dist + v * (tS - t), spm: actual.spm, w: actual.watts }];
+  }
+  s.tS = tS;
+  for (const r of [...sesion.rivales, ...sesion.referencias]) r.muestras = F.alinearSalida(r.original, tuyas, tS, r.salidaPropia ?? tS);
+  if (hecha) {
+    s.hecha = true;
+    sesion.lados = null;
+    if (t > 0) {
+      eventoCarrera('salida', '¡Salida! Empieza la carrera');
+      hablar('Fin del calentamiento. ¡Salida! Empieza la carrera', { urgente: true });
+    }
+  }
 }
 
 // Avisos que la carrera dibuja un momento: adelantos, te pasan y ventajas.
@@ -1598,7 +1644,7 @@ function carreraActual() {
   let texto = dif === 0 ? `Empatado con ${quien}` : `${Math.abs(dif)} m ${dif > 0 ? 'adelante' : 'atrás'} de ${quien}`;
   if (rs.length > 1) texto = `Vas ${lugar}º de ${rs.length + 1} · ${texto}`;
   // Verde solo si vas ganando, rojo solo si vas último; en medio, neutro.
-  const tono = rs.length > 1 ? (lugar === 1 ? 'adelante' : lugar === rs.length + 1 ? 'atras' : '') : (dif > 0 ? 'adelante' : dif < 0 ? 'atras' : '');
+  const tono = sesion.salida && !sesion.salida.hecha ? '' : rs.length > 1 ? (lugar === 1 ? 'adelante' : lugar === rs.length + 1 ? 'atras' : '') : (dif > 0 ? 'adelante' : dif < 0 ? 'atras' : '');
 
   // Diferencia en segundos con el primer fantasma: cuánto tardó él en llegar a donde estás tú.
   let l1 = texto;
@@ -1609,6 +1655,14 @@ function carreraActual() {
   } else if (rs.length === 1 && dif === 0) l1 = 'Empatados';
   else if (rs.length > 1) l1 = `${lugar}º de ${rs.length + 1} · ${dif > 0 ? '+' : ''}${dif} m vs. ${quien.replace(/^fantasma /, '')}`;
 
+  const sal = sesion.salida;
+  const calentandoCarrera = !!(sal && !sal.hecha);
+  if (calentandoCarrera) {
+    // Calentando: todos a tu par; lo que importa es cuánto falta para la salida.
+    const falta = `salida en ${formatoTiempo(Math.max(0, (sal.tS ?? t) - t))}`;
+    texto = `Calentamiento · los fantasmas van a tu lado · ${falta}`;
+    l1 = `Calentando · ${falta}`;
+  }
   const v = velocidadReciente();
   const p = sesion.empezo && t >= 10 ? F.proyectar({ t, dist: miDist, v }, rs, { meta, duracion: duracionCarrera() }) : null;
   let l2 = '';
@@ -1627,8 +1681,9 @@ function carreraActual() {
     referencias: refs,
     meta,
     cabecera: [l1, l2],
-    lugar, total: rs.length + 1, cercanos: cercanos(rs, difs, miDist, t),
-    reloj: relojCarrera(meta, v, p),
+    // Calentando no hay puestos: la cabecera dice cuánto falta para la salida.
+    lugar: calentandoCarrera ? null : lugar, total: rs.length + 1, cercanos: cercanos(rs, difs, miDist, t),
+    reloj: calentandoCarrera ? { ...relojCarrera(meta, v, p), lugar: null } : relojCarrera(meta, v, p),
     yoClase: J.claseDe(leerPersonaje().clase)?.clave || null,
     yoRetrato: sesion.retrato,
     ventajaM: extra,
@@ -1729,6 +1784,8 @@ function pintar() {
   $('#mr-watts').textContent = actual.watts;
   cambiarTexto($('#mr-split'), formatoSplit(actual.split));
   pintarCasillasRemo(t, dist, zfc);
+  pintarEstimadoFin(t);
+  if (!$('#modo-remo').hidden && vistaRemo() === 'rango') pintarRango();
   $('#mr-estado').textContent = $('#pausa-aviso').textContent;
   pintarRival();
 
@@ -1783,6 +1840,113 @@ function pintarCasillasRemo(t, dist, zfc) {
   });
 }
 
+// Vista de rango: la meta del intervalo en grande y una barra con la franja buena y una aguja con tu valor.
+// La derecha siempre es «más esfuerzo»: en el split (menos segundos = más rápido) la escala va al revés.
+function medidaDeBloque(b) {
+  const f = ftp();
+  const rw = Ent.rangoWatts(b, f);
+  if (rw) return { etq: 'Rango de potencia', valor: actual.watts, ...rw, unidad: 'W', txt: (x) => String(x), potencia: true };
+  if (b.metrica === 'split') return { etq: 'Rango de split', valor: actual.split, min: b.min, max: b.max, unidad: '/500', txt: formatoSplit, alReves: true };
+  if (b.metrica === 'spm') return { etq: 'Rango de golpes', valor: actual.spm, min: b.min, max: b.max, unidad: 'g/min', txt: (x) => String(x) };
+  const rf = Ent.rangoFc(b, fcMaxima());
+  if (rf) return { etq: 'Rango de pulso', valor: actual.fc || 0, ...rf, unidad: 'lpm', txt: (x) => String(x) };
+  return null;
+}
+
+function pintarRango() {
+  const info = sesion?.info;
+  const b = info && !info.terminado ? info.bloque : null;
+  const m = b ? medidaDeBloque(b) : null;
+  const caja = $('#mr-rango');
+  caja.classList.remove('dentro', 'bajo', 'alto', 'libre');
+  const pctSes = sesion?.segConMeta ? Math.round((100 * sesion.segEnRango) / sesion.segConMeta) : null;
+  if (!m) {
+    caja.classList.add('libre');
+    $('#mr-rango-etq').textContent = info?.terminado ? 'Entrenamiento completado' : 'Intervalo libre';
+    $('#mr-rango-meta').textContent = info?.siguiente ? `Luego ${Ent.textoMeta(info.siguiente, ftp(), fcMaxima())}` : '';
+    $('#mr-rango-valor').textContent = actual.watts;
+    $('#mr-rango-unidad').textContent = 'W';
+    $('#mr-rango-ind').textContent = info?.terminado ? '' : 'Rema a tu gusto';
+    $('#mr-rango-pie').textContent = pctSes != null ? `En rango ${pctSes}% de la sesión` : '';
+    return;
+  }
+  const estado = Ent.enRango(b, actual.watts, actual.spm, ftp(), actual.split, actual.fc);
+  if (estado) caja.classList.add(estado);
+  $('#mr-rango-etq').textContent = m.etq;
+  $('#mr-rango-meta').textContent = `${m.txt(m.min)}–${m.txt(m.max)} ${m.unidad}`;
+  $('#mr-rango-valor').textContent = m.valor ? m.txt(m.valor) : '-';
+  $('#mr-rango-unidad').textContent = m.unidad;
+  $('#mr-rango-ind').innerHTML = textoIndicador(estado, !!m.potencia);
+  // Escala: la franja ocupa el 40 % central; a los lados, medio ancho de franja (o un 20 %) de margen.
+  const ancho = Math.max(m.max - m.min, m.max * 0.1);
+  const lo = m.min - ancho * 0.75;
+  const hi = m.max + ancho * 0.75;
+  const pos = (x) => { const p = (x - lo) / (hi - lo); return 100 * (m.alReves ? 1 - p : p); };
+  const [a, z] = [pos(m.min), pos(m.max)].sort((x, y) => x - y);
+  const banda = $('#mr-banda');
+  banda.style.left = `${a}%`;
+  banda.style.width = `${z - a}%`;
+  $('#mr-banda-min').textContent = m.txt(m.alReves ? m.max : m.min);
+  $('#mr-banda-max').textContent = m.txt(m.alReves ? m.min : m.max);
+  $('#mr-aguja').style.left = `${Math.min(100, Math.max(0, m.valor ? pos(m.valor) : 0))}%`;
+  const resta = Ent.textoResta(info);
+  const sig = info.siguiente ? ` · luego ${Ent.textoMeta(info.siguiente, ftp(), fcMaxima())}` : '';
+  $('#mr-rango-pie').textContent = `${resta} en este rango${sig}${pctSes != null ? ` · ${pctSes}% en rango` : ''}`;
+}
+
+// Estimado del final del entrenamiento si sigues al ritmo medio que llevas. Solo con un final conocido
+// (objetivo o intervalos) y mientras no esté completado; en remo libre no hay final que estimar.
+function estimadoFin(t) {
+  if (!sesion || !entrenamientoActivo || t < 30 || !(sesion.dist > 0)) return null;
+  const ritmo = { split: (500 * t) / sesion.dist, spm: (sesion.paladas * 60) / t };
+  let tFinal;
+  let distFinal;
+  let objetivo = null;
+  if (Ent.tipoDe(entrenamientoActivo) === 'objetivo') {
+    const p = progresoActual(t);
+    if (p.completo || p.estimadoSeg == null) return null;
+    tFinal = t + p.estimadoSeg;
+    objetivo = p.metrica;
+    if (objetivo === 'distancia') distFinal = p.meta;
+  } else {
+    if (!sesion.info || sesion.info.terminado || !sesion.plan) return null;
+    tFinal = Ent.bloquesConDuracion(sesion.estadoAv, sesion.plan, { ...medidas(), ...ritmo }).reduce((a, b) => a + b.duracion, 0);
+  }
+  const e = Ent.estimarFin({ t, dist: sesion.dist, kcal: sesion.kcal, distFinal }, tFinal);
+  if (!e) return null;
+  // Lo que ya marca la meta no se estima: en 5000 m no tiene sentido «≈ 5000 m», ni el tiempo en un plan solo por tiempo.
+  e.tiempoFijo = !objetivo && Ent.soloTiempo({ bloques: sesion.plan });
+  e.objetivo = objetivo;
+  return e;
+}
+
+function pintarEstimadoFin(t) {
+  const mr = $('#modo-remo');
+  const e = mr.hidden ? null : estimadoFin(t);
+  const variante = mr.dataset.estimado || 'linea';
+  const partes = [];
+  if (e) {
+    if (!e.tiempoFijo) partes.push(['tiempo', formatoTiempo(e.tiempo)]);
+    if (e.objetivo !== 'distancia') partes.push(['dist', `${miles(e.dist)} m`]);
+    if (e.objetivo !== 'kcal') partes.push(['kcal', `${e.kcal} kcal`]);
+    partes.push(['split', `${formatoSplit(e.split)} /500`]);
+  }
+  const fin = $('#mr-fin');
+  if (variante === 'rotar' && partes.length) {
+    const [, txt] = partes[Math.floor(t / 4) % partes.length];
+    fin.textContent = `Al final ≈ ${txt}`;
+  } else fin.textContent = partes.length ? `Al final ≈ ${partes.map((x) => x[1]).join(' · ')}` : '';
+  fin.hidden = !partes.length || variante === 'casillas';
+  // Variante casillas: «→ …» bajo la casilla que corresponde (tiempo, distancia, calorías).
+  const claves = Cap.CASILLAS_REMO[sesion?.tipoPlan || 'libre'];
+  const porClave = Object.fromEntries(partes);
+  claves.forEach((clave, i) => {
+    const k = clave === 'extra' && !(entrenamientoActivo?.objetivo && entrenamientoActivo.objetivo.metrica !== 'paladas') ? 'kcal' : clave;
+    const v = variante === 'casillas' ? porClave[k] : null;
+    $(`#mr-c${i + 1}-fin`).textContent = v ? `fin ≈ ${v.replace(/ (m|kcal)$/, '')}` : '';
+  });
+}
+
 // Avisos por voz propios del tipo de sesión y saldo de la batería anaeróbica (W′), una vez por segundo.
 function vigilarTipoSesion(t) {
   if (sesion.pc) {
@@ -1815,13 +1979,16 @@ function vigilarTipoSesion(t) {
   }
 }
 
-// Vista del modo remo: 'numeros', 'grafica' o 'carrera' (esta solo si hay fantasma).
+// Vista del modo remo: 'numeros', 'rango' (si el plan tiene rangos), 'grafica' o 'carrera' (si hay fantasma).
+// La vista de rango solo existe si el plan marca rangos (potencia, split, golpes o pulso) en algún intervalo.
+const hayRangos = () => !!(sesion?.plan ? sesion.plan.some((b) => b.metrica) : entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos' && entrenamientoActivo.bloques?.some((b) => b.metrica));
 function vistaRemo() {
   const v = ajustes.leer('vistaRemo', 'numeros');
   if (v === 'carrera' && !hayCarrera()) return 'grafica';
+  if (v === 'rango' && !hayRangos()) return 'numeros';
   return v;
 }
-const vistaGrafica = () => vistaRemo() !== 'numeros';
+const vistaGrafica = () => vistaRemo() === 'grafica' || vistaRemo() === 'carrera';
 let leyendaRemo = '';
 function leyenda(html) {
   if (html !== leyendaRemo) { $('#mr-leyenda').innerHTML = html; leyendaRemo = html; }
@@ -1861,24 +2028,24 @@ function pintarGraficaRemo(t) {
 }
 
 // Orden al tocar el botón: números → gráfica → carrera (si hay fantasma) → números.
+const vistasRemo = () => ['numeros', ...(hayRangos() ? ['rango'] : []), 'grafica', ...(hayCarrera() ? ['carrera'] : [])];
 function siguienteVista() {
-  const v = vistaRemo();
-  if (v === 'numeros') return 'grafica';
-  if (v === 'grafica' && hayCarrera()) return 'carrera';
-  return 'numeros';
+  const vs = vistasRemo();
+  return vs[(vs.indexOf(vistaRemo()) + 1) % vs.length];
 }
 
 function aplicarVistaRemo() {
   const v = vistaRemo();
-  $('#modo-remo').classList.toggle('vista-grafica', v !== 'numeros');
+  $('#modo-remo').classList.toggle('vista-grafica', v === 'grafica' || v === 'carrera');
   $('#modo-remo').classList.toggle('vista-carrera', v === 'carrera');
+  $('#modo-remo').classList.toggle('vista-rango', v === 'rango');
   const sig = siguienteVista();
   const b = $('#mr-vista');
   b.classList.toggle('activo', v !== 'numeros');
   // El botón muestra la vista actual y unos puntos con su lugar en la vuelta; tocarlo pasa a la siguiente.
-  const vistas = hayCarrera() ? ['numeros', 'grafica', 'carrera'] : ['numeros', 'grafica'];
-  const icono = { numeros: '<span class="num" aria-hidden="true">123</span>', grafica: ico('i-grafica'), carrera: ico('i-fantasma') };
-  const nombre = { numeros: 'números grandes', grafica: 'gráfica', carrera: 'carrera' };
+  const vistas = vistasRemo();
+  const icono = { numeros: '<span class="num" aria-hidden="true">123</span>', rango: '<span class="num" aria-hidden="true">↔</span>', grafica: ico('i-grafica'), carrera: ico('i-fantasma') };
+  const nombre = { numeros: 'números grandes', rango: 'rango del intervalo', grafica: 'gráfica', carrera: 'carrera' };
   b.innerHTML = `${icono[v]}<span class="vista-puntos" aria-hidden="true">${vistas.map((x) => (x === v ? '●' : '○')).join('')}</span>`;
   b.setAttribute('aria-label', `Vista: ${nombre[v]}. Toca para cambiar a ${nombre[sig]}`);
 }
