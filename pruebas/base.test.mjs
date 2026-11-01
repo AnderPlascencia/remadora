@@ -5,7 +5,7 @@ import { esPrueba } from '../ventajas.js';
 
 const n1 = B.entrenamientosBase(1, 200);
 const n70 = B.entrenamientosBase(70, 200);
-assert.equal(n1.length, 18, '15 base + 3 pruebas');
+assert.equal(n1.length, 21, '15 base + 6 pruebas');
 // 3 dificultades por sección
 for (const sec of ['potencia', 'ritmo', 'distancia', 'tecnica', 'calorias']) {
   assert.deepEqual(n1.filter((x) => x.enfoque === sec).map((x) => x.dificultad), ['suave', 'mant', 'mejora'], sec);

@@ -76,6 +76,7 @@
         </div>
         <b id="hoy-nombre" class="hoy-nombre">Remo libre</b>
         <span id="hoy-resumen" class="hoy-resumen"></span>
+        <p id="hoy-porque" class="hoy-porque" hidden></p>
         <p id="hoy-cuerpo" class="hoy-cuerpo" hidden></p>
         <p id="hoy-ajuste" class="hoy-ajuste" hidden></p>
         <button type="button" id="btn-hoy-detalle" class="enlace-boton hoy-detalle" aria-controls="hoy-detalle-caja" aria-expanded="false" hidden>Ver detalles</button>
@@ -232,7 +233,6 @@
           <div id="as-resumen" class="as-resumen" hidden></div>
           <button type="button" id="btn-asistente" class="boton primario grande" disabled>Crear mi plan</button>
         </div>
-        <div id="plantillas-programa" hidden></div>
         <details class="serie">
           <summary>Crear mi propio programa</summary>
           <div class="fila-dos">
@@ -247,6 +247,9 @@
       <div id="programa-activo" hidden>
         <div class="tm-fila"><b id="prog-nombre"></b><span id="prog-cumple"></span></div>
         <div class="progreso" role="progressbar" aria-label="Avance del programa"><div id="prog-barra"></div></div>
+        <p id="prog-esquema" class="ayuda"></p>
+        <h3 id="semana-plan-titulo" class="etq-campo">Esta semana</h3>
+        <ol id="semana-plan" class="semana-plan"></ol>
         <div class="cal-cabecera"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
         <div id="calendario" class="calendario"></div>
         <p id="prog-dia" class="ayuda" aria-live="polite"></p>

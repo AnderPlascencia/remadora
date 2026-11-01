@@ -449,3 +449,21 @@ export const EJEMPLOS = [
     ],
   },
 ];
+
+// Pruebas que usan los planes para medir tu avance: siempre iguales, para poder compararlas.
+const ENF_P = { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 };
+const CAL_P = { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 };
+export const PRUEBAS = {
+  'Prueba FTP 20 min': { tipo: 'intervalos', nombre: 'Prueba FTP 20 min', pruebaFtp: true, bloques: [
+    CAL_P, { nombre: 'Prueba: máximo sostenido', duracion: 1200, metrica: '', min: 0, max: 0, prueba: true }, ENF_P] },
+  'Prueba 5 min': { tipo: 'intervalos', nombre: 'Prueba 5 min', prueba: true, bloques: [
+    CAL_P, { nombre: 'Prueba: 5 min a tope', duracion: 300, metrica: '', min: 0, max: 0, prueba: true }, ENF_P] },
+  'Prueba de potencia': { tipo: 'intervalos', nombre: 'Prueba de potencia', prueba: true, bloques: [
+    CAL_P,
+    { nombre: 'Prueba: 10 paladas a tope', duracion: 20, metrica: '', min: 0, max: 0, prueba: true, nivel: 18 },
+    { nombre: 'Descanso', duracion: 240, metrica: 'ftp', min: 40, max: 55 },
+    { nombre: 'Prueba: 1 min a tope', duracion: 60, metrica: '', min: 0, max: 0, prueba: true }, ENF_P] },
+  'Prueba de pulso fijo 30 min': { tipo: 'intervalos', nombre: 'Prueba de pulso fijo 30 min', prueba: true, bloques: [
+    { ...CAL_P, max: 70 },
+    { nombre: 'Prueba: 30 min al 70 % de tu pulso máximo', duracion: 1800, metrica: 'fcpct', min: 68, max: 72, prueba: true }, ENF_P] },
+};

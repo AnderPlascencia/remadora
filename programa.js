@@ -1,7 +1,8 @@
 // Programas de varias semanas: una lista de días con el entrenamiento que toca.
 // programa = { nombre, inicio: 'AAAA-MM-DD', dias: [{ fecha: 'AAAA-MM-DD', ent: nombre del entrenamiento }] }
 import { claveDia } from './estadisticas.js';
-import { formatoMmss as mm } from './entrenamientos.js';
+import { formatoMmss as mm, PRUEBAS } from './entrenamientos.js';
+import { tipoPlan } from './capacidades.js';
 
 const DIA = 864e5;
 const aFecha = (clave) => new Date(`${clave}T12:00:00`);
@@ -18,23 +19,7 @@ export function generarSemanal(nombre, inicio, semanas, porDia) {
   return { nombre, inicio, dias };
 }
 
-// Plantilla: mejorar 2000 m en 6 semanas (lunes, miércoles y sábado).
-export const PLANTILLAS = [
-  {
-    nombre: 'Mejorar 2000 m en 6 semanas',
-    descripcion: '3 días por semana: umbral, series de 500 m y ritmo. Prueba de 2000 m en las semanas 3 y 6.',
-    semanas: [
-      ['Umbral 3 × 8 min (zona 4)', 'Potencia 5 × 3 min', 'Ritmo 2:10 × 20 min'],
-      ['Umbral 3 × 8 min (zona 4)', '4 × 500 m', 'Ritmo 2:10 × 20 min'],
-      ['Umbral 3 × 8 min (zona 4)', 'Pirámide de paladas', '2000 m'],
-      ['Umbral 3 × 8 min (zona 4)', '4 × 500 m', 'Escalera de potencia'],
-      ['Potencia 5 × 3 min', '4 × 500 m', 'Ritmo 2:10 × 20 min'],
-      ['Umbral 3 × 8 min (zona 4)', 'Pirámide de paladas', '2000 m'],
-    ],
-    diasSemana: [0, 2, 5],
-  },
-];
-
+// Arma un plan desde semanas de nombres: { nombre, semanas: [[ent, …], …], diasSemana: [0 = lunes, …] }.
 export function desdePlantilla(p, inicio) {
   const dias = [];
   const base = aFecha(inicio);
@@ -212,6 +197,37 @@ const SEMANA_TIPO = {
   calorias: [SESIONES.fondo([40, 70]), SESIONES.fondo([30, 45]), SESIONES.kcalSeries, SESIONES.kcalMeta, SESIONES.fondoPulso([30, 50])],
 };
 
+// Tipos de sesión que cansan: entre dos de ellos conviene al menos un día de descanso o de fondo.
+export const TIPOS_DUROS = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
+export const esDura = (ent) => TIPOS_DUROS.has(tipoPlan(ent));
+
+// Reparte las sesiones de una semana entre sus días para que dos duras no caigan en días seguidos
+// (domingoDuro: la semana anterior terminó el domingo con una dura, así el lunes no repite).
+// Cambia lo mínimo posible el orden de prioridad, y la prueba, cuando la hay, se queda al final de la semana.
+export function ordenarSemana(nombres, diasSemana, buscar, domingoDuro = false) {
+  if (nombres.length < 2) return nombres;
+  const duro = nombres.map((n) => esDura(buscar(n)));
+  const seguidos = (a, b) => Math.abs(b - a) === 1;
+  const fija = tipoPlan(buscar(nombres.at(-1))) === 'prueba' ? nombres.length - 1 : null;
+  let mejor = null;
+  const probar = (orden) => {
+    const ds = orden.map((i) => duro[i]);
+    let choques = domingoDuro && diasSemana[0] === 0 && ds[0] ? 1 : 0;
+    for (let i = 0; i < ds.length; i++) {
+      for (let j = i + 1; j < ds.length; j++) if (ds[i] && ds[j] && seguidos(diasSemana[i], diasSemana[j])) choques++;
+    }
+    const mueve = orden.reduce((a, x, i) => a + Math.abs(x - i), 0);
+    const puntos = choques * 100 + mueve;
+    if (!mejor || puntos < mejor.puntos) mejor = { puntos, orden };
+  };
+  const permutar = (resto, hecho) => {
+    if (!resto.length) { probar(fija == null ? hecho : [...hecho, fija]); return; }
+    resto.forEach((x, i) => permutar([...resto.slice(0, i), ...resto.slice(i + 1)], [...hecho, x]));
+  };
+  permutar(nombres.map((_, i) => i).filter((i) => i !== fija), []);
+  return mejor.orden.map((i) => nombres[i]);
+}
+
 // ctx = { kcalHabitual: kcal de una sesión normal, kcalSemana: kcal de una semana normal, sinHistorial }
 export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx = {} }) {
   const obj = objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
@@ -223,7 +239,8 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     return ent.nombre;
   };
   const crear = (fn, p, k, s) => { const e = fn(p, k, ctx, s); return agregar({ tipo: e.tipo || 'intervalos', ...e }); };
-  const prueba = (nombre) => agregar({ ...EJEMPLO_PRUEBA[nombre], enfoque: 'pruebas' });
+  const prueba = (nombre) => agregar({ ...structuredClone(PRUEBAS[nombre]), enfoque: 'pruebas' });
+  let domingoDuro = false;
   const semanasPlan = Array.from({ length: semanas }, (_, s) => {
     // Descarga una de cada 4 semanas: la carga de la primera semana y un 30 % menos de volumen.
     const descarga = (s + 1) % 4 === 0 && s < semanas - 1;
@@ -231,8 +248,17 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     const k = vol * (descarga ? 0.7 : 1);
     const lista = tipos.map((fn) => crear(fn, p, k, s));
     const conPrueba = obj.prueba && (s === semanas - 1 || (semanas >= 6 && s === Math.floor(semanas / 2) - 1));
-    if (conPrueba) lista[lista.length - 1] = prueba(obj.prueba);
-    return lista;
+    // La prueba ocupa el lugar de la segunda sesión dura (así la semana no suma más intensidad);
+    // en un plan sin sesiones duras, el de la última. Va al final de la semana, ya con la carga más baja.
+    if (conPrueba) {
+      const duras = lista.map((n, i) => (i > 0 && esDura(entrenamientos.find((e) => e.nombre === n)) ? i : -1)).filter((i) => i >= 0);
+      lista.splice(duras.length ? duras.at(-1) : lista.length - 1, 1);
+      lista.push(prueba(obj.prueba));
+    }
+    const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
+    const orden = ordenarSemana(lista, DIAS_PLAN[dias], buscar, domingoDuro);
+    domingoDuro = DIAS_PLAN[dias].at(-1) === 6 && esDura(buscar(orden.at(-1)));
+    return orden;
   });
   const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
   // Lo elegido queda en el plan: sirve para armar el siguiente y para ajustarlo cuando haya historial.
@@ -244,23 +270,6 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
   }
   return { programa, entrenamientos };
 }
-const EJEMPLO_PRUEBA = {
-  'Prueba FTP 20 min': { tipo: 'intervalos', nombre: 'Prueba FTP 20 min', pruebaFtp: true, bloques: [
-    { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
-    { nombre: 'Prueba: máximo sostenido', duracion: 1200, metrica: '', min: 0, max: 0, prueba: true }, ENF] },
-  'Prueba 5 min': { tipo: 'intervalos', nombre: 'Prueba 5 min', prueba: true, bloques: [
-    { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
-    { nombre: 'Prueba: 5 min a tope', duracion: 300, metrica: '', min: 0, max: 0, prueba: true }, ENF] },
-  'Prueba de potencia': { tipo: 'intervalos', nombre: 'Prueba de potencia', prueba: true, bloques: [
-    { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
-    { nombre: 'Prueba: 10 paladas a tope', duracion: 20, metrica: '', min: 0, max: 0, prueba: true, nivel: 18 },
-    SUAVE(240),
-    { nombre: 'Prueba: 1 min a tope', duracion: 60, metrica: '', min: 0, max: 0, prueba: true }, ENF] },
-  'Prueba de pulso fijo 30 min': { tipo: 'intervalos', nombre: 'Prueba de pulso fijo 30 min', prueba: true, bloques: [
-    { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 70 },
-    { nombre: 'Prueba: 30 min al 70 % de tu pulso máximo', duracion: 1800, metrica: 'fcpct', min: 68, max: 72, prueba: true }, ENF] },
-};
-
 // Grupo de cada entrenamiento para ordenar la lista.
 export const GRUPOS_ENT = [
   { clave: 'potencia', nombre: 'Potencia' }, { clave: 'ritmo', nombre: 'Ritmo' }, { clave: 'distancia', nombre: 'Distancia y resistencia' },
@@ -280,6 +289,18 @@ export function enfoqueDe(ent) {
   if (trabajo.some((b) => b.fin === 'paladas')) return 'tecnica';
   const intenso = trabajo.some((b) => (b.metrica === 'ftp' && b.min >= 88) || b.metrica === 'watts');
   return intenso ? 'potencia' : 'distancia';
+}
+
+// Semana del plan en una fecha: las semanas van de lunes a domingo desde la del inicio (como el calendario).
+// { n (1 = la primera), total, descarga } o null sin plan.
+export function semanaDe(programa, ahora = Date.now()) {
+  if (!programa?.dias?.length) return null;
+  const ini = aFecha(programa.inicio);
+  const lunes = ini.getTime() - ((ini.getDay() + 6) % 7) * DIA;
+  const n = Math.floor((aFecha(claveDia(ahora)).getTime() - lunes) / (7 * DIA)) + 1;
+  const ultimo = aFecha(programa.dias.at(-1).fecha).getTime();
+  const total = programa.semanas || Math.floor((ultimo - lunes) / (7 * DIA)) + 1;
+  return { n, total, descarga: !!programa.objetivo && n % 4 === 0 && n < total };
 }
 
 // Meta de calorías de la semana de una fecha (o null si el plan no tiene).

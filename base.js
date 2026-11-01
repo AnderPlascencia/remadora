@@ -1,7 +1,7 @@
 // Entrenamientos base: 5 secciones × 3 dificultades (suave, mantenimiento, mejora), generados al momento.
 // La intensidad va en % del FTP (o golpes por minuto), así que siguen tu fuerza; el volumen crece con el rango del héroe.
 // No se guardan en la base de datos: su id es «base:clave» y siempre se calculan para tu nivel actual.
-import { EJEMPLOS, duracionTotal, soloTiempo, tipoDe } from './entrenamientos.js';
+import { EJEMPLOS, PRUEBAS as PRUEBAS_PLAN, duracionTotal, soloTiempo, tipoDe } from './entrenamientos.js';
 
 export const DIFICULTADES = [
   { clave: 'suave', nombre: 'Suave' },
@@ -115,15 +115,19 @@ const BASES = [
     objetivo: (e) => [300, 375, 450, 525][e] },
 ];
 
-// Las pruebas miden tu progreso: siempre iguales, sin dificultad.
+// Las pruebas miden tu progreso: siempre iguales, sin dificultad. Las tres últimas son las que usan los planes:
+// aquí están todas juntas para que no aparezcan repetidas entre tus entrenamientos.
 const PRUEBAS = [
   ['prueba-500', 'Prueba 500 m', 'Mide tu mejor 500 m.'],
   ['prueba-2000', 'Prueba 2000 m', 'Mide tu mejor 2000 m.'],
-  ['prueba-ftp', 'Prueba FTP 20 min', 'Calcula tu FTP para ajustar las intensidades.'],
-].map(([clave, nombre, proposito]) => ({ ...structuredClone(EJEMPLOS.find((x) => x.nombre === nombre)), id: `base:${clave}`, base: true, enfoque: 'pruebas', dificultad: null, proposito, ...(clave === 'prueba-ftp' ? { resumen: '20 min a tu máximo sostenido' } : {}) }));
+  ['prueba-ftp', 'Prueba FTP 20 min', 'Calcula tu FTP para ajustar las intensidades.', '20 min a tu máximo sostenido'],
+  ['prueba-5min', 'Prueba 5 min', 'Mide tu potencia de VO₂máx (plan VO₂máx).', '5 min a tope'],
+  ['prueba-potencia', 'Prueba de potencia', 'Mide tu pico de watts y tu mejor minuto (plan de potencia).', '10 paladas y 1 min a tope'],
+  ['prueba-pulso', 'Prueba de pulso fijo 30 min', 'Cuántos watts das a pulso suave: tu motor aeróbico (plan de base).', '30 min al 70 % de tu pulso máximo'],
+].map(([clave, nombre, proposito, resumen]) => ({ ...structuredClone(PRUEBAS_PLAN[nombre] || EJEMPLOS.find((x) => x.nombre === nombre)), id: `base:${clave}`, base: true, enfoque: 'pruebas', dificultad: null, proposito, ...(resumen ? { resumen } : {}) }));
 export const NOMBRES_PRUEBA = new Set(PRUEBAS.map((p) => p.nombre));
 
-// Los 15 entrenamientos base para tu nivel y tu FTP, más las 3 pruebas.
+// Los 15 entrenamientos base para tu nivel y tu FTP, más las 6 pruebas.
 export function entrenamientosBase(nivel = 1, ftp = 0) {
   const e = escalonDe(nivel);
   return BASES.map((b) => {
