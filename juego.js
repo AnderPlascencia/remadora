@@ -102,6 +102,30 @@ export function clasificacionDe(ftp, peso = 0, factor = 1) {
   const falta = sig ? Math.max(0, Math.ceil(umbral(sig) * (porPeso ? peso : 1) - ftp)) : null;
   return { ...CLASIFICACIONES[i], indice: i, valor: Math.round(valor * 100) / 100, porPeso, siguiente: sig || null, faltaW: falta };
 }
+// Qué significa cada puesto para quien lo ve: cómo reman los rivales de ese puesto.
+export const TEXTO_PUESTO = {
+  grumete: 'Rivales de remada irregular que se cansan pronto.',
+  marinero: 'Rivales algo más parejos; aún aflojan al final.',
+  contramaestre: 'Rivales de ritmo constante.',
+  oficial: 'Rivales que casi no se cansan.',
+  capitan: 'Rivales de remada de máquina, parejos hasta el final.',
+};
+// La escalera completa de puestos para dibujarla: umbral de cada uno (en W/kg y en tus watts),
+// estado (pasado, actual, siguiente, futuro) y cuánto llevas del tramo hacia el siguiente (0 a 1).
+export function escalaTripulacion(ftp, peso = 0, factor = 1) {
+  const c = clasificacionDe(ftp, peso, factor);
+  const porPeso = peso > 0;
+  const umbralW = (x) => Math.round((porPeso ? x.wkg * peso : x.w) * factor);
+  const filas = CLASIFICACIONES.map((x, i) => ({
+    id: x.id, nombre: x.nombre, texto: TEXTO_PUESTO[x.id],
+    wkg: Math.round(x.wkg * factor * 100) / 100, w: umbralW(x),
+    estado: i < c.indice ? 'pasado' : i === c.indice ? 'actual' : i === c.indice + 1 ? 'siguiente' : 'futuro',
+  }));
+  const desde = filas[c.indice].w;
+  const hasta = filas[c.indice + 1]?.w;
+  const progreso = hasta ? Math.max(0, Math.min(1, (ftp - desde) / (hasta - desde))) : 1;
+  return { ...c, filas, progreso };
+}
 // Dificultad de los rivales en «Por objetivo» (en Remo libre siempre es Costa).
 export const DIFICULTADES = {
   bahia: { nombre: 'Bahía', texto: 'Fácil: los rivales reman suave para ir parejos a ritmo tranquilo', rango: -1, xp: 15, ftp: () => 0.85, oscila: 0.03 },

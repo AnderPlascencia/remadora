@@ -327,7 +327,7 @@
           <div class="crece">
             <b id="heroe-titulo" class="heroe-nombre"></b>
             <span id="heroe-clase" class="suave"></span>
-            <span class="heroe-datos"><span id="heroe-monedas" class="monedas"></span><span id="heroe-aguas" class="aguas"></span></span>
+            <span class="heroe-datos"><span id="heroe-monedas" class="monedas"></span><button type="button" id="heroe-aguas" class="aguas enlace-trip" hidden></button></span>
           </div>
           <div class="heroe-nivel"><span class="etq">Nivel</span><b id="heroe-nivel">1</b></div>
           <div class="heroe-xp-caja">
@@ -528,7 +528,7 @@
         <label class="campo">Meta semanal (km) <input id="in-meta-semana" type="number" min="1" max="500" inputmode="numeric"></label>
       </div>
       <div id="perfil-usos" class="perfil-usos"></div>
-      <p id="clasificacion-ftp" class="aviso suave-aviso"></p>
+      <div id="clasificacion-ftp" class="trip-caja"></div>
       </details>
 
       <details class="seccion" data-seccion="ayuda">
@@ -791,6 +791,17 @@
     <div class="inicio-pie">
       <button type="button" id="inicio-atras" class="boton" hidden>Atrás</button>
       <button type="button" id="inicio-siguiente" class="boton primario grande">Empezar</button>
+    </div>
+  </div>
+
+  <!-- PUESTOS DE LA TRIPULACIÓN: qué son y cuánto falta -->
+  <div id="hoja-trip" class="hoja-fondo" hidden>
+    <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="trip-titulo" tabindex="-1">
+      <div class="hoja-cabecera">
+        <h2 id="trip-titulo">Tu puesto en la tripulación</h2>
+        <button id="trip-cerrar" class="boton icono" aria-label="Cerrar"><svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
+      </div>
+      <div id="trip-cuerpo"></div>
     </div>
   </div>
 

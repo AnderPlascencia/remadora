@@ -53,3 +53,13 @@ const VISTAS = ['entrenar', 'entrenamientos', 'heroe', 'historial', 'ajustes'];
 assert.ok(G.TEMAS.every((t) => VISTAS.includes(t.vista) && t.puntos.length >= 3 && t.resumen));
 assert.ok(VISTAS.every((v) => G.consejoDe(v)));
 console.log('perfil ok');
+// Escalera de la tripulación: 5 puestos, el tuyo marcado y el avance hacia el siguiente.
+import { escalaTripulacion } from '../juego.js';
+const esc = escalaTripulacion(145, 82);
+assert.equal(esc.filas.length, 5);
+assert.deepEqual(esc.filas.map((f) => f.estado), ['pasado', 'actual', 'siguiente', 'futuro', 'futuro']);
+assert.equal(esc.filas[2].w, 164);
+assert.ok(esc.progreso > 0.5 && esc.progreso < 0.6);
+assert.equal(escalaTripulacion(300, 80).progreso, 1, 'Capitán: tramo lleno');
+assert.equal(escalaTripulacion(170, 80, 0.82).filas[3].estado, 'actual');
+console.log('tripulación ok');

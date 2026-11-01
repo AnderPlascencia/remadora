@@ -20,7 +20,7 @@ import * as A from './adaptacion.js';
 import * as Pf from './perfil.js';
 import * as G from './guia.js';
 
-const VERSION = '0.40.0';
+const VERSION = '0.40.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -38,6 +38,7 @@ const ajustes = {
 };
 const ftp = () => ajustes.num('ftp', 0);
 const fcMaxima = () => ajustes.num('fcMax', 0);
+let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 // Tu perfil (Ajustes › Tu perfil y la bienvenida). minutos: null si no lo has elegido, 0 = sin límite.
 function perfil() {
   const min = ajustes.leer('minutosSesion', '');
@@ -599,22 +600,65 @@ function pintarClasificacion(sesiones = null) {
   const w = ftp() || (sesiones ? estimarFtp(sesiones) : 0);
   const caja = $('#clasificacion-ftp');
   if (!w) {
-    caja.textContent = 'Tu FTP se calcula solo después de unas sesiones (o escríbelo arriba si lo conoces). Con él sabrás tu puesto en la tripulación: Grumete, Marinero, Contramaestre, Primer oficial o Capitán.';
-    $('#heroe-aguas').textContent = '';
+    caja.innerHTML = '<p class="ayuda">Tu puesto en la tripulación (de Grumete a Capitán) sale de tu FTP. Se calcula solo después de unas sesiones, o escríbelo arriba si lo conoces.</p><button type="button" class="boton chico" data-trip>Ver los 5 puestos</button>';
+    $('#heroe-aguas').hidden = true;
+    escalaTrip = J.escalaTripulacion(0, peso, Pf.factorClasificacion(ajustes.leer('sexo', '')));
+    escalaTrip.sinFtp = true;
     return;
   }
-  const c = J.clasificacionDe(w, peso, Pf.factorClasificacion(ajustes.leer('sexo', '')));
-  const medida = c.porPeso ? `${c.valor.toFixed(1)} W/kg` : `${w} W`;
-  const detalle = avanzado() ? ` (${medida}${ftp() ? '' : ', FTP estimado'})` : '';
-  caja.textContent = `Tu puesto en la tripulación (sale de tu FTP, no del nivel): ${c.nombre}${detalle}.${c.siguiente ? ` Te faltan ${c.faltaW} W de FTP para ${c.siguiente.nombre}.` : ' Es el puesto más alto.'} Ajusta cómo reman tus rivales.`;
-  $('#heroe-aguas').textContent = `Tripulación: ${avanzado() ? `${c.nombre} · ${medida}` : c.nombre}`;
-  $('#heroe-aguas').title = 'Tu puesto en la tripulación sale de tu FTP; el rango sale de tu nivel.';
+  const c = J.escalaTripulacion(w, peso, Pf.factorClasificacion(ajustes.leer('sexo', '')));
+  escalaTrip = { ...c, ftp: w, peso, estimado: !ftp() || ajustes.si('ftpEstimado', false) };
+  caja.innerHTML = `<span class="etq-campo">Tu puesto en la tripulación</span>${htmlTripMini(c)}
+    <p class="trip-linea"><b>${c.nombre}</b>${c.siguiente ? ` · te faltan <b>${c.faltaW} W</b> de FTP para ${c.siguiente.nombre}` : ' · el puesto más alto'}</p>
+    <button type="button" class="boton chico" data-trip>Qué es y cómo subir</button>`;
+  $('#heroe-aguas').hidden = false;
+  $('#heroe-aguas').textContent = `Tripulación: ${c.nombre} ›`;
+  $('#heroe-aguas').setAttribute('aria-label', `Tu puesto en la tripulación: ${c.nombre}. Ver qué significa`);
   const vista = Number(ajustes.leer('clasificacionVista', '-1'));
   if (c.indice > vista) {
     if (vista >= 0) { toast(`¡Ascenso en la tripulación: ${c.nombre}!`); confeti(1800); }
     ajustes.escribir('clasificacionVista', String(c.indice));
   }
 }
+
+// Barra de 5 tramos (uno por puesto): los pasados llenos, el tuyo lleno hasta donde vas.
+function htmlTripMini(e) {
+  return `<div class="trip-barra" role="img" aria-label="Puesto ${e.indice + 1} de ${e.filas.length}: ${e.nombre}">${e.filas.map((f) => {
+    const lleno = f.estado === 'pasado' ? 1 : f.estado === 'actual' ? (e.siguiente ? e.progreso : 1) : 0;
+    return `<span class="trip-tramo ${f.estado}"><i style="width:${Math.round(lleno * 100)}%"></i></span>`;
+  }).join('')}</div>`;
+}
+function abrirTripulacion() {
+  if (!escalaTrip) { pintarClasificacion(); }
+  const e = escalaTrip;
+  if (!e) return;
+  const mujer = ajustes.leer('sexo', '') === 'm';
+  const filas = [...e.filas].reverse().map((f) => `<li class="trip-fila ${f.estado}">
+      <span class="trip-marca">${f.estado === 'pasado' ? ico('i-check') : f.estado === 'actual' ? '★' : e.filas.indexOf(f) + 1}</span>
+      <div><span><b>${f.nombre}</b>${f.estado === 'actual' ? '<span class="trip-tu">Tú</span>' : ''}</span>
+        <small>${f.w ? (e.porPeso ? `Desde ${f.wkg.toFixed(1)} W/kg · ${f.w} W de FTP para ti` : `Desde ${f.w} W de FTP`) : 'Desde el primer día'}</small>
+        <small class="trip-rivales">${f.texto}</small></div>
+    </li>`).join('');
+  const medida = e.sinFtp ? '' : e.porPeso
+    ? `<p class="trip-cuenta">Tu FTP <b>${e.ftp} W</b>${e.estimado ? ' (estimado)' : ''} ÷ tu peso <b>${e.peso} kg</b> = <b>${e.valor.toFixed(2)} W/kg</b></p>`
+    : `<p class="trip-cuenta">Tu FTP: <b>${e.ftp} W</b>. Pon tu peso en Ajustes para medirlo por kilo.</p>`;
+  $('#trip-cuerpo').innerHTML = `
+    <p class="ayuda">Tu puesto mide <b>cuánta fuerza sostienes por cada kilo</b> (tu FTP entre tu peso). Es distinto de tu rango de héroe: el rango sube con el nivel, remando; el puesto sube cuando de verdad eres más fuerte.</p>
+    ${medida}
+    ${e.sinFtp ? '' : `${htmlTripMini(e)}<p class="trip-linea">${e.siguiente ? `Llevas el <b>${Math.round(e.progreso * 100)} %</b> del camino a ${e.siguiente.nombre}: te faltan <b>${e.faltaW} W</b> de FTP.` : '¡Eres Capitán, el puesto más alto!'}</p>`}
+    <ol class="trip-escalera">${filas}</ol>
+    <p class="ayuda"><b>Para qué sirve:</b> tus rivales de la carrera son de tu mismo puesto, así que al subir reman más parejo y se cansan menos.${mujer ? ' Las referencias por kilo son un 18 % más bajas porque así lo pusiste en tu perfil.' : ''}</p>
+    <p class="ayuda"><b>Cómo subir:</b> el plan «Subir mi FTP» y la Prueba FTP 20 min, que lo mide. Tu FTP también sube solo con sesiones de 10 min o más.</p>
+    <div class="fila-botones"><button type="button" class="boton primario" data-ir-planes>Ver planes</button></div>`;
+  $('#hoja-trip').hidden = false;
+  $('#hoja-trip .hoja').focus();
+}
+function cerrarTripulacion() { $('#hoja-trip').hidden = true; }
+document.addEventListener('click', (e) => { if (e.target.closest('[data-trip], #heroe-aguas')) abrirTripulacion(); });
+$('#hoja-trip').addEventListener('click', (e) => {
+  if (e.target === $('#hoja-trip') || e.target.closest('#trip-cerrar')) cerrarTripulacion();
+  else if (e.target.closest('[data-ir-planes]')) { cerrarTripulacion(); irA('entrenamientos'); }
+});
 
 function pintarZonas() {
   const f = ftp();
@@ -4290,6 +4334,7 @@ $('#hoja').addEventListener('click', (e) => { if (e.target === $('#hoja')) cerra
 function cerrarLoDeEncima() {
   if (!$('#fin-dialogo').hidden) cerrarFin();
   else if (!$('#guia').hidden) cerrarGuia();
+  else if (!$('#hoja-trip').hidden) cerrarTripulacion();
   else if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
   else if (!$('#hoja').hidden) cerrarHoja();
   else if (!$('#modo-remo').hidden) cerrarModoRemo();

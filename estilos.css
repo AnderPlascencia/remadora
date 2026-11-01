@@ -1626,3 +1626,31 @@ details.mas-detalle[hidden] { display: none; }
   .consejo { grid-template-columns: auto 1fr auto; align-items: center; }
   .consejo-botones { grid-column: 3; }
 }
+
+/* ---------- v0.40: puestos de la tripulación ---------- */
+.trip-caja { margin: 12px 0; padding: 12px 14px; border-radius: var(--radio); background: var(--panel); border: 1px solid var(--borde); }
+.trip-caja .etq-campo { display: block; font-weight: 700; color: var(--texto-suave); margin-bottom: 8px; }
+.trip-caja .boton { margin-top: 8px; }
+.trip-barra { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 6px 0; }
+.trip-tramo { height: 10px; border-radius: 5px; background: var(--borde); overflow: hidden; }
+.trip-tramo i { display: block; height: 100%; background: var(--primario-claro); border-radius: 5px; }
+.trip-tramo.actual { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primario-claro) 45%, transparent); }
+.trip-linea { margin: 6px 0 0; color: var(--texto-suave); font-size: 14px; }
+.trip-linea b { color: var(--texto); }
+.enlace-trip { border: 0; background: transparent; padding: 4px 0; min-height: 32px; cursor: pointer; font: inherit; font-weight: 700; color: var(--primario-claro); text-decoration: underline dotted; text-underline-offset: 3px; }
+.enlace-trip small { font-weight: 600; color: var(--texto-suave); }
+.trip-cuenta { background: var(--panel); border-radius: 12px; padding: 10px 12px; color: var(--texto-suave); }
+.trip-cuenta b { color: var(--texto); }
+.trip-escalera { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 6px; }
+.trip-fila { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--borde); background: var(--panel); }
+.trip-fila > div { display: flex; flex-direction: column; gap: 2px; }
+.trip-fila b { color: var(--texto); }
+.trip-fila small { color: var(--texto-tenue); font-size: 13px; }
+.trip-fila .trip-rivales { font-style: italic; }
+.trip-marca { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--panel-2); color: var(--texto-tenue); border: 1px solid var(--borde); }
+.trip-marca .ico { width: 16px; height: 16px; }
+.trip-fila.pasado .trip-marca { background: color-mix(in srgb, var(--primario) 30%, var(--panel-2)); color: var(--primario-claro); }
+.trip-fila.actual { border-color: var(--primario-claro); background: color-mix(in srgb, var(--primario) 16%, var(--panel)); }
+.trip-fila.actual .trip-marca { background: var(--primario-claro); color: var(--fondo); border-color: transparent; }
+.trip-fila.siguiente { border-style: dashed; border-color: color-mix(in srgb, var(--primario-claro) 60%, var(--borde)); }
+.trip-tu { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; background: var(--primario-claro); color: var(--fondo); vertical-align: middle; }
