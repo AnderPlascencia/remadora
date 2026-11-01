@@ -448,6 +448,48 @@ export function repararSaltos(s) {
     // Si la meta se "cumplió" con el salto, no cuenta.
     tiempoMeta: s.tiempoMeta != null && primerSalto <= s.tiempoMeta ? null : s.tiempoMeta,
   };
+  // Sin meta cumplida, la carrera queda sin terminar: no da victoria ni XP.
+  if (debeQuedarSinTerminar(r)) r.carreraSinTerminar = true;
+  if (s.rival) r.rival = ajustar(s.rival);
+  if (s.rivales) r.rivales = s.rivales.map(ajustar);
+  if (s.referencias) r.referencias = s.referencias.map(ajustar);
+  r.marcas = marcasDeSesion(r);
+  return r;
+}
+
+// Una sesión reparada de un entrenamiento que ya no llega a la meta no puede contar la carrera como ganada.
+const tieneRivales = (s) => !!(s.rival || s.rivales?.length);
+export function debeQuedarSinTerminar(s) {
+  return !!(s?.reparada && s.entrenamiento && s.tiempoMeta == null && tieneRivales(s) && !s.carreraSinTerminar);
+}
+
+// ---------- Distancia según la potencia ----------
+// La consola suma ~20 % más metros de los que dan sus propios watts y su ritmo (W = 2,8 · v³).
+// Los fantasmas avanzan con esa fórmula, así que tu distancia también: v = ∛(W / 2,8) m/s por cada segundo remado.
+export const metrosPorWatts = (w) => (w > 0 ? Math.cbrt(w / 2.8) : 0);
+
+// Pasa una sesión guardada con la distancia de la consola a la distancia según watts (una sola vez).
+// Conserva la de la consola en `distanciaConsola`, recalcula las marcas y corrige la diferencia con
+// cada fantasma restando los metros que sobraban en el momento en que se decidió la carrera.
+// El tiempo de meta no cambia: la sesión se cumplió con las reglas de entonces. Devuelve null si no hay nada que pasar.
+export function distanciaPorWatts(s) {
+  const m = s?.muestras;
+  if (!m?.length || s.distFuente === 'watts') return null;
+  let d = 0;
+  const muestras = m.map((x) => {
+    d += metrosPorWatts(x.w);
+    return { ...x, dist: Math.round(d) };
+  });
+  const T = s.tiempoMeta ?? m.at(-1).t;
+  const sobra = distanciaEn(m, T) - distanciaEn(muestras, T);
+  const ajustar = (x) => (x && x.diferencia != null ? { ...x, diferencia: Math.round(x.diferencia - sobra) } : x);
+  const r = {
+    ...s,
+    muestras,
+    distancia: muestras.at(-1).dist,
+    distanciaConsola: s.distanciaConsola ?? s.distancia,
+    distFuente: 'watts',
+  };
   if (s.rival) r.rival = ajustar(s.rival);
   if (s.rivales) r.rivales = s.rivales.map(ajustar);
   if (s.referencias) r.referencias = s.referencias.map(ajustar);
