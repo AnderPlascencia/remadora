@@ -3,7 +3,7 @@
 
 import {
   SERVICIO_IFIT, CARACT_ESCRITURA, CARACT_NOTIFICACION, SERVICIO_1400,
-  hexABytes, bytesAHex, parsePaquete, paqueteRemada, paqueteMetricas,
+  hexABytes, bytesAHex, parsePaquete, paqueteRemada, paqueteMetricas, parseMedidaPulso,
 } from './protocolo.js';
 import { VARIANTES } from './variantes.js';
 
@@ -195,16 +195,18 @@ export class Remadora extends EventTarget {
   }
 }
 
-// Banda de pecho estándar (servicio Heart Rate 0x180D).
+// Banda de pecho o reloj que transmite el pulso (servicio Heart Rate 0x180D).
+// Eventos: 'fc' (lpm; 0 si el sensor no toca la piel o se desconecta) y 'rr' (intervalos en ms, si el sensor los manda).
 export class BandaCardiaca extends EventTarget {
   async conectar() {
     const disp = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
     const serv = await (await disp.gatt.connect()).getPrimaryService('heart_rate');
     const c = await serv.getCharacteristic('heart_rate_measurement');
     c.addEventListener('characteristicvaluechanged', (e) => {
-      const v = e.target.value;
-      const fc = v.getUint8(0) & 1 ? v.getUint16(1, true) : v.getUint8(1);
-      this.dispatchEvent(new CustomEvent('fc', { detail: fc }));
+      const m = parseMedidaPulso(e.target.value);
+      if (!m) return;
+      this.dispatchEvent(new CustomEvent('fc', { detail: m.contacto === false ? 0 : m.fc }));
+      if (m.rr.length && m.contacto !== false) this.dispatchEvent(new CustomEvent('rr', { detail: m.rr }));
     });
     await c.startNotifications();
     disp.addEventListener('gattserverdisconnected', () => this.dispatchEvent(new CustomEvent('fc', { detail: 0 })));

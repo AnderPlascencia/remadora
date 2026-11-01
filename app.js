@@ -16,7 +16,7 @@ import * as V from './ventajas.js';
 import * as B from './base.js';
 import * as C from './consejos.js';
 
-const VERSION = '0.31.0';
+const VERSION = '0.32.0';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -638,8 +638,16 @@ remadora.addEventListener('datos', (e) => {
   }
 });
 let bandaConectada = false;
-// Un pulso fuera de 30–240 lpm es un error de lectura de la banda: se ignora.
-banda.addEventListener('fc', (e) => { bandaConectada = true; if (e.detail >= 30 && e.detail <= 240) actual.fc = e.detail; });
+let ultimoFc = 0;
+// Un pulso fuera de 30–240 lpm es un error de lectura de la banda: se ignora. Un 0 (sin contacto o
+// desconectada) borra el pulso, para no seguir guardando el último valor como si fuera real.
+banda.addEventListener('fc', (e) => {
+  bandaConectada = true;
+  if (e.detail === 0) actual.fc = 0;
+  else if (e.detail >= 30 && e.detail <= 240) { actual.fc = e.detail; ultimoFc = Date.now(); }
+});
+// Los intervalos RR (si el sensor los manda) se guardan con la sesión para medir la variabilidad del pulso.
+banda.addEventListener('rr', (e) => { if (sesion && !enPausa()) sesion.rr.push(...e.detail); });
 
 $('#btn-conectar').addEventListener('click', async () => {
   if (remadora.conectada || remadora.reconectando) { remadora.desconectar(); return; }
@@ -802,6 +810,7 @@ async function iniciarSesion() {
     dist: 0,
     distPrevia: actual.distancia,
     muestras: [],
+    rr: [],
     kcal: 0,
     paladas: 0,
     segConMeta: 0,
@@ -955,6 +964,14 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     notas: '',
   };
   registro.estres = E.estres(registro, registro.ftp);
+  Object.assign(registro, {
+    kj: E.trabajoKj(m),
+    vi: E.variabilidadPotencia(m),
+    intensidad: E.factorIntensidad(m, registro.ftp),
+    desacople: E.desacople(m),
+    derivaFc: E.derivaCardiaca(m),
+  });
+  if (s.rr?.length) registro.rr = s.rr;
   if (s.pruebaFtp && ent) {
     let desde = 0;
     for (const b of ent.bloques) {
@@ -1016,6 +1033,22 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
   pintarHoy();
   pintarLineaNivel();
+  if (!recuperada) medirRecuperacionPulso(registro);
+}
+
+// Sigue leyendo el pulso un minuto después de terminar y guarda cuánto bajó (recuperación de pulso a 60 s).
+function medirRecuperacionPulso(registro) {
+  const fcFin = registro.muestras.at(-1)?.fc;
+  if (!fcFin || registro.id == null) return;
+  setTimeout(async () => {
+    const fresco = Date.now() - ultimoFc < 5000;
+    const rec = fresco ? E.recuperacionPulso(fcFin, actual.fc) : null;
+    if (rec == null) return;
+    registro.fcRec60 = rec;
+    const guardado = await db.obtener('sesiones', registro.id);
+    if (guardado) await db.guardar('sesiones', { ...guardado, fcRec60: rec });
+    agregarLog(`recuperación de pulso: ${rec} lpm en 60 s`);
+  }, 60000);
 }
 
 // Un tic por segundo: lee el estado, avanza la sesión (si no está en pausa) y pinta.
