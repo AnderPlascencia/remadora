@@ -1667,7 +1667,7 @@ function carreraActual() {
     // Calentando: todos a tu par; lo que importa es cuánto falta para la salida.
     const falta = `salida en ${formatoTiempo(Math.max(0, (sal.tS ?? t) - t))}`;
     texto = `Calentamiento · los fantasmas van a tu lado · ${falta}`;
-    l1 = `Calentando · ${falta}`;
+    l1 = `Salida en ${formatoTiempo(Math.max(0, (sal.tS ?? t) - t))}`;
   }
   const v = velocidadReciente();
   const p = sesion.empezo && t >= 10 ? F.proyectar({ t, dist: miDist, v }, rs, { meta, duracion: duracionCarrera() }) : null;
