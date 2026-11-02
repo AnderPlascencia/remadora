@@ -411,12 +411,30 @@ export function ftpSugerido(sesion) {
 //  - si el contador baja a casi 0, la consola se reinició y se cuenta desde ahí;
 //  - si baja a otra cifra, o sube más de lo que se puede remar en un segundo, no suma nada y solo se resincroniza.
 export const MAX_M_POR_SEGUNDO = 25;
-export function metrosNuevos(previa, lectura) {
+// `seg` son los segundos desde la última lectura que cambió: si la consola se atrasa y luego se pone al día de golpe
+// (por ejemplo 24 m tras 7 s casi sin avanzar), se aceptan hasta 25 m por cada uno de esos segundos (máximo 8).
+export const MAX_SEG_ATRASO = 8;
+export function metrosNuevos(previa, lectura, seg = 1) {
   if (lectura == null) return 0;
   if (previa == null) return 0;
   const d = lectura - previa;
-  if (d >= 0) return d <= MAX_M_POR_SEGUNDO ? d : 0;
+  const max = MAX_M_POR_SEGUNDO * Math.min(MAX_SEG_ATRASO, Math.max(1, seg || 1));
+  if (d >= 0) return d <= max ? d : 0;
   return lectura <= MAX_M_POR_SEGUNDO ? lectura : 0;
+}
+
+// Instante en que se cruzó la meta entre dos lecturas por segundo (t-1 → t), con una décima:
+// sin esto la meta se marcaba hasta el segundo siguiente.
+export function instanteMeta(t, previo, actual, meta) {
+  if (!(actual > previo) || previo >= meta) return t;
+  const f = Math.min(1, Math.max(0, (meta - previo) / (actual - previo)));
+  return Math.round((t - 1 + f) * 10) / 10;
+}
+
+// Segundos en pausa de una sesión, con la lista de pausas guardada ({ ini, fin } en ms).
+export function tiempoParado(pausas) {
+  if (!Array.isArray(pausas)) return 0;
+  return Math.round(pausas.reduce((a, p) => a + (p.fin > p.ini ? p.fin - p.ini : 0), 0) / 1000);
 }
 
 // Repara una sesión guardada con saltos falsos de distancia (la consola llegó a mandar cientos de metros en un segundo).
