@@ -55,6 +55,7 @@ export function simular(ent, nivel, ftpUsuario = 0) {
   const T = p.estilo ? simular(ent, { ...nivel, estilo: null }, ftpUsuario).muestras.length || 1 : 1;
   const estilo = p.estilo ? (tt) => p.estilo.f(tt, T) : () => 1;
   const muestras = [];
+  const cortes = []; // segundo en que acaba cada bloque (intervalos)
   let t = 0;
   let dist = 0;
   // Ruido suave y repetible: dos ondas lentas con fase fija por nivel.
@@ -86,6 +87,7 @@ export function simular(ent, nivel, ftpUsuario = 0) {
         const dur = Math.round((b.cantidad * 60) / 24);
         remar(rel, (tt) => tt - t0 >= dur, dur);
       } else remar(rel, (tt) => tt - t0 >= b.duracion, b.duracion);
+      cortes.push(t);
     }
   } else if (ent?.objetivo) {
     const rel = 0.9;
@@ -102,7 +104,7 @@ export function simular(ent, nivel, ftpUsuario = 0) {
   } else {
     remar(0.8, (tt) => tt >= 7200, 7200);
   }
-  return { nivel: p.clave, nombre: `Fantasma ${p.nombre.toLowerCase()}`, sintetico: true, ftp: p.ftp, muestras };
+  return { nivel: p.clave, nombre: `Fantasma ${p.nombre.toLowerCase()}`, sintetico: true, ftp: p.ftp, muestras, cortes };
 }
 
 // Fantasma que termina el entrenamiento en `segundos` (solo si su duración depende del ritmo,
@@ -175,4 +177,26 @@ export function proyectar(yo, rivales, { meta = null, duracion = null } = {}) {
     return { tipo: 'duracion', miDist, filas: filas.map((f) => ({ ...f, diferencia: miDist - f.dist })), lugar, total: rivales.length + 1 };
   }
   return null;
+}
+
+// ---------- Salida tras el calentamiento ----------
+// La carrera empieza al acabar el calentamiento: mientras dura, los fantasmas van a tu par.
+export const esCalentamiento = (b) => !!b?.guiado || /calentamiento/i.test(b?.nombre || '');
+export function bloquesCalentamiento(bloques = []) {
+  let n = 0;
+  while (n < bloques.length && esCalentamiento(bloques[n])) n++;
+  return n;
+}
+
+// Muestras del fantasma con la salida en tSalida: hasta ahí copia las tuyas (va a tu lado) y después rema su
+// recorrido desde su propia salida (tSalidaRival), sumando sus metros a los tuyos de ese momento.
+export function alinearSalida(muestrasRival, tuyas, tSalida, tSalidaRival) {
+  const dMia = distanciaEn(tuyas, tSalida);
+  const dSuya = distanciaEn(muestrasRival, tSalidaRival);
+  const antes = tuyas.filter((m) => m.t <= tSalida).map((m) => ({ t: m.t, dist: m.dist, spm: m.spm, w: m.w }));
+  if (!antes.length || antes.at(-1).t < tSalida) antes.push({ t: tSalida, dist: dMia, spm: antes.at(-1)?.spm ?? 0, w: antes.at(-1)?.w ?? 0 });
+  const despues = muestrasRival
+    .filter((m) => m.t > tSalidaRival)
+    .map((m) => ({ ...m, t: m.t - tSalidaRival + tSalida, dist: Math.round((m.dist - dSuya + dMia) * 10) / 10 }));
+  return [...antes, ...despues];
 }

@@ -577,6 +577,7 @@
       <label class="campo">Pantalla completa muestra
         <select id="sel-vista-remo">
           <option value="numeros">Números grandes</option>
+          <option value="rango">Rango del intervalo (si el plan tiene rangos)</option>
           <option value="grafica">Gráfica del entrenamiento</option>
           <option value="carrera">Carrera contra el fantasma (si eliges uno)</option>
         </select>
@@ -656,6 +657,7 @@
       <div class="mr-meta">
         <span id="mr-nombre" class="mr-nombre"></span>
         <span id="mr-meta-texto" class="mr-meta-texto"></span>
+        <span id="mr-fin" class="mr-fin" hidden></span>
       </div>
       <div class="mr-tiempo">
         <span id="mr-resta" class="mr-resta"></span>
@@ -669,13 +671,23 @@
       <span id="mr-indicador" class="mr-indicador" aria-live="polite"></span>
       <span id="mr-atr" class="mr-atr" hidden></span>
     </div>
+    <div id="mr-rango" class="mr-rango" aria-live="off">
+      <div class="mr-rango-cab"><span class="mr-etq" id="mr-rango-etq">Rango de potencia</span><span id="mr-rango-meta" class="mr-rango-meta"></span></div>
+      <div class="mr-rango-num"><span id="mr-rango-valor" class="mr-rango-valor">0</span><span id="mr-rango-unidad" class="mr-rango-unidad">W</span></div>
+      <div class="mr-medidor" aria-hidden="true">
+        <div id="mr-banda" class="mr-banda"><span id="mr-banda-min"></span><span id="mr-banda-max"></span></div>
+        <div id="mr-aguja" class="mr-aguja"></div>
+      </div>
+      <span id="mr-rango-ind" class="mr-indicador"></span>
+      <span id="mr-rango-pie" class="mr-rango-pie"></span>
+    </div>
     <div class="mr-grid">
       <div><span class="mr-etq">Split</span><span id="mr-split" class="mr-valor">--:--</span><span id="mr-parcial" class="mr-parcial"></span></div>
-      <div><span class="mr-etq" id="mr-c1-etq">Golpes/min</span><span id="mr-c1" class="mr-valor">0</span></div>
-      <div><span class="mr-etq" id="mr-c2-etq">Tiempo</span><span id="mr-c2" class="mr-valor">0:00</span></div>
-      <div><span class="mr-etq" id="mr-c3-etq">Distancia</span><span id="mr-c3" class="mr-valor">0</span></div>
-      <div><span class="mr-etq" id="mr-c4-etq">Calorías</span><span id="mr-c4" class="mr-valor">0</span></div>
-      <div><span class="mr-etq" id="mr-c5-etq">Pulso</span><span id="mr-c5" class="mr-valor">-</span></div>
+      <div><span class="mr-etq" id="mr-c1-etq">Golpes/min</span><span id="mr-c1" class="mr-valor">0</span><span id="mr-c1-fin" class="mr-fin-c"></span></div>
+      <div><span class="mr-etq" id="mr-c2-etq">Tiempo</span><span id="mr-c2" class="mr-valor">0:00</span><span id="mr-c2-fin" class="mr-fin-c"></span></div>
+      <div><span class="mr-etq" id="mr-c3-etq">Distancia</span><span id="mr-c3" class="mr-valor">0</span><span id="mr-c3-fin" class="mr-fin-c"></span></div>
+      <div><span class="mr-etq" id="mr-c4-etq">Calorías</span><span id="mr-c4" class="mr-valor">0</span><span id="mr-c4-fin" class="mr-fin-c"></span></div>
+      <div><span class="mr-etq" id="mr-c5-etq">Pulso</span><span id="mr-c5" class="mr-valor">-</span><span id="mr-c5-fin" class="mr-fin-c"></span></div>
     </div>
     <canvas id="mr-perfil" class="mr-perfil" role="img" aria-label="Plan de potencia" hidden></canvas>
     <div id="mr-zona-grafica" class="mr-zona-grafica">

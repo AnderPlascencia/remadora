@@ -581,7 +581,7 @@ function avisos(c, { ctx, ancho, alto }, { eventos }, arriba) {
       ctx.globalAlpha = 1;
       continue;
     }
-    const bueno = ev.tipo === 'adelanto';
+    const bueno = ev.tipo === 'adelanto' || ev.tipo === 'salida';
     // Destello breve de toda la pista al principio del aviso.
     if (!sinMovimiento && ev.edad < 0.25) {
       ctx.fillStyle = bueno ? `rgba(74,222,128,${0.28 * (1 - ev.edad / 0.25)})` : `rgba(239,68,68,${0.28 * (1 - ev.edad / 0.25)})`;

@@ -63,3 +63,9 @@ assert.equal(Ent.bloquesEnWatts([mixto[1]])[0].min, Ent.wattsDeSplit(130));
 assert.equal(Ent.duracionEstimada(mixto[1]), 130);
 assert.equal(Ent.duracionEstimada(mixto[2]), 50);
 console.log('entrenamientos mixtos OK');
+
+// Estimado del final al ritmo medio.
+assert.equal(Ent.estimarFin({ t: 20, dist: 80, kcal: 5 }, 600), null);
+assert.equal(Ent.estimarFin({ t: 120, dist: 0, kcal: 5 }, 600), null);
+assert.deepEqual(Ent.estimarFin({ t: 300, dist: 1200, kcal: 60 }, 1200), { tiempo: 1200, dist: 4800, kcal: 240, split: 125 });
+assert.deepEqual(Ent.estimarFin({ t: 120, dist: 500, kcal: 25, distFinal: 2000 }, 480), { tiempo: 480, dist: 2000, kcal: 100, split: 120 });
