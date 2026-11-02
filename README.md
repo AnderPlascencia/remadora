@@ -63,6 +63,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Guía rápida con 8 temas (primeros pasos, entrenar, modo remo, carrera, planes, héroe, progreso y ajustes) y un consejo la primera vez que abres cada pestaña.
 - Puestos de la tripulación explicados: escalera de Grumete a Capitán con los watts de FTP que necesitas para cada uno, tu avance al siguiente y cómo reman los rivales de cada puesto (Ajustes › Tu perfil y Héroe).
 - Vista previa del plan (Planes › Programa): lo que toca hoy con su forma de bloques, una gráfica del esfuerzo de cada semana (descargas y pruebas marcadas) y «Lo que sigue», semana a semana, con qué sesión sube respecto a la anterior. Lo futuro se marca como estimado porque el plan se ajusta solo.
+- Distancia según tus watts, con la misma fórmula que los fantasmas (W = 2,8 · v³): la consola sumaba ~20 % más metros de los que dan sus propios watts. La de la consola se guarda aparte; las sesiones antiguas se pasan una vez, con marcas y carreras recalculadas.
 - Tu perfil (edad, sexo, peso, altura, experiencia, días y tiempo por sesión): calorías con tu metabolismo basal, pulso máximo, FTP para empezar sin historial, puesto en la tripulación, volumen del primer plan y planes que no pasan del tiempo que tienes.
 
 ## Archivos
