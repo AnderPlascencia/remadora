@@ -21,3 +21,20 @@ assert.equal(tiempoParado([{ ini: 1000, fin: 31000 }, { ini: 50000, fin: 62500 }
 assert.equal(tiempoParado([{ ini: 5000, fin: null }]), 0);
 
 console.log('pausas-y-meta: ok');
+
+// «Sin pausas» (talentos): una pausa guardada de 5 s o más la descarta aunque las muestras no tengan segundos quietos
+import { sinPausas } from '../juego.js';
+import { formatoMeta } from '../ui.js';
+{
+  const muestras = Array.from({ length: 700 }, (_, i) => ({ t: i + 1, w: 150, spm: 24 }));
+  assert.equal(sinPausas({ muestras }), true);
+  assert.equal(sinPausas({ muestras, pausas: [] }), true);
+  assert.equal(sinPausas({ muestras, pausas: [{ ini: 0, fin: 3000 }] }), true);
+  assert.equal(sinPausas({ muestras, pausas: [{ ini: 0, fin: 30000 }] }), false);
+}
+// Tiempo de meta con décimas
+assert.equal(formatoMeta(92.8), '1:32.8');
+assert.equal(formatoMeta(93), '1:33');
+assert.equal(formatoMeta(59.96), '1:00');
+assert.equal(formatoMeta(445.37), '7:25.4');
+assert.equal(formatoMeta(null), '-');

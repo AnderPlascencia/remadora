@@ -21,7 +21,7 @@ import * as Pf from './perfil.js';
 import * as G from './guia.js';
 import * as R from './respaldo.js';
 import {
-  $, COLOR_ZONA, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, ftp, ico, marcaFecha, miles, perfil, pitido, sinMovimiento, toast, vibrar,
+  $, COLOR_ZONA, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
 const VERSION = '0.42.2';
@@ -1031,8 +1031,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     kcal: Math.round(s.kcal),
     paladas: Math.round(s.paladas),
     // Hora real de fin y pausas (una sesión recuperada cierra la última pausa a la hora en que se copió).
-    fin: s.fin || s.guardada || null,
-    pausas: (s.pausas || []).map((p) => ({ t: p.t, ini: p.ini, fin: p.fin ?? s.fin ?? s.guardada ?? p.ini, motivo: p.motivo })),
+    horaFin: s.fin || s.guardada || null,
+    pausas: (s.pausas || []).map((p) => ({ t: p.t, ini: p.ini, fin: Math.max(p.ini, p.fin ?? s.fin ?? s.guardada ?? p.ini), motivo: p.motivo })),
     version: VERSION,
     wattsProm: prom('w'),
     wattsMax: m.reduce((a, x) => Math.max(a, x.w), 0),
@@ -1449,7 +1449,7 @@ function avanceObjetivo(t) {
 
 // Al completar el entrenamiento se pregunta si seguir remando o terminar y guardar.
 function mostrarFin() {
-  const partes = [formatoTiempo(sesion.tiempoMeta ?? sesion.t), `${miles(sesion.dist)} m`];
+  const partes = [sesion.tiempoMeta != null ? formatoMeta(sesion.tiempoMeta) : formatoTiempo(sesion.t), `${miles(sesion.dist)} m`];
   if (sesion.rival) partes.push(carreraActual().texto.replace(/^Vas /, ''));
   $('#fin-texto').textContent = partes.join(' · ');
   $('#fin-dialogo').hidden = false;
@@ -3095,7 +3095,7 @@ async function pintarHistorial() {
     li.querySelector('.ico').style.transform = 'rotate(-90deg)';
     li.querySelector('.titulo').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${s.entrenamiento || 'Remo libre'}`;
     if (s.rpe) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip solo-avanzado">Esfuerzo ${s.rpe}</span>`);
-    li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoTiempo(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
+    li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoMeta(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
     li.addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') li.click(); });
     ul.append(li);
@@ -3680,7 +3680,7 @@ async function pintarPodio(s) {
   ].sort((a, b) => b.pos - a.pos || (a.yo ? -1 : 1));
   const xp = s.carreraSinTerminar ? 0 : rivales.filter((r) => r.diferencia > 0 && r.clase).slice(0, 3).reduce((a, r) => a + J.xpPorFantasma(r.dificultad), 0);
   const lugar = filas.findIndex((f) => f.yo) + 1;
-  const dato = (f) => (f.tiempo != null ? formatoTiempo(Math.round(f.tiempo)) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${miles(Math.abs(f.dif))} m`);
+  const dato = (f) => (f.tiempo != null ? formatoMeta(f.tiempo) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${miles(Math.abs(f.dif))} m`);
   const bloque = (f, i) => `<div class="podio-puesto p${i + 1}${f.yo ? ' yo' : ''}">
       ${f.img ? `<img src="${f.img}" width="48" height="48" alt="">` : `<span class="podio-ico">${ico('i-fantasma')}</span>`}
       <b>${escaparHtml(f.nombre)}</b><small>${dato(f)}</small>
@@ -3827,7 +3827,7 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   if (s.fcMax) stats.push(['Pulso máx', s.fcMax]);
   if (tec.wattsPorLatido && avanzado()) stats.push(['Watts/latido', tec.wattsPorLatido]);
   if (estres != null && avanzado()) stats.push(['Carga', estres]);
-  if (s.tiempoMeta != null) stats.push(['Meta en', formatoTiempo(s.tiempoMeta)]);
+  if (s.tiempoMeta != null) stats.push(['Meta en', formatoMeta(s.tiempoMeta)]);
   const parado = E.tiempoParado(s.pausas);
   if (parado >= 5) stats.push([s.pausas.length > 1 ? `Parado (${s.pausas.length} pausas)` : 'Parado', formatoTiempo(parado)]);
   if (s.pctEnRango != null) stats.push(['En rango', `${s.pctEnRango}%`]);
@@ -3848,11 +3848,12 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   $('#hoja-prediccion').innerHTML = tablaPrediccion(s);
 
   const cmp = E.compararConAnterior(s, previas);
-  const fmt = (c, v) => (c.clave === 'splitProm' || c.clave === 'tiempoMeta' ? formatoTiempo(v) : `${v}${c.unidad && c.unidad !== 's' ? ` ${c.unidad}` : ''}`);
+  const fmt = (c, v) => (c.clave === 'tiempoMeta' ? formatoMeta(v) : c.clave === 'splitProm' ? formatoTiempo(v) : `${v}${c.unidad && c.unidad !== 's' ? ` ${c.unidad}` : ''}`);
   const fmtDelta = (c) => {
     if (!c.delta) return '=';
     const signo = c.delta > 0 ? '+' : '−';
-    const abs = Math.abs(c.delta);
+    // La meta se guarda con décimas: 2.4000000001 s se ve como 2.4 s.
+    const abs = Math.round(Math.abs(c.delta) * 10) / 10;
     return `${signo}${c.clave === 'splitProm' || c.clave === 'tiempoMeta' ? `${abs} s` : `${abs}${c.unidad && c.unidad !== 's' ? ` ${c.unidad}` : ''}`}`;
   };
   $('#hoja-comparacion').innerHTML = cmp && cmp.filas.length ? `<h2>Contra la vez anterior (${fechaCorta(cmp.fecha)})</h2>

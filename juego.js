@@ -444,7 +444,10 @@ export function medidas(s, ftpActual) {
 }
 
 // Sesión sin pausas: 10 min o más sin quedarse 5 s quieto ni saltos de tiempo entre la primera y la última palada.
+// Desde v0.42.1 las pausas se guardan aparte (y al pulsar Seguir ya no quedan segundos quietos en las muestras):
+// una pausa de 5 s o más también la descarta.
 export function sinPausas(s) {
+  if (s.pausas?.some((p) => p.fin - p.ini >= 5000)) return false;
   const ms = s.muestras || [];
   const activa = (x) => x.w > 0 || x.spm > 0;
   const i0 = ms.findIndex(activa);

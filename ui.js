@@ -1,4 +1,5 @@
 // Utilidades de pantalla compartidas por toda la app: selector, iconos, ajustes guardados, avisos y sonidos.
+import { formatoTiempo } from './protocolo.js';
 
 export const $ = (sel) => document.querySelector(sel);
 export const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -92,4 +93,13 @@ export function pitido(frecuencia, segundos) {
 
 export function vibrar(patron) {
   try { navigator.vibrate?.(patron); } catch { /* sin vibración */ }
+}
+
+// Tiempo de meta: desde v0.42.1 se guarda con décimas (1:32.8), como en las remadoras de competición.
+// Los tiempos enteros (sesiones anteriores, fantasmas) se ven igual que siempre.
+export function formatoMeta(seg) {
+  if (seg == null || !Number.isFinite(seg)) return '-';
+  const d = Math.round(seg * 10) / 10;
+  if (Number.isInteger(d)) return formatoTiempo(d);
+  return `${formatoTiempo(Math.floor(d))}.${Math.round((d % 1) * 10)}`;
 }
