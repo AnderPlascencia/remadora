@@ -19,59 +19,13 @@ import * as Cap from './capacidades.js';
 import * as A from './adaptacion.js';
 import * as Pf from './perfil.js';
 import * as G from './guia.js';
+import * as R from './respaldo.js';
+import {
+  $, COLOR_ZONA, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, sinMovimiento, toast, vibrar,
+} from './ui.js';
 
-const VERSION = '0.42.1';
-const $ = (sel) => document.querySelector(sel);
-const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
-const COLOR_ZONA = ['#94A3B8', '#38BDF8', '#22C55E', '#FACC15', '#F97316', '#EF4444'];
-
-const ajustes = {
-  leer(clave, defecto) {
-    try { return localStorage.getItem(clave) ?? defecto; } catch { return defecto; }
-  },
-  escribir(clave, valor) {
-    try { localStorage.setItem(clave, valor); } catch { /* sin almacenamiento */ }
-  },
-  num(clave, defecto) { return Number(this.leer(clave, defecto)) || defecto; },
-  si(clave, defecto) { return this.leer(clave, defecto ? '1' : '0') === '1'; },
-};
-const ftp = () => ajustes.num('ftp', 0);
-const fcMaxima = () => ajustes.num('fcMax', 0);
+const VERSION = '0.42.2';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
-// Tu perfil (Ajustes › Tu perfil y la bienvenida). minutos: null si no lo has elegido, 0 = sin límite.
-function perfil() {
-  const min = ajustes.leer('minutosSesion', '');
-  return {
-    edad: ajustes.num('edad', 0), sexo: ajustes.leer('sexo', ''), peso: Number(ajustes.leer('peso', '')) || 0,
-    altura: ajustes.num('altura', 0), experiencia: ajustes.leer('experiencia', ''),
-    dias: Math.min(5, Math.max(1, ajustes.num('diasSemana', 3))), minutos: min === '' ? null : Number(min) || 0,
-  };
-}
-
-// Los nombres los escribe el usuario: siempre escapados al meterlos en HTML.
-function escaparHtml(t) { return String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-
-// Animaciones cortas; con «reducir animaciones» del teléfono todo queda en su estado final.
-const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-function contarHasta(el, total, formato = (v) => v, ms = 1100) {
-  if (sinMovimiento()) { el.textContent = formato(total); return; }
-  const t0 = performance.now();
-  const paso = (t) => {
-    const k = Math.min(1, (t - t0) / ms);
-    el.textContent = formato(Math.round(total * (1 - (1 - k) ** 3)));
-    if (k < 1) requestAnimationFrame(paso);
-  };
-  requestAnimationFrame(paso);
-}
-// Cambia el texto con un desvanecido breve, solo si cambió (para el split, que se lee en movimiento).
-function cambiarTexto(el, texto) {
-  if (el.textContent === texto) return;
-  el.textContent = texto;
-  el.classList.remove('cambia');
-  void el.offsetWidth;
-  el.classList.add('cambia');
-}
 
 // ---------- Navegación ----------
 const vistaActiva = (v) => $(`#vista-${v}`).classList.contains('activa');
@@ -93,14 +47,6 @@ function irA(vista) {
 }
 document.querySelectorAll('.nav-inferior button').forEach((b) => b.addEventListener('click', () => irA(b.dataset.vista)));
 
-let toastTimer = null;
-function toast(texto, ms = 3000) {
-  const t = $('#toast');
-  t.textContent = texto;
-  t.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
-}
 // Ayudas de un toque («?»): explican un término sin llenar la pantalla de párrafos.
 const AYUDAS = {
   xp: 'Cada sesión da XP por metros (1 XP cada 10 m), entrenamientos completos, récords, fantasmas vencidos, misiones y logros. Desde el 29 de octubre todo da la mitad de XP. Cada 3 niveles ganas un punto de talento.',
@@ -1085,8 +1031,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     kcal: Math.round(s.kcal),
     paladas: Math.round(s.paladas),
     // Hora real de fin y pausas (una sesión recuperada cierra la última pausa a la hora en que se copió).
-    fin: s.fin || s.guardada || null,
-    pausas: (s.pausas || []).map((p) => ({ t: p.t, ini: p.ini, fin: p.fin ?? s.fin ?? s.guardada ?? p.ini, motivo: p.motivo })),
+    horaFin: s.fin || s.guardada || null,
+    pausas: (s.pausas || []).map((p) => ({ t: p.t, ini: p.ini, fin: Math.max(p.ini, p.fin ?? s.fin ?? s.guardada ?? p.ini), motivo: p.motivo })),
     version: VERSION,
     wattsProm: prom('w'),
     wattsMax: m.reduce((a, x) => Math.max(a, x.w), 0),
@@ -1503,7 +1449,7 @@ function avanceObjetivo(t) {
 
 // Al completar el entrenamiento se pregunta si seguir remando o terminar y guardar.
 function mostrarFin() {
-  const partes = [formatoTiempo(sesion.tiempoMeta ?? sesion.t), `${miles(sesion.dist)} m`];
+  const partes = [sesion.tiempoMeta != null ? formatoMeta(sesion.tiempoMeta) : formatoTiempo(sesion.t), `${miles(sesion.dist)} m`];
   if (sesion.rival) partes.push(carreraActual().texto.replace(/^Vas /, ''));
   $('#fin-texto').textContent = partes.join(' · ');
   $('#fin-dialogo').hidden = false;
@@ -2832,7 +2778,6 @@ function formatoRecord(r, v) {
   if (r.tipo === 'tiempo') return formatoTiempo(v);
   return r.unidad === 'm' ? `${(v / 1000).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` : `${miles(v)} ${r.unidad}`;
 }
-const fechaCorta = (ms) => new Date(ms).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 
 function pintarPeriodos() {
   const n = periodo === 'semana' ? 8 : 6;
@@ -3150,7 +3095,7 @@ async function pintarHistorial() {
     li.querySelector('.ico').style.transform = 'rotate(-90deg)';
     li.querySelector('.titulo').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${s.entrenamiento || 'Remo libre'}`;
     if (s.rpe) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip solo-avanzado">Esfuerzo ${s.rpe}</span>`);
-    li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoTiempo(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
+    li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoMeta(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
     li.addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') li.click(); });
     ul.append(li);
@@ -3236,7 +3181,6 @@ async function prepararEntrenamiento(baseId, dificultad = null) {
   toast(`Listo: ${ent ? ent.nombre : 'Remo libre'}${rivales}. Pulsa Empezar cuando quieras.`);
 }
 const nombreAtributo = (k) => J.ATRIBUTOS.find((a) => a.clave === k)?.nombre || k;
-const miles = (n) => Math.round(n).toLocaleString('es-MX');
 // Opciones de los consejos de atributos con tu FTP, tu clase, tu contexto de hoy y tu atributo más bajo.
 function opcConsejos(h, sesiones = []) {
   return { ftp: ftp() || estimarFtp(sesiones) || 150, clase: leerPersonaje().clase || null, ctx: h.contexto || {}, debil: J.atributoDeLaSemana(h.atributos, { sinPulso: h.contexto?.sinPulso ?? true }) };
@@ -3736,7 +3680,7 @@ async function pintarPodio(s) {
   ].sort((a, b) => b.pos - a.pos || (a.yo ? -1 : 1));
   const xp = s.carreraSinTerminar ? 0 : rivales.filter((r) => r.diferencia > 0 && r.clase).slice(0, 3).reduce((a, r) => a + J.xpPorFantasma(r.dificultad), 0);
   const lugar = filas.findIndex((f) => f.yo) + 1;
-  const dato = (f) => (f.tiempo != null ? formatoTiempo(Math.round(f.tiempo)) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${miles(Math.abs(f.dif))} m`);
+  const dato = (f) => (f.tiempo != null ? formatoMeta(f.tiempo) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${miles(Math.abs(f.dif))} m`);
   const bloque = (f, i) => `<div class="podio-puesto p${i + 1}${f.yo ? ' yo' : ''}">
       ${f.img ? `<img src="${f.img}" width="48" height="48" alt="">` : `<span class="podio-ico">${ico('i-fantasma')}</span>`}
       <b>${escaparHtml(f.nombre)}</b><small>${dato(f)}</small>
@@ -3883,7 +3827,7 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   if (s.fcMax) stats.push(['Pulso máx', s.fcMax]);
   if (tec.wattsPorLatido && avanzado()) stats.push(['Watts/latido', tec.wattsPorLatido]);
   if (estres != null && avanzado()) stats.push(['Carga', estres]);
-  if (s.tiempoMeta != null) stats.push(['Meta en', formatoTiempo(s.tiempoMeta)]);
+  if (s.tiempoMeta != null) stats.push(['Meta en', formatoMeta(s.tiempoMeta)]);
   const parado = E.tiempoParado(s.pausas);
   if (parado >= 5) stats.push([s.pausas.length > 1 ? `Parado (${s.pausas.length} pausas)` : 'Parado', formatoTiempo(parado)]);
   if (s.pctEnRango != null) stats.push(['En rango', `${s.pctEnRango}%`]);
@@ -3904,11 +3848,12 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   $('#hoja-prediccion').innerHTML = tablaPrediccion(s);
 
   const cmp = E.compararConAnterior(s, previas);
-  const fmt = (c, v) => (c.clave === 'splitProm' || c.clave === 'tiempoMeta' ? formatoTiempo(v) : `${v}${c.unidad && c.unidad !== 's' ? ` ${c.unidad}` : ''}`);
+  const fmt = (c, v) => (c.clave === 'tiempoMeta' ? formatoMeta(v) : c.clave === 'splitProm' ? formatoTiempo(v) : `${v}${c.unidad && c.unidad !== 's' ? ` ${c.unidad}` : ''}`);
   const fmtDelta = (c) => {
     if (!c.delta) return '=';
     const signo = c.delta > 0 ? '+' : '−';
-    const abs = Math.abs(c.delta);
+    // La meta se guarda con décimas: 2.4000000001 s se ve como 2.4 s.
+    const abs = Math.round(Math.abs(c.delta) * 10) / 10;
     return `${signo}${c.clave === 'splitProm' || c.clave === 'tiempoMeta' ? `${abs} s` : `${abs}${c.unidad && c.unidad !== 's' ? ` ${c.unidad}` : ''}`}`;
   };
   $('#hoja-comparacion').innerHTML = cmp && cmp.filas.length ? `<h2>Contra la vez anterior (${fechaCorta(cmp.fecha)})</h2>
@@ -4462,18 +4407,14 @@ $('#btn-hoy-detalle').addEventListener('click', () => {
 });
 
 // ---------- Respaldo ----------
-const CLAVES_AJUSTES = ['peso', 'ftp', 'ftpEstimado', 'ftpDePerfil', 'edad', 'sexo', 'altura', 'experiencia', 'diasSemana', 'minutosSesion', 'fcMax', 'fcMaxDeEdad', 'libreFantasmas', 'inicioHecho', 'metaSemana', 'voz', 'modoAuto', 'pausaAuto', 'resAuto', 'atrVivo', 'vistaRemo', 'variante', 'tema', 'guiado', 'ritmoObjetivo', 'personaje', 'avanzado'];
-
 async function guardarRespaldo() {
-  const datos = {
-    app: 'remadora',
+  const datos = R.armarRespaldo({
     version: VERSION,
-    fecha: new Date().toISOString(),
     sesiones: await db.listar('sesiones'),
     entrenamientos: await db.listar('entrenamientos'),
     programa: leerPrograma(),
-    ajustes: Object.fromEntries(CLAVES_AJUSTES.map((k) => [k, ajustes.leer(k, null)]).filter(([, v]) => v != null)),
-  };
+    leer: (k) => ajustes.leer(k, null),
+  });
   const nombre = `rower-respaldo-${E.claveDia(Date.now())}.json`;
   const texto = JSON.stringify(datos);
   const archivo = new File([texto], nombre, { type: 'application/json' });
@@ -4496,32 +4437,19 @@ async function guardarRespaldo() {
 async function restaurarRespaldo(archivo) {
   let datos;
   try { datos = JSON.parse(await archivo.text()); } catch { toast('Ese archivo no es un respaldo válido'); return; }
-  if (datos?.app !== 'remadora' || !Array.isArray(datos.sesiones)) { toast('Ese archivo no es un respaldo de Rower'); return; }
-  const fechas = new Set((await db.listar('sesiones')).map((s) => s.fecha));
-  let nS = 0;
-  for (const s of datos.sesiones) {
-    if (fechas.has(s.fecha)) continue;
-    const copia = { ...s };
-    delete copia.id;
-    await db.guardar('sesiones', copia);
-    nS++;
-  }
-  const nombres = new Set((await db.listar('entrenamientos')).map((e) => e.nombre));
-  let nE = 0;
-  for (const e of datos.entrenamientos || []) {
-    if (nombres.has(e.nombre)) continue;
-    const copia = { ...e };
-    delete copia.id;
-    await db.guardar('entrenamientos', copia);
-    nE++;
-  }
+  if (!R.esRespaldo(datos)) { toast('Ese archivo no es un respaldo de Rower'); return; }
+  const { sesionesNuevas, entNuevos, ajustesResp, distintos } = R.planRestaurar(datos, {
+    sesiones: await db.listar('sesiones'),
+    entrenamientos: await db.listar('entrenamientos'),
+    programa: leerPrograma(),
+    leer: (k) => ajustes.leer(k, null),
+  });
+  for (const s of sesionesNuevas) await db.guardar('sesiones', s);
+  for (const e of entNuevos) await db.guardar('entrenamientos', e);
+  const nS = sesionesNuevas.length;
+  const nE = entNuevos.length;
   // Lo que falta se toma del respaldo; si el héroe, el plan o los ajustes ya existen y son otros, se pregunta.
-  const ajustesResp = Object.entries(datos.ajustes || {}).filter(([k]) => CLAVES_AJUSTES.includes(k));
-  const distintos = [];
-  if (datos.programa && leerPrograma() && JSON.stringify(leerPrograma()) !== JSON.stringify(datos.programa)) distintos.push('el plan');
-  if (ajustesResp.some(([k, v]) => k === 'personaje' && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('el héroe');
-  if (ajustesResp.some(([k, v]) => ['peso', 'ftp', 'edad', 'fcMax', 'metaSemana', 'sexo', 'altura', 'experiencia', 'diasSemana', 'minutosSesion'].includes(k) && ajustes.leer(k, null) != null && ajustes.leer(k, null) !== String(v))) distintos.push('tus ajustes');
-  const reemplazar = distintos.length > 0 && confirm(`El respaldo trae ${distintos.join(', ').replace(/, ([^,]*)$/, ' y $1')} distintos a los de ahora. ¿Usar los del respaldo?`);
+  const reemplazar = distintos.length > 0 && confirm(`El respaldo trae ${R.listaHumana(distintos)} distintos a los de ahora. ¿Usar los del respaldo?`);
   if (datos.programa && (reemplazar || !leerPrograma())) guardarPrograma(datos.programa);
   for (const [k, v] of ajustesResp) {
     if (reemplazar || ajustes.leer(k, null) == null) ajustes.escribir(k, v);
@@ -4750,36 +4678,6 @@ $('#btn-tcx').addEventListener('click', () => {
 });
 
 // ---------- Utilidades ----------
-function descargar(nombre, contenido, tipo) {
-  const url = URL.createObjectURL(new Blob([contenido], { type: tipo }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: nombre });
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function marcaFecha(ms = Date.now()) {
-  return new Date(ms).toISOString().slice(0, 16).replace(/[:T]/g, '-');
-}
-
-let audio = null;
-function pitido(frecuencia, segundos) {
-  try {
-    audio = audio || new AudioContext();
-    const o = audio.createOscillator();
-    const g = audio.createGain();
-    o.frequency.value = frecuencia;
-    g.gain.setValueAtTime(0.2, audio.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + segundos);
-    o.connect(g).connect(audio.destination);
-    o.start();
-    o.stop(audio.currentTime + segundos);
-  } catch { /* sin audio */ }
-}
-
-function vibrar(patron) {
-  try { navigator.vibrate?.(patron); } catch { /* sin vibración */ }
-}
-
 // El bloqueo de pantalla se pierde al cambiar de app; se recupera al volver si hay sesión.
 document.addEventListener('visibilitychange', async () => {
   if (sesion && document.visibilityState === 'visible') {
