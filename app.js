@@ -1923,26 +1923,24 @@ function estimadoFin(t) {
 function pintarEstimadoFin(t) {
   const mr = $('#modo-remo');
   const e = mr.hidden ? null : estimadoFin(t);
-  const variante = mr.dataset.estimado || 'linea';
   const partes = [];
   if (e) {
+    // El tiempo total solo se estima si el plan no es de tiempo fijo (objetivos, intervalos por metros o paladas).
     if (!e.tiempoFijo) partes.push(['tiempo', formatoTiempo(e.tiempo)]);
     if (e.objetivo !== 'distancia') partes.push(['dist', `${miles(e.dist)} m`]);
     if (e.objetivo !== 'kcal') partes.push(['kcal', `${e.kcal} kcal`]);
-    partes.push(['split', `${formatoSplit(e.split)} /500`]);
+    partes.push(['split', `${formatoSplit(e.split)}/500`]);
   }
+  // Línea en la cabecera con todo junto…
   const fin = $('#mr-fin');
-  if (variante === 'rotar' && partes.length) {
-    const [, txt] = partes[Math.floor(t / 4) % partes.length];
-    fin.textContent = `Al final ≈ ${txt}`;
-  } else fin.textContent = partes.length ? `Al final ≈ ${partes.map((x) => x[1]).join(' · ')}` : '';
-  fin.hidden = !partes.length || variante === 'casillas';
-  // Variante casillas: «→ …» bajo la casilla que corresponde (tiempo, distancia, calorías).
+  fin.textContent = partes.length ? `Al final ≈ ${partes.map(([k, v]) => (k === 'tiempo' ? `${v} total` : v)).join(' · ')}` : '';
+  fin.hidden = !partes.length;
+  // …y «fin ≈ …» bajo la casilla que corresponde (tiempo, distancia, calorías).
   const claves = Cap.CASILLAS_REMO[sesion?.tipoPlan || 'libre'];
   const porClave = Object.fromEntries(partes);
   claves.forEach((clave, i) => {
     const k = clave === 'extra' && !(entrenamientoActivo?.objetivo && entrenamientoActivo.objetivo.metrica !== 'paladas') ? 'kcal' : clave;
-    const v = variante === 'casillas' ? porClave[k] : null;
+    const v = porClave[k];
     $(`#mr-c${i + 1}-fin`).textContent = v ? `fin ≈ ${v.replace(/ (m|kcal)$/, '')}` : '';
   });
 }

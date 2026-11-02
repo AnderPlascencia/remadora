@@ -1715,7 +1715,7 @@ details.mas-detalle[hidden] { display: none; }
 }
 
 /* Estimado del final del entrenamiento en modo remo: pequeño y tenue, que no compita con los datos en vivo. */
-.mr-fin { font-size: 13px; font-weight: 700; color: var(--texto-tenue); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mr-fin { font-size: 13px; font-weight: 700; color: var(--texto-tenue); font-variant-numeric: tabular-nums; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .mr-fin[hidden] { display: none; }
 .mr-fin-c { display: block; font-size: 12px; font-weight: 700; color: var(--texto-tenue); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mr-fin-c:empty { display: none; }
@@ -1754,3 +1754,8 @@ details.mas-detalle[hidden] { display: none; }
   .mr-medidor { height: 34px; margin-bottom: 20px; }
 }
 .modo-remo.vista-carrera .mr-fin { display: none; }
+@media (orientation: landscape) and (max-height: 560px) {
+  /* En horizontal el «fin ≈» de las casillas no debe empujar los botones fuera de la pantalla. */
+  .mr-fin-c { font-size: 11px; line-height: 1.1; }
+  .modo-remo:not(.vista-grafica) .mr-perfil { height: 48px; }
+}
