@@ -106,3 +106,10 @@ El formato de los mensajes se tomó como referencia del proyecto
 [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift). El código de esta app es propio.
 - Sesión del día: con plan, la de hoy (o en un día libre, una de la semana que quedó sin hacer, sin juntar dos duras); sin plan, una sugerida con un esquema 80/20 según tu semana y tu cansancio. Siempre dice por qué toca.
 - Planes ordenados: nunca dos sesiones duras en días seguidos, la prueba sustituye a una dura, y en Programa ves la semana actual con su estado. Las variantes de cada semana ya no llenan tu lista y los restos de planes anteriores se borran solos.
+- Cada sesión guarda sus pausas (hora de inicio y fin), la hora real de fin y la versión de la app; el detalle muestra el tiempo parado. Al pulsar Seguir no se graban segundos hasta que vuelves a remar.
+- La meta se marca en el instante exacto en que la cruzas, no en el segundo siguiente.
+- La app pide a Chrome que no borre tus sesiones aunque falte espacio; Ajustes › Respaldo dice si lo consiguió.
+
+## Pruebas
+
+`npm test` corre todas las pruebas de `pruebas/` (también lo hace GitHub en cada PR). Una de ellas comprueba que la versión de `app.js` y la de la caché en `sw.js` coincidan.

@@ -20,7 +20,7 @@ import * as A from './adaptacion.js';
 import * as Pf from './perfil.js';
 import * as G from './guia.js';
 
-const VERSION = '0.42.0';
+const VERSION = '0.42.1';
 const $ = (sel) => document.querySelector(sel);
 const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -864,7 +864,12 @@ for (const b of ['#btn-pausa', '#mr-pausa']) {
   $(b).addEventListener('click', () => {
     if (!sesion) return;
     sesion.pausaManual = !sesion.pausaManual;
-    if (!sesion.pausaManual) sesion.sinRemar = 0;
+    // Al pulsar Seguir la pausa pasa a automática hasta tu primera palada: así no se graban segundos en 0 W.
+    if (!sesion.pausaManual) {
+      const auto = ajustes.si('pausaAuto', true);
+      sesion.sinRemar = auto ? 3 : 0;
+      sesion.trasSeguir = auto;
+    }
     hablar(sesion.pausaManual ? 'Pausa' : 'Seguimos', { urgente: true });
     actualizarBotones();
   });
@@ -952,6 +957,11 @@ async function iniciarSesion() {
     sinRemar: 0,
     empezo: false,
     pausaManual: false,
+    // Cada pausa con su hora real de inicio y fin (ms) y el segundo de la sesión en que empezó.
+    pausas: [],
+    trasSeguir: false,
+    ultimaSpm: 0,
+    segConsola: 1,
     perdida: false,
     ritmo: ritmoObjetivo(),
     n500: 0,
@@ -987,6 +997,11 @@ async function iniciarSesion() {
 async function detenerSesion() {
   const s = sesion;
   const ent = entrenamientoActivo;
+  if (s) {
+    s.fin = Date.now();
+    const abierta = s.pausas?.at(-1);
+    if (abierta && abierta.fin == null) abierta.fin = s.fin;
+  }
   sesion = null;
   entrenamientoActivo = null;
   actualizarBotones();
@@ -1017,7 +1032,7 @@ function guardarSesionEnCurso() {
   const copia = {
     inicio: s.inicio, t: s.t, dist: s.dist, distConsola: s.distConsola, distFuente: s.distFuente, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
     segConMeta: s.segConMeta, segEnRango: s.segEnRango, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
-    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, guardada: Date.now(),
+    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, guardada: Date.now(),
     ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
   };
   try { localStorage.setItem(CLAVE_EN_CURSO, JSON.stringify(copia)); } catch { /* sin espacio: se reintenta en 10 s */ }
@@ -1069,6 +1084,10 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     ...(s.distFuente === 'watts' ? { distFuente: 'watts', distanciaConsola: Math.round(s.distConsola || 0) } : {}),
     kcal: Math.round(s.kcal),
     paladas: Math.round(s.paladas),
+    // Hora real de fin y pausas (una sesión recuperada cierra la última pausa a la hora en que se copió).
+    fin: s.fin || s.guardada || null,
+    pausas: (s.pausas || []).map((p) => ({ t: p.t, ini: p.ini, fin: p.fin ?? s.fin ?? s.guardada ?? p.ini, motivo: p.motivo })),
+    version: VERSION,
     wattsProm: prom('w'),
     wattsMax: m.reduce((a, x) => Math.max(a, x.w), 0),
     spmProm: prom('spm'),
@@ -1197,6 +1216,15 @@ function enPausa() {
   return false;
 }
 
+// Una pausa abierta sigue siendo la misma aunque cambie de motivo (manual → automática tras Seguir).
+// La espera antes de la primera palada no cuenta como pausa.
+function registrarPausa(pausa) {
+  const ps = sesion.pausas;
+  const abierta = ps.at(-1)?.fin == null ? ps.at(-1) : null;
+  if (pausa && !abierta && sesion.t > 0) ps.push({ t: sesion.t, ini: Date.now(), fin: null, motivo: pausa });
+  else if (!pausa && abierta) abierta.fin = Date.now();
+}
+
 function avanzarSesion() {
   const remando = actual.spm > 0 || actual.watts > 0;
   sesion.sinRemar = remando ? 0 : sesion.sinRemar + 1;
@@ -1205,16 +1233,21 @@ function avanzarSesion() {
   // Distancia de la consola, acumulada aunque reinicie su contador (por ejemplo tras reconectar). Solo informativa.
   if (actual.distancia != null) {
     if (sesion.distPrevia == null) sesion.distPrevia = actual.distancia;
-    const m = E.metrosNuevos(sesion.distPrevia, actual.distancia);
+    const m = E.metrosNuevos(sesion.distPrevia, actual.distancia, sesion.segConsola);
     if (m === 0 && actual.distancia !== sesion.distPrevia) agregarLog(`distancia ignorada: ${sesion.distPrevia} → ${actual.distancia} m`);
     sesion.distConsola = (sesion.distConsola || 0) + m;
+    sesion.segConsola = actual.distancia === sesion.distPrevia ? (sesion.segConsola || 1) + 1 : 1;
     sesion.distPrevia = actual.distancia;
   }
 
   const pausa = enPausa();
   if (pausa !== sesion.pausaPrevia) {
-    if (pausa === 'auto' && sesion.empezo) hablar('Pausa', { clave: 'pausa', cadaSeg: 10 });
-    if (!pausa && sesion.pausaPrevia === 'auto' && sesion.t > 0) hablar('Seguimos', { clave: 'seguimos', cadaSeg: 10 });
+    // Tras pulsar Seguir ya se dijo «Seguimos»: no se repite al pasar a la pausa automática ni al volver a remar.
+    const callar = sesion.trasSeguir;
+    if (pausa === 'auto' && sesion.empezo && !callar) hablar('Pausa', { clave: 'pausa', cadaSeg: 10 });
+    if (!pausa && sesion.pausaPrevia === 'auto' && sesion.t > 0 && !callar) hablar('Seguimos', { clave: 'seguimos', cadaSeg: 10 });
+    if (!pausa) sesion.trasSeguir = false;
+    registrarPausa(pausa);
     sesion.pausaPrevia = pausa;
   }
   if (pausa) return;
@@ -1225,9 +1258,12 @@ function avanzarSesion() {
   // Basal por segundo de tu perfil (Mifflin-St Jeor con edad, sexo y altura; si no, 1 kcal por kg y hora).
   sesion.basal ??= Pf.basalPorHora(perfil()) / 3600;
   sesion.kcal += kcalPorSegundo(actual.watts) + sesion.basal;
-  sesion.paladas += actual.spm / 60;
+  // Al reanudar llegan watts antes que el primer dato de palada: se usa la última cadencia en vez de 0.
+  if (actual.spm > 0) sesion.ultimaSpm = actual.spm;
+  const spm = actual.spm > 0 ? actual.spm : actual.watts > 0 ? sesion.ultimaSpm || 0 : 0;
+  sesion.paladas += spm / 60;
   sesion.muestras.push({
-    t, w: actual.watts, spm: actual.spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
+    t, w: actual.watts, spm, split: actual.split, dist: Math.round(sesion.dist), nivel: actual.nivel ?? 0, fc: actual.fc,
   });
   sesion.wMax = Math.max(sesion.wMax || 0, actual.watts);
   sincronizarSalida(t);
@@ -1453,7 +1489,8 @@ function textoParcial() {
 function avanceObjetivo(t) {
   const p = progresoActual(t);
   if (p.completo && sesion.tiempoMeta == null) {
-    sesion.tiempoMeta = t;
+    const previo = sesion.avance.at(-2)?.[1] ?? 0;
+    sesion.tiempoMeta = E.instanteMeta(t, previo, sesion.avance.at(-1)?.[1] ?? p.hecho, p.meta);
     pitido(1046, 0.4);
     vibrar([200, 100, 200, 100, 400]);
     hablar(`¡Meta cumplida! en ${tiempoHablado(t)}. ¿Sigues o terminas?`, { urgente: true });
@@ -3847,6 +3884,8 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
   if (tec.wattsPorLatido && avanzado()) stats.push(['Watts/latido', tec.wattsPorLatido]);
   if (estres != null && avanzado()) stats.push(['Carga', estres]);
   if (s.tiempoMeta != null) stats.push(['Meta en', formatoTiempo(s.tiempoMeta)]);
+  const parado = E.tiempoParado(s.pausas);
+  if (parado >= 5) stats.push([s.pausas.length > 1 ? `Parado (${s.pausas.length} pausas)` : 'Parado', formatoTiempo(parado)]);
   if (s.pctEnRango != null) stats.push(['En rango', `${s.pctEnRango}%`]);
   for (const r of s.rivales || (s.rival ? [s.rival] : [])) {
     stats.push([s.rivales ? `Vs. ${r.nombre.replace(/^Fantasma /, '')}` : 'Vs. fantasma', `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m${s.ventaja ? ' ⚑' : ''}`]);
@@ -4496,11 +4535,23 @@ async function restaurarRespaldo(archivo) {
   pintarHoy();
 }
 
+// Pide a Chrome que no borre el historial aunque al teléfono le falte espacio (una app instalada suele obtenerlo).
+let datosProtegidos = null;
+async function protegerDatos() {
+  try {
+    if (!navigator.storage?.persist) return;
+    datosProtegidos = (await navigator.storage.persisted?.()) || (await navigator.storage.persist());
+    agregarLog(`almacenamiento persistente: ${datosProtegidos ? 'sí' : 'no'}`);
+  } catch { datosProtegidos = null; }
+  pintarInfoRespaldo();
+}
 function pintarInfoRespaldo() {
   const ultimo = Number(ajustes.leer('ultimoRespaldo', 0));
-  $('#respaldo-info').textContent = ultimo
-    ? `Último respaldo: ${new Date(ultimo).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}`
-    : 'Todavía no has guardado un respaldo.';
+  const proteccion = datosProtegidos === true ? ' Tus sesiones están protegidas en este teléfono.'
+    : datosProtegidos === false ? ' Chrome podría borrar tus sesiones si falta espacio: guarda respaldos seguido.' : '';
+  $('#respaldo-info').textContent = (ultimo
+    ? `Último respaldo: ${new Date(ultimo).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+    : 'Todavía no has guardado un respaldo.') + proteccion;
   $('#respaldo-resumen').textContent = ultimo ? new Date(ultimo).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'Sin respaldo';
 }
 $('#btn-respaldo').addEventListener('click', guardarRespaldo);
@@ -4511,6 +4562,7 @@ $('#in-restaurar').addEventListener('change', async (e) => {
   if (archivo) { await restaurarRespaldo(archivo); await repararSesiones(); }
 });
 pintarInfoRespaldo();
+protegerDatos();
 repararSesiones();
 
 // Sesiones guardadas con saltos falsos de distancia de la consola: se recortan a los metros reales una sola vez.
