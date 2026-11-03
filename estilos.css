@@ -1861,3 +1861,6 @@ details.mas-detalle[hidden] { display: none; }
   .barra { position: static; }
   .heroe-tabs { top: 0; }
 }
+
+/* Recuperar una sesión: «Guardar sesión» arriba a todo lo ancho; «Descartar» y «Seguir remando» debajo. */
+#recuperar-dialogo #recuperar-guardar { grid-column: 1 / -1; order: -1; }

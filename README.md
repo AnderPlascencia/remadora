@@ -112,6 +112,7 @@ El formato de los mensajes se tomó como referencia del proyecto
 - La app pide a Chrome que no borre tus sesiones aunque falte espacio; Ajustes › Respaldo dice si lo consiguió.
 - Colores con un solo significado: dorado para actuar, verde agua para XP y nivel, amarillo para monedas, azul para consejos y novedades. Los consejos de cada pestaña no salen a media sesión ni en horizontal, y el primer día tras la bienvenida propone remar en vez de «Hoy descansas».
 - Sesiones que no se pierden: la copia de la sesión en curso vive en IndexedDB y solo se borra cuando la sesión quedó guardada; si guardar falla, la app avisa y ofrece intentarlo otra vez. El tiempo y los metros salen del reloj, así que no se pierden aunque Chrome frene la app en segundo plano. Los errores quedan en el registro de Ajustes y las reparaciones del historial corren una sola vez.
+- Al recuperar una sesión que quedó a medias, además de guardarla o descartarla puedes seguir remando: lo nuevo se suma a la misma sesión y el rato con la app cerrada cuenta como pausa.
 
 ## Pruebas
 
