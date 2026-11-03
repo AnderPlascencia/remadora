@@ -25,7 +25,7 @@ import {
   $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, reajustarTextos, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
-const VERSION = '0.44.0';
+const VERSION = '0.44.1';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 
 // ---------- Navegación ----------
@@ -3350,8 +3350,8 @@ let seccionHeroe = 'ficha';
 async function pintarLineaNivel() {
   const { per, h } = await estadoHeroe();
   const clase = J.claseDe(per.clase);
-  const libres = clase ? h.talentosLibres : 0;
-  $('#tab-heroe').dataset.aviso = libres > 0 ? String(libres) : '';
+  // Los puntos de talento se anuncian solo aquí, y solo si hay algo que subir con ellos.
+  const libres = clase ? h.talentosPorRepartir : 0;
   const linea = $('#linea-nivel');
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
   linea.innerHTML = clase
@@ -3414,27 +3414,22 @@ async function pintarHeroe() {
   pintarAvisosHeroe(h, sesiones);
   for (const b of document.querySelectorAll('.heroe-tabs button')) {
     b.classList.toggle('activa', b.dataset.hp === seccionHeroe);
-    if (b.dataset.hp === 'talentos') b.dataset.aviso = h.talentosLibres > 0 ? h.talentosLibres : '';
   }
   for (const el of document.querySelectorAll('.hp')) el.hidden = el.id !== `hp-${seccionHeroe}`;
   ({ ficha: pintarFicha, talentos: pintarTalentos, niveles: pintarNiveles, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
 }
 
-// Avisos arriba del héroe: el cambio a la mitad de XP (una vez) y los puntos de talento sin repartir.
+// Aviso arriba del héroe: el cambio a la mitad de XP (una vez). Los puntos de talento se anuncian en la línea de nivel.
 function pintarAvisosHeroe(h, sesiones) {
   const avisos = [];
   const veterano = sesiones.some((x) => x.fecha < J.XP_LENTA_DESDE);
   if (Date.now() >= J.XP_LENTA_DESDE && veterano && !ajustes.si('avisoXpLenta', false)) {
     avisos.push(`<div class="aviso info heroe-aviso"><span>Desde el 29 de octubre cada sesión, misión y logro da <b>la mitad de XP</b>. Tu nivel no cambia: solo cuesta más subir.</span><button type="button" class="boton chico" data-aviso-xp>Entendido</button></div>`);
   }
-  if (h.talentosLibres > 0 && seccionHeroe === 'ficha') {
-    avisos.push(`<div class="aviso neutro heroe-aviso"><span>Tienes <b>${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento</b> sin usar.</span><button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></div>`);
-  }
   $('#heroe-avisos').innerHTML = avisos.join('');
 }
 $('#heroe-avisos').addEventListener('click', (e) => {
   if (e.target.closest('[data-aviso-xp]')) { ajustes.escribir('avisoXpLenta', '1'); pintarHeroe(); }
-  if (e.target.closest('[data-ir-talentos]')) { seccionHeroe = 'talentos'; pintarHeroe(); }
 });
 
 function pintarFicha(h, per, clase, sesiones) {
@@ -3527,9 +3522,11 @@ function pintarTalentos(h, per, clase) {
   const arbol = per.arbol?.[clase.clave] || {};
   const est = { nivel: h.nivel, libres: h.talentosLibres };
   const antiguo = J.tieneArbolAntiguo(arbol) && J.puntosGastados(arbol) === 0;
-  $('#talentos-libres').textContent = `${h.talentosLibres > 0
-    ? `Tienes ${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento.`
-    : 'Sin puntos libres.'} Ganas 1 punto cada 3 niveles.${antiguo ? ' Los talentos cambiaron: te devolvimos todos tus puntos para que los repartas de nuevo.' : ''}`;
+  const pts = (n) => `${n} ${n === 1 ? 'punto' : 'puntos'}`;
+  const guardados = h.talentosLibres - h.talentosPorRepartir;
+  $('#talentos-libres').textContent = `${h.talentosPorRepartir > 0
+    ? `Tienes ${pts(h.talentosPorRepartir)} de talento para repartir.${guardados > 0 ? ` Guardas ${pts(guardados)} más para cuando se abran otros talentos.` : ''}`
+    : h.talentosLibres > 0 ? `Guardas ${pts(h.talentosLibres)}: ahora no hay ningún talento que puedas subir.` : 'Sin puntos libres.'} Ganas 1 punto cada 3 niveles.${antiguo ? ' Los talentos cambiaron: te devolvimos todos tus puntos para que los repartas de nuevo.' : ''}`;
   const fila = (t) => {
     const g = J.grado(arbol, clase.clave, t.slot);
     const motivo = J.motivoBloqueo(t.slot, est, arbol, clase.clave);
@@ -3759,7 +3756,7 @@ function pintarXpSesion(s, previas, resumen) {
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
   caja.innerHTML = `<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
     ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.rangoDe(g.nivelDespues).nombre}.` : ''}</span>` : ''}
-    ${puntos > 0 && clase ? `<span class="subio-talento">+${puntos} ${puntos === 1 ? 'punto' : 'puntos'} de talento <button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></span>` : ''}
+    ${puntos > 0 && clase && h.talentosPorRepartir > 0 ? `<span class="subio-talento">+${puntos} ${puntos === 1 ? 'punto' : 'puntos'} de talento <button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></span>` : ''}
     <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div style="width:${h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100}%"></div></div>
     <small class="xp-nivel">Nivel ${h.nivel}${h.hasta ? ` · faltan ${miles(h.hasta - h.xp)} XP para el ${h.nivel + 1}${ses ? ` (${ses})` : ''}` : ''}</small>
     <details class="xp-desglose"${resumen ? '' : ' open'}><summary>Cómo la ganaste${logros.length ? ` · ${logros.length} ${logros.length === 1 ? 'logro' : 'logros'}` : ''}</summary>
