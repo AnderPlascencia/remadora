@@ -113,4 +113,8 @@ El formato de los mensajes se tomó como referencia del proyecto
 
 ## Pruebas
 
-`npm test` corre todas las pruebas de `pruebas/` (también lo hace GitHub en cada PR). Una de ellas comprueba que la versión de `app.js` y la de la caché en `sw.js` coincidan.
+`npm test` corre las pruebas unitarias de `pruebas/` (también lo hace GitHub en cada PR). Una de ellas comprueba que la versión de `app.js` y la de la caché en `sw.js` coincidan.
+
+`npm run test:e2e` abre la app en Chromium con tamaño de teléfono, en modo demo y con el reloj simulado, y recorre los flujos que no pueden fallar: bienvenida, sesión terminada y guardada, recuperar una sesión tras cerrar la app, respaldo de ida y vuelta, modo remo en vertical y horizontal, y uso sin conexión (`pruebas/e2e/`). La primera vez hace falta `npm ci` y `npx playwright install chromium`. GitHub las corre en cada PR y, si fallan, deja el informe con capturas y trazas en los artefactos del trabajo «e2e».
+
+La conexión Bluetooth se prueba sin la remadora con un `navigator.bluetooth` falso (`pruebas/remadora.test.mjs`): saludo inicial, consultas, cambio de resistencia, reconexión y modo demo.

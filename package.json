@@ -2,7 +2,15 @@
   "name": "remadora",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "test": "node --test pruebas/*.test.mjs"
+    "test": "node --test pruebas/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test:todo": "npm test && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
   }
 }
