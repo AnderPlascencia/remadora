@@ -768,7 +768,7 @@ details.seccion[open] { padding-bottom: 8px; }
 }
 
 /* En tema claro el logotipo usa letras oscuras: las claras no se ven sobre la barra blanca. */
-:root[data-tema="claro"] .barra .marca { content: url(rower-marca-clara.svg); }
+:root[data-tema="claro"] .barra .marca { content: url(../assets/marca/rower-marca-clara.svg); }
 
 /* Talentos por clase: lista de mejoras de nivel y maestría */
 .lema-tal { margin: 0 0 6px; font-size: 13px; }
@@ -1018,8 +1018,8 @@ h1, h2, h3, .titulo, .tm-nombre, #heroe-titulo, .lista b, .podio b { overflow-wr
    - Números con Barlow Condensed (incluida en la app, funciona sin conexión): caben más grandes.
    - Menos cajas dentro de cajas; en horizontal la navegación pasa a un riel lateral.
    ========================================================================== */
-@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(assets/fuentes/barlow-condensed-600.woff2) format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(assets/fuentes/barlow-condensed-700.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(../assets/fuentes/barlow-condensed-600.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(../assets/fuentes/barlow-condensed-700.woff2) format('woff2'); }
 :root { --num: 'Barlow Condensed', system-ui, sans-serif; --barra-accion: 72px; }
 
 .solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

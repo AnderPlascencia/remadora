@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import * as Cap from '../capacidades.js';
+import * as Cap from '../src/capacidades.js';
 
 const ahora = Date.parse('2026-10-26T12:00');
 const DIA = 864e5;

@@ -1,5 +1,5 @@
 # Genera rower-logo.svg, rower-marca.svg y rower-marca-clara.svg (los PNG salen de rower-logo.svg con tools/brand/render.cjs).
-# Uso: python3 tools/brand/make-logo.py assets/fuentes/barlow-condensed-700.woff2 <carpeta de salida>
+# Uso: python3 tools/brand/make-logo.py assets/fuentes/barlow-condensed-700.woff2 assets/marca
 # Necesita fonttools y brotli (pip install fonttools brotli) para leer la fuente woff2 que ya trae la app.
 import sys
 from fontTools.ttLib import TTFont

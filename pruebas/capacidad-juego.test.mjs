@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import * as J from '../juego.js';
+import * as J from '../src/juego.js';
 
 // Fase 6: misiones por capacidad, atributo Gasto y jefes de prueba, con fecha de inicio.
 const rit = { metros: 4000, min: 20, conRango: true, conPlan: true, conPulso: true, kcal: 250, kcalSemana: 800 };

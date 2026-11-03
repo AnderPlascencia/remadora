@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { PAISAJES, tienePaisaje, paisajeElegido, comprarPaisaje } from '../carrera.js';
+import { PAISAJES, tienePaisaje, paisajeElegido, comprarPaisaje } from '../src/carrera.js';
 
 // El fiordo es gratis y es el de siempre; la laguna cuesta 400 monedas
 assert.equal(PAISAJES.fiordo.precio, 0);

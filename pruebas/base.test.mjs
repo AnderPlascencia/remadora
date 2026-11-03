@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import * as B from '../base.js';
-import { enfoqueDe } from '../programa.js';
-import { esPrueba } from '../ventajas.js';
+import * as B from '../src/base.js';
+import { enfoqueDe } from '../src/programa.js';
+import { esPrueba } from '../src/ventajas.js';
 
 const n1 = B.entrenamientosBase(1, 200);
 const n70 = B.entrenamientosBase(70, 200);

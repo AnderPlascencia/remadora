@@ -1,4 +1,4 @@
-import { parsePaquete, paqueteRemada, paqueteMetricas, nivelDesdeByte, hexABytes, formatoSplit } from '../protocolo.js';
+import { parsePaquete, paqueteRemada, paqueteMetricas, nivelDesdeByte, hexABytes, formatoSplit } from '../src/protocolo.js';
 import assert from 'node:assert/strict';
 // Tabla de niveles conocida (byte 11 -> nivel)
 const tabla = {1:1,3:2,4:3,6:4,7:5,8:5,9:6,0x0b:7,0x0c:8,0x0d:8,0x0e:9,0x10:10,0x11:11,0x13:12,0x14:13,0x15:13,0x16:14,0x18:15,0x19:16,0x1a:16,0x1b:17,0x1d:18,0x1e:19,0x20:20,0x22:21,0x23:22,0x25:23,0x26:24,0x27:24};

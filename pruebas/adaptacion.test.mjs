@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import * as A from '../adaptacion.js';
-import * as P from '../programa.js';
-import { claveDia } from '../estadisticas.js';
+import * as A from '../src/adaptacion.js';
+import * as P from '../src/programa.js';
+import { claveDia } from '../src/estadisticas.js';
 
 const DIA = 864e5;
 const ahora = Date.parse('2026-11-11T09:00'); // miércoles

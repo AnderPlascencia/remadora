@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { esfuerzoPorPulso } from '../estadisticas.js';
+import { esfuerzoPorPulso } from '../src/estadisticas.js';
 
 const sesion = (seg, fc) => Array.from({ length: seg }, (_, t) => ({ t, w: 150, fc }));
 // Sin pulso máximo o sin pulso: no se calcula (se pregunta)

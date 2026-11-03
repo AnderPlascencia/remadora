@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as E from '../estadisticas.js';
-import * as P from '../programa.js';
+import * as E from '../src/estadisticas.js';
+import * as P from '../src/programa.js';
 
 const muestras = Array.from({ length: 600 }, (_, i) => ({ t: i + 1, w: 200, spm: 24, split: 125, dist: (i + 1) * 4, fc: 150 }));
 const s = { fecha: Date.parse('2026-10-20T10:00'), duracion: 600, distancia: 2400, paladas: 240, wattsProm: 200, spmProm: 24, fcProm: 150, muestras,
@@ -42,9 +42,9 @@ console.log('extra OK');
 
 // v0.7.0: predicción, calentamiento, insignias, recomendación, plan por meta
 {
-  const Ent = await import('../entrenamientos.js');
-  const E = await import('../estadisticas.js');
-  const P = await import('../programa.js');
+  const Ent = await import('../src/entrenamientos.js');
+  const E = await import('../src/estadisticas.js');
+  const P = await import('../src/programa.js');
   const assert = (await import('node:assert/strict')).default;
   // Ley de Paul: el split sube 5 s al duplicar la distancia
   assert.equal(Ent.predecir(2000, 480, 4000), Math.round((120 + 5) * 8));
@@ -67,7 +67,7 @@ console.log('extra OK');
 
 // Racha por semanas: remar en días alternos no la rompe y una semana sin remar sí.
 {
-  const E2 = await import('../estadisticas.js');
+  const E2 = await import('../src/estadisticas.js');
   const dia = (iso) => ({ fecha: Date.parse(iso) });
   const ahora = Date.parse('2026-10-28T12:00');
   assert.equal(E2.rachaSemanas([dia('2026-10-26T09:00'), dia('2026-10-21T09:00'), dia('2026-10-13T09:00')], ahora), 3);

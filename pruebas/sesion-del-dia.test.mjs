@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import * as A from '../adaptacion.js';
-import * as P from '../programa.js';
-import { claveDia } from '../estadisticas.js';
+import * as A from '../src/adaptacion.js';
+import * as P from '../src/programa.js';
+import { claveDia } from '../src/estadisticas.js';
 
 const DIA = 864e5;
 const muestras = (segs, w) => Array.from({ length: segs }, (_, t) => ({ t, w, fc: 0 }));

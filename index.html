@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0B1217">
   <title>Rower</title>
-  <link rel="apple-touch-icon" href="rower-192.png">
+  <link rel="apple-touch-icon" href="assets/marca/rower-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="rower-logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="estilos.css">
+  <link rel="icon" href="assets/marca/rower-logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="src/estilos.css">
 </head>
 <body>
-  <div id="bienvenida" class="bienvenida" aria-hidden="true"><svg class="sello" viewBox="0 0 512 512" width="132" height="132"><defs><linearGradient id="bv-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6C978"/><stop offset="1" stop-color="#E9A23B"/></linearGradient><linearGradient id="bv-m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E8FA8"/><stop offset="1" stop-color="#103445"/></linearGradient><clipPath id="bv-c"><circle cx="256" cy="256" r="176"/></clipPath></defs><g clip-path="url(#bv-c)"><circle cx="256" cy="256" r="176" fill="#0B1217"/><circle class="sol" cx="256" cy="262" r="112" fill="url(#bv-s)"/><path d="M60 300 Q120 284 180 300 T300 300 T420 300 T540 300 V460 H60 Z" fill="url(#bv-m)"/><path d="M60 300 Q120 284 180 300 T300 300 T420 300 T540 300" fill="none" stroke="#9AD8E6" stroke-width="8" stroke-linecap="round"/><g fill="#0B1217"><g class="remo r1"><rect x="-13" y="-200" width="26" height="58" rx="13"/><rect x="-9" y="-150" width="18" height="236" rx="5"/><rect x="-14" y="-64" width="28" height="16" rx="4"/><path d="M-9 76 C-36 104 -40 152 -32 198 C-24 218 24 218 32 198 C40 152 36 104 9 76 Z"/></g><g class="remo r2"><rect x="-13" y="-200" width="26" height="58" rx="13"/><rect x="-9" y="-150" width="18" height="236" rx="5"/><rect x="-14" y="-64" width="28" height="16" rx="4"/><path d="M-9 76 C-36 104 -40 152 -32 198 C-24 218 24 218 32 198 C40 152 36 104 9 76 Z"/></g></g></g><circle cx="256" cy="256" r="172" fill="none" stroke="#E9A23B" stroke-width="8"/></svg><img class="marca" src="rower-marca.svg" alt="Rower" height="40"><span>Para la remadora NordicTrack RW200</span></div>
+  <div id="bienvenida" class="bienvenida" aria-hidden="true"><svg class="sello" viewBox="0 0 512 512" width="132" height="132"><defs><linearGradient id="bv-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6C978"/><stop offset="1" stop-color="#E9A23B"/></linearGradient><linearGradient id="bv-m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E8FA8"/><stop offset="1" stop-color="#103445"/></linearGradient><clipPath id="bv-c"><circle cx="256" cy="256" r="176"/></clipPath></defs><g clip-path="url(#bv-c)"><circle cx="256" cy="256" r="176" fill="#0B1217"/><circle class="sol" cx="256" cy="262" r="112" fill="url(#bv-s)"/><path d="M60 300 Q120 284 180 300 T300 300 T420 300 T540 300 V460 H60 Z" fill="url(#bv-m)"/><path d="M60 300 Q120 284 180 300 T300 300 T420 300 T540 300" fill="none" stroke="#9AD8E6" stroke-width="8" stroke-linecap="round"/><g fill="#0B1217"><g class="remo r1"><rect x="-13" y="-200" width="26" height="58" rx="13"/><rect x="-9" y="-150" width="18" height="236" rx="5"/><rect x="-14" y="-64" width="28" height="16" rx="4"/><path d="M-9 76 C-36 104 -40 152 -32 198 C-24 218 24 218 32 198 C40 152 36 104 9 76 Z"/></g><g class="remo r2"><rect x="-13" y="-200" width="26" height="58" rx="13"/><rect x="-9" y="-150" width="18" height="236" rx="5"/><rect x="-14" y="-64" width="28" height="16" rx="4"/><path d="M-9 76 C-36 104 -40 152 -32 198 C-24 218 24 218 32 198 C40 152 36 104 9 76 Z"/></g></g></g><circle cx="256" cy="256" r="172" fill="none" stroke="#E9A23B" stroke-width="8"/></svg><img class="marca" src="assets/marca/rower-marca.svg" alt="Rower" height="40"><span>Para la remadora NordicTrack RW200</span></div>
   <!-- Iconos (trazos estilo Lucide, 24×24, línea de 2 px) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
@@ -51,7 +51,7 @@
   </svg>
 
   <header class="barra">
-    <h1><img src="rower-marca.svg" alt="Rower" class="marca" height="24"></h1>
+    <h1><img src="assets/marca/rower-marca.svg" alt="Rower" class="marca" height="24"></h1>
     <div class="barra-acciones">
       <span id="estado" class="pastilla" role="status" aria-live="polite">Desconectada</span>
       <button id="btn-banda" class="boton icono barra-boton" aria-label="Conectar banda de pulso"><svg class="ico" aria-hidden="true"><use href="#i-corazon"/></svg><span class="solo-lector">Pulso</span></button>
@@ -766,7 +766,7 @@
     </div>
     <div class="inicio-cuerpo">
       <section class="inicio-paso" data-paso="1">
-        <img class="inicio-logo" src="rower-logo.svg" alt="" width="56" height="56">
+        <img class="inicio-logo" src="assets/marca/rower-logo.svg" alt="" width="56" height="56">
         <h2 id="inicio-titulo">Te doy la bienvenida a Rower</h2>
         <p class="ayuda">Tu remadora RW200 convertida en entrenador y juego. Así funciona:</p>
         <ol class="inicio-como">
@@ -894,6 +894,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <div id="atr-pop" class="atr-pop" role="status" aria-live="polite" hidden></div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="src/app.js"></script>
 </body>
 </html>

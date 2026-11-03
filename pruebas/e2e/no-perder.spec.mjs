@@ -65,7 +65,7 @@ test('una copia que ya quedó guardada no se ofrece otra vez', async ({ page }) 
 
 test('una transacción abortada sin error (disco lleno) termina en error en vez de colgarse', async ({ page }) => {
   const resultado = await page.evaluate(async () => {
-    const db = await import('./db.js');
+    const db = await import('./src/db.js');
     const put = IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put = function (...args) {
       const req = put.apply(this, args);

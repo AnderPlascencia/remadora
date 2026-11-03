@@ -91,8 +91,8 @@ export async function tarjetaSesion(datos) {
   ctx.beginPath(); ctx.moveTo(0, 1010); ctx.lineTo(W, 760); ctx.lineTo(W, 860); ctx.lineTo(0, 1110); ctx.fill();
   ctx.globalAlpha = 1;
 
-  const logo = await cargarImagen('rower-logo.svg');
-  const marca = await cargarImagen('rower-marca.svg');
+  const logo = await cargarImagen('assets/marca/rower-logo.svg');
+  const marca = await cargarImagen('assets/marca/rower-marca.svg');
   if (logo) {
     ctx.save();
     ctx.beginPath(); ctx.roundRect(72, 72, 120, 120, 26); ctx.clip();

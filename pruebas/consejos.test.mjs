@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import * as C from '../consejos.js';
-import * as J from '../juego.js';
-import * as B from '../base.js';
+import * as C from '../src/consejos.js';
+import * as J from '../src/juego.js';
+import * as B from '../src/base.js';
 
 const bases = B.entrenamientosBase(10, 180);
 const porId = (id) => bases.find((x) => x.id === id);

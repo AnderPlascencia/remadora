@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as E2 from '../estadisticas.js';
-import { metrosNuevos, metrosPorWatts, distanciaPorWatts, debeQuedarSinTerminar } from '../estadisticas.js';
+import * as E2 from '../src/estadisticas.js';
+import { metrosNuevos, metrosPorWatts, distanciaPorWatts, debeQuedarSinTerminar } from '../src/estadisticas.js';
 
 // Remo normal
 assert.equal(metrosNuevos(100, 104), 4);
@@ -54,7 +54,7 @@ assert.equal(debeQuedarSinTerminar({ reparada: true, entrenamiento: '6km', tiemp
 console.log('distancia ok');
 
 // Reparación de una sesión guardada con saltos: 6 km que en realidad fueron ~4.1 km
-import { repararSaltos } from '../estadisticas.js';
+import { repararSaltos } from '../src/estadisticas.js';
 const muestras = [];
 let d = 0;
 for (let t = 1; t <= 1000; t++) { d += 4.1; muestras.push({ t, w: 150, spm: 24, split: 122, dist: Math.round(d) }); }

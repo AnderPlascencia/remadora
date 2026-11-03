@@ -68,6 +68,30 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 
 ## Archivos
 
+`index.html`, `manifest.webmanifest` y `sw.js` (la caché sin conexión) quedan en la raíz. El código vive en `src/`, los logos e iconos en `assets/marca/`, las fuentes en `assets/fuentes/` y los héroes en `assets/heroes/`.
+
+### Pantallas (`src/pantallas/`)
+
+`src/app.js` es solo el punto de entrada: importa cada pantalla y la arranca en orden. El estado que comparten varias pantallas (la sesión en curso, el entrenamiento elegido, la sesión abierta en el detalle, la caché del historial…) vive en `src/estado.js`; lo que usa una sola pantalla se queda en su módulo.
+
+| Pantalla | Módulo | Qué contiene |
+| --- | --- | --- |
+| Entrenar, antes de remar | `preparar.js` | Rivales, dificultad, ventaja y vista previa de la sesión |
+| Entrenar, sesión en vivo | `vivo.js` | Carrera, números grandes, modo remo, gráficas y retos durante la sesión |
+| Entrenar, ciclo de la sesión | `sesion.js` | Conexión con la remadora y la banda, grabar, pausa, tic, terminar, guardar y recuperar una sesión a medias |
+| Planes | `planes.js` | Lista de entrenamientos, editor y hoja de detalle de un entrenamiento |
+| Planes › Programa | `programa.js` | Asistente del plan, semanas y la sesión de hoy |
+| Héroe y tienda | `heroe.js` | Personaje, nivel, atributos, árbol, tienda, paisajes y resultado de la carrera |
+| Progreso (historial) | `progreso.js` | Historial, tendencia, capacidades, récords e insignias |
+| Detalle de una sesión | `detalle.js` | Hoja con gráficas, notas, compartir y exportar (CSV y TCX) |
+| Ajustes y respaldo | `ajustes.js` | Perfil, preferencias, zonas, prueba de nivel, tripulación, respaldo y reparaciones de datos |
+| Inicio | `inicio.js` | Bienvenida de la primera visita |
+| Guía y consejos | `ayuda.js` | Guía rápida y consejo de la primera visita a cada pestaña |
+
+En `src/` junto a `app.js` y `estado.js`: `navegacion.js` (cambio de pestaña y ayudas emergentes) y `registro.js` (registro de diagnóstico y errores).
+
+### Lógica sin pantalla (`src/`)
+
 | Archivo | Para qué |
 | --- | --- |
 | `protocolo.js` | Decodifica los paquetes de 20 bytes de la consola |
@@ -75,6 +99,9 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `remadora.js` | Conexión Bluetooth, cola de escritura, modo demo, banda de pulso |
 | `entrenamientos.js` | Lógica de objetivos, intervalos, zonas y FTP (con pruebas en `pruebas/`) |
 | `estadisticas.js` | Récords, comparación con la sesión anterior, progreso semanal/mensual |
+| `capacidades.js` | Capacidades físicas: qué entrenó cada sesión y cómo va cada capacidad en el tiempo |
+| `adaptacion.js` | Adaptación automática del plan según tus sesiones, con la frase que lo explica |
+| `base.js` | Entrenamientos base por sección y dificultad, ajustados a tu FTP y tu rango |
 | `voz.js` | Avisos por voz |
 | `programa.js` | Programas de varias semanas |
 | `fantasma.js` | Fantasmas simulados por nivel o a tu medida, y proyección de llegada |
@@ -82,13 +109,18 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `efectos.js` | Confeti y tarjeta de la sesión para compartir |
 | `consejos.js` | Qué atributos sube cada entrenamiento, extras con puntos, reto en vivo y análisis al terminar |
 | `juego.js` | Héroe: clases, atributos, XP, niveles, talentos, misiones, capítulos y monedas, calculados con tu historial |
+| `talentos.js` | Talentos de cada clase (dan XP o ventaja en la carrera, nunca cambian tus métricas) |
+| `ventajas.js` | Ventajas en la carrera: talentos de carrera y objetos de un solo uso de la tienda |
 | `objetos.js` | Vestimenta, colecciones y dibujo vectorial del héroe |
 | `perfil.js` | Tu perfil: basal, FTP inicial, qué falta y lo que aporta al plan |
 | `guia.js` | Temas de la guía rápida y consejos de cada pestaña |
-| `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
+| `ui.js` | Utilidades de interfaz: `$`, ajustes guardados, avisos, iconos y `escaparHtml` (todo texto del usuario o de un respaldo que va en HTML pasa por aquí) |
+| `respaldo.js` | Qué guarda un respaldo y cómo se combina al restaurar |
 | `db.js` | Almacenamiento local (IndexedDB): sesiones, entrenamientos y estado (sesión en curso, versión de los datos) |
 | `reloj.js` | Segundos de la sesión según la hora del sistema (no se pierden con la app en segundo plano) |
+| `version.js` | Número de versión que se ve en Ajustes (va junto con el de `sw.js`) |
+| `estilos.css` | Estilos de toda la app |
 
 ## Seguridad
 
@@ -116,7 +148,7 @@ El formato de los mensajes se tomó como referencia del proyecto
 
 ## Pruebas
 
-`npm test` corre las pruebas unitarias de `pruebas/` (también lo hace GitHub en cada PR). Una de ellas comprueba que la versión de `app.js` y la de la caché en `sw.js` coincidan.
+`npm test` corre las pruebas unitarias de `pruebas/` (también lo hace GitHub en cada PR). Una de ellas comprueba que la versión de `src/version.js` y la de la caché en `sw.js` coincidan, y que todo módulo que importa la app esté en esa caché.
 
 `npm run test:e2e` abre la app en Chromium con tamaño de teléfono, en modo demo y con el reloj simulado, y recorre los flujos que no pueden fallar: bienvenida, sesión terminada y guardada, recuperar una sesión tras cerrar la app, respaldo de ida y vuelta, modo remo en vertical y horizontal, y uso sin conexión (`pruebas/e2e/`). La primera vez hace falta `npm ci` y `npx playwright install chromium`. GitHub las corre en cada PR y, si fallan, deja el informe con capturas y trazas en los artefactos del trabajo «e2e».
 

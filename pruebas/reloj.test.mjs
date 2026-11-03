@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { crearReloj, MAX_SEG_PENDIENTES } from '../reloj.js';
-import { ajustarLienzo } from '../grafica.js';
+import { crearReloj, MAX_SEG_PENDIENTES } from '../src/reloj.js';
+import { ajustarLienzo } from '../src/grafica.js';
 
 // Un tic por segundo: 1, y la fracción no se pierde (0,6 s + 0,6 s = 1 s).
 let r = crearReloj(0);

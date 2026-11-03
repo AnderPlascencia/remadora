@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import * as V from '../ventajas.js';
+import * as V from '../src/ventajas.js';
 
 // Remar a ritmo fijo: 4 m/s y 0,5 paladas por segundo (8 m por palada) durante n segundos.
 const remar = (e, n, { v = 4, ppS = 0.5, desde = 0, detras = false, spm = 30 } = {}) => {

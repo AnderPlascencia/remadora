@@ -2,9 +2,9 @@
 // saludo inicial, consultas periódicas, cambio de resistencia, datos recibidos, reconexión y modo demo.
 import { test, mock, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Remadora } from '../remadora.js';
-import { VARIANTES } from '../variantes.js';
-import { SERVICIO_IFIT, CARACT_ESCRITURA, CARACT_NOTIFICACION, SERVICIO_1400, bytesAHex, paqueteMetricas, paqueteRemada } from '../protocolo.js';
+import { Remadora } from '../src/remadora.js';
+import { VARIANTES } from '../src/variantes.js';
+import { SERVICIO_IFIT, CARACT_ESCRITURA, CARACT_NOTIFICACION, SERVICIO_1400, bytesAHex, paqueteMetricas, paqueteRemada } from '../src/protocolo.js';
 
 const V = VARIANTES.generica;
 const CABECERA_RESISTENCIA = 'fe 02 0d 02';

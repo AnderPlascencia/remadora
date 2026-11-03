@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import * as Pf from '../perfil.js';
-import * as P from '../programa.js';
-import * as G from '../guia.js';
-import { clasificacionDe } from '../juego.js';
+import * as Pf from '../src/perfil.js';
+import * as P from '../src/programa.js';
+import * as G from '../src/guia.js';
+import { clasificacionDe } from '../src/juego.js';
 
 // Basal: Mifflin-St Jeor con todos los datos; si falta alguno, 1 kcal por kg y hora (lo de antes).
 assert.equal(Pf.basalPorHora({ peso: 80 }), 80);
@@ -54,7 +54,7 @@ assert.ok(G.TEMAS.every((t) => VISTAS.includes(t.vista) && t.puntos.length >= 3 
 assert.ok(VISTAS.every((v) => G.consejoDe(v)));
 console.log('perfil ok');
 // Escalera de la tripulación: 5 puestos, el tuyo marcado y el avance hacia el siguiente.
-import { escalaTripulacion } from '../juego.js';
+import { escalaTripulacion } from '../src/juego.js';
 const esc = escalaTripulacion(145, 82);
 assert.equal(esc.filas.length, 5);
 assert.deepEqual(esc.filas.map((f) => f.estado), ['pasado', 'actual', 'siguiente', 'futuro', 'futuro']);
