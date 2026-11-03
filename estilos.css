@@ -1864,3 +1864,98 @@ details.mas-detalle[hidden] { display: none; }
 
 /* Recuperar una sesión: «Guardar sesión» arriba a todo lo ancho; «Descartar» y «Seguir remando» debajo. */
 #recuperar-dialogo #recuperar-guardar { grid-column: 1 / -1; order: -1; }
+
+/* ---------- 0.44: modo remo usable ----------
+   Salir del modo remo va en la cabecera (icono «contraer»), lejos de Terminar; la fila de abajo queda
+   Terminar · Pausar · Vista. «Vista» es neutro (los puntos dicen en qué vista estás). Fuera de rango en un
+   bloque suave es ámbar y sin latido: el rojo queda para los intervalos. */
+:root { --suave-borde: #F59E0B; --suave-texto: #FCD34D; --suave-fondo: rgba(245, 158, 11, .07); }
+:root[data-tema="claro"] { --suave-borde: #B45309; --suave-texto: #92400E; --suave-fondo: rgba(180, 83, 9, .07); }
+:root[data-tema="contraste"] { --suave-borde: #FBBF24; --suave-texto: #FDE68A; --suave-fondo: transparent; }
+
+.mr-arriba { align-items: flex-start; }
+.mr-arriba > .mr-meta { flex: 1; }
+.mr-salir { flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; border-radius: 12px; }
+.mr-salir .ico { width: 22px; height: 22px; }
+.mr-botones, .modo-remo .mr-botones { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 64px; }
+#mr-vista.activo { background: var(--panel); border-color: var(--borde); color: var(--texto); }
+.mr-botones .boton span { white-space: nowrap; }
+#btn-grabar span { white-space: nowrap; }
+
+/* Bloques suaves fuera de rango: aviso ámbar, sin latido. */
+.mr-principal.suave.bajo, .mr-principal.suave.alto,
+.mr-rango.suave.bajo, .mr-rango.suave.alto,
+.tarjeta-meta.suave.fuera { border-color: var(--suave-borde); background: var(--suave-fondo); animation: none; }
+.mr-principal.suave.bajo .mr-indicador, .mr-principal.suave.alto .mr-indicador,
+.mr-rango.suave.bajo .mr-indicador, .mr-rango.suave.alto .mr-indicador,
+.tarjeta-meta.suave .indicador.bajo, .tarjeta-meta.suave .indicador.alto { color: var(--suave-texto); }
+
+/* Indicador y etiquetas: versión larga por defecto, corta en las casillas angostas. */
+.ind-corto, .etq-corta { display: none; }
+.modo-remo.vista-carrera .ind-largo { display: none; }
+.modo-remo.vista-carrera .ind-corto { display: inline; }
+.modo-remo.vista-carrera .etq-larga { display: none; }
+.modo-remo.vista-carrera .etq-corta { display: inline; }
+
+/* Meta del rango en blanco; verde solo cuando estás dentro. */
+.mr-rango .mr-rango-meta { color: var(--texto); }
+.mr-rango.dentro .mr-rango-meta { color: var(--exito); }
+
+/* El cuadro de watts contiene su etiqueta, el número y el indicador sin montarse en el borde. */
+.mr-principal { overflow: hidden; padding-left: 12px; padding-right: 12px; padding-bottom: 8px; box-sizing: border-box; }
+.modo-remo:not(:has(.mr-rival:not([hidden]))) .mr-principal { padding-top: 10px; }
+.mr-principal > .mr-etq { flex: none; line-height: 1.2; }
+.mr-watts { font-size: clamp(88px, min(44vw, 24vh), 260px); }
+.modo-remo.vista-carrera .mr-principal { padding: 4px 8px; }
+.modo-remo.vista-carrera .mr-indicador { max-width: 100%; overflow: hidden; }
+.mr-atr { flex: none; justify-content: center; }
+.mr-atr .anillo { flex: none; }
+.mr-atr > span:last-child { flex: 0 1 auto; min-width: 0; text-align: left; }
+
+/* Gráfica del plan: al menos 96 px. */
+.mr-perfil { height: 96px; min-height: 96px; flex: none; }
+
+/* Horizontal bajo: en la vista de números la gráfica deja sitio quitando la segunda fila de casillas. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mr-perfil { height: 96px; }
+  .mr-grid .etq-larga { display: none; }
+  .mr-grid .etq-corta { display: inline; }
+  .modo-remo.vista-grafica .mr-fin-c { display: none; }
+  .mr-salir { width: 40px; height: 40px; min-height: 40px; }
+}
+@media (orientation: landscape) and (min-height: 381px) and (max-height: 560px) {
+  .modo-remo:not(.vista-grafica) .mr-grid > div:nth-child(n+4) { display: none; }
+}
+
+/* Horizontal, vista de carrera: una sola columna derecha (cabecera, watts, tres casillas y botones). */
+@media (orientation: landscape) and (max-height: 560px) {
+  .modo-remo.vista-carrera { grid-template-columns: minmax(0, 1fr) clamp(236px, 31vw, 290px); grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; }
+  .modo-remo.vista-carrera > * { grid-column: 2; }
+  .modo-remo.vista-carrera > .mr-zona-grafica { grid-column: 1; grid-row: 1 / -1; }
+  .modo-remo.vista-carrera > .mr-arriba { grid-column: 2; grid-row: 1; position: relative; padding-right: 46px; }
+  .modo-remo.vista-carrera .mr-salir { position: absolute; top: 0; right: 0; }
+  .modo-remo.vista-carrera > .mr-progreso { grid-column: 2; grid-row: 2; }
+  .modo-remo.vista-carrera > .mr-principal { grid-column: 2; grid-row: 3; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+  .modo-remo.vista-carrera .mr-principal > .mr-etq { display: none; }
+  .modo-remo.vista-carrera .mr-watts::after { content: ' W'; font-size: 16px; font-weight: 700; color: var(--texto-tenue); }
+  .modo-remo.vista-carrera .mr-watts { font-size: clamp(28px, 10vh, 44px); }
+  .modo-remo.vista-carrera .mr-indicador { font-size: 15px; gap: 4px; }
+  .modo-remo.vista-carrera .mr-indicador .ico { width: 18px; height: 18px; }
+  .modo-remo.vista-carrera > .mr-grid { grid-column: 2; grid-row: 4; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  /* Tres casillas: split y las posiciones 1 y 3 de su tipo de sesión (pulso y m/pal en un fondo). */
+  .modo-remo.vista-carrera .mr-grid > div { display: flex; }
+  .modo-remo.vista-carrera .mr-grid > div:nth-child(3),
+  .modo-remo.vista-carrera .mr-grid > div:nth-child(5),
+  .modo-remo.vista-carrera .mr-grid > div:nth-child(6) { display: none; }
+  .modo-remo.vista-carrera .mr-grid .mr-etq { font-size: 13px; }
+  .modo-remo.vista-carrera .mr-valor { font-size: clamp(20px, 6.5vh, 28px); }
+  .modo-remo.vista-carrera .mr-fin-c { display: none; }
+  .modo-remo.vista-carrera > .mr-estado { grid-column: 2; grid-row: 5; }
+  .modo-remo.vista-carrera > .mr-botones { grid-column: 2; grid-row: 6; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px; gap: 6px; }
+  .modo-remo.vista-carrera .mr-botones .boton.grande { min-height: 44px; font-size: 14px; padding-left: 4px; padding-right: 4px; gap: 4px; }
+  .modo-remo.vista-carrera #mr-pausa .ico, .modo-remo.vista-carrera #mr-terminar .ico { display: inline-block; width: 16px; height: 16px; flex: none; }
+  .modo-remo.vista-carrera #mr-terminar[data-confirmar] .ico { display: none; }
+}
+@media (orientation: landscape) and (max-height: 380px) {
+  .modo-remo.vista-carrera .mr-grid > div:nth-child(4) { display: flex; }
+}

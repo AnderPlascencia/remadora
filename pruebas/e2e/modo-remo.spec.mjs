@@ -14,6 +14,18 @@ async function fueraDePantalla(page) {
   }, IMPRESCINDIBLE);
 }
 
+// Textos visibles que no caben en su caja (se cortan con «…» o se salen): botones, etiquetas y el indicador.
+async function textosCortados(page) {
+  return page.evaluate(() => [...document.querySelectorAll('#modo-remo .mr-botones .boton span, #modo-remo .mr-grid .mr-etq, #modo-remo .mr-indicador')]
+    .filter((el) => el.offsetParent && el.getClientRects().length)
+    .filter((el) => {
+      const caja = el.closest('.boton, .mr-grid > div, .mr-principal').getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      return el.scrollWidth > el.clientWidth + 1 || r.right > caja.right + 1 || r.left < caja.left - 1;
+    })
+    .map((el) => `${el.id || el.className}: ${el.textContent}`));
+}
+
 for (const [nombre, viewport] of [['vertical', { width: 412, height: 915 }], ['horizontal', { width: 915, height: 412 }], ['horizontal-bajo', { width: 780, height: 340 }]]) {
   test.describe(nombre, () => {
     test.use({ viewport });
@@ -31,13 +43,21 @@ for (const [nombre, viewport] of [['vertical', { width: 412, height: 915 }], ['h
       expect(await fueraDePantalla(page)).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
 
-      // Cambiar de vista no rompe nada.
-      for (let i = 0; i < 3; i++) { await page.locator('#mr-vista').click(); await avanzar(page, 1_000); }
-      expect(await fueraDePantalla(page)).toEqual([]);
+      // Ningún texto se corta y Salir no está junto a Terminar.
+      expect(await textosCortados(page)).toEqual([]);
+      await expect(page.locator('.mr-botones #mr-salir')).toHaveCount(0);
+
+      // Cambiar de vista no rompe nada (tampoco en la vista de carrera).
+      for (let i = 0; i < 3; i++) {
+        await page.locator('#mr-vista').click(); await avanzar(page, 1_000);
+        expect(await fueraDePantalla(page)).toEqual([]);
+        expect(await textosCortados(page)).toEqual([]);
+      }
 
       const terminar = page.locator('#mr-terminar');
       await terminar.click();
-      await expect(terminar).toContainText('Toca otra vez');
+      await expect(terminar).toContainText('¿Terminar?');
+      expect(await textosCortados(page)).toEqual([]);
       await terminar.click();
       await expect(mr).toBeHidden();
       await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');

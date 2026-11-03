@@ -42,11 +42,11 @@ test('el primer toque de Terminar se cancela solo a los 3 s', async ({ page }) =
   await remar(page, 20_000);
   const boton = page.locator('#btn-grabar');
   await boton.click();
-  await expect(boton).toContainText('Toca otra vez');
+  await expect(boton).toContainText('¿Terminar?');
   await avanzar(page, 3_500);
-  await expect(boton).not.toContainText('Toca otra vez');
+  await expect(boton).not.toContainText('¿Terminar?');
   await boton.click();
-  await expect(boton).toContainText('Toca otra vez');
+  await expect(boton).toContainText('¿Terminar?');
   expect(await listar(page, 'sesiones')).toHaveLength(0);
 });
 
