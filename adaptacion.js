@@ -28,6 +28,12 @@ export function pulsoDeMas(muestras, previas) {
   return Math.round(hoy.fc - media(otras.map((c) => c.fc)));
 }
 
+// Una sesión dura que se quedó corta: menos del 60 % en rango y, de lo que quedó fuera, más por debajo que por encima.
+// Las sesiones de antes de la v0.45 no separan bajo y alto: cuentan como antes (todo lo de fuera, por debajo).
+export const corta = (s) => s.pctEnRango < 60 && !(s.pctAlto != null && s.pctAlto >= (s.pctBajo ?? 0));
+// Una sesión dura que sobró: en rango más del 95 %, o un 25 % o más por encima del rango casi sin quedarse por debajo.
+export const sobrada = (s) => s.pctEnRango > 95 || (s.pctAlto != null && s.pctAlto >= 25 && (s.pctBajo ?? 0) < 10);
+
 // Revisa el plan. Devuelve { programa, entrenamientos, avisos } con lo que cambió, o null si no cambió nada.
 // entrenamientos: los guardados (para saber qué toca cada día); los nuevos que haga falta crear vuelven en la respuesta.
 export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, ahora = Date.now() }) {
@@ -70,17 +76,22 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
     if (motivo) cambiarDia(diaHoy, sesionFondo(30, { pulso: true }), `${motivo}: cambié «${diaHoy.ent}» por un fondo suave de 30 min.`);
   }
 
-  // 2. Cumplimiento de las sesiones duras: dos seguidas fuera de rango bajan los rangos un 3 %; dos fáciles los suben.
+  // 2. Cumplimiento de las sesiones duras: dos seguidas por debajo del rango bajan los rangos un 3 %;
+  //    dos fáciles (en rango casi siempre, o por encima con poco esfuerzo) los suben. Ir por encima no es fallar.
   const duras = orden.filter((s) => s.pctEnRango != null && DURO.has(tipoSesion(s, ftp)) && s.fecha >= new Date(`${p.inicio}T00:00`).getTime());
   const [a, b] = duras.slice(-2);
   if (a && b && recientes.includes(b)) {
     const ratio = ftp ? E.ratioCarga(orden, ftp, ahora) : null;
-    if (a.pctEnRango < 60 && b.pctEnRango < 60 && p.factor > FACTOR_MIN) {
+    const cargaOk = ratio == null || ratio <= 1.3;
+    const facil = (b.rpe ?? 10) <= 6;
+    if (corta(a) && corta(b) && p.factor > FACTOR_MIN) {
       p.factor = Math.max(FACTOR_MIN, Math.round(p.factor * 0.97 * 100) / 100);
-      avisos.push('Dos sesiones fuertes seguidas te costó mantener el rango: bajé tus rangos un 3 %.');
-    } else if (a.pctEnRango > 95 && b.pctEnRango > 95 && (b.rpe ?? 10) <= 6 && (ratio == null || ratio <= 1.3) && p.factor < FACTOR_MAX) {
+      avisos.push('Dos sesiones fuertes seguidas te quedaste por debajo del rango: bajé tus rangos un 3 %.');
+    } else if (facil && cargaOk && p.factor < FACTOR_MAX && sobrada(a) && sobrada(b)) {
       p.factor = Math.min(FACTOR_MAX, Math.round(p.factor * 1.03 * 100) / 100);
-      avisos.push('Tus dos últimas sesiones fuertes fueron fáciles: subí tus rangos un 3 %.');
+      avisos.push(a.pctEnRango > 95 && b.pctEnRango > 95
+        ? 'Tus dos últimas sesiones fuertes fueron fáciles: subí tus rangos un 3 %.'
+        : 'Tus dos últimas sesiones fuertes fueron por encima del rango y con poco esfuerzo: subí tus rangos un 3 %.');
     }
   }
 

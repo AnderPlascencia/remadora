@@ -126,6 +126,14 @@ console.log('tipo de plan OK');
   const e3 = Cap.estadoCuerpo([...regular, s(0.05, 3600, 230)], 200, ahora);
   assert.ok(e3.horas >= 12 && e3.clave !== 'fresco' && e3.clave !== 'listo', `${e3.clave} ${e3.horas}`);
   assert.equal(Cap.estadoCuerpo([], 200, ahora), null);
+  // Usuario nuevo con 3 sesiones iguales por semana durante 3 semanas: antes salía «Cargado» por el ratio
+  // (2,7 en la semana 3). Ahora sin 4 semanas de historial no hay ratio ni rango seguro y decide la frescura.
+  const nuevo = [];
+  for (let w = 3; w >= 1; w--) for (const d of [0, 2, 5]) nuevo.push({ fecha: ahora - (w * 7 - d + 1) * DIA, duracion: 2400, estres: 50, muestras: [] });
+  const e4 = Cap.estadoCuerpo(nuevo, 200, ahora);
+  assert.equal(e4.ratio, null);
+  assert.equal(e4.seguro, null);
+  assert.ok(['listo', 'fresco'].includes(e4.clave), e4.clave);
   console.log('cuerpo OK', e1.clave, e2.clave, e2.horas, e3.clave, e3.horas);
 }
 

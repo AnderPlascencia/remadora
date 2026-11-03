@@ -322,7 +322,10 @@ export function atributoDeLaSemana(atributos, { sinPulso = true, lunes = null } 
 }
 function misionAtributo(clave) {
   const a = ATRIBUTOS.find((x) => x.clave === clave);
-  return { id: 'atributo', atributo: clave, nombre: 'Héroe equilibrado', texto: (m) => `Sube ${m} puntos de ${a.nombre} esta semana`, metas: [META_ATRIBUTO[clave]], xp: [150], valor: (d) => Math.floor(d.atr?.[clave] || 0) };
+  // Dice qué entrenar: sin eso la meta empujaba a meter sprints o zona 4 en cualquier sesión.
+  const como = { recuperacion: 'con fondos muy suaves o un descanso tras un día duro', gasto: 'con fondos largos en zona 2' }[clave]
+    || `con «${RECOMENDACION_ATRIBUTO[clave]?.entrenamiento}»`;
+  return { id: 'atributo', atributo: clave, nombre: 'Héroe equilibrado', texto: (m) => `Sube ${m} puntos de ${a.nombre} esta semana ${como}`, metas: [META_ATRIBUTO[clave]], xp: [150], valor: (d) => Math.floor(d.atr?.[clave] || 0) };
 }
 export function misionesDeSemana(lunes, clase = null, rit = null, atributo = null) {
   const semilla = `s${lunes}`;

@@ -69,3 +69,25 @@ assert.equal(Ent.estimarFin({ t: 20, dist: 80, kcal: 5 }, 600), null);
 assert.equal(Ent.estimarFin({ t: 120, dist: 0, kcal: 5 }, 600), null);
 assert.deepEqual(Ent.estimarFin({ t: 300, dist: 1200, kcal: 60 }, 1200), { tiempo: 1200, dist: 4800, kcal: 240, split: 125 });
 assert.deepEqual(Ent.estimarFin({ t: 120, dist: 500, kcal: 25, distFinal: 2000 }, 480), { tiempo: 480, dist: 2000, kcal: 100, split: 120 });
+
+// % en rango honesto: solo bloques de trabajo, sin sus primeros segundos, y separando por debajo y por encima.
+{
+  const trabajo = { nombre: 'Umbral 1/3', duracion: 480, metrica: 'watts', min: 180, max: 200 };
+  const sprint = { nombre: 'Sprint a tope 1/6', duracion: 15, metrica: 'ftp', min: 140, max: 250 };
+  assert.ok(Ent.esBloqueTrabajo(trabajo));
+  assert.ok(Ent.esBloqueTrabajo({ nombre: 'Fondo suave', duracion: 1200 }), '«Fondo suave» es el trabajo de su sesión');
+  for (const n of ['Calentamiento', 'Calentamiento guiado', 'Descanso', 'Suave', 'Enfriamiento']) assert.ok(!Ent.esBloqueTrabajo({ nombre: n }), n);
+  assert.equal(Ent.graciaDe(trabajo), 12);
+  assert.equal(Ent.graciaDe(sprint), 3);
+  const c = { con: 0, dentro: 0, bajo: 0, alto: 0 };
+  Ent.contarRango(c, trabajo, 'bajo', 5); // arrancando: no cuenta
+  Ent.contarRango(c, { nombre: 'Descanso', metrica: 'watts' }, 'alto', 30); // descanso: no cuenta
+  Ent.contarRango(c, trabajo, null, 30); // sin meta: no cuenta
+  for (let i = 0; i < 6; i++) Ent.contarRango(c, trabajo, 'dentro', 20 + i);
+  for (let i = 0; i < 3; i++) Ent.contarRango(c, trabajo, 'alto', 40 + i);
+  Ent.contarRango(c, trabajo, 'bajo', 60);
+  assert.deepEqual(c, { con: 10, dentro: 6, bajo: 1, alto: 3 });
+  assert.deepEqual(Ent.porcentajesRango(c), { enRango: 60, bajo: 10, alto: 30 });
+  assert.deepEqual(Ent.porcentajesRango({}), { enRango: null, bajo: null, alto: null });
+}
+console.log('rango honesto OK');
