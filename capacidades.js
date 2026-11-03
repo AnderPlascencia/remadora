@@ -200,7 +200,9 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now()) {
   const cond = (hoy.condicion * 41 + hoy.carga) / 42; // tras sumar la carga de hoy
   const fat = (hoy.fatiga * 6 + hoy.carga) / 7;
   const fres = cond - fat;
-  const ratio = cond >= 5 ? fat / cond : null;
+  // Sin 4 semanas de historial, ni ratio ni rango seguro: la condición aún no refleja tu carga habitual.
+  const conHistorial = E.diasDeHistorial(sesiones, ahora) >= E.DIAS_PARA_RATIO;
+  const ratio = conHistorial && cond >= 5 ? fat / cond : null;
   let clave = fres > 5 ? 'fresco' : fres >= LISTO ? 'listo' : fres >= -25 ? 'cargado' : 'agotado';
   if (ratio != null && ratio > 1.5 && clave !== 'agotado') clave = 'cargado';
   // Recuperación: lo que pide cada sesión de los últimos 4 días según su carga (la más exigente cuenta entera
@@ -217,7 +219,7 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now()) {
   if (horas >= 12 && (clave === 'fresco' || clave === 'listo')) clave = 'cargado';
   else if (horas > 0 && clave === 'fresco') clave = 'listo';
   const semana = dias.slice(-7).reduce((a, d) => a + d.carga, 0);
-  const seguro = cond >= 5 ? { min: Math.round(cond * 7 * 0.8), max: Math.round(cond * 7 * 1.3) } : null;
+  const seguro = ratio != null ? { min: Math.round(cond * 7 * 0.8), max: Math.round(cond * 7 * 1.3) } : null;
   const reparto = E.distribucionIntensidad(sesiones, ftp, 7, ahora);
   return {
     clave, ...ESTADOS_CUERPO[clave], horas, ratio: ratio == null ? null : Math.round(ratio * 100) / 100,

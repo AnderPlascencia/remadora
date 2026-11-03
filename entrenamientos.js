@@ -197,6 +197,32 @@ export function enRango(bloque, watts, spm, ftp, split = 0, fc = 0) {
   return 'dentro';
 }
 
+// ---------- % del tiempo en rango ----------
+// Solo cuentan los bloques de trabajo: el calentamiento, los descansos y el enfriamiento tienen un rango de guía,
+// pero quedarse fuera ahí no dice nada de cómo hiciste la sesión (en un descanso de 15 s el volante ni siquiera
+// tiene tiempo de bajar). Los primeros segundos de cada bloque tampoco: es lo que tardan los watts en llegar.
+export const GRACIA_RANGO = 12;
+export const esBloqueTrabajo = (b) => !!b && !b.guiado && !/^(calentamiento|enfriamiento|descanso|suave)\b/i.test(b.nombre || '');
+// Segundos de gracia de un bloque: 12, o una cuarta parte si es más corto (un sprint de 15 s cuenta desde el 4.º).
+export const graciaDe = (b) => (finDe(b) === 'tiempo' && b.duracion > 0 ? Math.min(GRACIA_RANGO, Math.floor(b.duracion / 4)) : GRACIA_RANGO);
+
+// Suma un segundo al recuento { con, dentro, bajo, alto }. rango: lo que da enRango; seg: segundos dentro del bloque.
+export function contarRango(cuenta, b, rango, seg) {
+  if (!rango || !esBloqueTrabajo(b) || seg < graciaDe(b)) return cuenta;
+  cuenta.con += 1;
+  if (rango === 'dentro') cuenta.dentro += 1;
+  else if (rango === 'bajo') cuenta.bajo += 1;
+  else cuenta.alto += 1;
+  return cuenta;
+}
+
+// % en rango, por debajo y por encima (null si nada se pudo juzgar).
+export function porcentajesRango({ con = 0, dentro = 0, bajo = 0, alto = 0 } = {}) {
+  if (!con) return { enRango: null, bajo: null, alto: null };
+  const pct = (x) => Math.round((100 * x) / con);
+  return { enRango: pct(dentro), bajo: pct(bajo), alto: pct(alto) };
+}
+
 // Seguimiento de un entrenamiento por intervalos que pueden terminar por tiempo, distancia o paladas.
 // m = { t, dist, paladas, split, spm } acumulados de la sesión (t en segundos activos).
 export function crearAvance() {

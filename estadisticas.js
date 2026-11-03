@@ -689,8 +689,20 @@ export function rmssd(rr) {
 
 // ---------- Métricas avanzadas: carga ----------
 
+// Días desde la primera sesión con carga hasta `ahora` (0 sin historial).
+export function diasDeHistorial(sesiones, ahora = Date.now()) {
+  const fechas = (sesiones || []).filter((s) => s.fecha <= ahora && (s.estres > 0 || s.muestras?.length)).map((s) => s.fecha);
+  return fechas.length ? Math.floor((ahora - Math.min(...fechas)) / 864e5) : 0;
+}
+// La condición (42 días) arranca en 0: en las primeras semanas cualquier carga parece «disparada» frente a ella
+// (3 sesiones iguales por semana daban un ratio de 2,7 en la semana 3). Hasta tener 4 semanas de historial
+// el ratio no se calcula y las decisiones de fatiga se toman solo con la frescura.
+export const DIAS_PARA_RATIO = 28;
+
 // Ratio agudo:crónico (fatiga / condición). 0,8–1,3 = progreso seguro; más de 1,5 = riesgo.
+// null sin 4 semanas de historial o con la condición todavía muy baja.
 export function ratioCarga(sesiones, ftp, ahora = Date.now()) {
+  if (diasDeHistorial(sesiones, ahora) < DIAS_PARA_RATIO) return null;
   const hoy = forma(sesiones, ftp, 1, ahora).at(-1);
   if (!hoy || hoy.condicion < 5) return null;
   return dosDec(hoy.fatiga / hoy.condicion);

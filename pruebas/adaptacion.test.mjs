@@ -41,6 +41,29 @@ assert.equal(r3.programa.factor, 1.03);
 const r3b = A.revisarPlan({ programa: { ...r3.programa, revision: 'otra' }, sesiones: [umbral(-3, 98, 5), umbral(-1, 97, 5)], entrenamientos, ftp: 200, ahora });
 assert.equal(r3b.programa.factor, 1.03);
 
+// Ir por encima del rango no es fallar: con el 50 % en rango pero casi todo lo de fuera por encima, no se bajan.
+const r2b = A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: [umbral(-3, 50), umbral(-1, 55)].map((x) => ({ ...x, pctBajo: 5, pctAlto: 45 })), entrenamientos, ftp: 200, ahora });
+assert.equal(r2b.programa.factor, 1, 'por encima no baja los rangos');
+// Por encima y con poco esfuerzo → los rangos suben.
+const r2c = A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: [umbral(-3, 60, 5), umbral(-1, 62, 6)].map((x) => ({ ...x, pctBajo: 4, pctAlto: 36 })), entrenamientos, ftp: 200, ahora });
+assert.equal(r2c.programa.factor, 1.03);
+assert.match(r2c.avisos.at(-1), /por encima del rango/);
+// Por encima pero con esfuerzo alto: no se tocan.
+const r2d = A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: [umbral(-3, 60, 9), umbral(-1, 62, 9)].map((x) => ({ ...x, pctBajo: 4, pctAlto: 36 })), entrenamientos, ftp: 200, ahora });
+assert.equal(r2d.programa.factor, 1);
+// Por debajo (separado) sí los baja.
+const r2e = A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: [umbral(-3, 50), umbral(-1, 55)].map((x) => ({ ...x, pctBajo: 40, pctAlto: 8 })), entrenamientos, ftp: 200, ahora });
+assert.equal(r2e.programa.factor, 0.97);
+assert.ok(A.corta({ pctEnRango: 50 }), 'sesiones antiguas sin separar cuentan como antes');
+assert.ok(!A.sobrada({ pctEnRango: 70, pctBajo: 20, pctAlto: 30 }), 'si también te quedaste por debajo, no sobró');
+
+// 1b. Usuario nuevo con carga constante (3 sesiones iguales por semana): sin 4 semanas de historial,
+// la «carga disparada» no cambia la sesión dura.
+const nuevo = [];
+for (let w = 3; w >= 1; w--) for (const d of [0, 2, 5]) nuevo.push(ses(-(w * 7) + d - 1, { estres: 50 }));
+const r1c = A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: nuevo, entrenamientos, ftp: 200, ahora });
+assert.equal(r1c.programa.dias.find((d) => d.fecha === hoy).ent, 'Umbral 3 × 8 min', 'no hay falsa alarma de fatiga');
+
 // 3. Dos fondos con desacople bajo → el próximo fondo dura 10 min más.
 const fondo = (d) => ses(d, { desacople: 3, muestras: muestras(2400, 140) });
 const r4 = A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: [fondo(-4), fondo(-2)], entrenamientos, ftp: 200, ahora });

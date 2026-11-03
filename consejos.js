@@ -4,6 +4,12 @@
 import * as F from './fantasma.js';
 import * as Ent from './entrenamientos.js';
 import * as J from './juego.js';
+import { tipoPlan } from './capacidades.js';
+
+// Tipos de sesión hechos para apretar. En el resto (fondo, técnica, calorías, remo libre) los retos no piden
+// sprints ni minutos en zona 4: romperían el día suave, que es lo que deja fresco para la próxima dura.
+export const INTENSOS = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
+export const esIntenso = (tipo) => INTENSOS.has(tipo);
 
 const ftpO = (ftp) => ftp || 150;
 const vatios = (f, k) => Math.round(f * k);
@@ -52,16 +58,26 @@ export function prevision(ent, { ftp = 0, clase = null, ctx = {}, debil = null, 
   }
   if (prueba500) extras.push({ clave: '500', icono: 'i-reloj', titulo: 'Bájalo de 2:30', detalle: 'Un 500 m en menos de 2:30 suma Agilidad.', atributo: 'agilidad', puntos: 5 * fa('agilidad') });
   const w106 = vatios(f, 1.06);
-  if (!prueba500) extras.push(seg.agilidad < 0.5
+  const intenso = esIntenso(tipoPlan(ent));
+  if (!intenso) {
+    // Día suave: lo que suma es remar suave de verdad (Recuperación), el tiempo, la técnica y terminarlo.
+    // Solo si el plan entero es suave (un fondo progresivo con zona 3 no puede quedarse bajo el 75 %).
+    const todoSuave = Ent.tipoDe(ent) === 'intervalos' && ent.bloques.every((b) => b.metrica !== 'ftp' || b.max <= 75);
+    if (todoSuave && !(seg.recuperacion >= 1)) {
+      const pts = ctx.cargaAyer >= 60 ? 5 : 2;
+      extras.push({ clave: 'suave', icono: 'i-corazon', titulo: `Media por debajo de ${vatios(f, 0.75)} W`, detalle: 'Rema suave de verdad: así te recuperas para la próxima dura.', atributo: 'recuperacion', puntos: pts * fa('recuperacion') });
+    }
+  }
+  if (intenso && !prueba500) extras.push(seg.agilidad < 0.5
     ? { clave: 'sprint', icono: 'i-rayo', titulo: `Un sprint de 20 s por encima de ${w106} W`, detalle: 'Al final, cuando ya estás caliente.', atributo: 'agilidad', puntos: fa('agilidad') }
     : { clave: 'sprint', icono: 'i-rayo', titulo: `Cada 20 s más por encima de ${w106} W`, detalle: 'Aprieta un poco más en las series fuertes.', atributo: 'agilidad', puntos: fa('agilidad') });
-  if (seg.fuerza < 3) extras.push({ clave: 'zona4', icono: 'i-fuego', titulo: `Aguanta 2 min por encima de ${vatios(f, 0.91)} W`, detalle: 'Un tramo en zona 4 a mitad de la sesión.', atributo: 'fuerza', puntos: 2.4 * fa('fuerza') });
+  if (intenso && seg.fuerza < 3) extras.push({ clave: 'zona4', icono: 'i-fuego', titulo: `Aguanta 2 min por encima de ${vatios(f, 0.91)} W`, detalle: 'Un tramo en zona 4 a mitad de la sesión.', atributo: 'fuerza', puntos: 2.4 * fa('fuerza') });
   if (base.duracion < 1200 && !/^Prueba/.test(ent?.nombre || '')) {
     const min = Math.ceil((1200 - base.duracion) / 60);
     extras.push({ clave: '20min', icono: 'i-reloj', titulo: `Rema ${min} min más, suave`, detalle: 'Las sesiones de 20 min o más suman Resistencia.', atributo: 'resistencia', puntos: 4 * fa('resistencia') });
   }
   if (ctx.mppPromedio > 0) extras.push({ clave: 'mpp', icono: 'i-sube', titulo: `Más de ${coma(ctx.mppPromedio * 1.02)} m por palada`, detalle: 'Palada larga y potente, sin subir la cadencia.', atributo: 'tecnica', puntos: 3 * fa('tecnica') });
-  extras.push({ clave: 'esfuerzo', icono: 'i-fuego', titulo: 'Rema fuerte hasta el final', detalle: 'Si al terminar marcas esfuerzo 8 o más.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
+  if (intenso) extras.push({ clave: 'esfuerzo', icono: 'i-fuego', titulo: 'Rema fuerte hasta el final', detalle: 'Si al terminar marcas esfuerzo 8 o más.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
   const orden = extras.map((x) => ({ ...x, puntos: Math.max(1, Math.round(x.puntos)) }))
     .sort((a, b) => (b.atributo === debil) - (a.atributo === debil) || b.puntos - a.puntos);
   const seguro = redondear(seg);
@@ -87,7 +103,9 @@ export function mejoresPara(clave, ents, opts = {}) {
 // Mientras remas: lo que llevas de cada atributo y el siguiente punto que tienes más a mano.
 // muestras = las de la sesión (1 por segundo); pct = % en rango hasta ahora (o null);
 // rango = { min, max } en watts del tramo actual: el reto nunca te pide salirte de él.
-export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, rango = null } = {}) {
+// tipo = tipoPlan del entrenamiento (null en remo libre). Sin rango en watts el reto nunca te pide subir de zona,
+// y en un día suave tampoco te premia por quedarte por encima de la zona 3.
+export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, rango = null, tipo = null } = {}) {
   const f = ftpO(ftp);
   if (!muestras.length) return null;
   const fin = muestras.at(-1);
@@ -114,17 +132,29 @@ export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, 
       titulo: fuera ? `Vuelve a tu rango: ${txt}` : `Quédate en ${txt}`,
       detalle: 'Cada minuto en rango suma Técnica.', corto: 'En rango sumas Técnica',
     };
+  } else if (!rango && !esIntenso(tipo) && tipo != null && (!zona || zona.atributo !== 'resistencia')) {
+    // Día suave sin rango en watts (fondo por pulso, meta de distancia o calorías): solo zonas 2 y 3.
+    const arriba = !!zona;
+    reto = {
+      atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null,
+      titulo: arriba ? `Hoy toca suave: entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} W` : `Desde ${vatios(f, 0.56)} W sumas Resistencia`,
+      detalle: 'Cada 2 min en zonas 2 y 3 suma Resistencia.', corto: `${vatios(f, 0.56)}–${vatios(f, 0.9)} W suma Resistencia`,
+    };
   } else if (zona) {
     const v = totales[zona.atributo];
     const porSeg = zona.porSeg * J.factorAtributo(zona.atributo, clase);
     const falta = Math.floor(v) + 1 - v;
+    // La zona siguiente solo se menciona si cabe dentro del rango del tramo; sin rango, nunca.
+    const sig = zona.atributo === 'resistencia' ? { w: vatios(f, 0.91), txt: 'Fuerza, más rápido' } : zona.atributo === 'fuerza' ? { w: vatios(f, 1.06), txt: 'Agilidad' } : null;
+    const cabe = sig && rango?.max && sig.w <= rango.max;
+    const aqui = { resistencia: 'Cada 2 min aquí suma Resistencia.', fuerza: 'Cada minuto aquí suma Fuerza.', agilidad: 'Cada 20 s aquí es +1 Agilidad.' }[zona.atributo];
     reto = {
       atributo: zona.atributo, puntos: 1, progreso: 1 - falta, faltanSeg: Math.max(1, Math.ceil(falta / porSeg)),
-      titulo: `Sigue por encima de ${zona.umbral} W`,
-      detalle: zona.atributo === 'resistencia' ? `Por encima de ${vatios(f, 0.91)} W sumas Fuerza, más rápido.` : zona.atributo === 'fuerza' ? `Por encima de ${vatios(f, 1.06)} W sumas Agilidad.` : 'Sprint: cada 20 s es +1.',
+      titulo: rango ? `Sigue por encima de ${zona.umbral} W` : `Sumas ${nombre(zona.atributo)} desde ${zona.umbral} W`,
+      detalle: cabe ? `Por encima de ${sig.w} W sumas ${sig.txt}.` : aqui,
     };
   } else {
-    reto = { atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null, titulo: `Sube a ${vatios(f, 0.56)} W`, detalle: 'Desde ahí cada 2 min suma Resistencia.', corto: `Desde ${vatios(f, 0.56)} W sumas Resistencia` };
+    reto = { atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null, titulo: rango ? `Sube a ${vatios(f, 0.56)} W` : `Desde ${vatios(f, 0.56)} W sumas Resistencia`, detalle: 'Desde ahí cada 2 min suma Resistencia.', corto: `Desde ${vatios(f, 0.56)} W sumas Resistencia` };
   }
   return { totales, puntos: Object.fromEntries(Object.entries(totales).map(([k, v]) => [k, Math.floor(v)])), reto };
 }
@@ -146,7 +176,7 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
   if (m.z4min >= 1) logros.push({ icono: 'i-fuego', titulo: `${Math.round(m.z4min)} min en zona 4`, detalle: `Por encima de ${w91} W.`, atributo: 'fuerza', puntos: real.fuerza });
   const agiSeg = (s.muestras || []).filter((x) => x.w / f >= 1.06).length;
   if (agiSeg >= 20) logros.push({ icono: 'i-rayo', titulo: `${agiSeg} s por encima de ${w106} W`, atributo: 'agilidad', puntos: (agiSeg / 20) * fa('agilidad') });
-  else if (s.muestras?.length) cerca.push({ icono: 'i-rayo', titulo: agiSeg ? `Solo ${agiSeg} s por encima de ${w106} W` : `Nada por encima de ${w106} W`, detalle: 'Un sprint de 20 s al final ya cuenta.', atributo: 'agilidad', puntos: fa('agilidad') });
+  else if (s.muestras?.length && esIntenso(s.tipoPlan)) cerca.push({ icono: 'i-rayo', titulo: agiSeg ? `Solo ${agiSeg} s por encima de ${w106} W` : `Nada por encima de ${w106} W`, detalle: 'Un sprint de 20 s al final ya cuenta.', atributo: 'agilidad', puntos: fa('agilidad') });
   if (s.pctEnRango != null) {
     if (s.pctEnRango >= 85) logros.push({ icono: 'i-diana', titulo: `En rango el ${s.pctEnRango} % del tiempo`, atributo: 'tecnica', puntos: (m.min * s.pctEnRango) / 100 * 0.6 * fa('tecnica') });
     else {
@@ -161,7 +191,7 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
     else if (s.duracion <= 175) cerca.push({ icono: 'i-reloj', titulo: `Te faltaron ${s.duracion - 150} s para bajar de 2:30`, detalle: 'Sal fuerte y aguanta el último tramo.', atributo: 'agilidad', puntos: 5 * fa('agilidad') });
   }
   if (s.rpe >= 8) logros.push({ icono: 'i-fuego', titulo: 'Sesión muy dura', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
-  else if (s.rpe == null && s.muestras?.length) cerca.push({ icono: 'i-fuego', titulo: '¿Fue muy dura? Márcalo abajo', detalle: 'Un esfuerzo de 8 o más suma Voluntad.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
+  else if (s.rpe == null && s.muestras?.length && esIntenso(s.tipoPlan)) cerca.push({ icono: 'i-fuego', titulo: '¿Fue muy dura? Márcalo abajo', detalle: 'Un esfuerzo de 8 o más suma Voluntad.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
   if (ctx.mppPromedio > 0 && s.paladas) {
     const mpp = s.distancia / s.paladas;
     const meta = ctx.mppPromedio * 1.02;

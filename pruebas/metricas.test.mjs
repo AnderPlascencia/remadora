@@ -80,6 +80,11 @@ assert.ok(r1 > 0.95 && r1 < 1.1, `ratio ${r1}`);
 const fuerte = [...constante, ...Array.from({ length: 7 }, (_, i) => dia(i, 200))];
 assert.ok(E.ratioCarga(fuerte, 200, ahora) > 1.3);
 assert.equal(E.ratioCarga([], 200, ahora), null);
+// Las primeras 4 semanas no hay ratio: la condición empieza en 0 y cualquier carga parecería disparada.
+const inicio = Array.from({ length: 9 }, (_, i) => dia(i * 2 + 1, 150));
+assert.equal(E.diasDeHistorial(inicio, ahora), 17);
+assert.equal(E.ratioCarga(inicio, 200, ahora), null);
+assert.equal(E.diasDeHistorial([], ahora), 0);
 
 const mono = E.monotonia([dia(0, 150), dia(2, 150), dia(4, 150)], 200, ahora);
 assert.ok(mono.monotonia > 0 && mono.monotonia < 2);

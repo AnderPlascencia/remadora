@@ -25,7 +25,7 @@ import {
   $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, reajustarTextos, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
-const VERSION = '0.44.1';
+const VERSION = '0.45.0';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 
 // ---------- Navegación ----------
@@ -909,6 +909,8 @@ async function iniciarSesion(reanudar = null) {
     paladas: 0,
     segConMeta: 0,
     segEnRango: 0,
+    segBajo: 0,
+    segAlto: 0,
     fueraSeguidos: 0,
     tiempoMeta: null,
     mitadAvisada: false,
@@ -1003,7 +1005,7 @@ const CLAVE_EN_CURSO = 'sesionEnCurso';
 function copiaEnCurso(s, ent) {
   return {
     inicio: s.inicio, t: s.t, dist: s.dist, distConsola: s.distConsola, distFuente: s.distFuente, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
-    segConMeta: s.segConMeta, segEnRango: s.segEnRango, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
+    segConMeta: s.segConMeta, segEnRango: s.segEnRango, segBajo: s.segBajo, segAlto: s.segAlto, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
     pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(),
     ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
   };
@@ -1069,7 +1071,7 @@ function estadoReanudado(c) {
   const cruce = n500 ? m.find((x) => x.dist >= n500 * 500) : null;
   return {
     inicio: c.inicio, t: c.t, dist: c.dist, distConsola: c.distConsola || 0, kcal: c.kcal, paladas: c.paladas, muestras: m,
-    segConMeta: c.segConMeta || 0, segEnRango: c.segEnRango || 0, tiempoMeta: c.tiempoMeta ?? null,
+    segConMeta: c.segConMeta || 0, segEnRango: c.segEnRango || 0, segBajo: c.segBajo || 0, segAlto: c.segAlto || 0, tiempoMeta: c.tiempoMeta ?? null,
     estadoAv: c.estadoAv ?? sesion.estadoAv, pruebaFtp: !!c.pruebaFtp, pausas, pausaPrevia: 'auto', reanudada: true,
     avance: entrenamientoActivo?.objetivo?.metrica === 'distancia' ? m.map((x) => [x.t, x.dist]) : [],
     n500, t500: cruce ? cruce.t : 0, ultimaSpm: m.at(-1)?.spm || 0,
@@ -1121,6 +1123,9 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     tiempoMeta: s.tiempoMeta,
     delPrograma: delProgramaHoy(s),
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
+    // Lo que quedó fuera, separado: por debajo (te costó) o por encima (te sobró). La adaptación del plan lo usa.
+    pctBajo: s.segConMeta ? Math.round((100 * (s.segBajo || 0)) / s.segConMeta) : null,
+    pctAlto: s.segConMeta ? Math.round((100 * (s.segAlto || 0)) / s.segConMeta) : null,
     bloques: s.plan ? Ent.bloquesConDuracion(s.estadoAv, s.plan, { t: s.t, dist: s.dist, paladas: s.paladas }) : null,
     muestras: m,
     ftp: ftp() || null,
@@ -1352,7 +1357,7 @@ function actualizarAtrVivo() {
   const pct = sesion.segConMeta ? Math.round((100 * sesion.segEnRango) / sesion.segConMeta) : null;
   const b = sesion.info && !sesion.info.terminado ? sesion.info.bloque : null;
   const rw = b && Ent.rangoWatts(b, ftp());
-  const v = C.enVivo(sesion.muestras, { ...a.opc, pct, rango: rw ? { min: Math.round(rw.min), max: Math.round(rw.max) } : null });
+  const v = C.enVivo(sesion.muestras, { ...a.opc, pct, tipo: sesion.tipoPlan ?? null, rango: rw ? { min: Math.round(rw.min), max: Math.round(rw.max) } : null });
   if (!v) return;
   const subidas = ATR_VIVO.filter((k) => v.puntos[k] > (a.vistos[k] || 0));
   if (subidas.length && sesion.t - a.ultimoPop >= 15) {
@@ -1622,10 +1627,9 @@ function avanceBloque(t) {
     hablar(fin === 'distancia' ? 'Últimos 100 metros' : 'Últimas 10 paladas', { urgente: true });
   }
   const rango = Ent.enRango(b, actual.watts, actual.spm, ftp(), actual.split, actual.fc);
-  if (rango) {
-    sesion.segConMeta += 1;
-    if (rango === 'dentro') sesion.segEnRango += 1;
-  }
+  // Solo los bloques de trabajo y pasados sus primeros segundos cuentan para el % en rango.
+  const cuenta = Ent.contarRango({ con: sesion.segConMeta, dentro: sesion.segEnRango, bajo: sesion.segBajo || 0, alto: sesion.segAlto || 0 }, b, rango, t - info.desde);
+  Object.assign(sesion, { segConMeta: cuenta.con, segEnRango: cuenta.dentro, segBajo: cuenta.bajo, segAlto: cuenta.alto });
   sesion.fueraSeguidos = rango && rango !== 'dentro' ? sesion.fueraSeguidos + 1 : 0;
   if (sesion.fueraSeguidos >= 5 && info.restaSeg > 4) {
     const potencia = !!Ent.rangoWatts(b, ftp());
@@ -3075,7 +3079,7 @@ function pintarCuerpoHoy() {
     const pos = (v) => Math.round((100 * v) / tope);
     const zona = c.semana > c.seguro.max ? 'Pasada: baja unos días' : c.semana < c.seguro.min ? 'Puedes subir un poco' : 'En tu zona segura';
     $('#cuerpo-carga').innerHTML = barra('Esfuerzo de 7 días', pos(c.semana), 100, [pos(c.seguro.min), pos(c.seguro.max)], avanzado() ? `${c.semana} TSS · ratio ${c.ratio.toLocaleString('es-MX')}` : zona);
-  } else $('#cuerpo-carga').innerHTML = '<p class="ayuda">Con 2 o 3 semanas de sesiones te diré cuánto esfuerzo aguantas sin pasarte.</p>';
+  } else $('#cuerpo-carga').innerHTML = '<p class="ayuda">Con 4 semanas de sesiones te diré cuánto esfuerzo aguantas sin pasarte.</p>';
   const r = c.reparto;
   $('#cuerpo-reparto').innerHTML = r && r.segundos >= 600
     ? barra('Suave (7 días)', r.suave, 100, [75, 85], r.suave < 70 ? 'Poco suave: añade un fondo' : `${r.suave}% (ideal cerca de 80%)`)
