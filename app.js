@@ -25,7 +25,7 @@ import {
   $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, reajustarTextos, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
-const VERSION = '0.43.1';
+const VERSION = '0.43.2';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 
 // ---------- Navegación ----------
@@ -808,18 +808,21 @@ function confirmarTerminar(boton) {
   setTimeout(() => { if (boton.dataset.confirmar) { delete boton.dataset.confirmar; span.textContent = previo; } }, 3000);
 }
 
+// Conecta la remadora si hace falta. Devuelve false si no se pudo (o la persona canceló).
+async function asegurarConexion() {
+  if (remadora.conectada) return true;
+  try {
+    await remadora.conectar(selVariante.value);
+  } catch (err) {
+    agregarLog(`error: ${err.message}`);
+    $('#estado').textContent = err.name === 'NotFoundError' ? 'Cancelado' : `Error: ${err.message}`;
+    return false;
+  }
+  return remadora.conectada;
+}
 $('#btn-grabar').addEventListener('click', async (e) => {
   if (sesion) { confirmarTerminar(e.currentTarget); return; }
-  if (!remadora.conectada) {
-    try {
-      await remadora.conectar(selVariante.value);
-    } catch (err) {
-      agregarLog(`error: ${err.message}`);
-      $('#estado').textContent = err.name === 'NotFoundError' ? 'Cancelado' : `Error: ${err.message}`;
-      return;
-    }
-    if (!remadora.conectada) return;
-  }
+  if (!(await asegurarConexion())) return;
   iniciarSesion();
 });
 $('#mr-terminar').addEventListener('click', (e) => confirmarTerminar(e.currentTarget));
@@ -869,16 +872,19 @@ async function rachaConHoy() {
   return lista.some((x) => E.claveDia(x.fecha) === hoy) ? r : r + 1;
 }
 
-async function iniciarSesion() {
+// reanudar: la copia de una sesión que quedó a medias (al recuperar, «Seguir»). Se sigue en la misma sesión,
+// con su entrenamiento, su plan y lo ya remado, sin fantasmas (no se guardan en la copia).
+async function iniciarSesion(reanudar = null) {
   document.querySelectorAll('.consejo').forEach((x) => x.remove());
-  entrenamientoActivo = await obtenerEnt($('#sel-entrenamiento').value);
+  entrenamientoActivo = reanudar ? reanudar.ent : await obtenerEnt($('#sel-entrenamiento').value);
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
-  const plan = intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftpDelPlan(entrenamientoActivo), fcMaxima()) : null;
+  const plan = reanudar ? reanudar.plan || null
+    : intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(entrenamientoActivo.bloques, calMin, enfMin), ftpDelPlan(entrenamientoActivo), fcMaxima()) : null;
   $('#perfil-vivo').hidden = !plan;
   if (plan) $('#vivo-leyenda').innerHTML = leyendaPerfil(entrenamientoActivo.bloques, true);
-  const rivales = await crearRivales(entrenamientoActivo);
-  const referencias = await crearReferencias(entrenamientoActivo);
+  const rivales = reanudar ? [] : await crearRivales(entrenamientoActivo);
+  const referencias = reanudar ? [] : await crearReferencias(entrenamientoActivo);
   const rival = rivales[0] || null;
   // Potencia crítica y W′ con lo mejor de los últimos 90 días: alimentan la batería anaeróbica en vivo.
   const recientes = (await db.listar('sesiones')).filter((x) => x.fecha > Date.now() - 90 * 864e5);
@@ -937,6 +943,7 @@ async function iniciarSesion() {
     sprintAvisado: false,
     retrato: rival ? await retratoPropio() : null,
   };
+  if (reanudar) Object.assign(sesion, estadoReanudado(reanudar));
   if (plan) sesion.info = Ent.avanzar(sesion.estadoAv, plan, medidas());
   prepararSalida();
   await prepararAtrVivo();
@@ -948,7 +955,8 @@ async function iniciarSesion() {
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* opcional */ }
   pitido(880, 0.15);
   const contra = rivales.length > 1 ? `. Remas contra ${rivales.length} fantasmas` : rival ? '. Remas contra tu fantasma' : '';
-  if (entrenamientoActivo) hablar(`Comienza ${entrenamientoActivo.nombre}${contra}`);
+  if (reanudar) hablar(`Seguimos con ${entrenamientoActivo ? entrenamientoActivo.nombre : 'tu sesión'}`);
+  else if (entrenamientoActivo) hablar(`Comienza ${entrenamientoActivo.nombre}${contra}`);
   else hablar(`Sesión iniciada${contra}`);
   if (ajustes.si('modoAuto', false)) abrirModoRemo();
   pintar();
@@ -1050,6 +1058,32 @@ $('#recuperar-guardar').addEventListener('click', async () => {
   const guardada = await guardarSesionTerminada(s, s.ent, { recuperada: true });
   // Una copia de una versión anterior (sin distFuente) se pasa a la distancia según watts.
   if (guardada && s.distFuente !== 'watts') await repararSesiones();
+});
+// Lo que ya se había remado, para seguir en la misma sesión. El tiempo con la app cerrada queda como pausa:
+// la que estaba abierta sigue abierta, o se abre una desde la última copia, y se cierra al volver a remar.
+function estadoReanudado(c) {
+  const m = c.muestras;
+  const pausas = (c.pausas || []).map((p) => ({ ...p }));
+  if (pausas.at(-1)?.fin !== null || !pausas.length) pausas.push({ t: c.t, ini: c.guardada || Date.now(), fin: null, motivo: 'cierre' });
+  const n500 = Math.floor(c.dist / 500);
+  const cruce = n500 ? m.find((x) => x.dist >= n500 * 500) : null;
+  return {
+    inicio: c.inicio, t: c.t, dist: c.dist, distConsola: c.distConsola || 0, kcal: c.kcal, paladas: c.paladas, muestras: m,
+    segConMeta: c.segConMeta || 0, segEnRango: c.segEnRango || 0, tiempoMeta: c.tiempoMeta ?? null,
+    estadoAv: c.estadoAv ?? sesion.estadoAv, pruebaFtp: !!c.pruebaFtp, pausas, pausaPrevia: 'auto', reanudada: true,
+    avance: entrenamientoActivo?.objetivo?.metrica === 'distancia' ? m.map((x) => [x.t, x.dist]) : [],
+    n500, t500: cruce ? cruce.t : 0, ultimaSpm: m.at(-1)?.spm || 0,
+  };
+}
+$('#recuperar-seguir').addEventListener('click', async () => {
+  $('#recuperar-dialogo').hidden = true;
+  const s = await leerSesionEnCurso();
+  if (!s || sesion) return;
+  if (await yaGuardada(s)) { await borrarSesionEnCurso(); return; }
+  // La copia se queda hasta que la sesión se guarde: si algo falla al seguir, se puede volver a recuperar.
+  if (!(await asegurarConexion())) { ofrecerRecuperar(); return; }
+  irA('entrenar');
+  await iniciarSesion(s);
 });
 $('#recuperar-descartar').addEventListener('click', async () => {
   if (!confirm('¿Descartar la sesión sin guardar? No se puede deshacer.')) return;
