@@ -4,9 +4,10 @@
 import { EJEMPLOS, PRUEBAS as PRUEBAS_PLAN, duracionTotal, soloTiempo, tipoDe } from './entrenamientos.js';
 
 export const DIFICULTADES = [
+  // Un solo eje, la intensidad (antes «Mantenimiento» y «Mejora» mezclaban intensidad y propósito).
   { clave: 'suave', nombre: 'Suave' },
-  { clave: 'mant', nombre: 'Mantenimiento' },
-  { clave: 'mejora', nombre: 'Mejora' },
+  { clave: 'mant', nombre: 'Media' },
+  { clave: 'mejora', nombre: 'Exigente' },
 ];
 export const nombreDificultad = (d) => DIFICULTADES.find((x) => x.clave === d)?.nombre || '';
 

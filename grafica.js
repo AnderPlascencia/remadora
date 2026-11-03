@@ -164,7 +164,7 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
   const X = (t) => m.izq + (t / tFin) * w;
   const Y = (v) => m.arr + h - (Math.min(v, yMax) / yMax) * h;
 
-  // Intervalos: con rango de potencia, verde dentro y rojo fuera; sin rango, todo verde (cualquier potencia vale)
+  // Intervalos: con rango de potencia, verde dentro y gris fuera; sin rango, todo verde (cualquier potencia vale)
   // con una etiqueta de lo que pide. Los que terminan por distancia o paladas llevan rayas: su duración es estimada.
   let desde = 0;
   ctx.font = '600 11px system-ui, sans-serif';
@@ -175,7 +175,8 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
     const activo = ahora != null && ahora >= desde && ahora < desde + b.duracion;
     if (b.metrica === 'watts') {
       const max = b.max || yMax;
-      ctx.fillStyle = activo ? 'rgba(239, 68, 68, 0.38)' : 'rgba(239, 68, 68, 0.2)';
+      // Fuera del rango en gris: el rojo queda solo para cuando de verdad te sales.
+      ctx.fillStyle = activo ? 'rgba(148, 163, 184, 0.22)' : 'rgba(148, 163, 184, 0.12)';
       ctx.fillRect(x0, m.arr, x1 - x0, h);
       ctx.fillStyle = activo ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.5)';
       ctx.fillRect(x0, Y(max), x1 - x0, Y(b.min) - Y(max));

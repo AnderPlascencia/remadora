@@ -24,7 +24,7 @@ import {
   $, COLOR_ZONA, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
-const VERSION = '0.42.2';
+const VERSION = '0.43.0';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 
 // ---------- Navegación ----------
@@ -388,7 +388,7 @@ function tarjetaRival(r) {
     const c = J.claseDe(r.clase);
     const rango = J.RANGOS.find((x) => x.id === r.rango);
     return `<div class="rival-tarjeta" style="--chip:${r.color}"><img src="${srcRetratoRango(r.clase, r.rango)}" width="56" height="56" alt="">
-      <div><b>${escaparHtml(r.nombre.split(' (')[0])}</b><small>${c.nombre} ${rango?.nombre || ''} · ${J.DIFICULTADES[r.dificultad]?.nombre || ''} · ${r.clasificacion} · ${r.ftp} W</small>
+      <div><b>${escaparHtml(r.nombre.split(' (')[0])}</b><small>${c.nombre} ${rango?.nombre || ''} · ${r.ftp} W</small>
       <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
   }
   let detalle = '';
@@ -455,9 +455,9 @@ function bloqueAtributos(ent, hip, est, sesiones) {
 // «Y puedes sumar más»: un reto a la vista y los demás al tocar, para que la tarjeta no empuje el botón de empezar.
 function extrasPlegados(filas) {
   if (!filas.length) return '';
-  const resto = filas.slice(1);
-  return `<small class="sumar-titulo">Y puedes sumar más:</small><ul class="lista-cond">${filas[0]}</ul>${resto.length
-    ? `<details class="mas-detalle"><summary>${resto.length === 1 ? 'Otro reto' : `${resto.length} retos más`}</summary><ul class="lista-cond">${resto.join('')}</ul></details>` : ''}`;
+  // Todo plegado: la tarjeta Hoy dice qué toca y cuánto ganas; los retos se abren al tocar.
+  const retos = filas.filter((f) => !f.includes('cond riesgo')).length;
+  return `<details class="mas-detalle"><summary>${retos === 1 ? 'Un reto para sumar más' : `${retos} retos para sumar más`}</summary><ul class="lista-cond">${filas.join('')}</ul></details>`;
 }
 
 // FTP automático: sin FTP (o con uno estimado), cada sesión de 10 min o más lo calcula o lo sube.
@@ -616,12 +616,12 @@ pintarZonas();
 pintarFtpEstado();
 
 const selNivel = $('#sel-nivel-prueba');
-for (let n = 1; n <= 24; n++) selNivel.add(new Option(`Nivel ${n}`, n));
+for (let n = 1; n <= 24; n++) selNivel.add(new Option(`Resistencia ${n}`, n));
 selNivel.value = 8;
 $('#btn-nivel-prueba').addEventListener('click', () => {
   if (!remadora.conectada) { toast('Conecta la remadora primero'); return; }
   remadora.fijarResistencia(Number(selNivel.value));
-  toast(`Nivel ${selNivel.value} enviado. Revisa la consola.`);
+  toast(`Resistencia ${selNivel.value} enviada. Revisa la consola.`);
 });
 $('#version-ajustes').textContent = VERSION;
 
@@ -787,7 +787,7 @@ function confirmarTerminar(boton) {
   if (boton.dataset.confirmar) { span.textContent = boton.dataset.confirmar; delete boton.dataset.confirmar; detenerSesion(); return; }
   const previo = span.textContent;
   boton.dataset.confirmar = previo;
-  span.textContent = '¿Seguro?';
+  span.textContent = 'Toca otra vez';
   setTimeout(() => { if (boton.dataset.confirmar) { delete boton.dataset.confirmar; span.textContent = previo; } }, 3000);
 }
 
@@ -853,6 +853,7 @@ async function rachaConHoy() {
 }
 
 async function iniciarSesion() {
+  document.querySelectorAll('.consejo').forEach((x) => x.remove());
   entrenamientoActivo = await obtenerEnt($('#sel-entrenamiento').value);
   const intervalos = entrenamientoActivo && Ent.tipoDe(entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
@@ -1735,12 +1736,13 @@ function duracionCarrera() {
 
 function pintar() {
   const t = sesion ? sesion.t : 0;
-  const dist = sesion ? Math.round(sesion.dist) : (actual.distancia ?? 0);
+  // Sin sesión, distancia y tiempo en 0: antes la distancia de la consola corría con el tiempo parado.
+  const dist = sesion ? Math.round(sesion.dist) : 0;
   const f = ftp();
   const zona = Ent.zonaDe(actual.watts, f);
   const zfc = E.zonaFc(actual.fc, ajustes.num('fcMax', 0));
   $('#m-watts').textContent = actual.watts;
-  $('#m-nivel-etq').textContent = actual.nivel && avanzado() ? `· nivel ${actual.nivel}` : '';
+  $('#m-nivel-etq').textContent = actual.nivel && avanzado() ? `· resistencia ${actual.nivel}` : '';
   $('#m-zona').textContent = zona ? textoZona(zona) : '';
   $('#m-zona').style.color = zona ? COLOR_ZONA[zona.n - 1] : '';
   cambiarTexto($('#m-split'), formatoSplit(actual.split));
@@ -1749,10 +1751,10 @@ function pintar() {
   $('#m-dist').textContent = dist;
   $('#m-paladas').textContent = sesion ? Math.round(sesion.paladas) : 0;
   $('#m-kcal').textContent = sesion ? Math.round(sesion.kcal) : 0;
-  $('#m-fc').textContent = actual.fc || '-';
+  $('#m-fc').textContent = actual.fc || '—';
   $('#m-fc-zona').textContent = zfc ? `lpm · Z${zfc.n} ${zfc.nombre}` : 'lpm';
   $('#m-fc-zona').style.color = zfc ? COLOR_ZONA[zfc.n] : '';
-  $('#m-mpp').textContent = sesion && sesion.paladas >= 5 ? (sesion.dist / sesion.paladas).toFixed(1) : '-';
+  $('#m-mpp').textContent = sesion && sesion.paladas >= 5 ? `${(sesion.dist / sesion.paladas).toFixed(1)} m/palada` : '— m/palada';
   const par = textoParcial();
   for (const id of ['#m-parcial', '#mr-parcial']) {
     // En modo remo la casilla es angosta: texto corto en una línea para que no crezca ni mueva lo demás.
@@ -1804,17 +1806,17 @@ function valorCasilla(clave, t, dist, zfc) {
     case 'dist': return ['Distancia', dist];
     case 'kcal': return ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
     case 'extra': return entrenamientoActivo?.objetivo && !objPaladas ? ['Paladas', sesion ? Math.round(sesion.paladas) : 0] : ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
-    case 'fc': return [zfc ? `Pulso · Z${zfc.n}` : 'Pulso', actual.fc || '-'];
-    case 'kcalh': return ['Calorías/hora', t >= 60 ? Math.round((sesion.kcal * 3600) / t) : '-'];
+    case 'fc': return [zfc ? `Pulso · Z${zfc.n}` : 'Pulso', actual.fc || '—'];
+    case 'kcalh': return ['Calorías/hora', t >= 60 ? Math.round((sesion.kcal * 3600) / t) : '—'];
     case 'wmax': return ['Watts máx', sesion?.wMax || 0];
-    case 'jpp': return ['Trabajo/palada', actual.spm ? `${Math.round((actual.watts * 60) / actual.spm)} J` : '-'];
+    case 'jpp': return ['Trabajo/palada', actual.spm ? `${Math.round((actual.watts * 60) / actual.spm)} J` : '—'];
     case 'mpp': {
       // Metros por palada de los últimos 30 s: responde a cómo remas ahora, no a toda la sesión.
       const v = m.slice(-30);
       const paladas = v.reduce((a, x) => a + x.spm / 60, 0);
-      return ['Metros/palada', v.length >= 10 && paladas >= 3 ? ((v.at(-1).dist - v[0].dist) / paladas).toFixed(1) : '-'];
+      return ['Metros/palada', v.length >= 10 && paladas >= 3 ? ((v.at(-1).dist - v[0].dist) / paladas).toFixed(1) : '—'];
     }
-    case 'bateria': return [avanzado() ? 'Batería (W′)' : 'Batería', sesion?.pc ? `${Math.max(0, Math.round((100 * sesion.wBal) / sesion.pc.wPrima))}%` : '-'];
+    case 'bateria': return [avanzado() ? 'Batería (W′)' : 'Batería', sesion?.pc ? `${Math.max(0, Math.round((100 * sesion.wBal) / sesion.pc.wPrima))}%` : '—'];
     default: return ['', ''];
   }
 }
@@ -1863,7 +1865,7 @@ function pintarRango() {
   if (estado) caja.classList.add(estado);
   $('#mr-rango-etq').textContent = m.etq;
   $('#mr-rango-meta').textContent = `${m.txt(m.min)}–${m.txt(m.max)} ${m.unidad}`;
-  $('#mr-rango-valor').textContent = m.valor ? m.txt(m.valor) : '-';
+  $('#mr-rango-valor').textContent = m.valor ? m.txt(m.valor) : '—';
   $('#mr-rango-unidad').textContent = m.unidad;
   $('#mr-rango-ind').innerHTML = textoIndicador(estado, !!m.potencia);
   // Escala: la franja ocupa el 40 % central; a los lados, medio ancho de franja (o un 20 %) de margen.
@@ -2031,7 +2033,7 @@ function aplicarVistaRemo() {
   b.classList.toggle('activo', v !== 'numeros');
   // El botón muestra la vista actual y unos puntos con su lugar en la vuelta; tocarlo pasa a la siguiente.
   const vistas = vistasRemo();
-  const icono = { numeros: '<span class="num" aria-hidden="true">123</span>', rango: '<span class="num" aria-hidden="true">↔</span>', grafica: ico('i-grafica'), carrera: ico('i-fantasma') };
+  const icono = { numeros: '<span class="num" aria-hidden="true">Vista</span>', rango: '<span class="num" aria-hidden="true">Vista</span>', grafica: '<span class="num" aria-hidden="true">Vista</span>', carrera: '<span class="num" aria-hidden="true">Vista</span>' };
   const nombre = { numeros: 'números grandes', rango: 'rango del intervalo', grafica: 'gráfica', carrera: 'carrera' };
   b.innerHTML = `${icono[v]}<span class="vista-puntos" aria-hidden="true">${vistas.map((x) => (x === v ? '●' : '○')).join('')}</span>`;
   b.setAttribute('aria-label', `Vista: ${nombre[v]}. Toca para cambiar a ${nombre[sig]}`);
@@ -2316,7 +2318,7 @@ async function pintarEntrenamientos() {
   const subir = ajustes.leer('subirAtr', '');
   $('#subir-atr').innerHTML = [['', 'Todo'], ...J.ATRIBUTOS.map((a) => [a.clave, a.nombre])]
     .map(([k, n]) => `<button type="button" class="chip" data-subir="${k}" aria-pressed="${k === subir}">${n}${k && k === o.debil ? ' <span class="punto-bajo" title="Tu atributo más bajo">•</span>' : ''}</button>`).join('');
-  for (const id of ['#secciones-ent', '#base-nivel', '#base-tarjetas', '.mios-cabecera', '#lista-ent']) document.querySelector(id).hidden = !!subir;
+  for (const id of ['#secciones-etq', '#secciones-ent', '#base-nivel', '#base-tarjetas', '.mios-cabecera', '#lista-ent']) document.querySelector(id).hidden = !!subir;
   $('#subir-lista').hidden = !subir;
   if (subir) { pintarSubir(subir, h, o, lista); await llenarSelectorEntrenamientos(); return; }
   const seccion = ajustes.leer('seccionEnt', 'potencia');
@@ -2326,13 +2328,13 @@ async function pintarEntrenamientos() {
   $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
   $('#base-nivel').textContent = avanzado()
     ? `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`
-    : 'Hechos a tu nivel: crecen cuando subes de rango.';
+    : 'Ajustados a tu nivel de héroe: suben un escalón de carga cada vez que subes de rango.';
   $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
       ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}">${escaparHtml(x.nombre)}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
       ${chipsAtr(previsionDe(x, o)?.seguro || {}, o.debil, 3)}
-      <div class="base-acciones"><button type="button" class="boton primario" data-usar="${x.id}">Entrenar</button>
-      <button type="button" class="boton chico enlace-boton" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
+      <div class="base-acciones"><button type="button" class="boton" data-usar="${x.id}">Entrenar</button>
+      <button type="button" class="boton chico" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
   // Tus entrenamientos: los de la sección, o todos en «Míos»
   const mios = seccion === 'mios' ? lista : lista.filter((x) => P.enfoqueDe(x) === seccion);
   $('#mios-titulo').textContent = seccion === 'mios' ? 'Tus entrenamientos' : `Tus entrenamientos de ${SECCIONES_ENT.find((x) => x.clave === seccion).nombre.toLowerCase()}`;
@@ -3015,7 +3017,7 @@ function pintarHeroeProgreso(lista) {
   const [pasada, esta] = semanas.slice(-2);
   caja.innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="44" height="44" alt="">
     <span class="ph-texto"><b><span class="sin-corte">Nivel ${h.nivel}</span> · <span class="sin-corte">${h.titulo}</span></b><small><span class="sin-corte">+${miles(esta.xp)} XP esta semana,</span> <span class="sin-corte">la pasada +${miles(pasada.xp)}</span></small></span>
-    <span class="ph-barras" role="img" aria-label="XP por semana, últimas 8 semanas">${semanas.map((x, i) => `<i class="${i === 7 ? 'actual' : ''}" style="height:${Math.max(4, (100 * x.xp) / max)}%" title="${fechaCorta(x.desde)}: ${miles(x.xp)} XP"></i>`).join('')}</span>
+    <span class="ph-barras-caja"><span class="ph-barras" role="img" aria-label="XP por semana, últimas 8 semanas">${semanas.map((x, i) => `<i class="${i === 7 ? 'actual' : ''}" style="height:${Math.max(4, (100 * x.xp) / max)}%" title="${fechaCorta(x.desde)}: ${miles(x.xp)} XP"></i>`).join('')}</span><small aria-hidden="true">XP · 8 semanas</small></span>
     <span aria-hidden="true">›</span>`;
 }
 $('#progreso-heroe').addEventListener('click', () => irA('heroe'));
@@ -3198,7 +3200,7 @@ function previsionDe(ent, o) {
 // Chips de atributos: el destacado primero y en color.
 const chipsAtr = (gan, destacar = null, max = 4) => `<div class="chips-ganancia">${Object.entries(gan)
   .sort((a, b) => (b[0] === destacar) - (a[0] === destacar) || b[1] - a[1]).slice(0, max)
-  .map(([k, v]) => `<span${k === destacar ? ' class="top"' : ''}>${nombreAtributo(k)} +${miles(v)}</span>`).join('')}</div>`;
+  .map(([k, v]) => `<span${k === destacar ? ' class="top" title="Tu atributo más bajo"' : ''}>${nombreAtributo(k)} +${miles(v)}${k === destacar ? ' · tu más bajo' : ''}</span>`).join('')}</div>`;
 // Una condición con sus puntos: «Mantén el rango… +6 Técnica».
 const filaCond = (x, clase = '') => `<li class="cond ${clase}">${ico(x.icono || 'i-aviso')}<div><b>${escaparHtml(x.titulo)}</b>${x.detalle ? `<small>${escaparHtml(x.detalle)}</small>` : ''}</div><span class="cond-pts">${C.textoPuntos(x)}</span></li>`;
 // Duraciones largas (totales): «174 h 55 min» en vez de «174:55:00».
@@ -3269,7 +3271,9 @@ async function pintarHeroe() {
   const pct = h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100;
   $('#heroe-xp-barra').style.width = `${pct}%`;
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
-  $('#heroe-xp-texto').textContent = h.hasta ? `${miles(h.xp)} XP · faltan ${miles(h.hasta - h.xp)} para el nivel ${h.nivel + 1}${ses ? ` (${ses})` : ''}` : `${miles(h.xp)} XP · nivel máximo`;
+  // El texto cuenta lo mismo que la barra (el avance dentro del nivel); el total va aparte.
+  $('#heroe-xp-texto').textContent = h.hasta ? `${miles(h.xp - h.desde)} de ${miles(h.hasta - h.desde)} XP para el nivel ${h.nivel + 1}${ses ? ` (${ses})` : ''} · ${miles(h.xp)} en total` : `${miles(h.xp)} XP · nivel máximo`;
+  $('.heroe-xp').setAttribute('aria-valuenow', String(Math.round(pct)));
   pintarAvisosHeroe(h, sesiones);
   for (const b of document.querySelectorAll('.heroe-tabs button')) {
     b.classList.toggle('activa', b.dataset.hp === seccionHeroe);
@@ -3284,10 +3288,10 @@ function pintarAvisosHeroe(h, sesiones) {
   const avisos = [];
   const veterano = sesiones.some((x) => x.fecha < J.XP_LENTA_DESDE);
   if (Date.now() >= J.XP_LENTA_DESDE && veterano && !ajustes.si('avisoXpLenta', false)) {
-    avisos.push(`<div class="aviso heroe-aviso"><span>Desde el 29 de octubre cada sesión, misión y logro da <b>la mitad de XP</b>. Tu nivel no cambia: solo cuesta más subir.</span><button type="button" class="boton chico" data-aviso-xp>Entendido</button></div>`);
+    avisos.push(`<div class="aviso info heroe-aviso"><span>Desde el 29 de octubre cada sesión, misión y logro da <b>la mitad de XP</b>. Tu nivel no cambia: solo cuesta más subir.</span><button type="button" class="boton chico" data-aviso-xp>Entendido</button></div>`);
   }
   if (h.talentosLibres > 0 && seccionHeroe === 'ficha') {
-    avisos.push(`<div class="aviso heroe-aviso"><span>Tienes <b>${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento</b> sin usar.</span><button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></div>`);
+    avisos.push(`<div class="aviso neutro heroe-aviso"><span>Tienes <b>${h.talentosLibres} ${h.talentosLibres === 1 ? 'punto' : 'puntos'} de talento</b> sin usar.</span><button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></div>`);
   }
   $('#heroe-avisos').innerHTML = avisos.join('');
 }
@@ -3376,6 +3380,12 @@ function pintarSemanaHeroe(h, sesiones, f) {
     ${cercano ? `<p class="titulo-cerca">${ico('i-trofeo')}<span>${cercano.a.nombre} ${miles(h.atributos[cercano.a.clave] || 0)} → título <b>«${cercano.t.siguiente.nombre}»</b>. Te faltan ${miles(cercano.t.siguiente.faltan)}.</span></p>` : ''}`;
 }
 
+// «+1 / 2 / 3 XP»: resalta el valor del grado que tienes (o del siguiente, si aún no lo aprendiste).
+function gradoResaltado(texto, g, max) {
+  const i = Math.min(max, Math.max(1, g || 1)) - 1;
+  return texto.replace(/[+−-]?\d+(?:,\d+)?(?: \/ \d+(?:,\d+)?)+/g, (serie) => serie.split(' / ')
+    .map((v, k) => (k === i ? `<b class="grado-actual" title="${g ? 'Tu grado' : 'Al aprenderlo'}">${v}</b>` : `<span class="grado-otro">${v}</span>`)).join(' / '));
+}
 function pintarTalentos(h, per, clase) {
   const arbol = per.arbol?.[clase.clave] || {};
   const est = { nivel: h.nivel, libres: h.talentosLibres };
@@ -3397,7 +3407,7 @@ function pintarTalentos(h, per, clase) {
       : '<p class="talento-valor nada">Con tus últimas sesiones no sumaría XP: no cumplen lo que pide.</p>';
     return `<div class="talento ${g ? 'aprendido' : motivo && g < t.max ? 'bloqueado' : 'disponible'}">
       <div class="talento-cab"><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span><span class="pips" aria-label="Grado ${g} de ${t.max}">${pips}</span></div>
-      <p>${t.texto}</p>${valor}<div class="talento-pie"><small class="suave">Desde el nivel ${t.nivel}${g && g < t.max ? ` · Ahora: ${t.textoGrado(g).replace(/\.$/, '')}` : ''}</small>${accion}</div></div>`;
+      <p>${gradoResaltado(t.texto, g, t.max)}</p>${valor}<div class="talento-pie"><small class="suave">Desde el nivel ${t.nivel}${g && g < t.max ? ` · Ahora: ${t.textoGrado(g).replace(/\.$/, '')}` : ''}</small>${accion}</div></div>`;
   };
   const ts = J.talentosDe(clase.clave);
   $('#arbol').innerHTML = `<div class="rama"><div class="rama-titulo"><b>${J.cualidadDe(clase.clave)}</b><span>${clase.nombre}</span></div>
@@ -3418,7 +3428,7 @@ function pintarNiveles(h, per, clase) {
       if (n > 1 && n % 3 === 0) extras.push('+1 punto de talento');
       if (abre[n]) extras.push(abre[n]);
       const estado = n < h.nivel ? 'hecho' : n === h.nivel ? 'actual' : '';
-      html += `<li class="${estado}"><b>Nv ${n}</b><span>${n === 1 ? 'Inicio' : `${miles(J.xpParaNivel(n))} XP`}</span>${extras.length ? `<em>${extras.join(' · ')}</em>` : ''}</li>`;
+      html += `<li class="${estado}"><b>Nivel ${n}</b><span>${n === 1 ? 'Inicio' : `${miles(J.xpParaNivel(n))} XP`}</span>${extras.length ? `<em>${extras.join(' · ')}</em>` : ''}</li>`;
     }
     return html;
   };
@@ -3452,14 +3462,27 @@ document.querySelector('#hp-niveles').addEventListener('click', (e) => {
 });
 
 const NOMBRE_PRUEBA = { 'base:prueba-500': 'Prueba 500 m', 'base:prueba-2000': 'Prueba 2000 m', 'base:prueba-ftp': 'Prueba FTP 20 min' };
+// Unidad de cada misión y logro, para que el avance diga «2.5 de 6 km» y no «2,500 de 6,000».
+const UNIDAD_MISION = {
+  impulso: 'm', distdia: 'm', nordica: 'm', tiempo: 'min', constante: 'min', zona2: 'min', umbral: 'min', vo2: 'min', fondo: 'min', oceano: 'min',
+  kcal: 'kcal', kcalsem: 'kcal', corazon: 'lpm', rango: '%', ruta: 'km', disciplina: 'días', rumbo: 'sesiones', bushido: 'sesiones', dominio: 'misiones',
+  gran: 'km', canal: 'km', km50: 'km', km100: 'km', hora: 'min', ses25: 'sesiones', racha14: 'semanas', clases4: 'clases',
+  'cap-sesiones': 'sesiones', 'cap-km': 'km', 'cap-z2min': 'min', 'cap-z4min': 'min', 'cap-fantasmas': 'fantasmas', 'cap-racha': 'días',
+};
+const unaCifra = (v) => (Math.round(v * 10) / 10).toLocaleString('es-MX');
+function avanceMision(m) {
+  const u = UNIDAD_MISION[m.clave || String(m.id).split(':').pop()];
+  if (u === 'm') return `${unaCifra(m.valor / 1000)} de ${unaCifra(m.meta / 1000)} km`;
+  const valor = m.meta >= 100 ? miles(m.valor) : unaCifra(m.valor);
+  return `${valor} de ${miles(m.meta)}${u ? (u === '%' ? ' %' : ` ${u}`) : ''}`;
+}
 function filaMision(m) {
   const pct = Math.min(100, (100 * m.valor) / m.meta);
-  const valor = m.meta >= 100 ? miles(m.valor) : Math.round(m.valor * 10) / 10;
   // Las misiones del día y de la semana tienen un atajo a Entrenar con lo que piden.
   const atajo = m.preparar != null && !m.hecha ? `<button type="button" class="enlace-boton" data-preparar="${m.preparar}">Hacer ahora ›</button>` : '';
   return `<li class="${m.hecha ? 'hecha' : ''}"><div class="mision-fila"><span>${m.hecha ? ico('i-check') : ''}${m.nombre ? `<b>${m.nombre}</b> · ` : ''}${m.texto}</span>
     <span class="recompensa">${m.xp ? `<span class="xp">+${miles(m.xp)} XP</span>` : ''}${m.monedas ? `<span class="monedas">${icoMoneda}${m.monedas}</span>` : ''}</span></div>
-    <div class="progreso"><div style="width:${pct}%"></div></div><div class="mision-pie"><small>${valor} de ${miles(m.meta)}${m.premio ? ` · premio: <b>${m.premio}</b>` : ''}</small>${atajo}</div></li>`;
+    <div class="progreso"><div style="width:${pct}%"></div></div><div class="mision-pie"><small>${avanceMision(m)}${m.premio ? ` · premio: <b>${m.premio}</b>` : ''}</small>${atajo}</div></li>`;
 }
 
 function pintarMisiones(h) {
@@ -3468,8 +3491,8 @@ function pintarMisiones(h) {
   $('#mis-diarias').innerHTML = pendientesPrimero(h.diarias).map((m) => filaMision(m)).join('');
   $('#mis-semanales').innerHTML = pendientesPrimero(h.semanales).map((m) => filaMision(m)).join('');
   const c = h.capitulo;
-  $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p></div>
-    <ul class="lista misiones">${c.progreso.map((r) => filaMision({ texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
+  $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p><p class="cap-avance">La historia avanza venciendo jefes, no con tu nivel: ${c.listo ? `vence a ${c.jefe.nombre} para pasar al capítulo ${c.n + 1 <= J.CAPITULOS.length ? c.n + 1 : 'final'}.` : 'cumple lo de abajo y desbloqueas al jefe del capítulo.'}</p></div>
+    <ul class="lista misiones">${c.progreso.map((r) => filaMision({ clave: `cap-${r.clave}`, texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
     <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}${
       c.listo ? ' · ¡ya puedes enfrentarlo!' : ' · se desbloquea al cumplir lo de arriba'}</small></div>
       <span class="premio"><span class="xp">+${miles(c.xp)} XP</span> ${icoMoneda}${c.monedas + J.PREMIO_INSIGNIA} + insignia</span>
@@ -3477,7 +3500,7 @@ function pintarMisiones(h) {
     : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
   // Logros: primero los que te faltan, del más cercano al más lejano; los hechos al final.
   const avance = (x) => (x.hecha ? -1 : x.valor / x.meta);
-  const logro = (x) => filaMision({ nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas + (x.objeto ? J.PREMIO_INSIGNIA : 0), premio: x.objeto ? `insignia ${O.objeto(x.objeto).nombre}` : '', hecha: x.hecha });
+  const logro = (x) => filaMision({ clave: x.id, nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas + (x.objeto ? J.PREMIO_INSIGNIA : 0), premio: x.objeto ? `insignia ${O.objeto(x.objeto).nombre}` : '', hecha: x.hecha });
   // Los logros hechos se guardan en un desplegable: arriba quedan solo los que te faltan.
   const hechos = h.hazanas.filter((x) => x.hecha);
   $('#mis-hazanas').innerHTML = h.hazanas.filter((x) => !x.hecha).sort((a, b) => avance(b) - avance(a)).map(logro).join('')
@@ -3493,7 +3516,7 @@ function pintarTienda(h, per) {
   sig.setDate(sig.getDate() + 7);
   $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. Ventajas de un solo uso para tus carreras contra fantasmas: una por carrera y nunca en las pruebas. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.`;
   $('#tienda').innerHTML = items.map((x) => `<div class="objeto ventaja"><span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b><small>${x.texto}</small>
-    <span class="monedas">${icoMoneda}${x.precio}</span>
+    <span class="monedas">${icoMoneda}${x.precio}</span>${inv[x.id] ? `<span class="tienes">Tienes ${inv[x.id]}</span>` : ''}
     <button type="button" class="boton chico primario" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button></div>`).join('');
   const elegido = paisajeElegido(per);
   $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).map(([id, x]) => {
@@ -4334,7 +4357,7 @@ async function pintarHoy(ent = entrenamientoPrevio) {
   } else if (jefeHoy) {
     sug = { texto: `${jefe.jefe.nombre} te espera: ${jefe.jefe.texto.charAt(0).toLowerCase()}${jefe.jefe.texto.slice(1)} (+${miles(jefe.xp)} XP).`, boton: 'Enfrentar', accion: () => prepararEntrenamiento(jefe.preparar) };
   } else if (dia?.fuente === 'descanso' && dia.alternativa && !ent) {
-    sug = { texto: '¿Te apetece remar igual? Que sea suave.', boton: 'Fondo suave', accion: () => elegirEnt(dia.alternativa) };
+    sug = { texto: '¿Quieres remar igual? Que sea suave.', boton: 'Fondo suave', accion: () => elegirEnt(dia.alternativa) };
   } else if (!prog && ajustes.si('ftpEstimado', false) && sesiones.length >= 3 && !sesiones.some((x) => x.pruebaWatts) && ent?.id !== 'base:prueba-ftp') {
     sug = { texto: 'Tu FTP es estimado. Afínalo con la Prueba FTP 20 min.', boton: 'Elegir', accion: () => elegirEnt('base:prueba-ftp') };
   } else if (!prog && sesiones.length >= 3) {
@@ -4730,13 +4753,15 @@ function pintarInicio() {
   notaPerfilInicio();
   const sig = $('#inicio-siguiente');
   sig.disabled = (p === 2 && !inicio.clase) || (p === 3 && !inicio.objetivo);
-  sig.textContent = p === 1 ? (inicio.repetir ? 'Repasar' : 'Empezar') : p === 5 ? 'Lo haré después' : p === ultimo ? 'Guardar' : 'Siguiente';
+  // El botón deshabilitado dice qué falta, en vez de quedarse gris sin explicación.
+  sig.textContent = p === 2 && !inicio.clase ? 'Elige un héroe para seguir' : p === 3 && !inicio.objetivo ? 'Elige un objetivo para seguir'
+    : p === 1 ? (inicio.repetir ? 'Repasar' : 'Empezar') : p === 5 ? 'Lo haré después' : p === ultimo ? 'Guardar' : 'Siguiente';
   sig.classList.toggle('primario', p !== 5);
   $('#inicio-atras').hidden = p === 1;
   $('#inicio-saltar').hidden = p === 5;
   $('#inicio-saltar').textContent = inicio.repetir ? 'Cerrar' : 'Saltar';
   if (p === 5 && !Remadora.soportado()) {
-    $('#inicio-bt-texto').textContent = 'Este navegador no tiene Bluetooth web: para conectar la remadora abre la app en Chrome para Android. Mientras, pruébala en modo demo.';
+    $('#inicio-bt-texto').textContent = 'Este navegador no puede conectar con la remadora: abre la app en Chrome para Android. Mientras, pruébala en modo demo.';
     $('#inicio-conectar').hidden = true;
     $('#inicio-demo').classList.add('primario', 'grande');
   }
@@ -4892,12 +4917,13 @@ $('#btn-consejos').addEventListener('click', () => {
 function mostrarConsejo(vista) {
   document.querySelectorAll('.consejo').forEach((x) => x.remove());
   const t = G.consejoDe(vista);
-  if (!t || ajustes.si(`consejo-${vista}`, false) || !$('#inicio').hidden) return;
+  // Ni a media sesión ni con el teléfono en horizontal: ahí cada línea de alto cuenta.
+  if (!t || ajustes.si(`consejo-${vista}`, false) || !$('#inicio').hidden || sesion || matchMedia('(orientation: landscape) and (max-height: 520px)').matches) return;
   const el = document.createElement('div');
   el.className = 'consejo';
   el.setAttribute('role', 'note');
   el.innerHTML = `${ico(t.icono)}<div class="consejo-texto"><b>${t.titulo}</b><span>${t.resumen}</span></div>
-    <div class="consejo-botones"><button type="button" class="boton chico" data-guia="${t.clave}">Cómo funciona</button><button type="button" class="enlace-boton" data-entendido>Entendido</button></div>`;
+    <div class="consejo-botones"><button type="button" class="boton chico" data-guia="${t.clave}">Cómo funciona</button><button type="button" class="boton chico" data-entendido>Entendido</button></div>`;
   el.addEventListener('click', (e) => {
     const g = e.target.closest('[data-guia]');
     if (!g && !e.target.closest('[data-entendido]')) return;

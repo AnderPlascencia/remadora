@@ -53,7 +53,7 @@ export const PAISAJES = {
   },
   laguna: {
     nombre: 'Laguna tropical',
-    texto: 'Agua turquesa, islas volcánicas, palmeras y fares.',
+    texto: 'Agua turquesa, islas volcánicas, palmeras y faros.',
     precio: 400,
     miniatura: 'assets/carrera/laguna_mini.webp',
     panorama: { src: 'assets/carrera/laguna.webp', horizonte: 204 },

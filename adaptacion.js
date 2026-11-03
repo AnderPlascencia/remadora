@@ -165,6 +165,13 @@ export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp
       return { fuente: 'plan', ent: diaHoy.ent, motivo: [rol, enSemana].filter(Boolean).join(' · ') };
     }
     if (!prox) return { fuente: 'terminado', ent: null, motivo: '' };
+    // Plan recién creado que arranca otro día y sin ninguna sesión todavía (recién salido de la bienvenida):
+    // no dice «Hoy descansas», adelanta la primera sesión del plan, o un fondo suave si la primera es dura.
+    if (!sesiones.length && dias.every((x) => x.fecha > hoy)) {
+      return duro(prox.ent)
+        ? { fuente: 'sugerida', id: 'base:dis-suave', motivo: `Para empezar, un fondo suave y conoces la app. Tu plan arranca el ${DIA_SEM(prox.fecha)}.` }
+        : { fuente: 'plan', ent: prox.ent, motivo: `Tu primera sesión: adelantas la del ${DIA_SEM(prox.fecha)} y el plan sigue igual.` };
+    }
     if (remadoHoy) return { fuente: 'descanso', ent: null, motivo: `Hoy ya remaste. ${textoProx}` };
     // Sesiones de esta semana que no se hicieron (ni otro día): la más importante primero.
     const lunes = E.claveDia(E.inicioPeriodo(ahora, 'semana'));
