@@ -80,7 +80,7 @@ export async function pintarPrograma() {
     const e = buscarEnt(d.ent);
     const v = valorDe(d.ent, todos);
     const tipo = /^Prueba/.test(d.ent) ? 'Prueba' : e && P.esDura(e) ? 'Dura' : 'Suave';
-    return `<li data-estado="${d.estado}"><span class="sp-dia">${d.diaCorto}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b><small>${tipo}${e ? ` · ${B.resumenEnt(e).split(' · ')[0]}` : ''} · ${ESTADO[d.estado]}${d.estado === 'hecho' ? ' ✓' : ''}</small></span>${
+    return `<li data-estado="${d.estado}"><span class="sp-dia">${d.diaCorto}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b><small>${tipo}${e ? ` · ${escaparHtml(B.resumenEnt(e).split(' · ')[0])}` : ''} · ${ESTADO[d.estado]}${d.estado === 'hecho' ? ' ✓' : ''}</small></span>${
       v && d.estado !== 'hecho' ? `<button type="button" class="boton chico" data-entrenar="${v}">Entrenar</button>` : ''}</li>`;
   }).join('') : '<li class="vacio">Esta semana no hay sesiones en tu plan.</li>';
   pintarPlanHoy(prog, sesiones, todos);

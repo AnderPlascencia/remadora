@@ -100,7 +100,7 @@ export async function pintarEntrenamientos() {
   const tuyos = mios.filter((x) => !x.dePlan);
   const ul = $('#lista-ent');
   const fila = (x) => `<li data-id="${x.id}">
-      <div class="info clic" role="button" tabindex="0" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${B.resumenEnt(x)}</div></div>
+      <div class="info clic" role="button" tabindex="0" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${escaparHtml(B.resumenEnt(x))}</div></div>
       <details class="menu-fila"><summary class="boton icono chico" aria-label="Opciones de ${escaparHtml(x.nombre)}">⋯</summary>
         <div class="menu-fila-caja"><button type="button" data-a="editar">${ico('i-editar')} Editar</button><button type="button" data-a="duplicar">${ico('i-copiar')} Duplicar</button>
         <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`;
@@ -123,11 +123,11 @@ function pintarSubir(clave, h, o, lista) {
   const tarjeta = (x, i) => {
     const { ent, p } = x;
     const extra = x.si || p.extras.find((e) => e.atributo === clave);
-    return `<article class="base-tarjeta subir-tarjeta ${ent.dificultad || 'prueba'}" data-ver="${ent.id}">
+    return `<article class="base-tarjeta subir-tarjeta ${escaparHtml(ent.dificultad || 'prueba')}" data-ver="${ent.id}">
       ${i === 0 && !x.si ? `<span class="dif mejor">El mejor para ${a.nombre}</span>` : ''}
       <div class="subir-fila"><button type="button" class="base-nombre" data-ver="${ent.id}" aria-label="Ver detalles de ${escaparHtml(ent.nombre)}">${escaparHtml(ent.nombre)}</button>
         <span class="subir-pts"><b>+${p.seguro[clave] || x.si.puntos}</b><small>${x.si ? 'si lo logras' : a.nombre}</small></span></div>
-      <p class="base-resumen">${B.resumenEnt(ent)}</p>
+      <p class="base-resumen">${escaparHtml(B.resumenEnt(ent))}</p>
       ${chipsAtr(p.seguro, clave, 4)}
       ${extra ? `<p class="subir-extra">${ico(extra.icono)}<span>${escaparHtml(extra.titulo)}: <b>${C.textoPuntos(extra)}</b></span></p>` : ''}
       <div class="base-acciones"><button type="button" class="boton primario" data-usar="${ent.id}">Entrenar</button></div></article>`;
@@ -553,7 +553,7 @@ function abrirDetalleEnt(ent) {
   const base = B.esBase(ent.id);
   const secc = SECCIONES_ENT.find((x) => x.clave === (ent.enfoque || P.enfoqueDe(ent)));
   $('#he-titulo').textContent = ent.nombre;
-  $('#he-sub').innerHTML = [ent.dificultad ? `<span class="dif ${ent.dificultad}">${B.nombreDificultad(ent.dificultad)}</span>` : '', secc?.nombre, B.resumenEnt(ent), base ? '' : 'Tuyo'].filter(Boolean).join(' · ');
+  $('#he-sub').innerHTML = [ent.dificultad ? `<span class="dif ${escaparHtml(ent.dificultad)}">${B.nombreDificultad(ent.dificultad)}</span>` : '', secc?.nombre, escaparHtml(B.resumenEnt(ent)), base ? '' : 'Tuyo'].filter(Boolean).join(' · ');
   $('#he-para').textContent = ent.proposito || (base ? '' : 'Entrenamiento que creaste tú.');
   $('#he-para').hidden = !$('#he-para').textContent;
   $('#he-editar').textContent = base ? 'Copiar y editar' : 'Editar';
