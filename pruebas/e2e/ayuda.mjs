@@ -80,7 +80,26 @@ export function listar(page, almacen) {
   }), almacen);
 }
 
-export const enCurso = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('sesionEnCurso') || 'null'));
+// Lee una clave del almacén «estado» (sesión en curso, versión de los datos).
+export function leerEstado(page, clave) {
+  return page.evaluate((k) => new Promise((ok, mal) => {
+    const req = indexedDB.open('remadora');
+    req.onerror = () => mal(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('estado')) { db.close(); ok(null); return; }
+      const l = db.transaction('estado').objectStore('estado').get(k);
+      l.onsuccess = () => { db.close(); ok(l.result ?? null); };
+      l.onerror = () => mal(l.error);
+    };
+  }), clave);
+}
+
+// La copia de la sesión en curso: en IndexedDB y, si falló, en localStorage.
+export async function enCurso(page) {
+  return (await leerEstado(page, 'enCurso'))
+    ?? page.evaluate(() => { try { return JSON.parse(localStorage.getItem('sesionEnCurso') || 'null'); } catch { return null; } });
+}
 
 // Empieza la sesión que propone la tarjeta Hoy y rema `ms` en modo demo.
 export async function remar(page, ms, opciones) {

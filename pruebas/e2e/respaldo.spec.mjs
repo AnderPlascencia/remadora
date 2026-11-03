@@ -51,7 +51,8 @@ test('respaldo de ida y vuelta: lo guardado en un teléfono se restaura en otro 
   await otro.waitForLoadState();
   await expect.poll(() => listar(otro, 'sesiones').then((l) => l.length)).toBe(1);
   const [copia] = await listar(otro, 'sesiones');
-  const sinId = ({ id, ...resto }) => resto;
+  // Como viaja en el archivo: JSON no guarda claves undefined y -0 vuelve como 0 (la diferencia con un rival empatado).
+  const sinId = ({ id, ...resto }) => JSON.parse(JSON.stringify(resto));
   expect(sinId(copia)).toEqual(sinId(original[0]));
   expect(await otro.evaluate(() => localStorage.getItem('inicioHecho'))).toBe('1');
 

@@ -38,7 +38,16 @@ test('descartar la sesión recuperada no guarda nada', async ({ page }) => {
 });
 
 test('una copia dañada en el almacenamiento no rompe el arranque', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('sesionEnCurso', '{roto'));
+  // La copia vive en IndexedDB (y en localStorage si IndexedDB falló): se dañan las dos.
+  await page.evaluate(() => new Promise((ok) => {
+    localStorage.setItem('sesionEnCurso', '{roto');
+    const req = indexedDB.open('remadora');
+    req.onsuccess = () => {
+      const t = req.result.transaction('estado', 'readwrite');
+      t.objectStore('estado').put('{roto', 'enCurso');
+      t.oncomplete = () => { req.result.close(); ok(); };
+    };
+  }));
   await page.reload();
   await page.clock.runFor(1_000);
   await expect(page.locator('#recuperar-dialogo')).toBeHidden();
