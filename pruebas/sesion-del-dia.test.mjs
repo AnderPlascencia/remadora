@@ -61,6 +61,14 @@ assert.match(sinNada.ent, /^Fondo/, 'con mañana dura, se recupera el fondo, no 
 d = A.sesionDelDia({ programa: { ...programa, dias: programa.dias.filter((x) => !/^Fondo/.test(x.ent)) }, entrenamientos, sesiones: [], cuerpo: { clave: 'cargado' }, ahora: lunes + 2 * DIA });
 assert.equal(d.fuente, 'descanso');
 assert.match(d.motivo, /cargado/);
+// Plan recién creado que empieza mañana, sin ninguna sesión: no «Hoy descansas», se adelanta la primera.
+{
+  const domingo = lunes - DIA;
+  const p = A.sesionDelDia({ programa, entrenamientos, sesiones: [], ahora: domingo });
+  assert.notEqual(p.fuente, 'descanso');
+  assert.ok(p.fuente === 'plan' || (p.fuente === 'sugerida' && p.id === 'base:dis-suave'));
+  assert.match(p.motivo, /lunes/);
+}
 // Plan terminado.
 d = A.sesionDelDia({ programa, entrenamientos, ahora: lunes + 60 * DIA });
 assert.equal(d.fuente, 'terminado');

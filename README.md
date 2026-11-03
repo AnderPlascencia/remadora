@@ -17,7 +17,7 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Lee watts, golpes por minuto, split de 500 m, distancia y nivel de resistencia.
 - Banda de pulso Bluetooth opcional.
 - Entrenamientos por objetivo: calorías, distancia o paladas, con progreso y tiempo estimado.
-- Entrenamientos por intervalos de tiempo con rango de potencia (o golpes por minuto), gráfica del plan completo (rango en verde, fuera de rango en rojo, tu potencia encima), avisos de sube/baja y % del tiempo en rango.
+- Entrenamientos por intervalos de tiempo con rango de potencia (o golpes por minuto), gráfica del plan completo (rango en verde, fuera de rango en gris, tu potencia encima), avisos de sube/baja y % del tiempo en rango.
 - Zonas de potencia por FTP (intervalos en % del FTP) y prueba FTP de 20 min que calcula tu FTP.
 - Modo remo de pantalla completa (vertical y horizontal) con watts gigantes y aviso sube/baja.
 - Avisos por voz: cambio de intervalo, cuenta regresiva, fuera de rango, meta cumplida.
@@ -109,6 +109,7 @@ El formato de los mensajes se tomó como referencia del proyecto
 - Cada sesión guarda sus pausas (hora de inicio y fin), la hora real de fin y la versión de la app; el detalle muestra el tiempo parado. Al pulsar Seguir no se graban segundos hasta que vuelves a remar.
 - La meta se marca en el instante exacto en que la cruzas, no en el segundo siguiente.
 - La app pide a Chrome que no borre tus sesiones aunque falte espacio; Ajustes › Respaldo dice si lo consiguió.
+- Colores con un solo significado: dorado para actuar, verde agua para XP y nivel, amarillo para monedas, azul para consejos y novedades. Los consejos de cada pestaña no salen a media sesión ni en horizontal, y el primer día tras la bienvenida propone remar en vez de «Hoy descansas».
 
 ## Pruebas
 

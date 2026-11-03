@@ -354,7 +354,7 @@ export const INSIGNIAS = [
   { clave: 'tot100', nombre: '100 km', detalle: '100 km en total' },
   { clave: 'racha7', nombre: 'Semana perfecta', detalle: '7 días seguidos remando' },
   { clave: 'fantasma', nombre: 'Cazafantasmas', detalle: 'Ganarle a un fantasma' },
-  { clave: 'avanzado', nombre: 'Nivel avanzado', detalle: 'Ganarle al fantasma avanzado' },
+  { clave: 'avanzado', nombre: 'Rival avanzado', detalle: 'Ganarle al fantasma avanzado' },
   { clave: 'sub8', nombre: 'Bajo 8 minutos', detalle: '2000 m en menos de 8:00' },
   { clave: 'sub7', nombre: 'Bajo 7 minutos', detalle: '2000 m en menos de 7:00' },
 ];

@@ -62,7 +62,7 @@
     <!-- ENTRENAR -->
     <section id="vista-entrenar" class="vista activa" aria-labelledby="tab-entrenar">
       <div id="aviso-bt" class="aviso aviso-bt" hidden>
-        <span>Este navegador no tiene Bluetooth web: abre la app en Chrome para Android.</span>
+        <span>Este navegador no puede conectar con la remadora: abre la app en Chrome para Android.</span>
         <button type="button" id="btn-demo-aviso" class="boton chico">Probar en modo demo</button>
       </div>
 
@@ -175,7 +175,7 @@
       <div class="metricas">
         <div class="metrica destacada"><span class="etq">Watts <span id="m-nivel-etq"></span></span><span id="m-watts" class="valor">0</span><span id="m-zona" class="sub"></span></div>
         <div class="metrica destacada"><span class="etq">Split /500 m</span><span id="m-split" class="valor">--:--</span><span id="m-parcial" class="sub parcial"></span></div>
-        <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span><span class="sub"><span id="m-mpp">-</span> m/palada</span></div>
+        <div class="metrica"><span class="etq">Golpes/min</span><span id="m-spm" class="valor">0</span><span class="sub"><span id="m-mpp">— m/palada</span></span></div>
         <div class="metrica"><span class="etq">Tiempo</span><span id="m-tiempo" class="valor">0:00</span></div>
         <div class="metrica"><span class="etq">Distancia</span><span id="m-dist" class="valor">0</span><span class="sub">m</span></div>
         <div class="metrica extra-vivo" data-metrica="paladas"><span class="etq">Paladas</span><span id="m-paladas" class="valor">0</span></div>
@@ -204,7 +204,8 @@
         <div class="subir-atr"><span class="etq-campo">Quiero subir…</span>
           <div id="subir-atr" class="chips secciones-ent" role="group" aria-label="Atributo que quieres subir"></div></div>
         <div id="subir-lista" class="subir-lista" hidden></div>
-        <div id="secciones-ent" class="chips secciones-ent" aria-label="Secciones"></div>
+        <span id="secciones-etq" class="etq-campo etq-secciones">Tipo de entrenamiento</span>
+        <div id="secciones-ent" class="chips secciones-ent" aria-label="Tipo de entrenamiento"></div>
         <p id="base-nivel" class="ayuda"></p>
         <div id="base-tarjetas" class="base-tarjetas"></div>
         <div class="mios-cabecera"><h2 id="mios-titulo">Tus entrenamientos</h2><button id="btn-nuevo-ent" class="boton chico">+ Nuevo</button></div>
@@ -356,7 +357,7 @@
         <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
           <button type="button" data-hp="ficha" class="activa">Ficha</button>
           <button type="button" data-hp="talentos">Talentos</button>
-          <button type="button" data-hp="niveles">Niveles</button>
+          <button type="button" data-hp="niveles">Rangos</button>
           <button type="button" data-hp="misiones">Misiones</button>
           <button type="button" data-hp="tienda">Tienda</button>
         </div>
@@ -622,7 +623,7 @@
       <label class="interruptor"><input type="checkbox" id="in-res-auto"><span>Resistencia automática (experimental)</span></label>
       <p class="ayuda">Con la resistencia automática, la app cambia el nivel de la consola cuando un intervalo tiene "Nivel" definido. Pruébala primero sin remar fuerte.</p>
       <div class="fila-botones">
-        <label class="campo crece">Probar nivel
+        <label class="campo crece">Probar resistencia de la consola
           <select id="sel-nivel-prueba"></select>
         </label>
         <button id="btn-nivel-prueba" class="boton alinear-abajo">Enviar</button>
@@ -697,8 +698,8 @@
     <div id="mr-rival" class="rival mr-rival" hidden><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="mr-rival-texto"></span></div>
     <div id="mr-estado" class="mr-estado" aria-live="polite"></div>
     <div class="mr-botones">
+      <button id="mr-terminar" class="boton peligro lleno grande"><svg class="ico" aria-hidden="true"><use href="#i-stop"/></svg><span>Terminar</span></button>
       <button id="mr-pausa" class="boton grande" aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
-      <button id="mr-terminar" class="boton peligro grande"><svg class="ico" aria-hidden="true"><use href="#i-stop"/></svg><span>Terminar</span></button>
       <button id="mr-vista" class="boton grande" aria-label="Cambiar a vista de gráfica"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg></button>
       <button id="mr-salir" class="boton grande" aria-label="Salir del modo remo"><svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
     </div>
@@ -803,7 +804,7 @@
           <label class="campo">Edad <input id="inicio-edad" type="number" min="10" max="99" inputmode="numeric" placeholder="35"></label>
           <label class="campo">Peso (kg) <input id="inicio-peso" type="number" min="30" max="200" inputmode="numeric" placeholder="75"></label>
           <label class="campo">Altura (cm) <input id="inicio-altura" type="number" min="120" max="230" inputmode="numeric" placeholder="172"></label>
-          <label class="campo">FTP (W) <small>(si lo sabes)</small><input id="inicio-ftp" type="number" min="30" max="1000" inputmode="numeric" placeholder="Lo calculo"></label>
+          <label class="campo">FTP (W) <button type="button" class="ayuda-q" data-ayuda="ftp" aria-label="¿Qué es el FTP?">?</button> <small>(si lo sabes)</small><input id="inicio-ftp" type="number" min="30" max="1000" inputmode="numeric" placeholder="Lo calculo"></label>
         </div>
         <p id="inicio-perfil-nota" class="inicio-nota" aria-live="polite"></p>
       </section>

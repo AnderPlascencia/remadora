@@ -126,7 +126,7 @@ function medir(ss, { ftp, peso, fcRef }) {
 }
 
 export const CAPACIDADES = [
-  { clave: 'base', nombre: 'Base aeróbica', simple: 'Motor', entrena: 'Fondos suaves largos', unidad: 'W', como: (c) => `Watts a ${c.fcRef} lpm`, falta: 'Rema 20 min o más con el reloj para medirla.' },
+  { clave: 'base', nombre: 'Base aeróbica', simple: 'Motor', entrena: 'Fondos suaves largos', unidad: 'W', como: (c) => `Watts a ${c.fcRef} lpm`, falta: 'Necesita tu pulso: rema 20 min o más con banda o reloj conectado.' },
   { clave: 'umbral', nombre: 'Umbral (FTP)', simple: 'Ritmo sostenido', entrena: 'Bloques largos a ritmo fuerte', unidad: 'W', como: () => 'Potencia de una hora', falta: 'Haz la Prueba FTP 20 min o una sesión de 20 min.' },
   { clave: 'vo2', nombre: 'VO₂máx', simple: 'Pulmones', entrena: 'Series de 2 a 4 min muy fuertes', unidad: 'ml/kg/min', como: () => 'Estimado con tu mejor 5 min', falta: 'Rema 5 min a fondo para estimarlo.' },
   { clave: 'anaerobica', nombre: 'Capacidad anaeróbica', simple: 'Batería', entrena: 'Series cortas por encima de tu ritmo', unidad: 'kJ', como: () => 'W′ con tus mejores marcas de 2 a 20 min', falta: 'Necesita marcas de dos duraciones, por ejemplo 3 y 12 min.' },
