@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as E from '../estadisticas.js';
-import { parseMedidaPulso } from '../protocolo.js';
+import * as E from '../src/estadisticas.js';
+import { parseMedidaPulso } from '../src/protocolo.js';
 
 // ---------- Potencia ----------
 const pareja = Array.from({ length: 600 }, (_, t) => ({ t, w: 150 }));

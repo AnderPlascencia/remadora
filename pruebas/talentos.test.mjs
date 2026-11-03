@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as T from '../talentos.js';
-import { sinPausas } from '../juego.js';
+import * as T from '../src/talentos.js';
+import { sinPausas } from '../src/juego.js';
 
 const base = { paladas: 0, metros: 0, min: 0, ganados: 0, rivales: 0, sinPausas: false, delPrograma: false, racha: 1, sesSemana: 1 };
 const xp = (clase, grados, d) => T.xpTalentos(clase, grados, { ...base, ...d });

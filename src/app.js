@@ -21,11 +21,11 @@ import * as Pf from './perfil.js';
 import * as G from './guia.js';
 import * as R from './respaldo.js';
 import { crearReloj } from './reloj.js';
+import { VERSION } from './version.js';
 import {
   $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, reajustarTextos, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
-const VERSION = '0.45.0';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 
 // ---------- Navegación ----------

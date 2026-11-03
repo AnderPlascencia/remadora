@@ -1,7 +1,7 @@
 // Guarda la app en caché para que abra sin conexión. Cambia VERSION al publicar cambios.
 const VERSION = 'remadora-0.45.0';
-const ARCHIVOS = ['./', 'index.html', 'estilos.css', 'app.js', 'remadora.js', 'protocolo.js', 'variantes.js',
-  'grafica.js', 'db.js', 'entrenamientos.js', 'estadisticas.js', 'voz.js', 'programa.js', 'fantasma.js', 'carrera.js', 'efectos.js', 'juego.js', 'talentos.js', 'ventajas.js', 'base.js', 'objetos.js', 'consejos.js', 'capacidades.js', 'adaptacion.js', 'perfil.js', 'guia.js', 'ui.js', 'respaldo.js', 'reloj.js', 'manifest.webmanifest', 'rower-logo.svg', 'rower-marca.svg', 'rower-marca-clara.svg', 'rower-192.png', 'rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
+const ARCHIVOS = ['./', 'index.html', 'src/estilos.css', 'src/app.js', 'src/remadora.js', 'src/protocolo.js', 'src/variantes.js',
+  'src/grafica.js', 'src/db.js', 'src/entrenamientos.js', 'src/estadisticas.js', 'src/voz.js', 'src/programa.js', 'src/fantasma.js', 'src/carrera.js', 'src/efectos.js', 'src/juego.js', 'src/talentos.js', 'src/ventajas.js', 'src/base.js', 'src/objetos.js', 'src/consejos.js', 'src/capacidades.js', 'src/adaptacion.js', 'src/perfil.js', 'src/guia.js', 'src/ui.js', 'src/respaldo.js', 'src/reloj.js', 'src/version.js', 'manifest.webmanifest', 'assets/marca/rower-logo.svg', 'assets/marca/rower-marca.svg', 'assets/marca/rower-marca-clara.svg', 'assets/marca/rower-192.png', 'assets/marca/rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
 
 // Ilustraciones de los héroes (5 clases × 9 rangos, figura y retrato): ~1.7 MB. Se guardan aparte para que,
 // si alguna falla, la app igual quede instalada; así los rangos que aún no has visto también salen sin conexión.

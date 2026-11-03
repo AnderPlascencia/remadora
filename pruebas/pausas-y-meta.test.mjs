@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { metrosNuevos, instanteMeta, tiempoParado } from '../estadisticas.js';
+import { metrosNuevos, instanteMeta, tiempoParado } from '../src/estadisticas.js';
 
 // Filtro de saltos flexible: la consola se atrasa 7 s y se pone al día con 24 m (antes se perdían)
 assert.equal(metrosNuevos(1534, 1558, 7), 24);
@@ -23,8 +23,8 @@ assert.equal(tiempoParado([{ ini: 5000, fin: null }]), 0);
 console.log('pausas-y-meta: ok');
 
 // «Sin pausas» (talentos): una pausa guardada de 5 s o más la descarta aunque las muestras no tengan segundos quietos
-import { sinPausas } from '../juego.js';
-import { formatoMeta } from '../ui.js';
+import { sinPausas } from '../src/juego.js';
+import { formatoMeta } from '../src/ui.js';
 {
   const muestras = Array.from({ length: 700 }, (_, i) => ({ t: i + 1, w: 150, spm: 24 }));
   assert.equal(sinPausas({ muestras }), true);

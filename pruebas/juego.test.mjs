@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import * as J from '../juego.js';
+import * as J from '../src/juego.js';
 
 assert.equal(J.xpParaNivel(1), 0);
 assert.equal(J.xpParaNivel(2), 200);
@@ -226,7 +226,7 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   const h = J.estadoJuego([], { per: { clase: 'vikingo', arbol: { vikingo: lleno } } });
   assert.equal(h.talentosPorRepartir, 0);
 
-  const V = await import('../ventajas.js');
+  const V = await import('../src/ventajas.js');
   const est = V.OBJETOS_VENTAJA.find((x) => x.id === 'estandarte');
   assert.match(est.texto, new RegExp(`\\+${Math.round(V.XP_ESTANDARTE * J.FACTOR_XP_LENTA)} XP`), 'el texto dice lo que paga');
 

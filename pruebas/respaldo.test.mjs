@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { armarRespaldo, esRespaldo, planRestaurar, listaHumana, CLAVES_AJUSTES } from '../respaldo.js';
+import { armarRespaldo, esRespaldo, planRestaurar, listaHumana, CLAVES_AJUSTES } from '../src/respaldo.js';
 
 const guardados = { ftp: '180', personaje: '{"clase":"vikingo"}', ultimoRespaldo: '123' };
 const leer = (k) => guardados[k] ?? null;

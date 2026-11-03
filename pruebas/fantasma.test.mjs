@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as F from '../fantasma.js';
-import { EJEMPLOS } from '../entrenamientos.js';
+import * as F from '../src/fantasma.js';
+import { EJEMPLOS } from '../src/entrenamientos.js';
 
 const d2k = EJEMPLOS.find((e) => e.nombre === '2000 m');
 const tiempos = Object.keys(F.NIVELES).map((n) => F.simular(d2k, n).muestras.at(-1).t);
@@ -43,7 +43,7 @@ console.log('fantasma realista OK');
 
 // Salida tras el calentamiento: el fantasma va a tu par y luego rema lo suyo desde tus metros.
 {
-  const F2 = await import('../fantasma.js');
+  const F2 = await import('../src/fantasma.js');
   assert.equal(F2.bloquesCalentamiento([{ nombre: 'Calentamiento guiado', guiado: true }, { nombre: 'Calentamiento' }, { nombre: 'Trabajo' }]), 2);
   assert.equal(F2.bloquesCalentamiento([{ nombre: 'Trabajo' }]), 0);
   const tuyas = [1, 2, 3, 4].map((t) => ({ t, dist: t * 3, spm: 20 }));

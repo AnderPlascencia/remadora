@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as E from '../estadisticas.js';
-import * as Ent from '../entrenamientos.js';
+import * as E from '../src/estadisticas.js';
+import * as Ent from '../src/entrenamientos.js';
 
 // Sesión sintética: 600 s a 4 m/s, con 60 s a 300 W en el medio.
 const muestras = Array.from({ length: 600 }, (_, t) => ({ t, w: t >= 200 && t < 260 ? 300 : 150, dist: t * 4, spm: 24 }));

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import * as Ent from '../entrenamientos.js';
+import * as Ent from '../src/entrenamientos.js';
 
 const obj = { tipo: 'objetivo', nombre: '2000 m', objetivo: { metrica: 'distancia', valor: 2000 } };
 let p = Ent.progresoObjetivo(obj, { distancia: 500 }, 120);

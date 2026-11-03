@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as P from '../programa.js';
-import { EJEMPLOS } from '../entrenamientos.js';
+import * as P from '../src/programa.js';
+import { EJEMPLOS } from '../src/entrenamientos.js';
 
 const ctx = { kcalHabitual: 300, kcalSemana: 900 };
 const fcpctOFtp = (b) => !b.metrica || ['ftp', 'fcpct'].includes(b.metrica);
