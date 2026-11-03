@@ -103,3 +103,20 @@ export function formatoMeta(seg) {
   if (Number.isInteger(d)) return formatoTiempo(d);
   return `${formatoTiempo(Math.floor(d))}.${Math.round((d % 1) * 10)}`;
 }
+
+// Números que crecen (2:03:45, 42195 m, 12345 paladas): si el texto ya no cabe en su casilla se achica la
+// letra en vez de salirse. Solo se mide cuando cambia el largo del texto o la pantalla (rotar, cambiar de vista).
+let generacionAjuste = 0;
+export function reajustarTextos() { generacionAjuste++; }
+export function ajustarTexto(el, minimo = 0.55) {
+  if (!el) return;
+  const firma = `${generacionAjuste}|${el.textContent.length}`;
+  if (el.dataset.ajuste === firma) return;
+  el.style.fontSize = '';
+  const ancho = el.clientWidth;
+  if (!ancho) return; // oculto: se ajusta cuando se vea
+  el.dataset.ajuste = firma;
+  if (el.scrollWidth <= ancho + 1) return;
+  const base = parseFloat(getComputedStyle(el).fontSize);
+  el.style.fontSize = `${Math.max(base * minimo, Math.floor((base * ancho * 10) / el.scrollWidth) / 10)}px`;
+}

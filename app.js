@@ -21,7 +21,7 @@ import * as Pf from './perfil.js';
 import * as G from './guia.js';
 import * as R from './respaldo.js';
 import {
-  $, COLOR_ZONA, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, sinMovimiento, toast, vibrar,
+  $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, reajustarTextos, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
 const VERSION = '0.43.0';
@@ -1793,6 +1793,16 @@ function pintar() {
   }
   if (vistaActiva('entrenar')) dibujarVivo();
   if (!$('#modo-remo').hidden && vistaGrafica()) pintarGraficaRemo(t);
+  ajustarNumeros();
+}
+
+// Casillas con números que crecen a lo largo de la sesión: se achican si ya no caben.
+const NUMEROS_VIVOS = '#en-vivo .metrica .valor, #modo-remo .mr-valor, #modo-remo .mr-fin-c, #mr-watts, #mr-resta, #mr-rango-valor';
+let numerosVivos = null;
+function ajustarNumeros() {
+  numerosVivos ||= [...document.querySelectorAll(NUMEROS_VIVOS)];
+  // El «fin ≈» no baja tanto: si aún no cabe se corta con «…».
+  for (const el of numerosVivos) ajustarTexto(el, el.matches('.mr-fin-c') ? 0.8 : 0.55);
 }
 
 // Casillas del modo remo según lo que entrenas: en un fondo manda el pulso, en VO₂ la batería anaeróbica,
@@ -2025,6 +2035,7 @@ function siguienteVista() {
 
 function aplicarVistaRemo() {
   const v = vistaRemo();
+  reajustarTextos();
   $('#modo-remo').classList.toggle('vista-grafica', v === 'grafica' || v === 'carrera');
   $('#modo-remo').classList.toggle('vista-carrera', v === 'carrera');
   $('#modo-remo').classList.toggle('vista-rango', v === 'rango');
@@ -3863,6 +3874,7 @@ function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) 
     stats.push(['Ventaja ⚑', `${miles(s.ventaja.metros)} m${obj ? ` · ${obj.nombre}` : ''}`]);
   }
   $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${escaparHtml(k)}</span><span class="valor">${v}</span></div>`).join('');
+  requestAnimationFrame(() => $('#hoja-stats').querySelectorAll('.valor').forEach((el) => ajustarTexto(el)));
 
   corregirRpe = false;
   pintarRpe();
@@ -3905,6 +3917,7 @@ function pintarCapacidadSesion(s) {
 }
 $('#hoja-detalle').addEventListener('toggle', () => {
   if ($('#hoja-detalle').open && sesionAbierta) requestAnimationFrame(() => dibujarHojaGraficas(sesionAbierta));
+  if ($('#hoja-detalle').open) requestAnimationFrame(() => $('#hoja-stats').querySelectorAll('.valor').forEach((el) => ajustarTexto(el)));
 });
 // Gráficas de la hoja: se dibujan cuando el detalle está abierto (un lienzo plegado no tiene tamaño).
 function dibujarHojaGraficas(s) {
@@ -4943,6 +4956,8 @@ horizontalTel.addEventListener('change', () => {
   }
 });
 window.addEventListener('resize', () => {
+  reajustarTextos();
+  ajustarNumeros();
   if (vistaActiva('entrenar')) { dibujarVivo(); if (!sesion) vistaPrevia(); }
   if (vistaActiva('historial')) pintarHistorial();
   if (vistaActiva('entrenamientos')) pintarPrograma();
