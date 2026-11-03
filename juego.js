@@ -1,10 +1,10 @@
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
-import { gradosEn, puntosDeNivel, puntosGastados, xpTalentos } from './talentos.js';
+import { gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo } from './estadisticas.js';
 import { objeto } from './objetos.js';
-import { tiendaVentajas } from './ventajas.js';
+import { tiendaVentajas, XP_ESTANDARTE } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
 
 // Cada atributo representa una capacidad física real (la que mide Progreso › Mis capacidades).
@@ -365,6 +365,23 @@ export const CAPITULOS = [
 export const PRUEBA_JEFE = { p500: 'base:prueba-500', p2000: 'base:prueba-2000', pftp: 'base:prueba-ftp', mejor500: 'base:prueba-500', mejor2000: 'base:prueba-2000' };
 export const REQ_TEXTO = { sesiones: 'Sesiones', km: 'Kilómetros', z2min: 'Minutos en zona 2', z4min: 'Minutos en zona 4+', fantasmas: 'Fantasmas vencidos', racha: 'Días seguidos' };
 
+// «Vence a las 4 clases» desde v0.44.1: cuántas clases distintas puedes contar si cada carrera aporta una sola
+// (emparejamiento máximo entre carreras ganadas y clases vencidas en ellas). carreras = [[clase, …], …].
+export const CLASES4_DESDE = '2026-11-04';
+export function clasesEnCarrerasDistintas(carreras) {
+  const dueno = new Map(); // clase → índice de la carrera que la cuenta
+  const asignar = (i, vistas) => {
+    for (const c of new Set(carreras[i])) {
+      if (vistas.has(c)) continue;
+      vistas.add(c);
+      if (!dueno.has(c) || asignar(dueno.get(c), vistas)) { dueno.set(c, i); return true; }
+    }
+    return false;
+  };
+  carreras.forEach((_, i) => asignar(i, new Set()));
+  return dueno.size;
+}
+
 // Logros permanentes: una sola vez. Los hitos excepcionales dan entre 300 y 600 XP.
 export const HAZANAS = [
   { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20 },
@@ -378,7 +395,8 @@ export const HAZANAS = [
   { id: 'racha14', nombre: 'Dos meses sin fallar', texto: 'Rema al menos una vez por semana 8 semanas seguidas', meta: 8, valor: (g) => Math.max(g.semanasMax, g.rachaMax >= 14 ? 8 : 0), monedas: 250, objeto: 'capa-leyenda' },
   { id: 'sub8', nombre: 'Bajo 8 minutos', texto: '2000 m en menos de 8:00', meta: 1, valor: (g) => (g.mejor2000 && g.mejor2000 < 480 ? 1 : 0), monedas: 200, objeto: 'aura-hielo' },
   { id: 'nivel10', nombre: 'Aprendiz', texto: 'Llega al nivel 10', meta: 10, valor: (g) => g.nivel, xp: 250, monedas: 100 },
-  { id: 'clases4', nombre: 'Vence a las 4 clases', texto: 'Gánale una carrera a rivales de 4 clases distintas', meta: 4, valor: (g) => g.clasesVencidas.size, xp: 300, monedas: 100 },
+  // Desde v0.44.1 cada clase cuenta solo en una carrera distinta (antes una carrera de 3 rivales daba 3 clases); quien ya lo tenía lo conserva.
+  { id: 'clases4', nombre: 'Vence a las 4 clases', texto: 'Gana 4 carreras distintas, cada una contra un rival de otra clase', meta: 4, valor: (g) => Math.max(clasesEnCarrerasDistintas(g.carrerasGanadas), g.clasesAntiguas.size), xp: 300, monedas: 100 },
   { id: 'km100', nombre: 'Cien kilómetros', texto: '100 km en total', meta: 100, valor: (g) => g.kmTotal, xp: 600, monedas: 300, objeto: 'bote-dorado' },
   { id: 'nivel25', nombre: 'Héroe de nivel 25', texto: 'Llega al nivel 25', meta: 25, valor: (g) => g.nivel, monedas: 300, objeto: 'aura-dorada' },
 ];
@@ -516,7 +534,7 @@ function gananciaSesion(s, m, ctx) {
     detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, vencidos.reduce((a, r) => a + xpPorFantasma(r.dificultad), 0)]);
   }
   if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
-  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', 25]);
+  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', XP_ESTANDARTE]);
   // Talentos de la clase (solo los grados aprendidos antes de esta sesión): números fijos con tope por sesión.
   if (ctx.clase) {
     const rivales = s.carreraSinTerminar ? 0 : (s.rivales || (s.rival ? [s.rival] : [])).length;
@@ -546,7 +564,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
   let monedas = 0;
   let mppSuma = 0;
   let mppN = 0;
-  const g = { clasesVencidas: new Set(), kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, nivel: 1, sesiones: 0, misiones: 0 };
+  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, nivel: 1, sesiones: 0, misiones: 0 };
   // Inicio del día y del lunes (ms) para ajustar las misiones a tu ritmo de las semanas anteriores.
   const inicioDia = (ms) => new Date(ms).setHours(0, 0, 0, 0);
   const inicioLunes = (lunes) => new Date(`${lunes}T00:00`).getTime();
@@ -681,6 +699,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     g.kmMax = Math.max(g.kmMax, m.metros / 1000);
     g.sesiones++;
     for (const k of m.clasesVencidas) g.clasesVencidas.add(k);
+    if (hoy < CLASES4_DESDE) for (const k of m.clasesVencidas) g.clasesAntiguas.add(k);
+    if (m.clasesVencidas.length) g.carrerasGanadas.push(m.clasesVencidas);
     g.minMax = Math.max(g.minMax, m.min);
     g.rachaMax = Math.max(g.rachaMax, racha);
     if (m.t2000) g.mejor2000 = g.mejor2000 == null ? m.t2000 : Math.min(g.mejor2000, m.t2000);
@@ -752,6 +772,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     hasta: nivel >= NIVEL_MAX ? null : xpParaNivel(nivel + 1),
     talentos: puntosDeNivel(nivel),
     talentosLibres: puntosDeNivel(nivel) - gastados,
+    talentosPorRepartir: claveClase ? talentosPorRepartir(arbol, claveClase, nivel, puntosDeNivel(nivel) - gastados) : 0,
     atributos: Object.fromEntries(Object.entries(atributos).map(([k, v]) => [k, Math.round(v)])),
     porSesion,
     logros,
@@ -768,6 +789,16 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     factorXp: fHoy,
     contexto: contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio: mppN ? mppSuma / mppN : 0, sinPulso: !hayPulso }),
   };
+}
+
+// Puntos de talento que puedes gastar ahora: los libres, hasta lo que cuestan los grados que ya están abiertos.
+// 0 si no queda nada que subir (árbol completo, talentos aún cerrados por nivel o no te alcanza para la maestría).
+export function talentosPorRepartir(arbol, clase, nivel, libres) {
+  const subibles = SLOTS.filter((slot) => !motivoBloqueo(slot, { nivel, libres }, arbol, clase));
+  if (!subibles.length) return 0;
+  const abierto = SLOTS.filter((slot) => !motivoBloqueo(slot, { nivel, libres: Infinity }, arbol, clase))
+    .reduce((a, slot) => a + (GRADOS_MAX - Math.min(GRADOS_MAX, arbol?.[slot]?.length || 0)) * costeDe(slot), 0);
+  return Math.min(libres, abierto);
 }
 
 // Lo que necesita una sesión de hoy para estimar sus atributos: racha si remas hoy, tu % en rango de siempre, etc.

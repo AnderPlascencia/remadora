@@ -213,3 +213,34 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.ok(J.CLASES.every((c) => c.para));
   console.log('v0.24 OK', sem.map((m) => m.texto));
 }
+
+// v0.44.1: puntos de talento solo si queda algo que subir, Estandarte con su XP real y «4 clases» en 4 carreras.
+{
+  const T3 = [0, 0, 0];
+  const lleno = { m1: T3, m2: T3, m3: T3, m4: T3, maestria: T3 };
+  assert.equal(J.talentosPorRepartir(lleno, 'vikingo', 75, 7), 0, 'árbol completo: nada que repartir');
+  assert.equal(J.talentosPorRepartir({ m1: T3, m2: T3 }, 'vikingo', 18, 2), 0, 'm3 y m4 siguen cerrados hasta el nivel 20');
+  assert.equal(J.talentosPorRepartir({ m1: T3, m2: [0, 0] }, 'vikingo', 18, 2), 1, 'solo cabe un grado de m2');
+  assert.equal(J.talentosPorRepartir({ m1: T3, m2: T3, m3: T3, m4: T3 }, 'vikingo', 45, 1), 0, 'la maestría cuesta 2');
+  assert.equal(J.talentosPorRepartir({}, 'vikingo', 9, 3), 3);
+  const h = J.estadoJuego([], { per: { clase: 'vikingo', arbol: { vikingo: lleno } } });
+  assert.equal(h.talentosPorRepartir, 0);
+
+  const V = await import('../ventajas.js');
+  const est = V.OBJETOS_VENTAJA.find((x) => x.id === 'estandarte');
+  assert.match(est.texto, new RegExp(`\\+${Math.round(V.XP_ESTANDARTE * J.FACTOR_XP_LENTA)} XP`), 'el texto dice lo que paga');
+
+  assert.equal(J.clasesEnCarrerasDistintas([['pirata', 'samurai', 'romano']]), 1, 'una carrera cuenta una clase');
+  assert.equal(J.clasesEnCarrerasDistintas([['pirata', 'samurai'], ['pirata'], ['samurai', 'romano'], ['romano', 'polinesio']]), 4);
+  assert.equal(J.clasesEnCarrerasDistintas([['pirata'], ['pirata'], ['pirata', 'romano']]), 2);
+  const t0 = new Date('2026-11-09T19:00').getTime();
+  const carrera = (i, clases) => ({ fecha: t0 + i * 864e5, duracion: 600, distancia: 2500, muestras: [], rivales: clases.map((clase) => ({ clase, diferencia: 50, dificultad: 'costa' })) });
+  const tres = [carrera(0, ['pirata', 'samurai', 'romano']), carrera(1, ['pirata', 'samurai', 'polinesio'])];
+  const logro = (ses) => J.estadoJuego(ses, { per: { clase: 'vikingo' }, ahora: t0 + 9 * 864e5 }).hazanas.find((x) => x.id === 'clases4');
+  assert.equal(logro(tres).hecha, false, '2 carreras no bastan aunque traigan 4 clases');
+  assert.equal(logro(tres).valor, 2);
+  assert.equal(logro([...tres, carrera(2, ['romano']), carrera(3, ['polinesio'])]).hecha, true);
+  const antigua = { ...carrera(0, ['pirata', 'samurai', 'romano', 'polinesio']), fecha: new Date('2026-10-30T19:00').getTime() };
+  assert.equal(logro([antigua]).hecha, true, 'quien ya lo tenía lo conserva');
+  console.log('v0.44.1 OK');
+}

@@ -8,9 +8,12 @@ export const OBJETOS_VENTAJA = [
   { id: 'viento', nombre: 'Viento de cola', texto: 'Durante los primeros 2 min tu bote cuenta un 2 % más de distancia frente a los fantasmas.', precio: 80 },
   { id: 'ancla', nombre: 'Ancla al rival', texto: 'Los fantasmas reman un 2 % más lento en los últimos 3 min o 500 m. Solo en carreras con final.', precio: 100, necesitaFinal: true },
   { id: 'segunda', nombre: 'Segunda oportunidad', texto: 'Si pierdes por menos de 10 m, la carrera cuenta como empate.', precio: 120 },
-  { id: 'estandarte', nombre: 'Estandarte', texto: '+25 XP si ganas la carrera.', precio: 70 },
+  // Paga XP_ESTANDARTE con el factor de XP de hoy (la mitad desde el 29 de octubre): el texto dice lo que llega.
+  { id: 'estandarte', nombre: 'Estandarte', texto: '+13 XP si ganas la carrera.', precio: 70 },
   { id: 'mapa', nombre: 'Mapa del rival', texto: 'Ves cuándo va a acelerar el fantasma. No da metros.', precio: 50 },
 ];
+// XP del Estandarte antes del factor de XP lenta (las sesiones anteriores al 29 de octubre cobran esto entero).
+export const XP_ESTANDARTE = 25;
 export const objetoVentaja = (id) => OBJETOS_VENTAJA.find((x) => x.id === id) || null;
 
 // Las pruebas (500 m, 2000 m, FTP) y los jefes de capítulo se reman sin objetos.
