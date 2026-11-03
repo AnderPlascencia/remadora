@@ -87,7 +87,8 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 | `guia.js` | Temas de la guía rápida y consejos de cada pestaña |
 | `app.js` | Interfaz, sesiones, editor e historial |
 | `grafica.js` | Gráficas en canvas |
-| `db.js` | Almacenamiento local |
+| `db.js` | Almacenamiento local (IndexedDB): sesiones, entrenamientos y estado (sesión en curso, versión de los datos) |
+| `reloj.js` | Segundos de la sesión según la hora del sistema (no se pierden con la app en segundo plano) |
 
 ## Seguridad
 
@@ -110,6 +111,7 @@ El formato de los mensajes se tomó como referencia del proyecto
 - La meta se marca en el instante exacto en que la cruzas, no en el segundo siguiente.
 - La app pide a Chrome que no borre tus sesiones aunque falte espacio; Ajustes › Respaldo dice si lo consiguió.
 - Colores con un solo significado: dorado para actuar, verde agua para XP y nivel, amarillo para monedas, azul para consejos y novedades. Los consejos de cada pestaña no salen a media sesión ni en horizontal, y el primer día tras la bienvenida propone remar en vez de «Hoy descansas».
+- Sesiones que no se pierden: la copia de la sesión en curso vive en IndexedDB y solo se borra cuando la sesión quedó guardada; si guardar falla, la app avisa y ofrece intentarlo otra vez. El tiempo y los metros salen del reloj, así que no se pierden aunque Chrome frene la app en segundo plano. Los errores quedan en el registro de Ajustes y las reparaciones del historial corren una sola vez.
 
 ## Pruebas
 

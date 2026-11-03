@@ -1,14 +1,22 @@
 // Gráfica de líneas en canvas, sin dependencias. Hasta dos ejes: izquierdo y derecho.
 // series: [{ nombre, color, eje: 'izq'|'der', puntos: [[t, v], ...] }]
 
+// El lienzo solo se redimensiona si cambió su tamaño en píxeles. canvas.width guarda un entero: con densidades
+// fraccionarias (Android 2.625) comparar contra ancho * dpr sin redondear lo recreaba en cada dibujo.
+export function ajustarLienzo(canvas, ancho, alto, dpr = window.devicePixelRatio || 1) {
+  const w = Math.round(ancho * dpr);
+  const h = Math.round(alto * dpr);
+  if (canvas.width === w && canvas.height === h) return false;
+  canvas.width = w;
+  canvas.height = h;
+  return true;
+}
+
 export function dibujar(canvas, series, opciones = {}) {
   const dpr = window.devicePixelRatio || 1;
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
-  if (canvas.width !== ancho * dpr || canvas.height !== alto * dpr) {
-    canvas.width = ancho * dpr;
-    canvas.height = alto * dpr;
-  }
+  ajustarLienzo(canvas, ancho, alto, dpr);
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);
@@ -137,10 +145,7 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return;
-  if (canvas.width !== ancho * dpr || canvas.height !== alto * dpr) {
-    canvas.width = ancho * dpr;
-    canvas.height = alto * dpr;
-  }
+  ajustarLienzo(canvas, ancho, alto, dpr);
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);
@@ -254,8 +259,7 @@ export function dibujarBarras(canvas, datos, { color = '#F2A33A', formato = (v) 
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return;
-  canvas.width = ancho * dpr;
-  canvas.height = alto * dpr;
+  ajustarLienzo(canvas, ancho, alto, dpr);
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);
@@ -292,10 +296,7 @@ export function dibujarAvance(canvas, puntos, meta, estimadoFin = null) {
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return;
-  if (canvas.width !== ancho * dpr || canvas.height !== alto * dpr) {
-    canvas.width = ancho * dpr;
-    canvas.height = alto * dpr;
-  }
+  ajustarLienzo(canvas, ancho, alto, dpr);
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);

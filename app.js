@@ -20,11 +20,12 @@ import * as A from './adaptacion.js';
 import * as Pf from './perfil.js';
 import * as G from './guia.js';
 import * as R from './respaldo.js';
+import { crearReloj } from './reloj.js';
 import {
   $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, reajustarTextos, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
-const VERSION = '0.43.0';
+const VERSION = '0.43.1';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 
 // ---------- Navegación ----------
@@ -638,6 +639,22 @@ function agregarLog(linea) {
     });
   }
 }
+// Errores que nadie atrapó: quedan en el registro (Ajustes) y se avisa una vez cada 30 s, en vez de dejar una
+// pantalla a medias sin rastro.
+let ultimoAvisoError = 0;
+function anotarError(origen, e) {
+  const texto = e?.stack || e?.message || String(e);
+  agregarLog(`error (${origen}): ${texto}`);
+  if (Date.now() - ultimoAvisoError < 30000) return;
+  ultimoAvisoError = Date.now();
+  toast('Algo falló. Quedó anotado en el registro de Ajustes.', 4000);
+}
+window.addEventListener('error', (e) => anotarError('error', e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => anotarError('promesa', e.reason));
+db.alAvisar((tipo) => {
+  if (tipo === 'versionNueva') { agregarLog('base de datos: otra pestaña tiene una versión nueva'); toast('Hay una versión nueva de Rower abierta. Recarga esta pantalla.', 6000); }
+  if (tipo === 'bloqueada') { agregarLog('base de datos: actualización bloqueada por otra pestaña'); toast('Cierra las otras pestañas de Rower para terminar de actualizar tus datos.', 6000); }
+});
 $('#btn-log').addEventListener('click', () => descargar(`remadora-registro-${marcaFecha()}.txt`, lineasLog.join('\n'), 'text/plain'));
 $('#btn-log-limpiar').addEventListener('click', () => { lineasLog.length = 0; $('#log').textContent = ''; });
 
@@ -963,41 +980,58 @@ async function detenerSesion() {
   vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
-  borrarSesionEnCurso();
-  if (!s || s.muestras.length < 10) { toast('Sesión muy corta: no se guardó'); return; }
+  if (!s || s.muestras.length < 10) { await borrarSesionEnCurso(); toast('Sesión muy corta: no se guardó'); return; }
+  // Primero la copia con el final de la sesión; se borra solo cuando la sesión quedó guardada.
+  await guardarSesionEnCurso(s, ent);
   await guardarSesionTerminada(s, ent);
 }
 
 // ---------- Sesión en curso a salvo ----------
 // Android puede cerrar la app en segundo plano o con el gesto de atrás: cada 10 s remados (y al ocultarse)
-// se copia lo remado para ofrecer guardarlo al volver a abrir.
+// se copia lo remado para ofrecer guardarlo al volver a abrir. La copia vive en IndexedDB (sin el límite de
+// ~5 MB de localStorage ni el JSON.stringify en el hilo principal); si IndexedDB falla, se intenta en
+// localStorage. La copia solo se borra cuando la sesión quedó guardada de verdad.
 const CLAVE_EN_CURSO = 'sesionEnCurso';
-function guardarSesionEnCurso() {
-  const s = sesion;
-  if (!s || s.muestras.length < 10) return;
-  const ent = entrenamientoActivo;
-  const copia = {
+function copiaEnCurso(s, ent) {
+  return {
     inicio: s.inicio, t: s.t, dist: s.dist, distConsola: s.distConsola, distFuente: s.distFuente, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
     segConMeta: s.segConMeta, segEnRango: s.segEnRango, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
-    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, guardada: Date.now(),
+    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(),
     ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
   };
-  try { localStorage.setItem(CLAVE_EN_CURSO, JSON.stringify(copia)); } catch { /* sin espacio: se reintenta en 10 s */ }
 }
-function borrarSesionEnCurso() {
+async function guardarSesionEnCurso(s = sesion, ent = entrenamientoActivo) {
+  if (!s || s.muestras.length < 10) return;
+  const copia = copiaEnCurso(s, ent);
+  try {
+    await db.guardarEstado('enCurso', copia);
+    try { localStorage.removeItem(CLAVE_EN_CURSO); } catch { /* nada */ }
+  } catch (e) {
+    agregarLog(`copia de la sesión en IndexedDB falló: ${e?.name || e}`);
+    try { localStorage.setItem(CLAVE_EN_CURSO, JSON.stringify(copia)); } catch { /* sin espacio: se reintenta en 10 s */ }
+  }
+}
+async function borrarSesionEnCurso() {
   try { localStorage.removeItem(CLAVE_EN_CURSO); } catch { /* nada */ }
+  try { await db.borrarEstado('enCurso'); } catch (e) { agregarLog(`no se pudo borrar la copia de la sesión: ${e?.name || e}`); }
 }
-function leerSesionEnCurso() {
+async function leerSesionEnCurso() {
+  let s = null;
+  try { s = await db.leerEstado('enCurso'); } catch { /* se mira en localStorage */ }
+  if (s) return s;
+  // Copias de versiones anteriores (o de cuando IndexedDB falló).
   try { return JSON.parse(localStorage.getItem(CLAVE_EN_CURSO) || 'null'); } catch { return null; }
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') guardarSesionEnCurso(); });
-window.addEventListener('pagehide', guardarSesionEnCurso);
+window.addEventListener('pagehide', () => guardarSesionEnCurso());
 
 // Al abrir la app con una sesión que quedó a medias, se ofrece guardarla (sin carrera: los fantasmas no se guardan).
-function ofrecerRecuperar() {
-  const s = leerSesionEnCurso();
+async function ofrecerRecuperar() {
+  const s = await leerSesionEnCurso();
   if (!s || sesion) return;
-  if (!Array.isArray(s.muestras) || s.muestras.length < 10) { borrarSesionEnCurso(); return; }
+  if (!Array.isArray(s.muestras) || s.muestras.length < 10) { await borrarSesionEnCurso(); return; }
+  // Ya está guardada (se guardó pero no se alcanzó a borrar la copia): no se ofrece dos veces.
+  if (await yaGuardada(s)) { await borrarSesionEnCurso(); return; }
   const fin = s.muestras.at(-1);
   const f = new Date(s.inicio);
   const cuando = `${f.toLocaleDateString('es-MX', { weekday: 'long' })} a las ${f.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })}`;
@@ -1005,16 +1039,22 @@ function ofrecerRecuperar() {
   $('#recuperar-dialogo').hidden = false;
   $('#recuperar-guardar').focus();
 }
+async function yaGuardada(s) {
+  try { return (await db.listar('sesiones')).some((x) => x.fecha === s.inicio); } catch { return false; }
+}
 $('#recuperar-guardar').addEventListener('click', async () => {
-  const s = leerSesionEnCurso();
   $('#recuperar-dialogo').hidden = true;
-  borrarSesionEnCurso();
-  if (s) await guardarSesionTerminada(s, s.ent, { recuperada: true });
+  const s = await leerSesionEnCurso();
+  if (!s) return;
+  if (await yaGuardada(s)) { await borrarSesionEnCurso(); return; }
+  const guardada = await guardarSesionTerminada(s, s.ent, { recuperada: true });
+  // Una copia de una versión anterior (sin distFuente) se pasa a la distancia según watts.
+  if (guardada && s.distFuente !== 'watts') await repararSesiones();
 });
-$('#recuperar-descartar').addEventListener('click', () => {
+$('#recuperar-descartar').addEventListener('click', async () => {
   if (!confirm('¿Descartar la sesión sin guardar? No se puede deshacer.')) return;
   $('#recuperar-dialogo').hidden = true;
-  borrarSesionEnCurso();
+  await borrarSesionEnCurso();
   toast('Sesión descartada');
 });
 
@@ -1104,13 +1144,23 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     registro.referencias = s.referencias.map((r) => ({ nombre: r.nombre, fecha: r.fecha ?? null, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)) }));
   }
   registro.marcas = E.marcasDeSesion(registro);
+  let previas;
+  try {
+    previas = await db.listar('sesiones');
+    const id = await db.guardar('sesiones', registro);
+    if (registro.id == null && id != null) registro.id = id;
+  } catch (e) {
+    // La copia de la sesión en curso se queda: se puede volver a intentar ahora o al abrir la app.
+    agregarLog(`no se pudo guardar la sesión: ${e?.name || ''} ${e?.message || e}`);
+    toast('No se pudo guardar la sesión. Sigue a salvo: vuelve a intentarlo.', 6000);
+    ofrecerRecuperar();
+    return false;
+  }
+  await borrarSesionEnCurso();
   if (registro.ventajaUsada) {
     const inv = inventario();
     guardarPersonaje({ inventario: { ...inv, [registro.ventajaUsada]: Math.max(0, (inv[registro.ventajaUsada] || 0) - 1) } });
   }
-  const previas = await db.listar('sesiones');
-  const id = await db.guardar('sesiones', registro);
-  if (registro.id == null && id != null) registro.id = id;
   pitido(660, 0.2);
   agregarLog(`sesión guardada: ${formatoTiempo(registro.duracion)}, ${registro.distancia} m`);
   const ftpAuto = ftpAutomatico(registro);
@@ -1125,6 +1175,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   pintarHoy();
   pintarLineaNivel();
   if (!recuperada) medirRecuperacionPulso(registro);
+  return true;
 }
 
 // Sigue leyendo el pulso un minuto después de terminar y guarda cuánto bajó (recuperación de pulso a 60 s).
@@ -1143,17 +1194,30 @@ function medirRecuperacionPulso(registro) {
 }
 
 // Un tic por segundo: lee el estado, avanza la sesión (si no está en pausa) y pinta.
-setInterval(() => {
-  if (Date.now() - ultimoDato > 3000) { actual.watts = 0; actual.spm = 0; }
-  tVivo += 1;
-  for (const [k, v] of [['watts', actual.watts], ['spm', actual.spm]]) {
-    vivo[k].push([tVivo, v]);
-    if (vivo[k].length > 600) vivo[k].shift();
+// Los segundos salen del reloj (Date.now), no de contar tics: con la app en segundo plano Chrome frena los
+// temporizadores (hasta uno por minuto) y se perdían tiempo y metros. Si pasaron varios segundos desde el
+// último tic, se avanzan todos con el último dato recibido; si el dato ya es viejo, cuentan como pausa.
+const segundosDelReloj = crearReloj();
+let copiaPendiente = false;
+function tic() {
+  const n = segundosDelReloj();
+  if (!n) return;
+  if (n > 2 && sesion) agregarLog(`reloj: ${n} s sin tic (app en segundo plano); se ponen al día`);
+  for (let i = 0; i < n; i++) {
+    if (Date.now() - ultimoDato > 3000) { actual.watts = 0; actual.spm = 0; }
+    tVivo += 1;
+    for (const [k, v] of [['watts', actual.watts], ['spm', actual.spm]]) {
+      vivo[k].push([tVivo, v]);
+      if (vivo[k].length > 600) vivo[k].shift();
+    }
+    if (sesion) avanzarSesion();
   }
-  if (sesion) avanzarSesion();
+  // Una sola copia aunque se hayan puesto al día muchos segundos.
+  if (copiaPendiente) { copiaPendiente = false; guardarSesionEnCurso(); }
   if (!Remadora.soportado()) $('#aviso-bt').hidden = !!remadora.demoTimer;
   pintar();
-}, 1000);
+}
+setInterval(tic, 500);
 
 function enPausa() {
   if (!sesion) return false;
@@ -1217,7 +1281,7 @@ function avanzarSesion() {
   const calentando = sesion.salida && !sesion.salida.hecha;
   coachRitmo(t);
   vigilarTipoSesion(t);
-  if (t % 10 === 0) guardarSesionEnCurso();
+  if (t % 10 === 0) copiaPendiente = true;
   if (sesion.ventaja && !calentando) {
     const miDist = sesion.dist + V.metrosVentaja(sesion.ventaja);
     const detras = sesion.rivales.some((r) => E.distanciaEn(r.muestras, t) > miDist);
@@ -4527,7 +4591,22 @@ $('#in-restaurar').addEventListener('change', async (e) => {
 });
 pintarInfoRespaldo();
 protegerDatos();
-repararSesiones();
+// Reparaciones del historial: corren una sola vez por versión de los datos (antes recorrían y reescribían todo el
+// historial en cada arranque). Sube VERSION_DATOS al agregar una reparación nueva. Un respaldo restaurado o una
+// sesión recuperada de una versión vieja se reparan siempre, porque pueden traer sesiones en el formato anterior.
+const VERSION_DATOS = 1;
+async function migrarDatos() {
+  try {
+    const v = (await db.leerEstado('versionDatos')) || 0;
+    if (v >= VERSION_DATOS) return;
+    await repararSesiones();
+    await db.guardarEstado('versionDatos', VERSION_DATOS);
+    agregarLog(`datos: versión ${v} → ${VERSION_DATOS}`);
+  } catch (e) {
+    anotarError('migración de datos', e);
+  }
+}
+migrarDatos();
 
 // Sesiones guardadas con saltos falsos de distancia de la consola: se recortan a los metros reales una sola vez.
 // Después, cada sesión guardada con la distancia de la consola pasa a la distancia según watts (una sola vez).
