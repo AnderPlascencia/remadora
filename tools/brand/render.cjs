@@ -1,4 +1,4 @@
-// Pasa un SVG a PNG con Playwright. Uso: node tools/brand/render.cjs rower-logo.svg rower-192.png:192 rower-512.png:512
+// Pasa un SVG a PNG con Playwright. Uso: node tools/brand/render.cjs assets/marca/rower-logo.svg assets/marca/rower-192.png:192 assets/marca/rower-512.png:512
 const { chromium } = require('playwright');
 const fs = require('fs');
 (async () => {
