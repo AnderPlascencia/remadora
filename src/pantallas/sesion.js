@@ -748,10 +748,12 @@ function pintarAtrVivo(v) {
   const n = nombreAtributo(r.atributo);
   const anillo = `<span class="anillo" style="--p:${Math.round(r.progreso * 100)}%" aria-hidden="true"></span>`;
   const meta = r.faltanSeg ? `+1 ${n} en ${r.faltanSeg} s` : r.corto || `Suma ${n}`;
+  // En Entrenar el título ya va al lado: si trae los watts, la meta no los repite.
+  const metaCaja = !r.faltanSeg && /\d W\b/.test(r.titulo) ? `Suma ${n}` : meta;
   $('#atr-vivo').hidden = false;
   // Solo los atributos que ya sumaron hoy (o el del reto en curso): seis chips en +0 son ruido.
   $('#atr-vivo-chips').innerHTML = ATR_VIVO.filter((k) => v.puntos[k] > 0 || k === r.atributo).map((k) => `<span class="${k === r.atributo ? 'activo' : ''}">${nombreAtributo(k)} <b>+${v.puntos[k]}</b></span>`).join('');
-  $('#atr-reto').innerHTML = `${anillo}<div><b>${escaparHtml(r.titulo)}</b><small>${escaparHtml(r.detalle)}</small></div><span class="cond-pts">${meta}</span>`;
+  $('#atr-reto').innerHTML = `${anillo}<div><b>${escaparHtml(r.titulo)}</b><small>${escaparHtml(r.detalle)}</small></div><span class="cond-pts">${metaCaja}</span>`;
   const mr = $('#mr-atr');
   mr.hidden = false;
   // Una línea corta: el anillo es el avance hacia el próximo punto y va pegado a su texto; el resto, el total de hoy.
