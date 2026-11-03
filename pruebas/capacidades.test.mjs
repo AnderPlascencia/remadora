@@ -128,3 +128,13 @@ console.log('tipo de plan OK');
   assert.equal(Cap.estadoCuerpo([], 200, ahora), null);
   console.log('cuerpo OK', e1.clave, e2.clave, e2.horas, e3.clave, e3.horas);
 }
+
+// ---------- Título del resumen: no contradice al plan ----------
+{
+  const t = Cap.tituloCapacidad('sprint', 'fondo');
+  assert.equal(t.etiqueta, 'Tus watts parecieron de', 'un fondo con watts de sprint no dice «Entrenaste Sprints»');
+  assert.equal(t.plan.simple, 'Fondo');
+  assert.deepEqual(Cap.tituloCapacidad('fondo', 'fondo'), { etiqueta: 'Entrenaste', plan: null });
+  assert.deepEqual(Cap.tituloCapacidad('sprint', null), { etiqueta: 'Entrenaste', plan: null }, 'sin plan (sesiones viejas o remo libre)');
+  assert.deepEqual(Cap.tituloCapacidad('fondo', 'prueba'), { etiqueta: 'Entrenaste', plan: null });
+}

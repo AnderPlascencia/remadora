@@ -111,6 +111,6 @@ export async function remar(page, ms, opciones) {
 export async function terminar(page) {
   const boton = page.locator('#btn-grabar');
   await boton.click();
-  await expect(boton).toContainText('Toca otra vez');
+  await expect(boton).toContainText('¿Terminar?');
   await boton.click();
 }

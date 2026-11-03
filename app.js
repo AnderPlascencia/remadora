@@ -25,7 +25,7 @@ import {
   $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, contarHasta, descargar, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, marcaFecha, miles, perfil, pitido, reajustarTextos, sinMovimiento, toast, vibrar,
 } from './ui.js';
 
-const VERSION = '0.43.2';
+const VERSION = '0.44.0';
 let escalaTrip = null; // puestos de la tripulación ya calculados (pintarClasificacion)
 
 // ---------- Navegación ----------
@@ -804,7 +804,7 @@ function confirmarTerminar(boton) {
   if (boton.dataset.confirmar) { span.textContent = boton.dataset.confirmar; delete boton.dataset.confirmar; detenerSesion(); return; }
   const previo = span.textContent;
   boton.dataset.confirmar = previo;
-  span.textContent = 'Toca otra vez';
+  span.textContent = '¿Terminar?';
   setTimeout(() => { if (boton.dataset.confirmar) { delete boton.dataset.confirmar; span.textContent = previo; } }, 3000);
 }
 
@@ -1117,6 +1117,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     fcMax: m.reduce((a, x) => Math.max(a, x.fc || 0), 0),
     entrenamiento: s.entrenamiento,
     enfoque: ent ? P.enfoqueDe(ent) : null,
+    tipoPlan: s.tipoPlan ?? null,
     tiempoMeta: s.tiempoMeta,
     delPrograma: delProgramaHoy(s),
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
@@ -1375,7 +1376,10 @@ function pintarAtrVivo(v) {
   $('#atr-reto').innerHTML = `${anillo}<div><b>${escaparHtml(r.titulo)}</b><small>${escaparHtml(r.detalle)}</small></div><span class="cond-pts">${meta}</span>`;
   const mr = $('#mr-atr');
   mr.hidden = false;
-  mr.innerHTML = `${anillo}<span><b>${meta}</b> · ${ATR_VIVO.filter((k) => v.puntos[k] > 0).map((k) => `${nombreAtributo(k).slice(0, 3)}. +${v.puntos[k]}`).join(' · ') || 'Hoy: sin puntos aún'}</span>`;
+  // Una línea corta: el anillo es el avance hacia el próximo punto y va pegado a su texto; el resto, el total de hoy.
+  const hoy = ATR_VIVO.reduce((a, k) => a + (v.puntos[k] || 0), 0);
+  mr.innerHTML = `${anillo}<span><b>${meta}</b> · ${hoy ? `hoy +${hoy} ${hoy === 1 ? 'punto' : 'puntos'}` : 'aún sin puntos hoy'}</span>`;
+  mr.title = `El anillo es lo que te falta para ${r.faltanSeg ? `+1 ${n}` : 'el próximo punto'}`;
 }
 let popAtrTimer = 0;
 function mostrarPopAtr(titulo, detalle) {
@@ -1633,23 +1637,37 @@ function avanceBloque(t) {
 }
 
 // ---------- Pintado ----------
+// Cada texto lleva una versión corta para las casillas pequeñas (vista de carrera): «Baja», «Sube», «En rango».
 function textoIndicador(rango, potencia) {
-  if (rango === 'dentro') return `${ico('i-check')}En rango`;
-  if (rango === 'bajo') return `${ico('i-arriba')}${potencia ? 'Sube la potencia' : 'Sube el ritmo'}`;
-  if (rango === 'alto') return `${ico('i-abajo')}${potencia ? 'Baja la potencia' : 'Baja el ritmo'}`;
+  const t = (largo, corto) => `<span class="ind-largo">${largo}</span><span class="ind-corto">${corto}</span>`;
+  if (rango === 'dentro') return `${ico('i-check')}${t('En rango', 'En rango')}`;
+  if (rango === 'bajo') return `${ico('i-arriba')}${t(potencia ? 'Sube la potencia' : 'Sube el ritmo', 'Sube')}`;
+  if (rango === 'alto') return `${ico('i-abajo')}${t(potencia ? 'Baja la potencia' : 'Baja el ritmo', 'Baja')}`;
   return '';
 }
 
-function marcarRango(rango, potencia = true) {
+// Calentamiento, enfriamiento, fondo y demás bloques suaves: salirse del rango es un aviso (ámbar), no una alarma (rojo).
+function bloqueSuave(b) {
+  if (!b) return false;
+  if (/calent|enfri|fondo|recupera|suave|descanso|rodaje|vuelta a la calma/i.test(b.nombre || '')) return true;
+  if (b.metrica === 'ftp') return (b.max ?? b.min) <= 76;
+  if (b.metrica === 'fcpct') return (b.max ?? b.min) <= 75;
+  if (b.metrica === 'fc') return b.zona != null ? b.zona <= 2 : false;
+  return false;
+}
+
+function marcarRango(rango, potencia = true, suave = false) {
   const caja = $('#bloque-actual');
   caja.classList.toggle('dentro', rango === 'dentro');
   caja.classList.toggle('fuera', rango === 'bajo' || rango === 'alto');
+  caja.classList.toggle('suave', !!suave);
   const ind = $('#bloque-indicador');
   ind.className = `indicador ${rango || ''}`;
   ind.innerHTML = textoIndicador(rango, potencia);
   const p = $('#mr-principal');
   p.classList.remove('dentro', 'bajo', 'alto');
   if (rango) p.classList.add(rango);
+  p.classList.toggle('suave', !!suave);
   $('#mr-indicador').innerHTML = textoIndicador(rango, potencia);
 }
 
@@ -1747,9 +1765,9 @@ function carreraActual() {
   const calentandoCarrera = !!(sal && !sal.hecha);
   if (calentandoCarrera) {
     // Calentando: todos a tu par; lo que importa es cuánto falta para la salida.
-    const falta = `salida en ${formatoTiempo(Math.max(0, (sal.tS ?? t) - t))}`;
-    texto = `Calentamiento · los fantasmas van a tu lado · ${falta}`;
-    l1 = `Salida en ${formatoTiempo(Math.max(0, (sal.tS ?? t) - t))}`;
+    // El tiempo que falta ya lo marca el reloj del intervalo: aquí no se repite (y no se desfasa un segundo).
+    texto = 'Calentamiento · los fantasmas van a tu lado';
+    l1 = 'En la salida';
   }
   const v = velocidadReciente();
   const p = sesion.empezo && t >= 10 ? F.proyectar({ t, dist: miDist, v }, rs, { meta, duracion: duracionCarrera() }) : null;
@@ -1915,25 +1933,32 @@ function valorCasilla(clave, t, dist, zfc) {
     case 'kcal': return ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
     case 'extra': return entrenamientoActivo?.objetivo && !objPaladas ? ['Paladas', sesion ? Math.round(sesion.paladas) : 0] : ['Calorías', sesion ? Math.round(sesion.kcal) : 0];
     case 'fc': return [zfc ? `Pulso · Z${zfc.n}` : 'Pulso', actual.fc || '—'];
-    case 'kcalh': return ['Calorías/hora', t >= 60 ? Math.round((sesion.kcal * 3600) / t) : '—'];
+    case 'kcalh': return ['kcal/hora', t >= 60 ? Math.round((sesion.kcal * 3600) / t) : '—'];
     case 'wmax': return ['Watts máx', sesion?.wMax || 0];
-    case 'jpp': return ['Trabajo/palada', actual.spm ? `${Math.round((actual.watts * 60) / actual.spm)} J` : '—'];
+    case 'jpp': return ['J/palada', actual.spm ? `${Math.round((actual.watts * 60) / actual.spm)} J` : '—'];
     case 'mpp': {
       // Metros por palada de los últimos 30 s: responde a cómo remas ahora, no a toda la sesión.
       const v = m.slice(-30);
       const paladas = v.reduce((a, x) => a + x.spm / 60, 0);
-      return ['Metros/palada', v.length >= 10 && paladas >= 3 ? ((v.at(-1).dist - v[0].dist) / paladas).toFixed(1) : '—'];
+      return ['m/palada', v.length >= 10 && paladas >= 3 ? ((v.at(-1).dist - v[0].dist) / paladas).toFixed(1) : '—'];
     }
     case 'bateria': return [avanzado() ? 'Batería (W′)' : 'Batería', sesion?.pc ? `${Math.max(0, Math.round((100 * sesion.wBal) / sesion.pc.wPrima))}%` : '—'];
     default: return ['', ''];
   }
 }
 
+// Etiqueta corta fija para las casillas angostas (vista de carrera y horizontal): nunca se corta con «…».
+const ETQ_CORTA = { spm: 'g/min', tiempo: 'Tiempo', dist: 'Dist.', kcal: 'kcal', fc: 'Pulso', kcalh: 'kcal/h', wmax: 'W máx', jpp: 'J/pal', mpp: 'm/pal', bateria: 'Batería' };
 function pintarCasillasRemo(t, dist, zfc) {
   const claves = Cap.CASILLAS_REMO[sesion?.tipoPlan || 'libre'];
   claves.forEach((clave, i) => {
     const [etq, valor] = valorCasilla(clave, t, dist, zfc);
-    $(`#mr-c${i + 1}-etq`).textContent = etq;
+    const corta = clave === 'extra' ? (etq === 'Paladas' ? 'Paladas' : 'kcal') : ETQ_CORTA[clave] || etq;
+    const el = $(`#mr-c${i + 1}-etq`);
+    if (el.dataset.etq !== etq) {
+      el.dataset.etq = etq;
+      el.innerHTML = `<span class="etq-larga">${escaparHtml(etq)}</span><span class="etq-corta">${escaparHtml(corta)}</span>`;
+    }
     $(`#mr-c${i + 1}`).textContent = valor;
     $(`#mr-c${i + 1}`).style.color = clave === 'fc' && zfc ? COLOR_ZONA[zfc.n] : '';
   });
@@ -1957,7 +1982,7 @@ function pintarRango() {
   const b = info && !info.terminado ? info.bloque : null;
   const m = b ? medidaDeBloque(b) : null;
   const caja = $('#mr-rango');
-  caja.classList.remove('dentro', 'bajo', 'alto', 'libre');
+  caja.classList.remove('dentro', 'bajo', 'alto', 'libre', 'suave');
   const pctSes = sesion?.segConMeta ? Math.round((100 * sesion.segEnRango) / sesion.segConMeta) : null;
   if (!m) {
     caja.classList.add('libre');
@@ -1971,6 +1996,7 @@ function pintarRango() {
   }
   const estado = Ent.enRango(b, actual.watts, actual.spm, ftp(), actual.split, actual.fc);
   if (estado) caja.classList.add(estado);
+  caja.classList.toggle('suave', bloqueSuave(b));
   $('#mr-rango-etq').textContent = m.etq;
   $('#mr-rango-meta').textContent = `${m.txt(m.min)}–${m.txt(m.max)} ${m.unidad}`;
   $('#mr-rango-valor').textContent = m.valor ? m.txt(m.valor) : '—';
@@ -2030,18 +2056,21 @@ function pintarEstimadoFin(t) {
     if (e.objetivo !== 'kcal') partes.push(['kcal', `${e.kcal} kcal`]);
     partes.push(['split', `${formatoSplit(e.split)}/500`]);
   }
-  // Línea en la cabecera con todo junto…
-  const fin = $('#mr-fin');
-  fin.textContent = partes.length ? `Al final ≈ ${partes.map(([k, v]) => (k === 'tiempo' ? `${v} total` : v)).join(' · ')}` : '';
-  fin.hidden = !partes.length;
-  // …y «fin ≈ …» bajo la casilla que corresponde (tiempo, distancia, calorías).
+  // «fin ≈ …» bajo la casilla que corresponde (tiempo, distancia, calorías)…
   const claves = Cap.CASILLAS_REMO[sesion?.tipoPlan || 'libre'];
   const porClave = Object.fromEntries(partes);
+  const enCasilla = new Set();
   claves.forEach((clave, i) => {
     const k = clave === 'extra' && !(entrenamientoActivo?.objetivo && entrenamientoActivo.objetivo.metrica !== 'paladas') ? 'kcal' : clave;
     const v = porClave[k];
+    if (v) enCasilla.add(k);
     $(`#mr-c${i + 1}-fin`).textContent = v ? `fin ≈ ${v.replace(/ (m|kcal)$/, '')}` : '';
   });
+  // …y en la cabecera solo lo que no tiene casilla (el tiempo total, el split medio): nada sale dos veces.
+  const resto = partes.filter(([k]) => !enCasilla.has(k));
+  const fin = $('#mr-fin');
+  fin.textContent = resto.length ? `Al final ≈ ${resto.map(([k, v]) => (k === 'tiempo' ? `${v} total` : v)).join(' · ')}` : '';
+  fin.hidden = !resto.length;
 }
 
 // Avisos por voz propios del tipo de sesión y saldo de la batería anaeróbica (W′), una vez por segundo.
@@ -2139,7 +2168,6 @@ function aplicarVistaRemo() {
   $('#modo-remo').classList.toggle('vista-rango', v === 'rango');
   const sig = siguienteVista();
   const b = $('#mr-vista');
-  b.classList.toggle('activo', v !== 'numeros');
   // El botón muestra la vista actual y unos puntos con su lugar en la vuelta; tocarlo pasa a la siguiente.
   const vistas = vistasRemo();
   const icono = { numeros: '<span class="num" aria-hidden="true">Vista</span>', rango: '<span class="num" aria-hidden="true">Vista</span>', grafica: '<span class="num" aria-hidden="true">Vista</span>', carrera: '<span class="num" aria-hidden="true">Vista</span>' };
@@ -2221,7 +2249,7 @@ function pintarBloque(t) {
   $('#mr-resta').textContent = resta;
   $('#mr-resta-etq').textContent = siguiente ? `luego ${Ent.textoMeta(siguiente, f, fcMaxima())}` : 'último';
   $('#mr-barra').style.width = `${100 * info.fraccion}%`;
-  marcarRango(Ent.enRango(b, actual.watts, actual.spm, f, actual.split, actual.fc), !!Ent.rangoWatts(b, f));
+  marcarRango(Ent.enRango(b, actual.watts, actual.spm, f, actual.split, actual.fc), !!Ent.rangoWatts(b, f), bloqueSuave(b));
 }
 
 function dibujarVivo() {
@@ -4009,7 +4037,12 @@ function pintarCapacidadSesion(s) {
   caja.hidden = !s.muestras?.length;
   if (caja.hidden) return;
   const a = Cap.analisisSesion(s, { ftp: ftp(), fcMax: fcMaxima() });
-  caja.innerHTML = `<div class="hc-cabecera"><span class="etq">Entrenaste</span><b>${avanzado() ? a.nombre : a.simple}</b></div>
+  // Si tus watts no se parecen al plan (un fondo remado a tirones), se dice así y no «Entrenaste Sprints».
+  const nombre = avanzado() ? a.nombre : a.simple;
+  const { etiqueta, plan } = Cap.tituloCapacidad(a.tipo, s.tipoPlan);
+  const cab = `<span class="etq">${etiqueta}</span><b>${nombre}</b>`;
+  const aviso = plan ? `<p class="ayuda hc-plan">El plan era de ${(avanzado() ? plan.nombre : plan.simple).toLowerCase()}; abajo, lo que dicen tus watts.</p>` : '';
+  caja.innerHTML = `<div class="hc-cabecera">${cab}</div>${aviso}
     <div class="metricas compacta">${a.datos.map((d) => `<div class="metrica" title="${escaparHtml(d.ayuda)}"><span class="etq">${escaparHtml(d.etq)}</span><span class="valor">${d.valor}</span></div>`).join('')}</div>
     <p class="ayuda">${a.lectura}</p>`;
 }

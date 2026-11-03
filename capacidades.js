@@ -101,6 +101,13 @@ export function analisisSesion(s, { ftp = 0, fcMax = 0 } = {}) {
   return { tipo, ...TIPOS[tipo], datos, lectura };
 }
 
+// Cómo se titula la capacidad entrenada en el resumen. Si los watts no se parecen al plan (un fondo remado a
+// tirones), se dice «Tus watts parecieron de…» y se nombra el plan, en vez de un «Entrenaste Sprints» que lo contradice.
+export function tituloCapacidad(tipo, tipoPlan) {
+  const plan = tipoPlan && tipoPlan !== 'prueba' && tipoPlan !== tipo && TIPOS[tipoPlan] ? TIPOS[tipoPlan] : null;
+  return { etiqueta: plan ? 'Tus watts parecieron de' : 'Entrenaste', plan };
+}
+
 // ---------- Capacidades en el tiempo ----------
 
 const enVentana = (sesiones, desde, hasta) => sesiones.filter((s) => s.fecha >= desde && s.fecha < hasta);
