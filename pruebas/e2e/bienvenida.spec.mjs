@@ -2,7 +2,7 @@ import { test, expect, abrirApp, completarBienvenida, esperarAviso } from './ayu
 
 test('la bienvenida arma el plan, deja la app en modo demo y no vuelve a salir', async ({ page }) => {
   await abrirApp(page);
-  await expect(page.locator('#inicio-titulo')).toHaveText('Te doy la bienvenida a Rower');
+  await expect(page.locator('#inicio-titulo')).toHaveText('Hola, soy Rower');
   await completarBienvenida(page);
   await esperarAviso(page, /^Tu plan está listo: \d+ sesiones en 6 semanas$/);
   await expect(page.locator('#hoy-nombre')).not.toBeEmpty();

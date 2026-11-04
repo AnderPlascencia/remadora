@@ -3,6 +3,12 @@
 
 // El lienzo solo se redimensiona si cambió su tamaño en píxeles. canvas.width guarda un entero: con densidades
 // fraccionarias (Android 2.625) comparar contra ancho * dpr sin redondear lo recreaba en cada dibujo.
+// Paso de la rejilla (4 divisiones) con números redondos: 0, 10, 20, 30… y no 0, 8, 15, 23.
+const PASOS = [1, 2, 5, 10, 15, 20, 25, 50, 75, 100, 150, 200, 250, 500, 750, 1000];
+export function pasoRedondo(v) {
+  return PASOS.find((p) => p >= v) ?? Math.ceil(v / 1000) * 1000;
+}
+
 export function ajustarLienzo(canvas, ancho, alto, dpr = window.devicePixelRatio || 1) {
   const w = Math.round(ancho * dpr);
   const h = Math.round(alto * dpr);
@@ -42,7 +48,7 @@ export function dibujar(canvas, series, opciones = {}) {
     for (const s of series) if (s.eje === eje) for (const [t, v] of s.puntos) if (t >= tMin) max = Math.max(max, v);
     for (const b of opciones.metas || []) if (b.eje === eje && b.hasta >= tMin && b.desde <= tMax) max = Math.max(max, b.max);
     if (opciones.decimales && max > 0 && max < 20) escalas[eje] = Math.ceil(max * 1.15 * 2) / 2;
-    else escalas[eje] = max > 0 ? Math.ceil((max * 1.15) / 10) * 10 : 10;
+    else escalas[eje] = max > 0 ? 4 * pasoRedondo((max * 1.15) / 4) : 40;
   }
 
   const X = (t) => m.izq + ((t - tMin) / (tMax - tMin)) * w;

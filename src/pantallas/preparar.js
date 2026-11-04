@@ -16,6 +16,11 @@ import { contextoXp } from './programa.js';
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
+// Una estimación no lleva metros exactos: «unos 5 km» y no «unos 5,003 m».
+function distanciaRedonda(m) {
+  if (m < 1000) return `${Math.round(m / 50) * 50} m`;
+  return `${(Math.round(m / 500) / 2).toLocaleString('es-MX', { maximumFractionDigits: 1 })} km`;
+}
 // Respuestas del asistente de plan por objetivo (en Planes).
 export const asistente = { objetivo: null, nivel: null, dias: perfil().dias, semanas: 6 };
 // En «Por objetivo» siempre se compite contra 3 rivales de otras clases; en Remo libre, solo si lo activas.
@@ -252,7 +257,7 @@ async function pintarPreparar() {
   const hip = { ...sesionHipotetica(ent, reales, sesiones), ...(await contextoXp(ent, sesiones)) };
   if (turno !== preparoTurno || estado.sesion) return;
   const est = J.estimarXp(sesiones, hip, { ftp: ftp(), per: leerPersonaje() });
-  const condicion = [ent ? `completas «${escaparHtml(ent.nombre)}»` : `remas unos ${miles(hip.distancia)} m`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
+  const condicion = [ent ? `completas «${escaparHtml(ent.nombre)}»` : `remas unos ${distanciaRedonda(hip.distancia)}`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
   const partes = [...est.detalle.map(([k, v]) => [k, v]), ...(est.extra ? [['Misiones y logros', est.extra]] : [])].filter(([, v]) => v > 0);
   caja.innerHTML = `<div class="xp-cabecera">${ico('i-trofeo')}<div><b>≈ ${miles(est.total)} XP</b> <span class="monedas">${icoMoneda}${est.monedas}</span>
     <small>si ${condicion}${est.subeNivel ? ` · subirías al nivel ${est.subeNivel}` : ''}</small></div></div>
