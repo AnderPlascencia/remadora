@@ -1962,3 +1962,26 @@ details.mas-detalle[hidden] { display: none; }
 
 /* 0.45.2: la meta del reto en vivo puede partirse en líneas y no aplasta el título en pantallas estrechas. */
 .atr-reto .cond-pts { flex: 0 1 auto; max-width: 40%; white-space: normal; text-align: right; line-height: 1.2; }
+
+/* 0.46: Héroe sin dorado repetido. El dorado relleno queda para la acción principal de la pantalla. */
+/* Tripulación: dato secundario de la cabecera, en gris y sin subrayado. */
+.heroe-datos .enlace-trip { color: var(--texto-suave); font-weight: 600; text-decoration: none; }
+/* Talentos: todos los botones son secundarios; el borde dorado de las tarjetas disponibles pasa a neutro. */
+.talento.disponible { border-color: var(--texto-tenue); }
+#talentos-libres { text-align: left; font-weight: 500; font-size: 14px; }
+/* Rangos: la columna del nivel no se parte y los niveles pasados no van en dorado; solo el actual se marca. */
+.nivel-lista li { grid-template-columns: 72px 1fr; }
+.nivel-lista li b { white-space: nowrap; }
+.nivel-lista li.hecho b { color: var(--texto); }
+.nivel-lista li em { color: var(--texto-suave); }
+/* Misiones: la recompensa va en su propia línea, bajo el título, y el texto ya no se parte en 3 líneas. */
+.mision-fila { flex-wrap: wrap; align-items: flex-start; row-gap: 2px; }
+.mision-fila > span:first-child { flex: 1 1 100%; }
+.mision-fila .recompensa { flex-basis: 100%; }
+/* Cambiar de clase: acción poco frecuente, como enlace discreto al final de la Ficha. */
+#btn-cambiar-clase { background: transparent; border-color: transparent; color: var(--texto-suave); font-weight: 600; min-height: 44px; }
+/* La barra de avance de una misión es un dato: va en el color de la XP, no en el dorado de las acciones. */
+.misiones .progreso > div { background: var(--xp); }
+.mision-pie .enlace-boton { text-decoration: none; }
+/* Segmentados (Semanas/Meses, Entrenamientos/Programa…): estado activo neutro; el dorado relleno es para la acción principal. */
+.segmentado button.activo { background: var(--panel-2); color: var(--texto); box-shadow: inset 0 -2px 0 var(--primario-claro); }

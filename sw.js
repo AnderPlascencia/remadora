@@ -1,5 +1,5 @@
 // Guarda la app en caché para que abra sin conexión. Cambia VERSION al publicar cambios.
-const VERSION = 'remadora-0.46.0';
+const VERSION = 'remadora-0.46.1';
 const ARCHIVOS = ['./', 'index.html', 'src/estilos.css', 'src/app.js', 'src/estado.js', 'src/navegacion.js', 'src/registro.js', 'src/pantallas/ajustes.js', 'src/pantallas/preparar.js', 'src/pantallas/vivo.js', 'src/pantallas/sesion.js', 'src/pantallas/planes.js', 'src/pantallas/progreso.js', 'src/pantallas/heroe.js', 'src/pantallas/detalle.js', 'src/pantallas/programa.js', 'src/pantallas/inicio.js', 'src/pantallas/ayuda.js',
   'src/remadora.js', 'src/protocolo.js', 'src/variantes.js',
   'src/grafica.js', 'src/db.js', 'src/entrenamientos.js', 'src/estadisticas.js', 'src/voz.js', 'src/programa.js', 'src/fantasma.js', 'src/carrera.js', 'src/efectos.js', 'src/juego.js', 'src/xp-carga.js', 'src/talentos.js', 'src/ventajas.js', 'src/base.js', 'src/objetos.js', 'src/consejos.js', 'src/capacidades.js', 'src/adaptacion.js', 'src/perfil.js', 'src/guia.js', 'src/ui.js', 'src/respaldo.js', 'src/reloj.js', 'src/version.js', 'manifest.webmanifest', 'assets/marca/rower-logo.svg', 'assets/marca/rower-marca.svg', 'assets/marca/rower-marca-clara.svg', 'assets/marca/rower-192.png', 'assets/marca/rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
