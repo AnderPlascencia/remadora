@@ -87,7 +87,33 @@ export const PAISAJES = {
     }
   }
 };
+// Colección a largo plazo (etapa 12): variantes de los dos paisajes con otra hora, tiempo o estación, de 600 a
+// 3000 monedas. Reusan las imágenes del paisaje base con un filtro de color (si el navegador no sabe filtrar el
+// lienzo, se ven como el base) y sus propios colores de cielo y agua.
+const variante = (base, extra) => ({ ...PAISAJES[base], ...extra, base, colores: { ...PAISAJES[base].colores, ...extra.colores } });
+Object.assign(PAISAJES, {
+  'fiordo-invierno': variante('fiordo', { nombre: 'Fiordo en invierno', texto: 'El mismo fiordo bajo la nieve, con luz blanca y fría.', precio: 600, filtro: 'saturate(.35) brightness(1.12) contrast(.95)',
+    colores: { agua2d: ['#3E6A86', '#2A4F66'], cielo3d: ['#C9D4DE', '#E8EDF1'], agua3d: ['#4A6476', '#24394A'], reflejo: '214,224,232', tierra2d: '#D8DEE3' } }),
+  'laguna-atardecer': variante('laguna', { nombre: 'Laguna al atardecer', texto: 'Sol bajo sobre la laguna: agua de cobre y palmeras a contraluz.', precio: 900, filtro: 'sepia(.45) saturate(1.5) hue-rotate(-12deg) brightness(.95)',
+    colores: { agua2d: ['#C9773E', '#8A4B2A'], cielo3d: ['#F29A5B', '#FBD08B'], agua3d: ['#B86B3E', '#5E3322'], reflejo: '250,190,130' } }),
+  'fiordo-tormenta': variante('fiordo', { nombre: 'Fiordo en tormenta', texto: 'Nubes de plomo y agua oscura: se rema igual, pero impone.', precio: 1300, filtro: 'grayscale(.55) brightness(.72) contrast(1.15)',
+    colores: { agua2d: ['#2B3C48', '#18242D'], cielo3d: ['#59636C', '#8A939B'], agua3d: ['#26323B', '#111A21'], reflejo: '150,162,172' } }),
+  'laguna-luna': variante('laguna', { nombre: 'Laguna de luna llena', texto: 'La laguna de noche, plateada por la luna.', precio: 1800, filtro: 'brightness(.5) saturate(.7) hue-rotate(185deg)',
+    colores: { agua2d: ['#1A3A5C', '#0C2238'], cielo3d: ['#0F1E36', '#2B4468'], agua3d: ['#16324F', '#08172A'], reflejo: '170,190,230', tierra2d: '#3A4250' } }),
+  'fiordo-aurora': variante('fiordo', { nombre: 'Fiordo bajo la aurora', texto: 'Noche polar con el cielo verde de la aurora boreal.', precio: 2400, filtro: 'brightness(.55) saturate(1.3) hue-rotate(115deg)',
+    colores: { agua2d: ['#0E3B3A', '#06201F'], cielo3d: ['#08221F', '#1F6B55'], agua3d: ['#0C3330', '#041716'], reflejo: '120,230,180' } }),
+  'laguna-dorada': variante('laguna', { nombre: 'Laguna dorada', texto: 'La laguna de las leyendas: agua y cielo de oro.', precio: 3000, filtro: 'sepia(.85) saturate(2.2) brightness(1.05)',
+    colores: { agua2d: ['#C9A227', '#8C6D12'], cielo3d: ['#E8C45A', '#FBE7A1'], agua3d: ['#B8912A', '#6E5310'], reflejo: '255,225,140' } }),
+});
 let paisaje = PAISAJES.fiordo;
+// Dibuja con el filtro de color del paisaje (las variantes); sin filtro, tal cual.
+function conFiltro(ctx, dibujar) {
+  if (!paisaje.filtro || !('filter' in ctx)) { dibujar(); return; }
+  const antes = ctx.filter;
+  ctx.filter = paisaje.filtro;
+  dibujar();
+  ctx.filter = antes;
+}
 export function usarPaisaje(id) { paisaje = PAISAJES[id] || PAISAJES.fiordo; }
 
 // Paisajes de la tienda: los gratis (precio 0) los tiene todo el mundo; los demás se compran una vez con monedas.
@@ -110,6 +136,25 @@ export const BOTES = {
   polinesio: { nombre: 'Canoa polinesia', tela: '#0EA5E9', marca: '#FDE047' },
   romano: { nombre: 'Trirreme romano', tela: '#7E22CE', marca: '#FACC15' },
 };
+// Velas y banderas de tu bote (etapa 12): colección de 400 a 2500 monedas. Solo cambian tu bote, nunca los rivales.
+export const VELAS = {
+  carmesi: { nombre: 'Velas carmesí', texto: 'Rojo de batalla con franjas negras.', precio: 400, tela: '#991B1B', marca: '#111827' },
+  esmeralda: { nombre: 'Velas esmeralda', texto: 'Verde selva con remates de oro.', precio: 800, tela: '#047857', marca: '#FCD34D' },
+  medianoche: { nombre: 'Velas de medianoche', texto: 'Azul noche con estrellas de plata.', precio: 1200, tela: '#1E1B4B', marca: '#E2E8F0' },
+  hielo: { nombre: 'Velas de hielo', texto: 'Blanco glaciar con azul polar.', precio: 1800, tela: '#E0F2FE', marca: '#0284C7' },
+  oro: { nombre: 'Velas de oro', texto: 'Para quien ya lo ha ganado todo.', precio: 2500, tela: '#CA8A04', marca: '#FEF3C7' },
+};
+export const tieneVelas = (per, id) => !!VELAS[id] && (per.velas || []).includes(id);
+export const velasElegidas = (per = {}) => (tieneVelas(per, per.vela) ? per.vela : null);
+export function comprarVelas(per, id, monedas) {
+  const x = VELAS[id];
+  if (!x || tieneVelas(per, id) || monedas < x.precio) return null;
+  return { velas: [...(per.velas || []), id], gastado: (per.gastado || 0) + x.precio, vela: id };
+}
+let velasYo = null;
+export function usarVelas(id) { velasYo = VELAS[id] || null; }
+// Colores de un bote: los de su clase y, en el tuyo, tus velas.
+const decoDe = (b) => (BOTES[b.clase] && b.yo && velasYo ? { ...BOTES[b.clase], tela: velasYo.tela, marca: velasYo.marca } : BOTES[b.clase]);
 
 // Retratos de los carriles: se cargan una vez y se pintan cuando ya llegaron.
 const imagenes = new Map();
@@ -654,7 +699,7 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
       ctx.save();
       ctx.translate(0, y);
       if (volteada) ctx.scale(1, -1);
-      for (let x = x0; x < ancho; x += w) ctx.drawImage(costa, 0, costa.naturalHeight - sh, costa.naturalWidth, sh, x, -h, w + 0.5, h);
+      conFiltro(ctx, () => { for (let x = x0; x < ancho; x += w) ctx.drawImage(costa, 0, costa.naturalHeight - sh, costa.naturalWidth, sh, x, -h, w + 0.5, h); });
       ctx.restore();
     };
     tira(y0, tierraArriba, false);
@@ -921,7 +966,7 @@ function bandera2d(ctx, x, y, tam, deco, t) {
 }
 
 function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
-  const deco = BOTES[b.clase];
+  const deco = decoDe(b);
   let ancho = Math.max(7, largo * 0.09);
   if (b.clase === 'pirata' || b.clase === 'romano') ancho *= 1.25;
   ctx.globalAlpha = b.yo ? 1 : 0.88;
@@ -1319,7 +1364,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     const y = horizonte - paisaje.panorama.horizonte * k;
     let x = cx - w / 2;
     while (x > 0) x -= w;
-    for (; x < ancho; x += w) ctx.drawImage(fiordo, x, y, w, h);
+    conFiltro(ctx, () => { for (; x < ancho; x += w) ctx.drawImage(fiordo, x, y, w, h); });
   } else {
     ctx.fillStyle = '#244634';
     ctx.beginPath();
@@ -1491,10 +1536,10 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
       ctx.save();
       ctx.translate(base.x, 0);
       ctx.scale(-1, 1);
-      ctx.drawImage(atlas, q.x, q.y, q.w, q.h, -q.pie[0] * w, base.y - q.pie[1] * h, w, h);
+      conFiltro(ctx, () => ctx.drawImage(atlas, q.x, q.y, q.w, q.h, -q.pie[0] * w, base.y - q.pie[1] * h, w, h));
       ctx.restore();
     } else {
-      ctx.drawImage(atlas, q.x, q.y, q.w, q.h, base.x - q.pie[0] * w, base.y - q.pie[1] * h, w, h);
+      conFiltro(ctx, () => ctx.drawImage(atlas, q.x, q.y, q.w, q.h, base.x - q.pie[0] * w, base.y - q.pie[1] * h, w, h));
     }
     ctx.globalAlpha = 1;
   };
@@ -1664,7 +1709,7 @@ function palo3d(ctx, P, x, z, h0, h1) {
 
 // Detalles de cada clase sobre el casco (en 3D).
 function adornos3d(ctx, P, b, largo, t) {
-  const deco = BOTES[b.clase];
+  const deco = decoDe(b);
   const cerca = P(b.x, b.dist);
   if (!deco || !cerca) return;
   // Velas, mástiles y estandartes no se dibujan en tu bote (taparían la pista) y se desvanecen en los rivales cercanos.

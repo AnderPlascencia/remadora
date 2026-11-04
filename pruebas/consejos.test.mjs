@@ -16,8 +16,10 @@ const opc = { ftp: 180, clase: 'samurai', ctx: { pctMedio: 62, mppPromedio: 9.5,
   assert.ok(!fondo.seguro.agilidad, 'Fondo no sube Agilidad');
   assert.ok(fondo.seguro.resistencia > 10, 'Fondo sube Resistencia');
   assert.ok(fondo.extras.length <= 3 && fondo.extras.every((x) => x.puntos >= 1 && x.titulo), 'extras con puntos');
-  const rango = C.prevision(porId('base:rit-mant'), opc).extras.find((x) => x.clave === 'rango');
-  assert.ok(rango && rango.atributo === 'tecnica', 'mantener el rango suma Técnica');
+  // Etapa 12: la Técnica sale de remar parejo (potencia y cadencia), no del rango ni de los metros por palada.
+  const ritmo = C.prevision(porId('base:rit-mant'), opc);
+  assert.ok(ritmo.seguro.tecnica >= 15, `remar parejo suma Técnica: ${ritmo.seguro.tecnica}`);
+  assert.ok(!ritmo.extras.some((x) => x.clave === 'rango' || x.clave === 'mpp'));
   assert.equal(fondo.riesgo.puntos, -Math.round(3 * 1), 'dejarlo a medias quita el bono de Voluntad');
 }
 // El atributo débil va primero en los extras (en una sesión dura, que es donde se puede apretar).

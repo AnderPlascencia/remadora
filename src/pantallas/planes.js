@@ -119,8 +119,9 @@ function pintarSubir(clave, h, o, lista) {
   const ents = [...estado.baseActual, ...lista.filter((x) => !esDePlan(x))];
   const mejores = C.mejoresPara(clave, ents, o).slice(0, 5);
   const valor = h.atributos[clave] || 0;
-  const tit = J.tituloAtributo(clave, valor);
-  const intro = `<p class="ayuda">Tu ${a.nombre} va en <b>${miles(valor)}</b>${clave === o.debil ? ': es tu atributo más bajo' : ''}.${tit.siguiente ? ` Con ${miles(tit.siguiente.faltan)} más serás <b>${tit.siguiente.nombre}</b>.` : ''}</p>`;
+  // El título mira el acumulado; el valor que se ve, las últimas 6 semanas.
+  const tit = J.tituloAtributo(clave, h.atributosTotal?.[clave] ?? valor);
+  const intro = `<p class="ayuda">Tu ${a.nombre} va en <b>${miles(valor)}</b> en las últimas 6 semanas${clave === o.debil ? ': es tu atributo más bajo' : ''}.${tit.siguiente ? ` Con ${miles(tit.siguiente.faltan)} más serás <b>${tit.siguiente.nombre}</b>.` : ''}</p>`;
   const nota = clave === 'recuperacion'
     ? `<p class="aviso suave-aviso">Recuperación no sube apretando: rema suave (media por debajo de ${Math.round(o.ftp * 0.75)} W), descansa el día después de uno duro${h.contexto?.sinPulso ? ' o usa banda de pulso para que cuenten tus descansos' : ''}.</p>` : '';
   const tarjeta = (x, i) => {

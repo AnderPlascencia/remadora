@@ -40,7 +40,9 @@ assert.ok(g2.detalle.some(([t]) => t.startsWith('Racha')));
 assert.ok(h.nivel >= 2);
 // Bono de clase: el explorador (ahora polinesio) gana 15 % más resistencia
 const sin = J.progresoHeroe([fondo], { ftp: 200 });
-assert.ok(h.atributos.resistencia > sin.atributos.resistencia);
+assert.ok(h.atributosTotal.resistencia > sin.atributosTotal.resistencia);
+// Lo que se ve son las últimas 6 semanas: sesiones de enero ya no cuentan, pero el acumulado (títulos) sí.
+assert.equal(h.atributos.resistencia, 0);
 // 1 XP por cada 10 m: 7200 m de fondo dan 720 XP de base
 assert.deepEqual(g1.detalle[0], ['Distancia', 720]);
 console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
@@ -159,8 +161,11 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.equal(J.factorXp(J.XP_LENTA_DESDE - 1), 1);
   assert.equal(J.factorXp(J.XP_LENTA_DESDE), J.FACTOR_XP_LENTA);
   const ses = (fecha) => ({ fecha, duracion: 1800, distancia: 6000, paladas: 700, wattsProm: 150, splitProm: 125, spmProm: 24, muestras: [] });
-  const antes = J.estadoJuego([ses(J.XP_LENTA_DESDE - 7 * 864e5 + 36e5 * 10)]);
-  const despues = J.estadoJuego([ses(J.XP_LENTA_DESDE + 7 * 864e5 + 36e5 * 10)]);
+  // Se compara la XP de la sesión: las misiones de cada día son distintas.
+  const fa = J.XP_LENTA_DESDE - 7 * 864e5 + 36e5 * 10;
+  const fd = J.XP_LENTA_DESDE + 36e5 * 10;
+  const antes = J.estadoJuego([ses(fa)]).porSesion.get(fa);
+  const despues = J.estadoJuego([ses(fd)]).porSesion.get(fd);
   assert.ok(antes.xp > 0);
   assert.ok(Math.abs(despues.xp - antes.xp / 2) <= antes.xp * 0.02, `${despues.xp} vs ${antes.xp}`);
   assert.equal(despues.monedas, antes.monedas);
@@ -173,21 +178,22 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   const ses = [2, 9, 16, 23].map(corta); // 1 vez por semana, 3 km
   const h = J.estadoJuego(ses, { ftp: 120, per: { clase: 'polinesio' }, ahora: dia(30) });
   // Desde el 29 de octubre todo da la mitad: lo que se muestra ya viene a la mitad
-  const sinRitmo = J.misionesDelDia(J.lunesDe(dia(30)));
-  assert.ok(h.diarias.every((m) => m.xp <= 30), 'misiones diarias a la mitad');
+  const sinRitmo = J.misionesDelDia('2026-10-26');
+  assert.ok(h.diarias.every((m) => m.xp <= J.XP_MISION_DIARIA.plan / 2), 'misiones diarias a la mitad');
   assert.equal(h.hazanas.find((x) => x.id === 'ses25').xp, 250, 'logro a la mitad');
   assert.equal(h.factorXp, 0.5);
   // Misiones a tu medida: nada de 5 km ni de «en tu rango» para quien rema 3 km en remo libre
   const rit = J.ritmoReciente(ses, dia(30));
   assert.equal(Math.round(rit.kmSemana), 3);
   for (let k = 0; k < 20; k++) {
-    const d = J.misionesDelDia(`2026-12-${String(k + 1).padStart(2, '0')}`, rit);
+    const d = J.misionesDelDia(`2026-10-${String(k + 1).padStart(2, '0')}`, rit); // antes de la etapa 12
     assert.ok(d[0].meta <= 3000, `distancia a tu medida ${d[0].meta}`);
     assert.ok(!d.some((m) => m.clave === 'rango'), 'sin «en tu rango» si no usas entrenamientos con rango');
     assert.ok(d.every((m) => m.preparar === undefined), 'misiones crudas sin atajo');
   }
   assert.ok(sinRitmo.length === 5);
-  const sem = J.misionesDeSemana('2026-12-07', 'polinesio', rit);
+  assert.equal(J.misionesDelDia('2026-12-07').length, 3, 'desde la etapa 12, 3 diarias');
+  const sem = J.misionesDeSemana('2026-10-26', 'polinesio', rit);
   assert.equal(sem[0].meta, 3, 'la ruta pide tu semana normal');
   assert.ok(!(sem.some((m) => m.clave === 'fondo') && sem.some((m) => m.clave === 'oceano')), 'sin dos misiones de sesión larga');
   assert.ok(h.semanales.every((m) => typeof m.preparar === 'string'), 'cada misión tiene atajo');

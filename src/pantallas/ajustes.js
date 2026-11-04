@@ -34,7 +34,7 @@ export function arrancarAjustes1() {
   campoNumero('#in-peso', 'peso', '75', () => { pintarClasificacion(); vistaPrevia(); alCambiarPerfil(); });
   campoNumero('#in-ftp', 'ftp', '', () => { ajustes.escribir('ftpEstimado', '0'); ajustes.escribir('ftpDePerfil', '0'); pintarFtpEstado(); pintarZonas(); pintarClasificacion(); vistaPrevia(); });
   campoNumero('#in-altura', 'altura', '', () => alCambiarPerfil());
-  campoNumero('#in-meta-semana', 'metaSemana', '10');
+  campoNumero('#in-meta-semana', 'metaSemana', '10', () => J.fijarMetaSemana(ajustes.num('metaSemana', 10)));
   campoNumero('#in-fcmax', 'fcMax', '');
   campoNumero('#in-edad', 'edad', '', () => { aplicarEdad(); alCambiarPerfil(); });
   $('#in-fcmax').addEventListener('change', () => ajustes.escribir('fcMaxDeEdad', '0'));

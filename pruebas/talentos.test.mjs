@@ -3,7 +3,9 @@ import * as T from '../src/talentos.js';
 import { sinPausas } from '../src/juego.js';
 
 const base = { paladas: 0, metros: 0, min: 0, ganados: 0, rivales: 0, sinPausas: false, delPrograma: false, racha: 1, sesSemana: 1 };
-const xp = (clase, grados, d) => T.xpTalentos(clase, grados, { ...base, ...d });
+// Valores de antes de la etapa 12 (antes: true) y los de ahora.
+const xp = (clase, grados, d) => T.xpTalentos(clase, grados, { ...base, antes: true, ...d });
+const xp12 = (clase, grados, d) => T.xpTalentos(clase, grados, { ...base, ...d });
 
 // Vikingo: Brazos de hacha cada 10 paladas, Saga de fuerza a las 500, Botín de la saga cada 1000
 assert.deepEqual(xp('vikingo', { m2: 2, m4: 1, maestria: 1 }, { paladas: 1030 }), [['Brazos de hacha', 150]], 'tope de 150 XP');
@@ -18,6 +20,18 @@ assert.deepEqual(xp('polinesio', { m1: 1, m3: 1, maestria: 1 }, { min: 61, metro
 // Romano: tercera sesión de la semana, racha (hasta 7) y Triunfo semanal aparte del tope
 assert.deepEqual(xp('romano', { m1: 3, m3: 3, maestria: 3 }, { sesSemana: 5, racha: 9 }), [['Pax romana', 45], ['Ley de la legión', 105], ['Triunfo romano', 225]]);
 assert.deepEqual(xp('romano', { maestria: 1 }, { sesSemana: 6 }), [], 'el Triunfo se paga una vez por semana');
+// Etapa 12: vikingo cada 100 paladas, pirata menos por fantasma; el Triunfo romano con 4 sesiones o la meta de km.
+assert.deepEqual(xp12('vikingo', { m2: 3, m4: 3, maestria: 3 }, { paladas: 1030 }), [['Brazos de hacha', 70], ['Saga de fuerza', 30], ['Botín de la saga', 50]], 'tope de 150 XP');
+assert.deepEqual(xp12('pirata', { m1: 3 }, { ganados: 2, rivales: 3 }), [['Bolsa ligera', 48]]);
+assert.deepEqual(xp12('romano', { maestria: 3 }, { sesSemana: 4, kmSemana: 20, metros: 5000, metaSemanaKm: 40 }), [['Triunfo romano', 225]], '4 sesiones');
+assert.deepEqual(xp12('romano', { maestria: 3 }, { sesSemana: 5, kmSemana: 25, metros: 5000, metaSemanaKm: 40 }), [], 'una vez por semana');
+assert.deepEqual(xp12('romano', { maestria: 3 }, { sesSemana: 2, kmSemana: 12, metros: 6000, metaSemanaKm: 10 }), [['Triunfo romano', 225]], 'la meta de km llega antes');
+assert.deepEqual(xp12('romano', { maestria: 3 }, { sesSemana: 4, kmSemana: 16, metros: 4000, metaSemanaKm: 10 }), [], 'ya lo cobró al pasar la meta');
+assert.ok(T.CLASES_TALENTO.romano.talentos.maestria.texto(225).includes('4 sesiones'));
+// Puntos sobrantes: los que ya no caben en el árbol completo (cuesta 18).
+assert.equal(T.puntosSobrantes({}, 20), 2);
+assert.equal(T.puntosSobrantes({ m1: [1, 2, 3], m2: [1, 2, 3], m3: [1, 2, 3], m4: [1, 2, 3], maestria: [1, 2, 3] }, 5), 5);
+assert.equal(T.puntosSobrantes({ m1: [1] }, 4), 0);
 // Sin grados no hay nada
 assert.deepEqual(xp('vikingo', {}, { paladas: 5000 }), []);
 

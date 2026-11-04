@@ -59,6 +59,7 @@ export const AJUSTES = {
   ultimoRespaldo: A('numero', 0, false),
   ayudaGestos: A('numero', 0, false),
   avisoXpLenta: A('si', false, false),
+  avisoTriunfo12: A('si', false, false), // etapa 12: el Triunfo romano cambió (se avisa una vez)
   consejoModoRemo: A('si', false, false),
   // La copia de la sesión en curso cuando IndexedDB falla (ver pantallas/sesion.js).
   sesionEnCurso: A('json', null, false),
