@@ -11,7 +11,7 @@ const ARCHIVOS = ['./', 'index.html', 'src/estilos.css', 'src/app.js', 'src/esta
 const CLASES = ['pirata', 'polinesio', 'romano', 'samurai', 'vikingo'];
 const RANGOS = ['novato', 'aprendiz', 'combatiente', 'guerrero', 'veterano', 'elite', 'campeon', 'maestro', 'legendario'];
 const HEROES = CLASES.flatMap((c) => RANGOS.flatMap((r) => [`assets/heroes/${c}_${r}.webp`, `assets/heroes/${c}_${r}_retrato.webp`]));
-// Paisajes de la carrera renderizados en Blender (fiordo ~70 KB, laguna ~190 KB, los cinco de la colección ~1 MB en
+// Paisajes de la carrera renderizados en Blender (fiordo ~70 KB, laguna ~190 KB, los cinco de la colección ~550 KB en
 // total, miniaturas de la tienda ~15 KB);
 // sin ellos se dibujan las formas sencillas.
 const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp', 'assets/carrera/fiordo_mini.webp',
