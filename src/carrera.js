@@ -503,8 +503,8 @@ const PIEL = '#E2B48C';
 // vista con una palada entera: el fotograma sale de la fase. ancla es el escálamo a ras de agua; ppm, píxeles por metro
 // del render en ese punto. Se descargan al pintar el primer bote de esa clase; mientras, se dibuja el bote vectorial.
 export const REMEROS_ATLAS = {
-  '3d': { w: 320, h: 196, cols: 4, n: 24, ancla: [160.0, 118.7], ppm: 81.93 },
-  '2d': { w: 356, h: 251, cols: 4, n: 24, ancla: [143.4, 123.0], ppm: 60.0 },
+  '3d': { w: 208, h: 127, cols: 4, n: 24, ancla: [104.0, 77.2], ppm: 53.25 },
+  '2d': { w: 231, h: 163, cols: 4, n: 24, ancla: [93.2, 80.0], ppm: 39.0 },
 };
 // La barca de Blender mide 5,4 m: de la popa al escálamo 1,89 m y del escálamo a la proa 3,51 m.
 const BARCA_REAL = { largo: 5.4, proa: 3.51 };
@@ -2213,6 +2213,8 @@ function bote3d(ctx, P, b, t) {
 
 // Remero realista (atlas de Blender) visto desde la cámara de persecución. El render tiene la misma cámara que
 // pintar3d a 12,6 m del escálamo; aquí se escala por la distancia real y, a lo ancho, como la pista (fx ≠ f).
+// Fracción de la perspectiva real con la que se inclinan los botes de las calles laterales (aprobada con Ander)
+const INCLINA_CALLE = 0.6;
 function remero3d(ctx, P, b, { im, A, sx, sy }, t) {
   const q = P(b.x, b.dist - 0.4, 0);
   const q1 = P(b.x + 1, b.dist - 0.4, 0);
@@ -2224,7 +2226,15 @@ function remero3d(ctx, P, b, { im, A, sx, sy }, t) {
     ctx.shadowColor = '#FDE047';
     ctx.shadowBlur = sinMovimiento ? 18 : 16 + 10 * Math.sin(t * 10);
   }
+  // El atlas está renderizado con la cámara justo detrás del bote. En las calles laterales se inclina hacia el punto de
+  // fuga: las líneas a lo largo del bote siguen la perspectiva y las horizontales (remos) se quedan horizontales.
+  const pa = P(b.x, b.dist + 1.6, 0);
+  const pb = P(b.x, b.dist - 2.4, 0);
+  const sesgo = INCLINA_CALLE * (pa && pb && Math.abs(pa.y - pb.y) > 0.5 ? (pa.x - pb.x) / (pa.y - pb.y) : 0);
+  ctx.save();
+  ctx.transform(1, 0, sesgo, 1, -sesgo * q.y, 0);
   ctx.drawImage(im, sx, sy, A.w, A.h, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, A.w * kx, A.h * ky);
+  ctx.restore();
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 }
