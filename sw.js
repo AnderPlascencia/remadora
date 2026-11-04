@@ -11,12 +11,11 @@ const ARCHIVOS = ['./', 'index.html', 'src/estilos.css', 'src/app.js', 'src/esta
 const CLASES = ['pirata', 'polinesio', 'romano', 'samurai', 'vikingo'];
 const RANGOS = ['novato', 'aprendiz', 'combatiente', 'guerrero', 'veterano', 'elite', 'campeon', 'maestro', 'legendario'];
 const HEROES = CLASES.flatMap((c) => RANGOS.flatMap((r) => [`assets/heroes/${c}_${r}.webp`, `assets/heroes/${c}_${r}_retrato.webp`]));
-// Paisajes de la carrera renderizados en Blender (fiordo ~70 KB, laguna ~190 KB, los cinco de la colección ~550 KB en
-// total, miniaturas de la tienda ~15 KB);
-// sin ellos se dibujan las formas sencillas.
-const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp', 'assets/carrera/fiordo_mini.webp',
-  'assets/carrera/laguna.webp', 'assets/carrera/laguna_orilla.webp', 'assets/carrera/laguna_costa.webp', 'assets/carrera/laguna_mini.webp',
-  ...['canon', 'otono', 'cerezos', 'glaciar', 'mediterraneo'].flatMap((p) => ['', '_orilla', '_costa', '_mini'].map((s) => `assets/carrera/${p}${s}.webp`)),
+// Carrera: al instalar solo se guardan el fiordo (el paisaje gratis, el de siempre), las miniaturas de la tienda y
+// los rivales. Cada paisaje comprado (~70-200 KB) se descarga al comprarlo y al abrir la app, con el mensaje
+// «precargar» (ver precargarRecursos en src/pantallas/heroe.js); sin él se dibujan las formas sencillas.
+const MINIATURAS = ['fiordo', 'laguna', 'canon', 'otono', 'cerezos', 'glaciar', 'mediterraneo'].map((p) => `assets/carrera/${p}_mini.webp`);
+const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp', ...MINIATURAS,
   'assets/carrera/rival_vikingo.webp'];
 // Los vídeos de la vista realista (~1,2 MB) son de una clase: no se precargan al instalar. La app los pide con un
 // mensaje «precargar» cuando tu héroe es de esa clase (ver src/app.js).
@@ -44,10 +43,13 @@ self.addEventListener('activate', (e) => {
     .then(() => self.clients.claim()));
 });
 
-// { tipo: 'precargar', clase }: guarda los vídeos de esa clase para verlos sin conexión.
+// { tipo: 'precargar', clase, archivos }: guarda los vídeos de esa clase y las imágenes de los paisajes que
+// tienes, para verlos sin conexión. Solo se aceptan imágenes de assets/carrera/.
+const IMAGEN_CARRERA = /^assets\/carrera\/[\w-]+\.webp$/;
 self.addEventListener('message', (e) => {
   if (e.data?.tipo !== 'precargar') return;
-  const lista = VIDEOS[e.data.clase] || [];
+  const archivos = Array.isArray(e.data.archivos) ? e.data.archivos.filter((a) => typeof a === 'string' && IMAGEN_CARRERA.test(a)) : [];
+  const lista = [...new Set([...(VIDEOS[e.data.clase] || []), ...archivos])];
   e.waitUntil(caches.open(VERSION).then((c) => Promise.all(lista.map(async (a) => {
     if (await c.match(a)) return;
     try { await guardarEnCache(a, await fetch(a)); } catch { /* sin conexión: otra vez será */ }

@@ -69,7 +69,7 @@ export function arrancarHeroe() {
   $('#btn-crear-heroe').addEventListener('click', () => {
     if (!claseElegida) return;
     guardarPersonaje({ clase: claseElegida, nombre: $('#heroe-nombre').value.trim() });
-    precargarVideosDeClase();
+    precargarRecursos();
     confeti();
     pintarHeroe();
   });
@@ -125,6 +125,7 @@ export function arrancarHeroe() {
       const cambios = comprarPaisaje(per, id, h.monedas);
       if (!cambios) return;
       guardarPersonaje(cambios);
+      precargarRecursos();
       confeti();
       toast(`¡${PAISAJES[id].nombre} es tuyo! Ya lo verás en tu próxima carrera.`);
     }
@@ -596,12 +597,19 @@ function pintarTienda(h, per) {
     : '<li class="vacio">Aún no tienes ventajas. Cómpralas aquí y elígelas en Entrenar antes de la carrera.</li>';
 }
 
-// Pide al service worker que guarde los vídeos de tu clase (la vista realista) para verlos sin conexión.
-// Los de las otras clases no se descargan.
-export function precargarVideosDeClase() {
-  const clase = leerPersonaje().clase;
-  if (!clase || !('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.ready.then((r) => r.active?.postMessage({ tipo: 'precargar', clase })).catch(() => {});
+// Imágenes de los paisajes de pago que tienes (panorama, orilla y costa). Las variantes usan las de su paisaje base.
+export function archivosDePaisajes(per) {
+  const ids = Object.keys(PAISAJES).filter((id) => PAISAJES[id].precio > 0 && tienePaisaje(per, id));
+  return [...new Set(ids.flatMap((id) => [PAISAJES[id].panorama?.src, PAISAJES[id].costa, PAISAJES[id].orilla?.src]).filter(Boolean))];
+}
+
+// Pide al service worker que guarde para usarlos sin conexión los vídeos de tu clase (la vista realista) y los
+// paisajes que compraste. Los de otras clases y los paisajes que no tienes no se descargan.
+export function precargarRecursos() {
+  const per = leerPersonaje();
+  const archivos = archivosDePaisajes(per);
+  if ((!per.clase && !archivos.length) || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then((r) => r.active?.postMessage({ tipo: 'precargar', clase: per.clase || null, archivos })).catch(() => {});
 }
 
 // El juego con la sesión recién terminada: la hoja de resumen lo usa dos veces y se calcula una.
