@@ -217,7 +217,24 @@ export function crearCarrera(canvas) {
     detener() { this.estado = null; this.yoVista = null; this.vistos = null; this.centro = null; this.ventanaLista = false; this.charcos = []; this.alejar = 0; this.costa = null; },
   };
   carreras.add(c);
+  // Fuera de la pantalla (al bajar en Entrenar) no se dibuja; al volver a verse, la animación sigue.
+  if (typeof IntersectionObserver === 'function') {
+    new IntersectionObserver((entradas) => {
+      c.fueraDeVista = !entradas.at(-1).isIntersecting;
+      if (!c.fueraDeVista) arrancar();
+    }).observe(canvas);
+  }
   return c;
+}
+
+// Cuadros por segundo como mucho, según la vista. La 3D y la realista cuestan mucho más por cuadro (con la CPU
+// 4× más lenta daban 22 y 11 fps frente a 35 en 2D) y a 30 fps se ven igual de fluidas; en un teléfono de 120 Hz
+// esto también evita dibujar la 2D el doble de veces que se nota. La tolerancia de 4 ms absorbe el vaivén de
+// requestAnimationFrame para que a 60 Hz se dibuje justo uno de cada dos cuadros.
+export const FPS_MAX = { '2d': 60, '3d': 30, real: 30 };
+export function tocaPintar(c, ahora) {
+  const fps = FPS_MAX[c.modo] ?? 60;
+  return !c.ultimoPintado || ahora - c.ultimoPintado >= 1000 / fps - 4;
 }
 
 function arrancar() {
@@ -229,14 +246,19 @@ function arrancar() {
 function cuadro(ahora) {
   let alguna = false;
   realPintado = false;
+  let realEsperando = false;
   for (const c of carreras) {
-    if (!c.estado || !c.canvas.isConnected || c.canvas.hidden || c.canvas.offsetParent === null) continue;
+    // tapado: otra pantalla la cubre entera (el modo remo encima de Entrenar), así que no se ve aunque esté «visible».
+    if (!c.estado || !c.canvas.isConnected || c.canvas.hidden || c.canvas.offsetParent === null || c.fueraDeVista || c.tapado) continue;
     alguna = true;
+    // Un cuadro que se salta por el límite de fps no cuenta como «sin vista realista»: el clip sigue.
+    if (!tocaPintar(c, ahora)) { if (c.modo === 'real') realEsperando = true; continue; }
+    c.ultimoPintado = ahora;
     pintarCarrera(c, ahora);
   }
   // El clip realista no sigue sonando por detrás (gasta batería) si ningún lienzo lo ha pintado.
   // Los que aún cargan siguen en autoplay: pausarlos dejaría el clip sin imagen.
-  if (!realPintado) for (const v of Object.values(videos)) if (v && !v.paused && v.readyState >= 2) v.pause();
+  if (!realPintado && !realEsperando) for (const v of Object.values(videos)) if (v && !v.paused && v.readyState >= 2) v.pause();
   if (alguna) requestAnimationFrame(cuadro);
   else animando = false;
 }
@@ -318,8 +340,11 @@ const REMEROS = {
 };
 const PIEL = '#E2B48C';
 
-function preparar(canvas) {
-  const dpr = window.devicePixelRatio || 1;
+// La vista realista es un vídeo de 720 px de alto escalado: más de 1,5 píxeles por punto no se nota y
+// cuesta mucho dibujarlo (con densidad 2,6 era el 70 % del tiempo de cada cuadro).
+const DPR_MAX = { real: 1.5 };
+function preparar(canvas, modo) {
+  const dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX[modo] ?? Infinity);
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return null;
@@ -337,7 +362,7 @@ function preparar(canvas) {
 }
 
 export function pintarCarrera(c, ahora = performance.now()) {
-  const p = preparar(c.canvas);
+  const p = preparar(c.canvas, c.modo);
   if (!p) return;
   const datos = interpolar(c, ahora);
   const arriba = altoCabecera(c);

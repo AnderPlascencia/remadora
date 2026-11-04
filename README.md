@@ -167,4 +167,19 @@ El formato de los mensajes se tomó como referencia del proyecto
 
 `npm run test:e2e` abre la app en Chromium con tamaño de teléfono, en modo demo y con el reloj simulado, y recorre los flujos que no pueden fallar: bienvenida, sesión terminada y guardada, recuperar una sesión tras cerrar la app, respaldo de ida y vuelta, modo remo en vertical y horizontal, y uso sin conexión (`pruebas/e2e/`). La primera vez hace falta `npm ci` y `npx playwright install chromium`. GitHub las corre en cada PR y, si fallan, deja el informe con capturas y trazas en los artefactos del trabajo «e2e».
 
+`pruebas/e2e/rendimiento.spec.mjs` es el presupuesto de rendimiento: la primera carga no pasa de 1,25 MB ni de 70 archivos y no baja videos; la carrera da un mínimo de cuadros por segundo en 2D, 3D, realista y modo remo con la CPU 4 veces más lenta, sin pasar su tope (60 en 2D, 30 en 3D y realista); no se pinta fuera de la pantalla ni detrás del modo remo, y 2 h simuladas remando no hacen crecer la memoria, los nodos del DOM ni lo que cuesta cada minuto, con la gráfica en vivo al día. `pruebas/e2e/accesibilidad.spec.mjs` pasa axe-core (WCAG 2.1 A y AA) por Entrenar, el modo remo en sus tres vistas, Héroe y Ajustes con los temas oscuro, claro y alto contraste, y comprueba que en el modo remo ningún texto baja de 14 px.
+
+### Prueba en el teléfono (30 min, a mano)
+
+Lo que las pruebas automáticas no ven: el teléfono real, la remadora y la batería. Una vez por etapa grande, con el teléfono cargado por encima del 80 %, brillo automático y la app instalada desde la página publicada:
+
+1. Anota la batería y abre Rower sin conexión de datos (modo avión con Bluetooth encendido). Debe abrir igual.
+2. Conecta la RW200, elige un entrenamiento de 30 min con carrera contra el fantasma y empieza.
+3. Minutos 0 a 10, en Entrenar: cambia la carrera a 2D, 3D y realista (toca el lienzo). Ninguna debe dar tirones visibles; la realista puede ir más suave, pero el bote no salta.
+4. Minutos 10 a 20, en modo remo: pasa por números, gráfica y carrera (desliza a los lados). Los números se leen a la distancia del brazo y cambian cada segundo; doble toque pausa y reanuda.
+5. Minutos 20 a 25: apaga la pantalla 1 min y vuelve; cambia a otra app 1 min y vuelve. La sesión sigue contando y la gráfica no tiene un hueco más largo que esa pausa.
+6. Minutos 25 a 30: cambia el tema a claro y a alto contraste en Ajustes y vuelve al modo remo; todo debe seguir legible con luz de día.
+7. Termina. Revisa que la sesión quedó guardada con su distancia y que el teléfono no está caliente al tacto.
+8. Anota la batería: más de un 10 % en 30 min es para reportarlo, con el modelo del teléfono y la vista de carrera que más usaste.
+
 La conexión Bluetooth se prueba sin la remadora con un `navigator.bluetooth` falso (`pruebas/remadora.test.mjs`): saludo inicial, consultas, cambio de resistencia, reconexión y modo demo.

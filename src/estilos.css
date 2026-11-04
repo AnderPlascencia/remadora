@@ -17,6 +17,8 @@
   --acento: #F5C451;
   --exito: #22C55E;
   --peligro: #EF4444;
+  /* Fondo de los botones rojos con texto encima (Terminar, Detener): 4,8:1 con el blanco. */
+  --peligro-lleno: #DC2626; --sobre-peligro: #fff;
   --aviso: #FACC15;
   --watts: #FB923C;
   --spm: #38BDF8;
@@ -97,7 +99,7 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
 .boton.primario { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); }
 .boton.primario:hover:not(:disabled) { background: #F0B157; }
 .boton.peligro { background: transparent; border-color: rgba(239, 68, 68, .6); color: var(--mal-texto); }
-.boton.peligro.lleno, .boton.grabando { background: var(--peligro); border-color: var(--peligro); color: #fff; }
+.boton.peligro.lleno, .boton.grabando { background: var(--peligro-lleno); border-color: var(--peligro-lleno); color: var(--sobre-peligro); }
 .boton.grande { min-height: 56px; font-size: var(--t-m); }
 .boton.icono { min-width: 48px; padding: 10px; }
 .boton.chico { min-height: 40px; min-width: 40px; padding: 6px 10px; font-size: var(--t-s); }
@@ -486,7 +488,7 @@ details.seccion[open] { padding-bottom: 8px; }
 :root[data-tema="claro"] {
   --fondo: #F2F5F6; --panel: #FFFFFF; --panel-2: #E3E9EC; --borde: #C6D0D5;
   --texto: #0F1A20; --texto-suave: #34444D; --texto-tenue: #56666F; --rejilla: #E3E9EC;
-  --primario: #E39A30; --primario-osc: #B97A22; --primario-claro: #8A520C; --sobre-primario: #1A1206; --acento: #A86A12; --exito: #16A34A; --peligro: #DC2626;
+  --primario: #E39A30; --primario-osc: #B97A22; --primario-claro: #8A520C; --sobre-primario: #1A1206; --acento: #9C6210; --exito: #15803D; --peligro: #DC2626;
   --watts: #C2410C; --spm: #0284C7; --split: #7C3AED; --fondo-remo: #F6F8F9;
   --xp: #0F766E; --moneda: #A16207; --info: #075985;
   --ok-texto: #15803D; --mal-texto: #B91C1C;
@@ -498,11 +500,11 @@ details.seccion[open] { padding-bottom: 8px; }
 :root[data-tema="claro"] .aviso { color: #854D0E; background: #FEF9C3; border-color: #FACC15; }
 :root[data-tema="claro"] .aviso.suave-aviso { color: #075985; background: #E0F2FE; border-color: #7DD3FC; }
 :root[data-tema="claro"] .aviso.exito { color: #166534; background: #DCFCE7; border-color: #4ADE80; }
-:root[data-tema="claro"] .etiqueta, :root[data-tema="claro"] .record.nuevo .etq { color: #A86A12; }
+:root[data-tema="claro"] .etiqueta, :root[data-tema="claro"] .record.nuevo .etq { color: var(--acento); }
 :root[data-tema="contraste"] {
   --fondo: #000000; --panel: #0A0A0A; --panel-2: #1C1C1C; --borde: #FFFFFF;
   --texto: #FFFFFF; --texto-suave: #FFFFFF; --texto-tenue: #E5E5E5; --rejilla: #555555;
-  --primario: #FFB547; --primario-claro: #FFD08A; --sobre-primario: #000000; --acento: #FFB547; --exito: #00E676; --peligro: #FF3B3B;
+  --primario: #FFB547; --primario-claro: #FFD08A; --sobre-primario: #000000; --acento: #FFB547; --exito: #00E676; --peligro: #FF3B3B; --peligro-lleno: #FF3B3B; --sobre-peligro: #000;
   --watts: #FF9E40; --spm: #40C4FF; --split: #B388FF; --primario-osc: #FFB547; --fondo-remo: #000000; --ok-texto: #00E676; --mal-texto: #FF6E6E;
   --xp: #64FFDA; --moneda: #FFEB3B; --info: #80D8FF;
 }
