@@ -28,7 +28,8 @@ import { leyendaPerfil, obtenerEnt } from './planes.js';
 import { pintarCurva, pintarForma, pintarGasto, pintarMotor, pintarTendencia } from './progreso.js';
 import { estadoHeroe, guardarPersonaje, inventario, leerPersonaje, nombreAtributo, pintarLineaNivel } from './heroe.js';
 import { abrirSesion, fcParaEsfuerzo } from './detalle.js';
-import { delProgramaHoy, ftpDelPlan, pintarHoy, revisarPlanAuto } from './programa.js';
+import { contextoXp, delProgramaHoy, ftpDelPlan, pintarHoy, revisarPlanAuto } from './programa.js';
+import * as XC from '../xp-carga.js';
 
 // ---------- Conexión y estado en vivo ----------
 export const remadora = new Remadora();
@@ -347,6 +348,11 @@ async function iniciarSesion(reanudar = null) {
     retrato: rival ? await retratoPropio() : null,
   };
   if (reanudar) Object.assign(estado.sesion, estadoReanudado(reanudar));
+  // Si era la sesión del día y lo que tocaba en el plan: se anota al empezar (luego ya habría cambiado).
+  if (!estado.sesion.xpCtx) {
+    const actualSes = estado.sesion;
+    contextoXp(estado.entrenamientoActivo, recientes, actualSes.inicio).then((c) => { actualSes.xpCtx ??= c; });
+  }
   if (plan) estado.sesion.info = Ent.avanzar(estado.sesion.estadoAv, plan, medidas());
   prepararSalida();
   await prepararAtrVivo();
@@ -407,7 +413,7 @@ function copiaEnCurso(s, ent) {
   return {
     inicio: s.inicio, t: s.t, dist: s.dist, distConsola: s.distConsola, distFuente: s.distFuente, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
     segConMeta: s.segConMeta, segEnRango: s.segEnRango, segBajo: s.segBajo, segAlto: s.segAlto, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
-    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(),
+    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(), xpCtx: s.xpCtx ?? null,
     ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
   };
 }
@@ -462,7 +468,7 @@ function estadoReanudado(c) {
   return {
     inicio: c.inicio, t: c.t, dist: c.dist, distConsola: c.distConsola || 0, kcal: c.kcal, paladas: c.paladas, muestras: m,
     segConMeta: c.segConMeta || 0, segEnRango: c.segEnRango || 0, segBajo: c.segBajo || 0, segAlto: c.segAlto || 0, tiempoMeta: c.tiempoMeta ?? null,
-    estadoAv: c.estadoAv ?? estado.sesion.estadoAv, pruebaFtp: !!c.pruebaFtp, pausas, pausaPrevia: 'auto', reanudada: true,
+    estadoAv: c.estadoAv ?? estado.sesion.estadoAv, pruebaFtp: !!c.pruebaFtp, pausas, pausaPrevia: 'auto', reanudada: true, xpCtx: c.xpCtx ?? null,
     avance: estado.entrenamientoActivo?.objetivo?.metrica === 'distancia' ? m.map((x) => [x.t, x.dist]) : [],
     n500, t500: cruce ? cruce.t : 0, ultimaSpm: m.at(-1)?.spm || 0,
   };
@@ -496,6 +502,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     tipoPlan: s.tipoPlan ?? null,
     tiempoMeta: s.tiempoMeta,
     delPrograma: delProgramaHoy(s),
+    // Para el juego (xp-carga.js): reglas de XP por carga, si era la sesión del día y qué tocaba en el plan.
+    ...(s.xpCtx || { reglasXp: XC.REGLAS_XP_CARGA }),
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
     // Lo que quedó fuera, separado: por debajo (te costó) o por encima (te sobró). La adaptación del plan lo usa.
     pctBajo: s.segConMeta ? Math.round((100 * (s.segBajo || 0)) / s.segConMeta) : null,

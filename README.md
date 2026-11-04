@@ -109,6 +109,7 @@ En `src/` junto a `app.js` y `estado.js`: `navegacion.js` (cambio de pestaña y 
 | `efectos.js` | Confeti y tarjeta de la sesión para compartir |
 | `consejos.js` | Qué atributos sube cada entrenamiento, extras con puntos, reto en vivo y análisis al terminar |
 | `juego.js` | Héroe: clases, atributos, XP, niveles, talentos, misiones, capítulos y monedas, calculados con tu historial |
+| `xp-carga.js` | XP por carga con tope diario, sesión del plan cumplida, descansos y semana del plan (acuerdo D1) y el calendario del plan |
 | `talentos.js` | Talentos de cada clase (dan XP o ventaja en la carrera, nunca cambian tus métricas) |
 | `ventajas.js` | Ventajas en la carrera: talentos de carrera y objetos de un solo uso de la tienda |
 | `objetos.js` | Vestimenta, colecciones y dibujo vectorial del héroe |

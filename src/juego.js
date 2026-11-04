@@ -2,7 +2,9 @@
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
 import { gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo } from './talentos.js';
-import { estres, claveDia, RECORDS, mejorTiempo } from './estadisticas.js';
+import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad } from './estadisticas.js';
+import { tipoSesion } from './capacidades.js';
+import * as XC from './xp-carga.js';
 import { objeto } from './objetos.js';
 import { tiendaVentajas, XP_ESTANDARTE } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
@@ -14,7 +16,7 @@ export const ATRIBUTOS = [
   { clave: 'resistencia', nombre: 'Resistencia', capacidad: 'Base aeróbica', detalle: 'Minutos en zonas 2 y 3, sesiones de 20 min o más' },
   { clave: 'recuperacion', nombre: 'Recuperación', capacidad: 'Recuperación', detalle: 'Pulso que baja en los descansos, días suaves y descansos a tiempo' },
   { clave: 'tecnica', nombre: 'Técnica', capacidad: 'Técnica y economía', detalle: 'Tiempo en rango y buena distancia por palada' },
-  { clave: 'voluntad', nombre: 'Voluntad', capacidad: 'Constancia', detalle: 'Rachas, entrenamientos completos y sesiones muy duras' },
+  { clave: 'voluntad', nombre: 'Voluntad', capacidad: 'Constancia', detalle: 'Rachas, entrenamientos completos y semanas del plan cumplidas' },
   { clave: 'gasto', nombre: 'Gasto', capacidad: 'Gasto calórico', detalle: 'Calorías quemadas' },
 ];
 // Desde esta semana: atributo Gasto en la meta semanal, misiones por capacidad y pruebas del plan como jefes.
@@ -31,7 +33,7 @@ export function comoSubir(clave, f = 0) {
     resistencia: [`Cada minuto entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} (zonas 2 y 3): +0,5`, 'Sesiones de 20 min o más: +4'],
     recuperacion: ['Un día de descanso después de un día duro: +4', `Una sesión suave (media por debajo de ${vatios(f, 0.75)}): +2, o +5 si ayer fue duro`, 'Con banda de pulso: +3 por cada descanso en que el pulso baja 20 lpm en un minuto'],
     tecnica: ['Cada minuto dentro del rango de un entrenamiento: hasta +0,6', 'Más metros por palada que tu media: +3'],
-    voluntad: ['Terminar el entrenamiento completo: +3', 'Una sesión muy dura (esfuerzo 8 o más): +3', 'Cada día de racha: +0,5 (hasta 7)'],
+    voluntad: ['Terminar el entrenamiento completo: +3', 'Cumplir una semana entera de tu plan: +5', 'Cada día de racha: +0,5 (hasta 7)'],
     gasto: ['Cada 50 kcal quemadas: +1', 'Los fondos largos en zona 2 son lo que más quema con menos fatiga'],
   }[clave] || [];
 }
@@ -516,11 +518,16 @@ function gananciaSesion(s, m, ctx) {
   if (s.pctEnRango != null) at.tecnica += (m.min * s.pctEnRango) / 100 * 0.6;
   if (s.paladas && ctx.mppPromedio && s.distancia / s.paladas > ctx.mppPromedio * 1.02) at.tecnica += 3;
   const completo = s.tiempoMeta != null;
+  const nueva = XC.usaCarga(s);
   if (completo) at.voluntad += 3;
-  if (s.rpe >= 8) at.voluntad += 3;
+  // Con las reglas de carga ya no suma marcar un esfuerzo de 8 o más (empujaba a apretar en días suaves);
+  // en su lugar, cada semana del plan cumplida da +5.
+  if (!nueva && s.rpe >= 8) at.voluntad += 3;
+  if (nueva) at.voluntad += 5 * (ctx.creditos?.semanas || 0);
   at.voluntad += Math.min(ctx.racha, 7) * 0.5;
 
   const carga = s.estres ?? estres(s, m.f) ?? Math.round(m.min * 0.8);
+  if (nueva) return gananciaCarga(s, m, ctx, at, carga);
   // XP base: 1 por cada 10 m remados.
   const base = Math.floor(m.metros / XP_POR_METROS);
   const detalle = [['Distancia', base]];
@@ -548,10 +555,93 @@ function gananciaSesion(s, m, ctx) {
   return { xp: detalleXp.reduce((a, [, v]) => a + v, 0), xpBase: detalle.reduce((a, [, v]) => a + v, 0), detalle: detalleXp, atributos: at, carga, datosTal: datosTalento(s, m, ctx) };
 }
 
+// Lo que no cambia con las reglas de carga: fantasmas, racha, Estandarte y talentos (con el factor de XP lenta).
+function bonosDeJuego(s, m, ctx) {
+  const detalle = [];
+  if (m.ganados) {
+    const vencidos = (s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : [])).filter((r) => r.diferencia > 0).slice(0, 3);
+    detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, vencidos.reduce((a, r) => a + xpPorFantasma(r.dificultad), 0)]);
+  }
+  if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
+  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', XP_ESTANDARTE]);
+  if (ctx.clase) detalle.push(...xpTalentos(ctx.clase, ctx.grados || {}, datosTalento(s, m, ctx)));
+  const f = factorXp(s.fecha);
+  return detalle.map(([k, v]) => [k, Math.round(v * f)]);
+}
+
+// Ganancia con las reglas de carga (acuerdo D1): XP base por carga con tope diario, gran recompensa por cumplir
+// la sesión del día, descansos del plan respetados y semana cumplida. Sin «Entrenamiento completo» suelto ni
+// récord de «Sesión más larga» (ctx.records ya no lo cuenta).
+function gananciaCarga(s, m, ctx, at, carga) {
+  const P = XC.XP_PLAN;
+  const detalle = [['Carga del entrenamiento', XC.xpBaseCarga(ctx.cargaAntes || 0, carga)]];
+  const delDia = XC.esDelDia(s) && !ctx.planPagado;
+  const cumple = delDia ? XC.cumplimientoPlan(s) : null;
+  if (cumple === 'cumplida') detalle.push([s.delDia === 'sugerida' ? 'Sesión del día cumplida' : 'Sesión del plan cumplida', P.cumplida]);
+  else if (cumple === 'terminada') detalle.push(['Sesión del plan terminada', P.terminada]);
+  else if (!XC.esDelDia(s) && !ctx.planPagado && XC.equivalePlan(s, ctx.tipo, carga)) detalle.push(['Equivale a la sesión del plan', P.equivalente]);
+  if (cumple && /^Prueba/.test(s.entrenamiento || '')) detalle.push(ctx.records ? ['Prueba del plan con marca nueva', P.pruebaRecord] : ['Prueba del plan', P.prueba]);
+  if (ctx.records) detalle.push(['Récord personal', 50]);
+  const cr = ctx.creditos || {};
+  if (cr.descansos) detalle.push([cr.descansos === 1 ? 'Descanso del plan respetado' : `${cr.descansos} descansos del plan respetados`, P.descanso * cr.descansos]);
+  if (cr.semanas) detalle.push([cr.semanas === 1 ? 'Semana del plan cumplida' : `${cr.semanas} semanas del plan cumplidas`, P.semana * cr.semanas]);
+  const todo = [...detalle, ...bonosDeJuego(s, m, ctx)].filter(([, v]) => v > 0);
+  const xp = todo.reduce((a, [, v]) => a + v, 0);
+  // Monedas como antes: unas 1 por cada 25 XP que se ven.
+  return { xp, xpBase: xp * 2, detalle: todo, atributos: at, carga, datosTal: datosTalento(s, m, ctx), pagaPlan: !!cumple };
+}
+
+// Calendario del plan que usa el juego (ver xp-carga.js). La app lo fija al arrancar y al cambiar de plan.
+let calendarioPlan = null;
+export const fijarCalendarioPlan = (cal) => { calendarioPlan = cal || null; };
+
 // ---------- Estado completo del juego ----------
 // per = { clase, nombre, arbol: { clase: { slot: [fechas] } }, inventario: { id: n }, gastado, equipo }
-export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } = {}) {
+export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), calendario = calendarioPlan } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
+  const cal = calendario || {};
+  // Días del plan (descansos y semanas) que ya se cobraron, desde la primera sesión con reglas de carga.
+  const primeraCarga = orden.find(XC.usaCarga);
+  const desdeCarga = primeraCarga ? claveDia(primeraCarga.fecha) : null;
+  const porDia = new Map(); // día → { carga, ifMax, hechas: [entrenamientos terminados] }
+  for (const s of orden) {
+    const k = claveDia(s.fecha);
+    const d = porDia.get(k) || { carga: 0, ifMax: 0, hechas: [] };
+    const f = s.ftp || ftp;
+    d.carga += s.estres ?? estres(s, f) ?? Math.round(((s.duracion || 0) / 60) * 0.8);
+    d.ifMax = Math.max(d.ifMax, s.intensidad ?? factorIntensidad(s.muestras, f) ?? (f && s.wattsProm ? s.wattsProm / f : 0));
+    if (s.tiempoMeta != null && s.entrenamiento) d.hechas.push(s.entrenamiento);
+    porDia.set(k, d);
+  }
+  const descansoRespetado = (k) => { const d = porDia.get(k); return !d || (d.carga <= XC.DESCANSO_CARGA_MAX && d.ifMax < XC.DESCANSO_IF_MAX); };
+  const diaMs = (k) => new Date(`${k}T12:00`).getTime();
+  // Semana del plan cumplida: todas sus sesiones terminadas (también otro día de esa semana) y todos sus descansos respetados.
+  const semanaCumplida = (lunes) => {
+    const dias = Array.from({ length: 7 }, (_, i) => claveDia(diaMs(lunes) + i * 864e5)).filter((k) => k in cal);
+    const plan = dias.filter((k) => cal[k]);
+    if (!plan.length) return false;
+    // Cada sesión del plan tiene que estar hecha esa semana (dos fondos piden dos fondos), el día que sea.
+    const cuenta = (lista) => lista.reduce((m, e) => m.set(e, (m.get(e) || 0) + 1), new Map());
+    const hechas = cuenta(dias.flatMap((k) => porDia.get(k)?.hechas || []));
+    const pide = cuenta(plan.map((k) => cal[k]));
+    // Un descanso en el que recuperaste una sesión de esa semana no la rompe.
+    const recuperada = (k) => (porDia.get(k)?.hechas || []).some((e) => pide.has(e));
+    return [...pide].every(([e, n]) => (hechas.get(e) || 0) >= n) && dias.filter((k) => !cal[k] && k >= desdeCarga && !recuperada(k)).every(descansoRespetado);
+  };
+  let creditoHasta = desdeCarga; // primer día aún sin revisar
+  const creditosAntesDe = (hoy) => {
+    let descansos = 0;
+    let semanas = 0;
+    if (!creditoHasta) return { descansos, semanas };
+    for (let k = creditoHasta; k < hoy; k = claveDia(diaMs(k) + 864e5)) {
+      if (k in cal && !cal[k] && descansoRespetado(k)) descansos++;
+      // Al cerrar un domingo se cobra su semana.
+      if (new Date(diaMs(k)).getDay() === 0 && lunesDe(diaMs(k)) >= lunesDe(diaMs(desdeCarga)) && semanaCumplida(lunesDe(diaMs(k)))) semanas++;
+    }
+    creditoHasta = hoy > creditoHasta ? hoy : creditoHasta;
+    return { descansos, semanas };
+  };
+  const planPagado = new Set(); // días en que ya se cobró la sesión del día
   const fav = claseDe(per.clase)?.favorito;
   const claveClase = claseDe(per.clase)?.clave || null;
   const arbol = (claveClase && per.arbol?.[claveClase]) || {};
@@ -624,7 +714,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
         const mejor = previo == null || (r.tipo === 'tiempo' ? v < previo : v > previo);
         // Solo cuentan mejoras claras: 1 s en tiempos, 500 m en distancia y 2 % en vatios.
         const clara = previo != null && (r.tipo === 'tiempo' ? previo - v >= 1 : r.clave === 'dist' ? v - previo >= 500 : v >= previo * 1.02);
-        if (clara) records++;
+        if (clara && !(XC.usaCarga(s) && r.clave === 'dist')) records++;
         if (mejor) mejores[r.clave] = v;
       }
     }
@@ -633,7 +723,15 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
     const lunesS = lunesDe(s.fecha);
     sesPorSemana.set(lunesS, (sesPorSemana.get(lunesS) || 0) + 1);
     if (semAtr.lunes !== lunesS) semAtr = { lunes: lunesS, atr: { ...atributos }, pulso: hayPulso };
-    const gan = gananciaSesion(s, m, { grados, clase: claveClase, sesSemana: sesPorSemana.get(lunesS), racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0 });
+    const nueva = XC.usaCarga(s);
+    const creditos = nueva ? creditosAntesDe(hoy) : null;
+    const gan = gananciaSesion(s, m, {
+      grados, clase: claveClase, sesSemana: sesPorSemana.get(lunesS), racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0,
+      cargaAntes: cargaDia.get(hoy) || 0, creditos, planPagado: planPagado.has(hoy), tipo: nueva ? tipoSesion(s, ftp) : null,
+    });
+    if (gan.pagaPlan) planPagado.add(hoy);
+    // Remar fuerte en un descanso del plan: XP completa, pero el resumen avisa (y ese día no cuenta como descanso).
+    const avisoDescanso = nueva && cal[hoy] === '' && !XC.esDelDia(s) && (gan.carga > XC.DESCANSO_CARGA_MAX || (porDia.get(hoy)?.ifMax || 0) >= XC.DESCANSO_IF_MAX);
     cargaDia.set(hoy, (cargaDia.get(hoy) || 0) + gan.carga);
     if (s.paladas) { mppSuma += s.distancia / s.paladas; mppN++; }
     const nivelAntes = nivelDe(xp);
@@ -740,7 +838,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now() } 
         }
       }
     }
-    porSesion.set(s.fecha, { xp: gan.xp, xpExtra: xpSesion, detalle: gan.detalle, ganancias, nivelAntes, nivelDespues: nivelDe(xp), monedas: monedasSesion, datosTal: gan.datosTal, grados });
+    porSesion.set(s.fecha, { xp: gan.xp, xpExtra: xpSesion, detalle: gan.detalle, ganancias, nivelAntes, nivelDespues: nivelDe(xp), monedas: monedasSesion, datosTal: gan.datosTal, grados, avisoDescanso });
   }
 
   // Misiones de hoy y de esta semana aunque todavía no hayas remado.
@@ -898,3 +996,4 @@ export function recomendarPorAtributos(atributos, { sinPulso = false } = {}) {
   const flojo = lista.reduce((m, a) => (a.valor < m.valor ? a : m));
   return { atributo: flojo, ...RECOMENDACION_ATRIBUTO[flojo.clave] };
 }
+export { usaCarga, REGLAS_XP_CARGA } from './xp-carga.js';
