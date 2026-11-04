@@ -64,21 +64,22 @@ test('una copia que ya quedó guardada no se ofrece otra vez', async ({ page }) 
 });
 
 test('una transacción abortada sin error (disco lleno) termina en error en vez de colgarse', async ({ page }) => {
-  const resultado = await page.evaluate(async () => {
+  // Solo se aborta el guardado de la prueba (marcado con __prueba): tras la bienvenida la app sigue guardando
+  // los entrenamientos del plan, y abortar esos daba un error real en la página una de cada pocas veces.
+  const prueba = page.evaluate(async () => {
     const db = await import('./src/db.js');
     const put = IDBObjectStore.prototype.put;
-    IDBObjectStore.prototype.put = function (...args) {
-      const req = put.apply(this, args);
-      // Como con QuotaExceededError: la transacción se aborta y la petición no avisa a la transacción.
-      req.addEventListener('error', (e) => e.stopPropagation());
-      this.transaction.abort();
+    IDBObjectStore.prototype.put = function (valor, ...resto) {
+      const req = put.call(this, valor, ...resto);
+      if (valor?.__prueba) {
+        // Como con QuotaExceededError: la transacción se aborta y la petición no avisa a la transacción.
+        req.addEventListener('error', (e) => e.stopPropagation());
+        this.transaction.abort();
+      }
       return req;
     };
     try {
-      await Promise.race([
-        db.guardar('entrenamientos', { nombre: 'x' }),
-        new Promise((_, mal) => setTimeout(() => mal(new Error('colgada')), 2000)),
-      ]);
+      await db.guardar('entrenamientos', { nombre: 'x', __prueba: true });
       return 'guardó';
     } catch (e) {
       return e.name || e.message;
@@ -86,7 +87,10 @@ test('una transacción abortada sin error (disco lleno) termina en error en vez 
       IDBObjectStore.prototype.put = put;
     }
   });
-  expect(resultado).toBe('AbortError');
+  // El límite va con el reloj de la prueba: en la página el reloj está simulado y un setTimeout no llegaría nunca.
+  const limite = new Promise((ok) => { setTimeout(() => ok('colgada'), 5_000).unref?.(); });
+  expect(await Promise.race([prueba, limite])).toBe('AbortError');
+  expect((await listar(page, 'entrenamientos')).filter((e) => e.__prueba)).toHaveLength(0);
 });
 
 test('con el temporizador frenado en segundo plano, la sesión no pierde tiempo ni metros', async ({ page }) => {
