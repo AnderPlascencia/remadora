@@ -7,6 +7,7 @@ import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
 import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
 import { objeto } from './objetos.js';
+import { hazanaDeClase } from './coleccion-bote.js';
 import { tiendaVentajas, XP_ESTANDARTE } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
 
@@ -500,6 +501,28 @@ export function clasesEnCarrerasDistintas(carreras) {
 }
 
 // Logros permanentes: una sola vez. Los hitos excepcionales dan entre 300 y 600 XP.
+export const COLECCION_DESDE = '2026-11-04';
+// Minutos técnicos de las sesiones de antes de la etapa 12 (para la hazaña samurái), calculados una vez por sesión.
+const cacheTecnica = new Map();
+function minutosTecnicos(s, ftp) {
+  if (!s.muestras?.length) return 0;
+  const k = `${s.fecha}|${s.muestras.length}|${ftp}`;
+  if (!cacheTecnica.has(k)) {
+    if (cacheTecnica.size > 2000) cacheTecnica.clear();
+    cacheTecnica.set(k, tecnicaDeSesion(s, ftp).minutos);
+  }
+  return cacheTecnica.get(k);
+}
+export const HAZANAS_CLASE = [
+  ['vikingo', 'Saga de las cien mil', 'paladas', 75000, (g) => g.paladas],
+  ['pirata', 'Terror de los siete mares', 'fantasmas vencidos', 60, (g) => g.fantasmas],
+  ['samurai', 'El camino de la forma', 'minutos técnicos', 400, (g) => g.tecMin],
+  ['polinesio', 'Navegante del océano', 'km', 750, (g) => g.kmTotal],
+  ['romano', 'Pax romana', 'semanas del plan cumplidas', 10, (g) => g.semanasPlan],
+].map(([clase, nombre, unidad, meta, valor]) => ({
+  id: hazanaDeClase(clase), clase, nombre, unidad, meta, valor, xp: 1000, monedas: 300, desde: COLECCION_DESDE,
+  texto: `${miles(meta)} ${unidad} en total: vela legendaria y mascarón dorado de ${clase === 'samurai' ? 'samurái' : clase}`,
+}));
 export const HAZANAS = [
   { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20 },
   { id: 'mision1', nombre: 'Primera misión', texto: 'Completa tu primera misión', meta: 1, valor: (g) => g.misiones, xp: 50, monedas: 20 },
@@ -526,6 +549,9 @@ export const HAZANAS = [
     .map(([meta, xp, monedas]) => ({ id: `nivel${meta}`, nombre: `Héroe de nivel ${meta}`, texto: `Llega al nivel ${meta}`, meta, valor: (g) => g.nivel, xp, monedas })),
   ...[[10, 'Diez semanas al remo', 500, 150], [20, 'Veinte semanas al remo', 900, 300]]
     .map(([meta, nombre, xp, monedas]) => ({ id: `semanas${meta}`, nombre, texto: `Rema al menos una vez por semana ${meta} semanas seguidas`, meta, valor: (g) => g.semanasMax, xp, monedas })),
+  // Hazañas de clase (etapa 15): dan la vela legendaria y el mascarón dorado de esa clase. Cuenta todo tu historial,
+  // pero se cobran desde COLECCION_DESDE (quien ya las cumplía las cobra en su siguiente sesión).
+  ...HAZANAS_CLASE,
   ...[[10, 'Más fuerte', 400, 100], [25, 'Mucho más fuerte', 800, 200], [50, 'Otro remero', 1200, 300]]
     .map(([meta, nombre, xp, monedas]) => ({ id: `ftp${meta}`, nombre, texto: `Sube tu FTP ${meta} W desde tu primera sesión con FTP`, meta, valor: (g) => g.ftpMejora, xp, monedas })),
 ];
@@ -817,7 +843,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   let monedas = 0;
   let mppSuma = 0;
   let mppN = 0;
-  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0 };
+  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0 };
   // Inicio del día y del lunes (ms) para ajustar las misiones a tu ritmo de las semanas anteriores.
   const inicioDia = (ms) => new Date(ms).setHours(0, 0, 0, 0);
   const inicioLunes = (lunes) => new Date(`${lunes}T00:00`).getTime();
@@ -967,6 +993,10 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
 
     // Capítulo de la historia
     g.kmTotal += m.metros / 1000;
+    g.paladas += s.paladas || 0;
+    g.fantasmas += m.ganados || 0;
+    g.tecMin += Math.min(TOPE_TECNICA_MIN, m.tec ? m.tec.minutos : minutosTecnicos(s, s.ftp || ftp));
+    g.semanasPlan += creditos?.semanas || 0;
     g.kmMax = Math.max(g.kmMax, m.metros / 1000);
     g.sesiones++;
     for (const k of m.clasesVencidas) g.clasesVencidas.add(k);
@@ -1014,7 +1044,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       g.nivel = nivelDe(xp);
       if (!XC.usaReglas9(s)) g.nivelAntiguo = g.nivel;
       for (const h of HAZANAS) {
-        if (!hazanas.has(h.id) && h.valor(g) >= h.meta) {
+        if (!hazanas.has(h.id) && h.valor(g) >= h.meta && !(h.desde && hoy < h.desde)) {
           hazanas.add(h.id);
           nuevo = true;
           lograr(s.fecha, 'hazana', `Logro: ${h.nombre}`, h.monedas, h.objeto, h.xp || 0);

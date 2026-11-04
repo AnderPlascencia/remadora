@@ -1,5 +1,6 @@
 // Héroe y tienda: personaje, nivel, atributos, árbol, tienda y paisajes.
-import { PAISAJES, VELAS, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarVelas, velasElegidas } from '../carrera.js';
+import { PAISAJES, VELAS, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarEquipo } from '../carrera.js';
+import * as CB from '../coleccion-bote.js';
 import * as H from '../historial.js';
 import { hablar } from '../voz.js';
 import { confeti } from '../efectos.js';
@@ -36,7 +37,7 @@ export function arrancarHeroe() {
   }
   // Paisaje de la carrera: el fiordo es gratis; los demás se compran en la tienda.
   usarPaisaje(paisajeElegido(leerPersonaje()));
-  usarVelas(velasElegidas(leerPersonaje()));
+  aplicarEquipo();
   $('#vista-heroe').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-preparar]');
     if (!b) return;
@@ -69,6 +70,7 @@ export function arrancarHeroe() {
   $('#btn-crear-heroe').addEventListener('click', () => {
     if (!claseElegida) return;
     guardarPersonaje({ clase: claseElegida, nombre: $('#heroe-nombre').value.trim() });
+    aplicarEquipo();
     precargarVideosDeClase();
     confeti();
     pintarHeroe();
@@ -132,26 +134,33 @@ export function arrancarHeroe() {
     vibrar(60);
     pintarHeroe();
   });
+  // Colección del bote de tu clase: velas, mascarón y palas; y las velas de color, que valen para cualquier bote.
   $('#tienda-velas').addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-velas]');
+    const b = e.target.closest('[data-pieza]');
     if (!b) return;
-    const id = b.dataset.velas;
+    const id = b.dataset.pieza;
+    const tipo = b.dataset.tipo;
     const { per, h } = await estadoHeroe();
-    if (id === '') {
-      guardarPersonaje({ vela: null });
-      toast('Tu bote vuelve a sus velas de siempre.');
-    } else if (tieneVelas(per, id)) {
-      guardarPersonaje({ vela: id });
-      toast(`Tu bote ahora lleva: ${VELAS[id].nombre}.`);
+    const clase = J.claseDe(per.clase)?.clave;
+    if (!clase) return;
+    const ctx = ctxColeccion(h);
+    const x = CB.PIEZAS[id] || VELAS[id];
+    if (b.dataset.quitar != null) {
+      guardarPersonaje(CB.equipar(per, clase, tipo, null));
+      toast(tipo === 'vela' ? 'Tu bote vuelve a su vela clásica.' : `Quitaste ${x.nombre}.`);
+    } else if (CB.PIEZAS[id] ? CB.tienePieza(per, id, ctx) : tieneVelas(per, id)) {
+      guardarPersonaje(CB.equipar(per, clase, tipo, id));
+      toast(`Tu bote ahora lleva: ${x.nombre}.`);
     } else {
-      const cambios = comprarVelas(per, id, h.monedas);
+      const cambios = CB.PIEZAS[id] ? CB.comprarPieza(per, id, h.monedas) : comprarVelas(per, id, h.monedas);
       if (!cambios) return;
-      guardarPersonaje(cambios);
+      // Las velas de color se compran y se estrenan en el bote de tu clase.
+      guardarPersonaje(CB.PIEZAS[id] ? cambios : { ...cambios, ...CB.equipar(per, clase, 'vela', id) });
       confeti();
-      toast(`¡${VELAS[id].nombre} son tuyas! Las verás en tu próxima carrera.`);
+      toast(`¡${x.nombre}: ${CB.PIEZAS[id]?.tipo === 'palas' ? 'son tuyas' : 'ya es tuyo'}! Lo verás en tu próxima carrera.`);
     }
-    usarVelas(id);
     vibrar(60);
+    await aplicarEquipo();
     pintarHeroe();
   });
   // Puntos de talento sobrantes (con el árbol completo): se cambian por monedas.
@@ -177,6 +186,7 @@ export function arrancarHeroe() {
     if (!b || leerPersonaje().clase) return;
     const c = J.claseDe(b.dataset.claseRapida);
     guardarPersonaje({ clase: c.clave });
+    aplicarEquipo();
     confeti();
     b.closest('.xp-heroe').outerHTML = `<p class="aviso exito">¡Listo! Tu ${c.nombre} ya tiene esta experiencia. Ponle nombre en la pestaña Héroe.</p>`;
     pintarLineaNivel();
@@ -559,6 +569,56 @@ function pintarMisiones(h) {
     + (hechos.length ? `<li class="hechos-grupo"><details><summary>${ico('i-check')}Completados <span class="seccion-resumen">${hechos.length}</span></summary><ul class="lista misiones">${hechos.map(logro).join('')}</ul></details></li>` : '');
 }
 
+// Lo que la colección necesita del estado del juego: tu nivel y las hazañas cumplidas.
+const ctxColeccion = (h) => ({ nivel: h.nivel, hazanas: new Set(h.hazanas.filter((x) => x.hecha).map((x) => x.id)) });
+const equipoActual = (per, h) => {
+  const clase = J.claseDe(per.clase)?.clave;
+  return clase ? CB.equipoDe(per, clase, ctxColeccion(h), { velaDeColor: (id) => tieneVelas(per, id) }) : null;
+};
+// Pone en la carrera el equipo del bote de tu clase.
+export async function aplicarEquipo() {
+  const { per, h } = await estadoHeroe();
+  usarEquipo(equipoActual(per, h));
+}
+
+const muestraDe = (x) => `<span class="velas-muestra" aria-hidden="true" style="background:linear-gradient(90deg, ${x.tela} 0 70%, ${x.marca} 70%)"></span>`;
+function pintarColeccion(h, per) {
+  const clase = J.claseDe(per.clase);
+  const caja = $('#tienda-velas');
+  if (!clase) {
+    $('#coleccion-hazana').innerHTML = '';
+    caja.innerHTML = '<p class="vacio">Elige una clase para ver la colección de tu bote.</p>';
+    return;
+  }
+  const ctx = ctxColeccion(h);
+  const equipo = equipoActual(per, h);
+  usarEquipo(equipo);
+  const hz = h.hazanas.find((x) => x.id === CB.hazanaDeClase(clase.clave));
+  $('#coleccion-titulo').textContent = `Tu bote: colección ${clase.nombre.toLowerCase()}`;
+  $('#coleccion-hazana').innerHTML = hz ? `<div class="mision-fila"><span><b>Hazaña de clase: ${hz.nombre}</b> · ${hz.hecha ? 'cumplida' : hz.texto}</span></div>
+    <div class="progreso" role="progressbar" aria-label="Avance de la hazaña de clase" aria-valuemin="0" aria-valuemax="${hz.meta}" aria-valuenow="${hz.valor}" aria-valuetext="${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}"><div style="width:${Math.min(100, (hz.valor / hz.meta) * 100)}%"></div></div>
+    <small>${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}</small>` : '';
+  const ficha = (x, tipo, tiene, enUso, falta) => {
+    const precio = x.como?.precio ?? x.precio;
+    const boton = enUso
+      ? (tipo === 'vela' && x.id === `${clase.clave}-clasica` ? '<span class="paisaje-uso">En uso</span>'
+        : `<span class="paisaje-uso">En uso</span><button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" data-quitar>Quitar</button>`)
+      : tiene ? `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}">Usar</button>`
+        : falta ? `<span class="bloqueada">${falta}</span>`
+          : `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" ${h.monedas < precio ? 'disabled' : ''}>${h.monedas < precio ? `Te faltan ${miles(precio - h.monedas)}` : 'Comprar'}</button>`;
+    const etiqueta = tiene ? (precio && !x.como?.gratis ? 'Comprado' : 'Ganado') : precio ? `${icoMoneda}${miles(precio)}` : '';
+    return `<div class="objeto velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}">${muestraDe(x)}<b>${x.nombre}</b><small>${CB.TIPOS[tipo]} · ${x.texto}</small>
+      <span class="monedas">${x.como?.gratis ? 'Gratis' : etiqueta}</span>${boton}</div>`;
+  };
+  const faltaDe = (x) => (x.como.nivel ? `Llega al nivel ${x.como.nivel}` : x.como.hazana ? `Cumple «${hz?.nombre || 'la hazaña de clase'}»` : '');
+  const propias = CB.piezasDe(clase.clave).map((x) => {
+    const tiene = CB.tienePieza(per, x.id, ctx);
+    return ficha(x, x.tipo, tiene, equipo[x.tipo] === x.id, tiene || x.como.precio ? '' : faltaDe(x));
+  });
+  const deColor = Object.entries(VELAS).map(([id, x]) => ficha({ ...x, id }, 'vela', tieneVelas(per, id), equipo.vela === id, ''));
+  caja.innerHTML = `${propias.join('')}<h3 class="tienda-sub">Velas de color · para cualquier bote</h3>${deColor.join('')}`;
+}
+
 const ICONO_VENTAJA = { salida: 'i-play', viento: 'i-sube', ancla: 'i-baja', segunda: 'i-corazon', estandarte: 'i-trofeo', mapa: 'i-fantasma' };
 function pintarTienda(h, per) {
   const lunes = J.lunesDe(Date.now());
@@ -580,17 +640,7 @@ function pintarTienda(h, per) {
     return `<div class="objeto paisaje${id === elegido ? ' activo' : ''}"><img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"${x.filtro ? ` style="filter:${x.filtro}"` : ''}><b>${x.nombre}</b><small>${x.texto}</small>
       <span class="monedas">${x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis'}</span>${boton}</div>`;
   }).join('');
-  const vela = velasElegidas(per);
-  $('#tienda-velas').innerHTML = [['', { nombre: 'Velas de tu clase', texto: 'Los colores de siempre de tu bote.', precio: 0 }], ...Object.entries(VELAS)].map(([id, x]) => {
-    const tiene = !id || tieneVelas(per, id);
-    const enUso = (vela || '') === id;
-    const muestra = id ? `<span class="velas-muestra" aria-hidden="true" style="background:linear-gradient(90deg, ${x.tela} 0 70%, ${x.marca} 70%)"></span>` : '';
-    const boton = enUso ? '<span class="paisaje-uso">En uso</span>'
-      : tiene ? `<button type="button" class="boton chico" data-velas="${id}">Usar</button>`
-        : `<button type="button" class="boton chico" data-velas="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
-    return `<div class="objeto velas${enUso ? ' activo' : ''}">${muestra}<b>${x.nombre}</b><small>${x.texto}</small>
-      <span class="monedas">${!id ? 'Gratis' : tiene ? 'Comprado' : `${icoMoneda}${miles(x.precio)}`}</span>${boton}</div>`;
-  }).join('');
+  pintarColeccion(h, per);
   const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
   $('#inventario').innerHTML = tengo.length ? tengo.map((x) => `<li><div class="mision-fila"><span><b>${x.nombre}</b> · ${x.texto}</span><span class="recompensa"><span class="xp">×${inv[x.id]}</span></span></div></li>`).join('')
     : '<li class="vacio">Aún no tienes ventajas. Cómpralas aquí y elígelas en Entrenar antes de la carrera.</li>';

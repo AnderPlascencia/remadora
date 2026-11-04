@@ -2,6 +2,7 @@
 // Los datos llegan una vez por segundo; entre lecturas se interpola para que todo se mueva fluido
 // a la frecuencia de pantalla. Los remos se animan al ritmo de golpes por minuto de cada bote.
 import { distanciaEn } from './estadisticas.js';
+import { PIEZAS, velaDeRival } from './coleccion-bote.js';
 
 const carreras = new Set();
 let animando = false;
@@ -309,10 +310,28 @@ export function comprarVelas(per, id, monedas) {
   if (!x || tieneVelas(per, id) || monedas < x.precio) return null;
   return { velas: [...(per.velas || []), id], gastado: (per.gastado || 0) + x.precio, vela: id };
 }
-let velasYo = null;
-export function usarVelas(id) { velasYo = VELAS[id] || null; }
-// Colores de un bote: los de su clase y, en el tuyo, tus velas.
-const decoDe = (b) => (BOTES[b.clase] && b.yo && velasYo ? { ...BOTES[b.clase], tela: velasYo.tela, marca: velasYo.marca } : BOTES[b.clase]);
+// Equipo de tu bote (colección por clase, etapa 15): { vela, proa, palas } con ids de coleccion-bote.js (la vela
+// también puede ser una vela de color de VELAS). Los rivales llevan la vela de su categoría (b.vela).
+let equipoYo = null;
+export function usarEquipo(equipo) { equipoYo = equipo || null; }
+// Lo que se dibuja de un bote: los colores de su clase y, si lleva pieza, su tela, su marca y su emblema
+// (emblema, proa y palas: el dibujo de cada uno lo pone el arte; sin dibujo propio, basta con los colores).
+const decoCache = new Map();
+function decoDe(b) {
+  const base = BOTES[b.clase];
+  if (!base) return base;
+  const vela = b.yo ? (equipoYo ? PIEZAS[equipoYo.vela] || VELAS[equipoYo.vela] : null) : b.vela;
+  const proa = b.yo && equipoYo?.proa ? PIEZAS[equipoYo.proa] : null;
+  const palas = b.yo && equipoYo?.palas ? PIEZAS[equipoYo.palas] : null;
+  if (!vela && !proa && !palas) return base;
+  const k = `${b.clase}|${vela?.nombre || ''}|${proa?.id || ''}|${palas?.id || ''}`;
+  let d = decoCache.get(k);
+  if (!d) {
+    d = { ...base, ...(vela ? { tela: vela.tela, marca: vela.marca, emblema: vela.emblema || PIEZAS[`${b.clase}-clasica`]?.emblema, animado: !!vela.animado } : {}), proa, palas };
+    decoCache.set(k, d);
+  }
+  return d;
+}
 
 // Retratos de los carriles: se cargan una vez y se pintan cuando ya llegaron.
 const imagenes = new Map();
@@ -443,7 +462,7 @@ function interpolar(c, ahora) {
     // Acelerón: va un 3 % más rápido que su media de los últimos 10 s.
     const media = t > 12 ? (d - distanciaEn(r.muestras, t - 10)) / 10 : 0;
     const acelera = !e.pausa && media > 0 && v > media * 1.03;
-    botes.push({ nombre: r.nombre, color: r.color || COLORES_RIVAL[i % 3], dist: d, spm, v, clase: r.clase || null, retrato: r.retrato || null, aviso: r.aviso || null, acelera });
+    botes.push({ nombre: r.nombre, color: r.color || COLORES_RIVAL[i % 3], dist: d, spm, v, clase: r.clase || null, retrato: r.retrato || null, aviso: r.aviso || null, acelera, vela: velaDeRival(r.clase, r) });
   });
   botes.forEach((b, i) => {
     c.fases[i] = ((c.fases[i] || 0) + (dt * b.spm) / 60) % 1;
@@ -1256,7 +1275,7 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
     ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(bx, by); ctx.stroke();
     // Pala: cuadrada (ancha) en el agua, girada (fina) en la recuperación; deja un remolino al salir.
-    ctx.fillStyle = pa.agua ? b.color : 'rgba(226,232,240,0.95)';
+    ctx.fillStyle = deco?.palas ? (pa.agua ? deco.palas.tela : deco.palas.marca) : pa.agua ? b.color : 'rgba(226,232,240,0.95)';
     ctx.beginPath(); ctx.ellipse(bx, by, pala * 0.55, pala * (0.42 - 0.27 * pa.pluma) + 0.4, pa.ang * lado + Math.PI / 2, 0, Math.PI * 2); ctx.fill();
     if (b.spm && b.fase < 0.14 && !sinMovimiento) {
       const k = b.fase / 0.14;
@@ -2097,7 +2116,8 @@ function bote3d(ctx, P, b, t) {
     ctx.lineWidth = Math.max(1, m.s * 0.05);
     ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(z.x, z.y); ctx.stroke();
     // Pala cuadrada en el agua, girada (fina) en la recuperación
-    ctx.fillStyle = pa.agua ? b.color : '#E2E8F0';
+    const palas = b.yo && equipoYo?.palas ? PIEZAS[equipoYo.palas] : null;
+    ctx.fillStyle = palas ? (pa.agua ? palas.tela : palas.marca) : pa.agua ? b.color : '#E2E8F0';
     ctx.beginPath(); ctx.ellipse(z.x, z.y, Math.max(1.5, z.s * 0.14), Math.max(0.6, z.s * (0.05 + 0.06 * (1 - pa.pluma))), 0, 0, Math.PI * 2); ctx.fill();
     // Salpicadura al meter la pala y remolino al sacarla
     if (b.spm && !sinMovimiento && (b.fase < 0.14 || (b.fase > 0.36 && b.fase < 0.46))) {
