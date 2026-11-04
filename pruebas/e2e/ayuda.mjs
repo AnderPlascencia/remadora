@@ -73,9 +73,21 @@ export function listar(page, almacen) {
     const req = indexedDB.open('remadora');
     req.onerror = () => mal(req.error);
     req.onsuccess = () => {
-      const l = req.result.transaction(a).objectStore(a).getAll();
-      l.onsuccess = () => { req.result.close(); ok(l.result); };
-      l.onerror = () => mal(l.error);
+      const db = req.result;
+      // Las sesiones se leen con sus muestras, que desde la v3 de la base van en su propio almacén.
+      const juntar = a === 'sesiones' && db.objectStoreNames.contains('muestras');
+      const t = db.transaction(juntar ? ['sesiones', 'muestras'] : a);
+      const l = t.objectStore(a).getAll();
+      const m = juntar ? t.objectStore('muestras') : null;
+      const ms = m?.getAll();
+      const ks = m?.getAllKeys();
+      t.oncomplete = () => {
+        db.close();
+        if (!juntar) { ok(l.result); return; }
+        const mapa = new Map(ks.result.map((k, i) => [k, ms.result[i]]));
+        ok(l.result.map((s) => (s.muestras || !mapa.has(s.id) ? s : { ...s, muestras: mapa.get(s.id) })));
+      };
+      t.onerror = () => mal(t.error);
     };
   }), almacen);
 }

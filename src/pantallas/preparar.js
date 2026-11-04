@@ -2,7 +2,7 @@
 import { formatoSplit, formatoTiempo } from '../protocolo.js';
 import { COLORES_RIVAL } from '../carrera.js';
 import * as F from '../fantasma.js';
-import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as E from '../estadisticas.js';
 import * as J from '../juego.js';
 import * as V from '../ventajas.js';
@@ -156,14 +156,14 @@ export function pintarSelVentaja(sel = rivalesElegidos()) {
 export async function crearRivales(ent, { vista = false } = {}) {
   const lista = [];
   let guardadas = null;
-  const sesiones = async () => (guardadas ??= await db.listar('sesiones'));
+  const sesiones = async () => (guardadas ??= await H.sesiones());
   const elegidos = rivalesElegidos();
   // Rivales de otras clases: su FTP sale del tuyo y, en Remo libre, de tu ritmo real de las últimas semanas.
   const nClase = elegidos.filter((k) => k === 'clase').length;
   let deClase = [];
   if (nClase) {
     const per = leerPersonaje();
-    const h = J.estadoJuego(await sesiones(), { ftp: ftp(), per });
+    const h = H.estadoJuegoDe(await sesiones(), { ftp: ftp(), per });
     const base = ftp() || estimarFtp(await sesiones()) || 150;
     deClase = J.rivalesPara(nClase, { miClase: per.clase, nivel: h.nivel, ftp: base, peso: ajustes.num('peso', 75), factor: Pf.factorClasificacion(ajustes.leer('sexo', '')), dificultad: dificultadActual(), lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString(), ritmo: ent ? null : J.ritmoLibre(await sesiones()) });
   }
@@ -185,7 +185,7 @@ const COLOR_REFERENCIA = '#FACC15';
 export async function crearReferencias(ent, { vista = false } = {}) {
   const refs = referenciasElegidas();
   if (!refs.length) return [];
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   const lista = [];
   for (const clave of refs) {
     const nombre = clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior';
@@ -247,7 +247,7 @@ async function pintarPreparar() {
   const elegidos = rivalesElegidos();
   const rivales = elegidos.length ? await crearRivales(ent, { vista: true }) : [];
   const refs = await crearReferencias(ent, { vista: true });
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   if (turno !== preparoTurno || estado.sesion) return;
   $('#rivales-vista').innerHTML = rivales.map(tarjetaRival).join('');
   $('#referencias-vista').innerHTML = refs.map(tarjetaRival).join('');

@@ -1,6 +1,6 @@
 // Inicio: bienvenida de la primera visita.
 import { Remadora } from '../remadora.js';
-import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
 import { confeti } from '../efectos.js';
@@ -118,7 +118,7 @@ export function arrancarInicio() {
   (async () => {
     if (ajustes.si('inicioHecho', false)) { ofrecerRecuperar(); mostrarConsejo('entrenar'); return; }
     // Solo para quien empieza de cero: con héroe o sesiones guardadas, ya pasó por aquí.
-    if (leerPersonaje().clase || (await db.listar('sesiones')).length) { ajustes.escribir('inicioHecho', '1'); mostrarConsejo('entrenar'); return; }
+    if (leerPersonaje().clase || (await H.sinMuestras()).length) { ajustes.escribir('inicioHecho', '1'); mostrarConsejo('entrenar'); return; }
     abrirInicio();
   })();
 }

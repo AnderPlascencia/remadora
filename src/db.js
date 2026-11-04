@@ -4,9 +4,11 @@
 // Versiones de la base:
 //   1: sesiones y entrenamientos.
 //   2: almacén «estado» (claves sueltas: enCurso, versionDatos).
+//   3: las muestras de cada sesión pasan a su propio almacén («muestras», con el id de la sesión como clave)
+//      y «sesiones» gana un índice por fecha. Así listar el historial no carga cada segundo remado.
 
 const NOMBRE = 'remadora';
-const VERSION_BD = 2;
+const VERSION_BD = 3;
 let dbPromesa = null;
 
 // La app escucha estos avisos para decírselos a la persona (ver app.js).
@@ -24,6 +26,7 @@ function abrir() {
         db.createObjectStore('entrenamientos', { keyPath: 'id', autoIncrement: true });
       }
       if (e.oldVersion < 2) db.createObjectStore('estado');
+      if (e.oldVersion < 3) separarMuestras(req.transaction);
     };
     req.onsuccess = () => {
       const db = req.result;
@@ -40,6 +43,25 @@ function abrir() {
   return dbPromesa;
 }
 
+// v3: crea «muestras» y el índice por fecha, y saca las muestras de cada sesión guardada. Corre dentro de la
+// transacción de la actualización: si algo falla, la base se queda entera en la versión anterior.
+function separarMuestras(t) {
+  const db = t.db;
+  const muestras = db.createObjectStore('muestras');
+  const sesiones = t.objectStore('sesiones');
+  sesiones.createIndex('fecha', 'fecha');
+  sesiones.openCursor().onsuccess = (ev) => {
+    const c = ev.target.result;
+    if (!c) return;
+    const { muestras: m, ...resto } = c.value;
+    if (m) {
+      muestras.put(m, c.primaryKey);
+      c.update(resto);
+    }
+    c.continue();
+  };
+}
+
 // Una transacción termina siempre: con su resultado (complete) o con un error (error o abort). Un disco lleno
 // (QuotaExceededError) solo dispara abort, y sin escucharlo la promesa no terminaba nunca.
 export async function tx(almacen, modo, fn) {
@@ -53,11 +75,14 @@ export async function tx(almacen, modo, fn) {
       return;
     }
     let req;
-    t.oncomplete = () => resolve(req?.result);
+    // Con varios almacenes, fn recibe la transacción y devuelve una petición, una función o un valor.
+    const varios = Array.isArray(almacen);
+    const leer = () => (typeof req === 'function' ? req() : req instanceof IDBRequest ? req.result : req);
+    t.oncomplete = () => resolve(leer());
     t.onerror = () => reject(t.error || req?.error || new Error(`error en ${almacen}`));
     t.onabort = () => reject(t.error || new DOMException(`transacción abortada en ${almacen}`, 'AbortError'));
     try {
-      req = fn(t.objectStore(almacen));
+      req = fn(varios ? t : t.objectStore(almacen));
     } catch (e) {
       try { t.abort(); } catch { /* ya terminó */ }
       reject(e);

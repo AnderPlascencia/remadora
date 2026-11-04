@@ -1,8 +1,10 @@
 // Utilidades de pantalla compartidas por toda la app: selector, iconos, ajustes guardados, avisos y sonidos.
 import { formatoTiempo } from './protocolo.js';
+import { token } from './grafica.js';
 
 export const $ = (sel) => document.querySelector(sel);
-export const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+// Color de una variable CSS del tema, leído una vez (ver grafica.js); al cambiar de tema se llama olvidarTokens.
+export const color = (v) => token(v);
 export const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
 export const COLOR_ZONA = ['#94A3B8', '#38BDF8', '#22C55E', '#FACC15', '#F97316', '#EF4444'];
 

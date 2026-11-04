@@ -1,6 +1,6 @@
 // Héroe y tienda: personaje, nivel, atributos, árbol, tienda y paisajes.
 import { PAISAJES, comprarPaisaje, paisajeElegido, tienePaisaje, usarPaisaje } from '../carrera.js';
-import * as db from '../db.js';
+import * as H from '../historial.js';
 import { hablar } from '../voz.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
@@ -257,7 +257,7 @@ function enSemanas(xp, h) {
 
 export async function estadoHeroe() {
   const per = leerPersonaje();
-  return { per, h: J.estadoJuego(await db.listar('sesiones'), { ftp: ftp(), per }) };
+  return { per, h: H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per }) };
 }
 
 export async function pintarHeroe() {
@@ -274,8 +274,8 @@ export async function pintarHeroe() {
     if (per.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
     return;
   }
-  const sesiones = await db.listar('sesiones');
-  const h = J.estadoJuego(sesiones, { ftp: ftp(), per });
+  const sesiones = await H.sesiones();
+  const h = H.estadoJuegoDe(sesiones, { ftp: ftp(), per });
   $('#heroe-avatar').innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="84" height="84" alt="${clase.nombre} ${h.titulo}"><span class="emblema mini">${emblema(clase)}</span>`;
   // Sin nombre, el título es la clase y la línea de abajo no la repite.
   $('#heroe-titulo').textContent = per.nombre || clase.nombre;
@@ -537,12 +537,22 @@ function pintarTienda(h, per) {
     : '<li class="vacio">Aún no tienes ventajas. Cómpralas aquí y elígelas en Entrenar antes de la carrera.</li>';
 }
 
+// El juego con la sesión recién terminada: la hoja de resumen lo usa dos veces y se calcula una.
+let juegoResumen = null;
+function juegoConSesion(previas, s, per) {
+  const clave = `${ftp()}|${JSON.stringify(per)}`;
+  if (juegoResumen?.previas === previas && juegoResumen.s === s && juegoResumen.clave === clave) return juegoResumen.h;
+  const h = J.estadoJuego([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), per });
+  juegoResumen = { previas, s, clave, h };
+  return h;
+}
+
 // XP, monedas y logros que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel o venciste a un jefe.
 export function pintarXpSesion(s, previas, resumen) {
   const caja = $('#hoja-xp');
   const per = leerPersonaje();
   const clase = J.claseDe(per.clase);
-  const h = J.estadoJuego([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), per });
+  const h = juegoConSesion(previas, s, per);
   const g = h.porSesion.get(s.fecha);
   caja.hidden = !g;
   if (!g) return false;
@@ -590,7 +600,7 @@ export function pintarAtrSesion(s, previas, resumen) {
   const r = C.analisis(s, { ftp: f, clase: per.clase || null, ctx: { mppPromedio: mpp } });
   let prox = '';
   if (resumen) {
-    const h = J.estadoJuego([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), per });
+    const h = juegoConSesion(previas, s, per);
     const rec = J.recomendarPorAtributos(h.atributos, { sinPulso: h.contexto.sinPulso });
     const bases = estado.baseActual.length ? estado.baseActual : B.basesPara(h.nivel, ftp(), previas);
     const ent = rec && bases.find((x) => x.id === (rec.base || J.PREPARAR_ATRIBUTO[rec.atributo.clave]));

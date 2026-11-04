@@ -1,9 +1,9 @@
 // Sesión en vivo: carrera, números grandes, modo remo, gráficas y retos durante la sesión.
 import { formatoSplit, formatoTiempo } from '../protocolo.js';
-import { dibujar, dibujarAvance, dibujarPerfil } from '../grafica.js';
+import { crearGraficaVivo, dibujarAvance, dibujarPerfil } from '../grafica.js';
 import { crearCarrera } from '../carrera.js';
 import * as F from '../fantasma.js';
-import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { hablar } from '../voz.js';
@@ -256,7 +256,7 @@ export async function retratoPropio() {
   const per = leerPersonaje();
   const c = per.clase ? J.claseDe(per.clase) : null;
   if (!c) return null;
-  const h = J.estadoJuego(await db.listar('sesiones'), { ftp: ftp(), per });
+  const h = H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per });
   return srcHeroe(c.clave, h.nivel || 1, true);
 }
 
@@ -555,17 +555,19 @@ function pintarGraficaRemo(t) {
   if (plan && Ent.tipoDe(plan) === 'intervalos') {
     leyenda('<span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia</span>');
     canvas.setAttribute('aria-label', 'Plan de potencia con tu potencia real');
+    graficaRemo.reiniciar();
     dibujarPerfil(canvas, estado.sesion ? estado.sesion.bloques : paraPerfil(plan.bloques), estado.sesion ? estado.sesion.muestras.map((x) => [x.t, x.w]) : [], estado.sesion ? t : null);
   } else if (plan) {
     const unidad = Ent.METRICAS_OBJETIVO[plan.objetivo.metrica].unidad;
     leyenda(`<span class="lw">Llevas (${unidad})</span><span class="lr">Meta ${plan.objetivo.valor} ${unidad}</span><span class="lp">Proyección a tu ritmo</span>`);
     canvas.setAttribute('aria-label', `Avance hacia la meta de ${plan.objetivo.valor} ${unidad}`);
     const p = estado.sesion ? progresoActual(t) : null;
+    graficaRemo.reiniciar();
     dibujarAvance(canvas, estado.sesion ? estado.sesion.avance : [], plan.objetivo.valor, p && !p.completo && p.estimadoSeg != null ? t + p.estimadoSeg : null);
   } else {
     leyenda('<span class="lw">Watts</span><span class="ls">Golpes/min</span>');
     canvas.setAttribute('aria-label', 'Watts y golpes por minuto de los últimos 5 minutos');
-    dibujar(canvas, [
+    graficaRemo(canvas, [
       { color: color('--watts'), eje: 'izq', puntos: vivo.watts },
       { color: color('--spm'), eje: 'der', puntos: vivo.spm },
     ], { ventana: 300 });
@@ -733,6 +735,9 @@ function pintarBloque(t) {
   marcarRango(Ent.enRango(b, actual.watts, actual.spm, f, actual.split, actual.fc), !!Ent.rangoWatts(b, f), bloqueSuave(b));
 }
 
+// Las dos gráficas en vivo (Entrenar y modo remo) solo dibujan lo nuevo de cada segundo.
+const graficaEntrenar = crearGraficaVivo();
+const graficaRemo = crearGraficaVivo();
 export function dibujarVivo() {
   const metas = [];
   const info = estado.sesion?.info;
@@ -740,7 +745,7 @@ export function dibujarVivo() {
     const r = Ent.bloquesEnWatts([info.bloque], ftp())[0];
     if (r.metrica === 'watts') metas.push({ desde: estado.tVivo - (estado.sesion.t - info.desde), hasta: estado.tVivo + info.restaSeg, min: r.min, max: r.max || r.min, eje: 'izq' });
   }
-  dibujar($('#grafica-vivo'), [
+  graficaEntrenar($('#grafica-vivo'), [
     { nombre: 'Watts', color: color('--watts'), eje: 'izq', puntos: vivo.watts },
     { nombre: 'Golpes/min', color: color('--spm'), eje: 'der', puntos: vivo.spm },
   ], { ventana: 300, metas });

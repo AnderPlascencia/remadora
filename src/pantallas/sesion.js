@@ -3,6 +3,7 @@ import { BandaCardiaca, Remadora } from '../remadora.js';
 import { formatoSplit, formatoTiempo, kcalPorSegundo } from '../protocolo.js';
 import * as F from '../fantasma.js';
 import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { hablar, tiempoHablado } from '../voz.js';
@@ -271,7 +272,7 @@ function crearVentaja(ent, racha) {
 
 // Días seguidos contando hoy (la sesión que empieza ya cuenta).
 async function rachaConHoy() {
-  const lista = await db.listar('sesiones');
+  const lista = await H.sesiones();
   const hoy = E.claveDia(Date.now());
   const r = E.racha(lista);
   return lista.some((x) => E.claveDia(x.fecha) === hoy) ? r : r + 1;
@@ -292,7 +293,7 @@ async function iniciarSesion(reanudar = null) {
   const referencias = reanudar ? [] : await crearReferencias(estado.entrenamientoActivo);
   const rival = rivales[0] || null;
   // Potencia crítica y W′ con lo mejor de los últimos 90 días: alimentan la batería anaeróbica en vivo.
-  const recientes = (await db.listar('sesiones')).filter((x) => x.fecha > Date.now() - 90 * 864e5);
+  const recientes = (await H.sesiones()).filter((x) => x.fecha > Date.now() - 90 * 864e5);
   const pc = E.potenciaCritica(E.curvaHistorial(recientes));
   // Calentamientos de las últimas sesiones con pulso: para notar si hoy vas más cargado que de costumbre.
   const calentamientos = recientes.filter((x) => x.muestras?.some((m) => m.fc)).slice(-15).map((x) => ({ muestras: x.muestras.slice(240, 301) }));
@@ -458,7 +459,7 @@ export async function ofrecerRecuperar() {
   $('#recuperar-guardar').focus();
 }
 async function yaGuardada(s) {
-  try { return (await db.listar('sesiones')).some((x) => x.fecha === s.inicio); } catch { return false; }
+  try { return (await H.sinMuestras()).some((x) => x.fecha === s.inicio); } catch { return false; }
 }
 // Lo que ya se había remado, para seguir en la misma sesión. El tiempo con la app cerrada queda como pausa:
 // la que estaba abierta sigue abierta, o se abre una desde la última copia, y se cierra al volver a remar.
@@ -571,8 +572,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   registro.marcas = E.marcasDeSesion(registro);
   let previas;
   try {
-    previas = await db.listar('sesiones');
-    const id = await db.guardar('sesiones', registro);
+    previas = await H.sesiones();
+    const id = await H.guardar(registro);
     if (registro.id == null && id != null) registro.id = id;
   } catch (e) {
     // La copia de la sesión en curso se queda: se puede volver a intentar ahora o al abrir la app.
@@ -592,7 +593,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   // Con pulso, el esfuerzo se calcula solo; sin pulso, se pregunta en el resumen.
   const porPulso = E.esfuerzoPorPulso(registro.muestras, fcParaEsfuerzo());
   if (porPulso) Object.assign(registro, { rpe: porPulso.rpe, rpeFuente: 'pulso', rpePct: porPulso.pct });
-  if (porPulso) await db.guardar('sesiones', registro);
+  if (porPulso) await H.actualizar(registro.id, { rpe: registro.rpe, rpeFuente: registro.rpeFuente, rpePct: registro.rpePct });
   const recs = E.nuevosRecords(registro, previas);
   if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
@@ -612,8 +613,7 @@ function medirRecuperacionPulso(registro) {
     const rec = fresco ? E.recuperacionPulso(fcFin, actual.fc) : null;
     if (rec == null) return;
     registro.fcRec60 = rec;
-    const guardado = await db.obtener('sesiones', registro.id);
-    if (guardado) await db.guardar('sesiones', { ...guardado, fcRec60: rec });
+    await H.actualizar(registro.id, { fcRec60: rec });
     agregarLog(`recuperación de pulso: ${rec} lpm en 60 s`);
   }, 60000);
 }
@@ -733,7 +733,7 @@ async function prepararAtrVivo() {
   if (!estado.sesion || ajustes.leer('atrVivo', '1') !== '1') return;
   const { per, h } = await estadoHeroe();
   if (!estado.sesion) return;
-  estado.sesion.atr = { opc: { ftp: ftp() || estimarFtp(await db.listar('sesiones')) || 150, clase: per.clase || null, ctx: h.contexto }, vistos: {}, ultimoPop: -99 };
+  estado.sesion.atr = { opc: { ftp: ftp() || estimarFtp(await H.sesiones()) || 150, clase: per.clase || null, ctx: h.contexto }, vistos: {}, ultimoPop: -99 };
 }
 function actualizarAtrVivo() {
   const a = estado.sesion?.atr;

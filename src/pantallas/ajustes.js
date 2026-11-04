@@ -2,6 +2,7 @@
 import { VARIANTES } from '../variantes.js';
 import { formatoSplit } from '../protocolo.js';
 import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { configurarVoz, hablar } from '../voz.js';
@@ -10,6 +11,7 @@ import * as J from '../juego.js';
 import * as Pf from '../perfil.js';
 import * as R from '../respaldo.js';
 import { VERSION } from '../version.js';
+import { olvidarTokens } from '../grafica.js';
 import { $, COLOR_ZONA, ajustes, color, descargar, escaparHtml, ftp, ico, perfil, toast } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA, vistaActiva } from '../navegacion.js';
@@ -131,7 +133,7 @@ export function pintarPerfil() {
 // Queda como estimado y la primera sesión de 10 min o más lo reemplaza, suba o baje.
 export async function ofrecerFtpInicial() {
   if (ftp() && !ajustes.si('ftpDePerfil', false)) return;
-  if ((await db.listar('sesiones')).length) return;
+  if ((await H.sinMuestras()).length) return;
   const v = Pf.ftpInicial(perfil());
   if (!v || v === ftp()) return;
   guardarFtp(v, true);
@@ -154,6 +156,7 @@ function aplicarTema() {
   const tema = ajustes.leer('tema', 'oscuro');
   if (tema === 'oscuro') delete document.documentElement.dataset.tema;
   else document.documentElement.dataset.tema = tema;
+  olvidarTokens();
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color('--fondo') || '#0B1217');
 }
 const selTema = $('#sel-tema');
@@ -166,7 +169,7 @@ export const ritmoObjetivo = () => leerMmss(ajustes.leer('ritmoObjetivo', '')) |
 // Clasificación de tripulación por FTP (Grumete … Capitán): en la Ficha y en Ajustes, con aviso al subir.
 export function pintarClasificacion(sesiones = null) {
   // Sin FTP escrito se estima con el historial, igual que en la Ficha, para que Ajustes no diga otra cosa.
-  if (!sesiones && !ftp()) { db.listar('sesiones').then((s) => pintarClasificacion(s)); return; }
+  if (!sesiones && !ftp()) { H.sesiones().then((s) => pintarClasificacion(s)); return; }
   const peso = ajustes.num('peso', 75);
   const w = ftp() || (sesiones ? estimarFtp(sesiones) : 0);
   const caja = $('#clasificacion-ftp');
@@ -258,7 +261,7 @@ const selNivel = $('#sel-nivel-prueba');
 export async function guardarRespaldo() {
   const datos = R.armarRespaldo({
     version: VERSION,
-    sesiones: await db.listar('sesiones'),
+    sesiones: await H.sesiones(),
     entrenamientos: await db.listar('entrenamientos'),
     programa: leerPrograma(),
     leer: (k) => ajustes.leer(k, null),
@@ -287,12 +290,12 @@ async function restaurarRespaldo(archivo) {
   try { datos = JSON.parse(await archivo.text()); } catch { toast('Ese archivo no es un respaldo válido'); return; }
   if (!R.esRespaldo(datos)) { toast('Ese archivo no es un respaldo de Rower'); return; }
   const { sesionesNuevas, entNuevos, ajustesResp, distintos } = R.planRestaurar(datos, {
-    sesiones: await db.listar('sesiones'),
+    sesiones: await H.sesiones(),
     entrenamientos: await db.listar('entrenamientos'),
     programa: leerPrograma(),
     leer: (k) => ajustes.leer(k, null),
   });
-  for (const s of sesionesNuevas) await db.guardar('sesiones', s);
+  for (const s of sesionesNuevas) await H.guardar(s);
   for (const e of entNuevos) await db.guardar('entrenamientos', e);
   const nS = sesionesNuevas.length;
   const nE = entNuevos.length;
@@ -365,7 +368,7 @@ async function migrarDatos() {
 export async function repararSesiones() {
   let n = 0;
   let pasadas = 0;
-  for (const s of await db.listar('sesiones')) {
+  for (const s of await H.sesiones()) {
     let r = E.repararSaltos(s);
     if (r) {
       agregarLog(`sesión reparada: ${s.distancia} → ${r.distancia} m`);
@@ -381,7 +384,7 @@ export async function repararSesiones() {
       r = w;
       pasadas++;
     }
-    if (r) await db.guardar('sesiones', r);
+    if (r) await H.guardar(r);
   }
   if (!n && !pasadas) return;
   if (n) toast(n === 1 ? 'Reparé una sesión con metros falsos de la consola' : `Reparé ${n} sesiones con metros falsos de la consola`);
