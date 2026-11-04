@@ -5,6 +5,7 @@ import * as F from '../fantasma.js';
 import * as H from '../historial.js';
 import * as E from '../estadisticas.js';
 import * as J from '../juego.js';
+import * as C from '../consejos.js';
 import * as V from '../ventajas.js';
 import * as Pf from '../perfil.js';
 import { $, ajustes, escaparHtml, ftp, ico, miles, perfil, toast } from '../ui.js';
@@ -281,7 +282,7 @@ function extrasPlegados(filas) {
   if (!filas.length) return '';
   // Todo plegado: la tarjeta Hoy dice qué toca y cuánto ganas; los retos se abren al tocar.
   const retos = filas.filter((f) => !f.includes('cond riesgo')).length;
-  return `<details class="mas-detalle"><summary>${retos === 1 ? 'Un reto para sumar más' : `${retos} retos para sumar más`}</summary><ul class="lista-cond">${filas.join('')}</ul></details>`;
+  return `<details class="mas-detalle"><summary>${C.resumenRetos(retos, retos < filas.length)}</summary><ul class="lista-cond">${filas.join('')}</ul></details>`;
 }
 
 // FTP automático: sin FTP (o con uno estimado), cada sesión de 10 min o más lo calcula o lo sube.
