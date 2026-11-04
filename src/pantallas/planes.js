@@ -24,10 +24,12 @@ import { cerrarGuia } from './ayuda.js';
 
 // ---------- Editor de entrenamientos ----------
 // ---------- Planes: entrenamientos base (según tu nivel) y los tuyos ----------
-// Recalcula los base para tu nivel y tu FTP de ahora.
+// Recalcula los base para tu condición y tu FTP de ahora.
 async function actualizarBase() {
   const { h } = await estadoHeroe();
-  estado.baseActual = B.entrenamientosBase(h.nivel, ftp());
+  const sesiones = await db.listar('sesiones');
+  estado.condicionBase = B.condicionDe(sesiones, ftp());
+  estado.baseActual = B.entrenamientosBase(h.nivel, ftp(), { condicion: estado.condicionBase });
   return h;
 }
 // Entrenamiento por el valor del selector: «base:…» se genera, un número se lee de la base de datos.
@@ -84,8 +86,8 @@ export async function pintarEntrenamientos() {
   const bases = estado.baseActual.filter((x) => x.enfoque === seccion);
   $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
   $('#base-nivel').textContent = avanzado()
-    ? `Ajustados a tu nivel ${h.nivel} (${B.TEXTO_ESCALON[B.escalonDe(h.nivel)]}): crecen cuando subes de rango.`
-    : 'Ajustados a tu nivel de héroe: suben un escalón de carga cada vez que subes de rango.';
+    ? `Ajustados a tu condición ${estado.condicionBase || 0} (${B.TEXTO_CONDICION[B.escalonDeCondicion(estado.condicionBase || 0)]}): crecen cuando entrenas con constancia y bajan si lo dejas un tiempo.`
+    : 'Ajustados a tu forma de las últimas semanas: crecen cuando entrenas con constancia y bajan si lo dejas un tiempo.';
   $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
       ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}">${escaparHtml(x.nombre)}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>

@@ -6,6 +6,7 @@ export const estado = {
   entrenamientoPrevio: null,
   entrenamientoActivo: null,
   baseActual: [],
+  condicionBase: 0, // condición con la que se armaron los base
   elegirLoDeHoy: true,
   cacheSesiones: [],
   tendencia: 'potencia',

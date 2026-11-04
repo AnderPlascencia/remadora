@@ -1,7 +1,9 @@
 // Entrenamientos base: 5 secciones × 3 dificultades (suave, mantenimiento, mejora), generados al momento.
-// La intensidad va en % del FTP (o golpes por minuto), así que siguen tu fuerza; el volumen crece con el rango del héroe.
+// La intensidad va en % del FTP (o golpes por minuto), así que siguen tu fuerza; el volumen sale de tu condición
+// (la carga crónica de las últimas semanas), no del rango del héroe: si dejas de entrenar, baja.
 // No se guardan en la base de datos: su id es «base:clave» y siempre se calculan para tu nivel actual.
-import { EJEMPLOS, PRUEBAS as PRUEBAS_PLAN, duracionTotal, soloTiempo, tipoDe } from './entrenamientos.js';
+import { ACTIVACION, EJEMPLOS, PRUEBAS as PRUEBAS_PLAN, duracionTotal, soloTiempo, tipoDe } from './entrenamientos.js';
+import { forma } from './estadisticas.js';
 
 export const DIFICULTADES = [
   // Un solo eje, la intensidad (antes «Mantenimiento» y «Mejora» mezclaban intensidad y propósito).
@@ -14,6 +16,9 @@ export const nombreDificultad = (d) => DIFICULTADES.find((x) => x.clave === d)?.
 // Escalón de volumen según el nivel: 1–19, 20–39, 40–59, 60–90.
 export const escalonDe = (nivel) => (nivel >= 60 ? 3 : nivel >= 40 ? 2 : nivel >= 20 ? 1 : 0);
 export const TEXTO_ESCALON = ['niveles 1–19', 'niveles 20–39', 'niveles 40–59', 'niveles 60–90'];
+// Escalón de volumen según la condición (carga crónica, TSS por día): es lo que de verdad aguanta tu cuerpo hoy.
+export const escalonDeCondicion = (c) => (c >= 40 ? 3 : c >= 25 ? 2 : c >= 15 ? 1 : 0);
+export const TEXTO_CONDICION = ['condición menor de 15', 'condición 15–24', 'condición 25–39', 'condición 40 o más'];
 
 const CAL = { nombre: 'Calentamiento', duracion: 480, metrica: 'ftp', min: 56, max: 75 };
 const CAL_CORTO = { ...CAL, duracion: 300 };
@@ -51,7 +56,7 @@ const BASES = [
   { clave: 'pot-mejora', enfoque: 'potencia', dificultad: 'mejora', nombre: 'VO2 máx', proposito: 'Subir tu FTP y tus watts máximos.',
     armar: (e) => {
       const reps = [6, 7, 8, 10][e];
-      return { resumen: `${reps} × 2 min muy fuertes`, bloques: [CAL, ...series(reps, (i, n) => ftpB(`2 min fuerte ${i}/${n}`, 120, 106, 120), SUAVE(120)), ENF] };
+      return { resumen: `${reps} × 2 min muy fuertes`, bloques: [CAL, ...ACTIVACION, ...series(reps, (i, n) => ftpB(`2 min fuerte ${i}/${n}`, 120, 106, 120), SUAVE(120)), ENF] };
     } },
   { clave: 'rit-suave', enfoque: 'ritmo', dificultad: 'suave', nombre: 'Ritmo cómodo', proposito: 'Remar suelto y relajado.',
     armar: (e, ftp) => {
@@ -64,11 +69,12 @@ const BASES = [
       return { resumen: `${reps} × ${min(m)} a ritmo de crucero`,
         bloques: [CAL, ...series(reps, (i, n) => ritmoB(`Crucero ${i}/${n}`, { duracion: m * 60 }, 80, 88, ftp), SUAVE(120)), ENF] };
     } },
-  { clave: 'rit-mejora', enfoque: 'ritmo', dificultad: 'mejora', nombre: 'Ritmo de carrera', proposito: 'Bajar tu tiempo en 2000 m.',
+  // Series de 500 m un poco más rápidas que tu ritmo de 2000 m (110–118 % del FTP), con descanso completo.
+  { clave: 'rit-mejora', enfoque: 'ritmo', dificultad: 'mejora', nombre: 'Ritmo 2000 m', proposito: 'Bajar tu tiempo en 2000 m.',
     armar: (e, ftp) => {
-      const reps = [4, 5, 6, 7][e];
-      return { resumen: `${reps} × 1000 m a ritmo de carrera`,
-        bloques: [CAL, ...series(reps, (i, n) => ritmoB(`1000 m ${i}/${n}`, { fin: 'distancia', cantidad: 1000, duracion: 0 }, 95, 102, ftp), SUAVE(180)), ENF] };
+      const reps = [4, 5, 6, 8][e];
+      return { resumen: `${reps} × 500 m a ritmo de 2000 m`,
+        bloques: [CAL, ...ACTIVACION, ...series(reps, (i, n) => ritmoB(`500 m ${i}/${n}`, { fin: 'distancia', cantidad: 500, duracion: 0 }, 110, 118, ftp), SUAVE(150)), ENF] };
     } },
   { clave: 'dis-suave', enfoque: 'distancia', dificultad: 'suave', nombre: 'Fondo suave', proposito: 'Recuperar y sumar metros.',
     armar: (e) => {
@@ -128,9 +134,9 @@ const PRUEBAS = [
 ].map(([clave, nombre, proposito, resumen]) => ({ ...structuredClone(PRUEBAS_PLAN[nombre] || EJEMPLOS.find((x) => x.nombre === nombre)), id: `base:${clave}`, base: true, enfoque: 'pruebas', dificultad: null, proposito, ...(resumen ? { resumen } : {}) }));
 export const NOMBRES_PRUEBA = new Set(PRUEBAS.map((p) => p.nombre));
 
-// Los 15 entrenamientos base para tu nivel y tu FTP, más las 6 pruebas.
-export function entrenamientosBase(nivel = 1, ftp = 0) {
-  const e = escalonDe(nivel);
+// Los 15 entrenamientos base para tu condición (o, si no se conoce, tu nivel) y tu FTP, más las 6 pruebas.
+export function entrenamientosBase(nivel = 1, ftp = 0, { condicion } = {}) {
+  const e = Number.isFinite(condicion) ? escalonDeCondicion(condicion) : escalonDe(nivel);
   return BASES.map((b) => {
     const comun = { id: `base:${b.clave}`, base: true, nombre: b.nombre, enfoque: b.enfoque, dificultad: b.dificultad, proposito: b.proposito, escalon: e };
     if (b.objetivo) {
@@ -141,6 +147,9 @@ export function entrenamientosBase(nivel = 1, ftp = 0) {
     return { ...comun, tipo: 'intervalos', bloques, resumen };
   }).concat(PRUEBAS.map((p) => structuredClone(p)));
 }
+// Condición de hoy a partir de tus sesiones (0 si aún no hay).
+export const condicionDe = (sesiones = [], ftp = 0, ahora = Date.now()) => forma(sesiones, ftp || 150, 1, ahora).at(-1)?.condicion || 0;
+export const basesPara = (nivel, ftp, sesiones, ahora) => entrenamientosBase(nivel, ftp, { condicion: condicionDe(sesiones, ftp, ahora) });
 export const esBase = (id) => typeof id === 'string' && id.startsWith('base:');
 
 // Texto corto y útil: duración y qué se hace («≈ 37 min · 3 × 6 min en umbral»).
