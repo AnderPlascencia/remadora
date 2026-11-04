@@ -70,9 +70,9 @@ console.log('plan por objetivo OK');
   assert.ok(sem.every((s) => s.sesiones === 3 && s.minutos > 0 && s.esfuerzo > 0));
   assert.ok(sem[3].descarga && sem[3].esfuerzo < sem[2].esfuerzo, 'semana 4 de descarga, más suave');
   assert.ok(sem[7].prueba, 'termina con prueba');
-  assert.equal(sem[1].dias.find((d) => /^Umbral/.test(d.ent)).antes, undefined, 'igual que la semana anterior');
-  assert.equal(sem[2].dias.find((d) => /^Umbral/.test(d.ent)).antes, 'Umbral 3 × 8 min');
-  assert.ok(sem[5].esfuerzo > sem[1].esfuerzo, 'la carga sube');
+  assert.equal(sem[1].dias.find((d) => /^Umbral/.test(d.ent)).antes, 'Umbral 3 × 8 min');
+  assert.equal(sem[2].dias.find((d) => /^Umbral/.test(d.ent)).antes, undefined, 'igual que la semana anterior');
+  assert.ok(sem[6].esfuerzo > sem[1].esfuerzo, 'la carga sube');
   // Una sesión que la adaptación pasó a otro día no cuenta dos veces.
   const movido = structuredClone(programa);
   movido.dias[0].movido = true;

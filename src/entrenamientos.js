@@ -43,8 +43,19 @@ export function rangoFc(b, fcMax) {
   return null;
 }
 
-// Texto corto de la meta de un bloque.
+// Activación al final del calentamiento antes de una sesión intensa: 3 arranques progresivos de 15 s.
+// Se llaman «Calentamiento…» para que no cuenten como trabajo (ni en el % en rango ni en el tipo de sesión).
+export const ACTIVACION = [1, 2, 3].flatMap((i) => [
+  { nombre: `Calentamiento: arranque progresivo ${i}/3`, duracion: 15, metrica: 'ftp', min: 95, max: 115 },
+  { nombre: 'Calentamiento suave', duracion: 45, metrica: 'ftp', min: 40, max: 60 },
+]);
+
+// Texto corto de la meta de un bloque, con la cadencia pedida si la hay (spmMeta: [min, max]).
 export function textoMeta(b, ftp, fcMax = 0) {
+  const base = textoMetaSolo(b, ftp, fcMax);
+  return b.spmMeta ? `${base} a ${b.spmMeta[0]}–${b.spmMeta[1]} golpes/min` : base;
+}
+function textoMetaSolo(b, ftp, fcMax) {
   if (b.metrica === 'split') return `${formatoMmss(b.min)}–${formatoMmss(b.max)} /500 m`;
   if (b.metrica === 'fc') return `${b.min}–${b.max} lpm`;
   if (b.metrica === 'fcpct') {
@@ -372,10 +383,10 @@ export const EJEMPLOS = [
   },
   {
     tipo: 'intervalos',
-    nombre: 'Ritmo 2:10 × 20 min',
+    nombre: 'Ritmo constante 20 min',
     bloques: [
-      { nombre: 'Calentamiento', duracion: 300, metrica: 'split', min: 135, max: 150 },
-      { nombre: 'Ritmo constante', duracion: 1200, metrica: 'split', min: 125, max: 130 },
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'ftp', min: 56, max: 70 },
+      { nombre: 'Ritmo constante', duracion: 1200, metrica: 'ftp', min: 80, max: 88 },
       { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
     ],
   },
@@ -398,8 +409,10 @@ export const EJEMPLOS = [
     tipo: 'intervalos',
     nombre: 'Potencia 5 × 3 min',
     bloques: [
-      { nombre: 'Calentamiento', duracion: 300, metrica: 'watts', min: 80, max: 120 },
-      ...serie({ reps: 5, trabajo: 180, wMin: 160, wMax: 190, descanso: 90, dMin: 80, dMax: 110 }),
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'ftp', min: 56, max: 75 },
+      ...ACTIVACION,
+      ...serie({ reps: 5, trabajo: 180, descanso: 90 }).map((b) => (b.nombre.startsWith('Trabajo')
+        ? { ...b, metrica: 'ftp', min: 106, max: 115 } : { ...b, metrica: 'ftp', min: 40, max: 55 })),
       { nombre: 'Enfriamiento', duracion: 180, metrica: '', min: 0, max: 0 },
     ],
   },
@@ -476,11 +489,11 @@ export const EJEMPLOS = [
     tipo: 'intervalos',
     nombre: 'Escalera de potencia',
     bloques: [
-      { nombre: 'Calentamiento', duracion: 240, metrica: 'watts', min: 80, max: 120 },
-      { nombre: 'Escalón 1', duracion: 120, metrica: 'watts', min: 120, max: 140 },
-      { nombre: 'Escalón 2', duracion: 120, metrica: 'watts', min: 140, max: 160 },
-      { nombre: 'Escalón 3', duracion: 120, metrica: 'watts', min: 160, max: 180 },
-      { nombre: 'Escalón 4', duracion: 120, metrica: 'watts', min: 180, max: 200 },
+      { nombre: 'Calentamiento', duracion: 240, metrica: 'ftp', min: 56, max: 70 },
+      { nombre: 'Escalón 1', duracion: 120, metrica: 'ftp', min: 70, max: 80 },
+      { nombre: 'Escalón 2', duracion: 120, metrica: 'ftp', min: 80, max: 90 },
+      { nombre: 'Escalón 3', duracion: 120, metrica: 'ftp', min: 90, max: 100 },
+      { nombre: 'Escalón 4', duracion: 120, metrica: 'ftp', min: 100, max: 110 },
       { nombre: 'Enfriamiento', duracion: 180, metrica: '', min: 0, max: 0 },
     ],
   },

@@ -372,7 +372,7 @@ function pintarSemanaHeroe(h, sesiones, f) {
     .sort((a, b) => (h.atributos[a.clave] || 0) - (h.atributos[b.clave] || 0)).slice(0, 3);
   if (!mi && !Object.values(h.atributos).some((v) => v > 0)) { caja.innerHTML = '<p class="suave">Rema tu primera sesión y te armo una semana para equilibrar tu héroe.</p>'; return; }
   const o = opcConsejos(h, sesiones);
-  const bases = estado.baseActual.length ? estado.baseActual : B.entrenamientosBase(h.nivel, ftp());
+  const bases = estado.baseActual.length ? estado.baseActual : B.basesPara(h.nivel, ftp(), sesiones);
   const meta = mi ? `<div class="semana-meta${mi.hecha ? ' hecha' : ''}"><div class="fila-meta"><div><b>${mi.hecha ? '¡Meta cumplida!' : `Meta: sube ${nombreAtributo(mi.atributo)}`}</b><small>${escaparHtml(mi.texto)}</small></div>
       <span class="anillo grande" style="--p:${Math.round((100 * mi.valor) / mi.meta)}%"><i>${mi.valor}/${mi.meta}</i></span></div>
       <small class="premio">Premio: <b>+${miles(mi.xp)} XP</b> y ${icoMoneda}${mi.monedas}</small></div>` : '';
@@ -588,7 +588,7 @@ export function pintarAtrSesion(s, previas, resumen) {
   if (resumen) {
     const h = J.estadoJuego([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), per });
     const rec = J.recomendarPorAtributos(h.atributos, { sinPulso: h.contexto.sinPulso });
-    const bases = estado.baseActual.length ? estado.baseActual : B.entrenamientosBase(h.nivel, ftp());
+    const bases = estado.baseActual.length ? estado.baseActual : B.basesPara(h.nivel, ftp(), previas);
     const ent = rec && bases.find((x) => x.id === (rec.base || J.PREPARAR_ATRIBUTO[rec.atributo.clave]));
     const p = ent && previsionDe(ent, opcConsejos(h, previas));
     if (p) {

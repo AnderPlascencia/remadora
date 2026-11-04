@@ -1,7 +1,7 @@
 // Programas de varias semanas: una lista de días con el entrenamiento que toca.
 // programa = { nombre, inicio: 'AAAA-MM-DD', dias: [{ fecha: 'AAAA-MM-DD', ent: nombre del entrenamiento }] }
 import { claveDia } from './estadisticas.js';
-import { formatoMmss as mm, PRUEBAS } from './entrenamientos.js';
+import { formatoMmss as mm, PRUEBAS, esBloqueTrabajo, ACTIVACION } from './entrenamientos.js';
 import { tipoPlan } from './capacidades.js';
 
 const DIA = 864e5;
@@ -65,44 +65,58 @@ export function proximo(programa, ahora = Date.now()) {
 
 // Plan automático hacia una meta: distancia en un tiempo, en N semanas, 3 días por semana.
 // Crea sus propios entrenamientos a partir del split meta y los va endureciendo semana a semana.
+// Zonas de remo desde el split de la meta: fondo (UT2) a +20–30 s, umbral (AT) a +8–12 s y el calentamiento
+// más suave que el fondo (+32–45 s). Una descarga cada 4 semanas y la última semana un 40 % más corta.
+export const META_FONDO = [20, 30];
+export const META_UMBRAL = [8, 12];
+export const META_CAL = [32, 45];
 export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana = [0, 2, 5] }) {
   const split = Math.round((segundos * 500) / distancia);
   const entrenamientos = [];
   const crear = (e) => { if (!entrenamientos.some((x) => x.nombre === e.nombre)) entrenamientos.push(e); return e.nombre; };
-  const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + 14, max: split + 22 };
+  const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + META_CAL[0], max: split + META_CAL[1] };
   const enf = { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 };
   const prueba = crear({ tipo: 'objetivo', nombre: `Prueba ${distancia} m`, prueba: true, objetivo: { metrica: 'distancia', valor: distancia } });
-  const fondo = crear({
-    tipo: 'intervalos', nombre: `Fondo a ${mm(split + 14)} × 20 min`,
-    bloques: [cal, { nombre: 'Fondo', duracion: 1200, metrica: 'split', min: split + 11, max: split + 17 }, enf],
+  const fondo = (min) => crear({
+    tipo: 'intervalos', nombre: `Fondo a ${mm(split + 25)} × ${min} min`,
+    bloques: [cal, { nombre: 'Fondo', duracion: min * 60, metrica: 'split', min: split + META_FONDO[0], max: split + META_FONDO[1] }, enf],
   });
-  const umbral = crear({
-    tipo: 'intervalos', nombre: `Umbral a ${mm(split + 6)} 3 × 8 min`,
-    bloques: [cal, ...[1, 2, 3].flatMap((n) => [
-      { nombre: `Umbral ${n}/3`, duracion: 480, metrica: 'split', min: split + 4, max: split + 8 },
-      ...(n < 3 ? [{ nombre: 'Descanso', duracion: 180, metrica: '', min: 0, max: 0 }] : []),
+  const umbral = (n) => crear({
+    tipo: 'intervalos', nombre: `Umbral a ${mm(split + 10)} ${n} × 8 min`,
+    bloques: [cal, ...Array.from({ length: n }, (_, i) => i + 1).flatMap((i) => [
+      { nombre: `Umbral ${i}/${n}`, duracion: 480, metrica: 'split', min: split + META_UMBRAL[0], max: split + META_UMBRAL[1] },
+      ...(i < n ? [{ nombre: 'Descanso', duracion: 180, metrica: '', min: 0, max: 0 }] : []),
     ]), enf],
   });
   const tramo = Math.max(100, Math.min(1000, Math.round(distancia / 4 / 100) * 100));
-  const reps = Math.max(3, Math.min(8, Math.round((distancia * 1.25) / tramo)));
-  const series = (sem) => {
+  const repsBase = Math.max(3, Math.min(8, Math.round((distancia * 1.25) / tramo)));
+  const series = (sem, reps) => {
     const extra = semanas > 1 ? Math.round(3 * (1 - sem / (semanas - 1))) : 0;
     const sp = split + extra;
     return crear({
       tipo: 'intervalos', nombre: `Ritmo ${mm(sp)} · ${reps} × ${tramo} m`,
-      bloques: [cal, ...Array.from({ length: reps }, (_, i) => [
+      bloques: [cal, ...ACTIVACION, ...Array.from({ length: reps }, (_, i) => [
         { nombre: `${tramo} m ${i + 1}/${reps}`, fin: 'distancia', cantidad: tramo, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 1 },
         ...(i < reps - 1 ? [{ nombre: 'Descanso', duracion: Math.round(tramo / 5) + 30, metrica: '', min: 0, max: 0 }] : []),
       ]).flat(), enf],
     });
   };
+  // El fondo crece 5 min cada dos semanas, de 20 a 35 min.
+  const minFondo = (s) => Math.min(35, 20 + 5 * Math.floor(s / 2));
+  const menos = (x, f, min) => Math.max(min, Math.round(x * f));
+  const descarga = (s) => (s + 1) % 4 === 0 && s < semanas - 1;
   const mitad = semanas >= 6 ? Math.floor(semanas / 2) - 1 : -1;
   const semanasPlan = Array.from({ length: semanas }, (_, s) => {
-    if (s === semanas - 1) return [series(s), fondo, prueba];
-    if (s === mitad) return [umbral, series(s), prueba];
-    return [umbral, series(s), fondo];
+    // Última semana: un 40 % menos de volumen para llegar fresco a la prueba.
+    if (s === semanas - 1) return [series(s, menos(repsBase, 0.6, 2)), fondo(Math.max(15, Math.round((minFondo(s) * 0.6) / 5) * 5)), prueba];
+    // Descarga: un 30 % menos (y si coincide con la prueba de mitad, se hace descansado).
+    if (descarga(s)) return s === mitad ? [umbral(2), series(s, menos(repsBase, 0.7, 2)), prueba]
+      : [umbral(2), series(s, menos(repsBase, 0.7, 2)), fondo(Math.max(15, Math.round((minFondo(s) * 0.7) / 5) * 5))];
+    if (s === mitad) return [umbral(3), series(s, repsBase), prueba];
+    return [umbral(3), series(s, repsBase), fondo(minFondo(s))];
   });
   const programa = desdePlantilla({ nombre: `Meta: ${distancia} m en ${mm(segundos)}`, semanas: semanasPlan, diasSemana }, inicio);
+  programa.conDescarga = true;
   return { programa, entrenamientos, split };
 }
 
@@ -139,6 +153,10 @@ const series = (reps, trabajo, descanso) => Array.from({ length: reps }, (_, i) 
 const paso = (lista, p) => lista[Math.min(lista.length - 1, Math.floor(p * lista.length))];
 const reps = (n, k) => Math.max(2, Math.round(n * k));
 
+// Nivel de resistencia de la consola (1–24) en fuerza y sprints, según la experiencia del plan.
+export const NIVEL_FUERZA = { inicio: 10, medio: 12, alto: 14 };
+export const NIVEL_SPRINT = { inicio: 12, medio: 14, alto: 16 };
+
 // Cada sesión recibe el avance del plan (p: 0 la primera semana, 1 la última), k (volumen del nivel,
 // un 30 % menos en semana de descarga), el contexto (kcalHabitual) y el número de semana.
 const SESIONES = {
@@ -153,13 +171,14 @@ const SESIONES = {
   vo2: (p, k) => {
     const [n, dur, min, max] = paso([[5, 2, 110, 115], [6, 2, 110, 115], [5, 3, 108, 112], [4, 4, 106, 110]], p);
     const r = reps(n, k);
-    return { nombre: `VO₂ ${r} × ${dur} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerte', duracion: dur * 60, metrica: 'ftp', min, max }, Math.min(180, dur * 60)), ENF] };
+    return { nombre: `VO₂ ${r} × ${dur} min`, enfoque: 'potencia', bloques: [CAL, ...ACTIVACION, ...series(r, { nombre: 'Fuerte', duracion: dur * 60, metrica: 'ftp', min, max }, Math.min(180, dur * 60)), ENF] };
   },
   // Series de 30 s fuertes y 15 s suaves: mucho tiempo cerca del VO₂máx con poco desgaste.
   treinta15: (p, k) => {
-    const n = reps(p < 0.5 ? 10 : 12, k);
+    // Como mucho 13 por serie (3 × 13 × 30 s ≈ 20 min fuertes): más ya no suma, solo cansa.
+    const n = Math.min(13, reps(p < 0.5 ? 10 : 12, k));
     const serie = Array.from({ length: n }, (_, i) => [{ nombre: `30 s fuerte ${i + 1}/${n}`, duracion: 30, metrica: 'ftp', min: 115, max: 130 }, { nombre: 'Descanso', duracion: 15, metrica: 'ftp', min: 40, max: 55 }]).flat();
-    return { nombre: `3 series de ${n} × 30/15`, enfoque: 'potencia', bloques: [CAL, ...serie, SUAVE(180), ...serie, SUAVE(180), ...serie, ENF] };
+    return { nombre: `3 series de ${n} × 30/15`, enfoque: 'potencia', bloques: [CAL, ...ACTIVACION, ...serie, SUAVE(180), ...serie, SUAVE(180), ...serie, ENF] };
   },
   umbral: (p, k) => {
     const [n, min, lo, hi] = paso([[3, 8, 95, 100], [3, 10, 95, 100], [3, 12, 95, 100], [2, 15, 95, 100], [2, 20, 95, 100], [1, 30, 93, 97]], p);
@@ -169,22 +188,23 @@ const SESIONES = {
   umbralCorto: (p, k) => { const m = p < 0.5 || k < 0.4 ? 8 : 10; const r = reps(3, k); return { nombre: `Umbral ${r} × ${m} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Umbral', duracion: m * 60, metrica: 'ftp', min: 91, max: 100 }, 180), ENF] }; },
   // Sweet spot (88–94 % del FTP): casi tanto estímulo como el umbral con menos fatiga.
   sweet: (p, k) => { const [n, m] = paso([[2, 12], [2, 15], [3, 12], [3, 15]], p); const r = reps(n, k); return { nombre: `Sweet spot ${r} × ${m} min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Sweet spot', duracion: m * 60, metrica: 'ftp', min: 88, max: 94 }, 240), ENF] }; },
-  vo2Corto: (p, k) => { const r = reps(5, k); return { nombre: `VO₂ ${r} × 3 min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerte', duracion: 180, metrica: 'ftp', min: 108, max: 112 }, 180), ENF] }; },
-  sprints: (p, k) => {
+  vo2Corto: (p, k) => { const r = reps(5, k); return { nombre: `VO₂ ${r} × 3 min`, enfoque: 'potencia', bloques: [CAL, ...ACTIVACION, ...series(r, { nombre: 'Fuerte', duracion: 180, metrica: 'ftp', min: 108, max: 112 }, 180), ENF] }; },
+  // La resistencia de la consola sube con la experiencia: a cadencia baja y nivel alto la espalda carga mucho.
+  sprints: (p, k, ctx = {}) => {
     const [n, seg, minutos] = paso([[6, 15, 0], [8, 15, 0], [6, 20, 4], [8, 20, 5]], p);
     const r = reps(n, k);
     const extra = minutos ? [SUAVE(180), ...series(reps(minutos, k), { nombre: '1 min fuerte', duracion: 60, metrica: 'ftp', min: 120, max: 130 }, 120)] : [];
-    return { nombre: `Sprints ${r} × ${seg} s${minutos ? ` + ${reps(minutos, k)} × 1 min` : ''}`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Sprint a tope', duracion: seg, metrica: 'ftp', min: 140, max: 250, nivel: 18 }, 120), ...extra, ENF] };
+    return { nombre: `Sprints ${r} × ${seg} s${minutos ? ` + ${reps(minutos, k)} × 1 min` : ''}`, enfoque: 'potencia', bloques: [CAL, ...ACTIVACION, ...series(r, { nombre: 'Sprint a tope', duracion: seg, metrica: 'ftp', min: 140, max: 250, nivel: NIVEL_SPRINT[ctx.nivelPlan] ?? 14 }, 120), ...extra, ENF] };
   },
   // Fuerza-resistencia: cerca del umbral pero a cadencia baja, para que cada palada pese.
-  fuerza: (p, k) => { const [n, m] = paso([[4, 3], [5, 3], [4, 4], [5, 4]], p); const r = reps(n, k); return { nombre: `Fuerza ${r} × ${m} min a 18 paladas/min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerza a 18-20 paladas/min', duracion: m * 60, metrica: 'ftp', min: 88, max: 95, nivel: 16 }, 120), ENF] }; },
+  fuerza: (p, k, ctx = {}) => { const [n, m] = paso([[4, 3], [5, 3], [4, 4], [5, 4]], p); const r = reps(n, k); return { nombre: `Fuerza ${r} × ${m} min a 18 paladas/min`, enfoque: 'potencia', bloques: [CAL, ...series(r, { nombre: 'Fuerza a 18-20 paladas/min', duracion: m * 60, metrica: 'ftp', min: 88, max: 95, spmMeta: [18, 20], nivel: NIVEL_FUERZA[ctx.nivelPlan] ?? 12 }, 120), ENF] }; },
   arranques: (p, k) => {
     const m = ronda((30 + 15 * p) * k, 5); const n = p < 0.5 ? 4 : 6;
     const fondo = (min) => ({ nombre: 'Fondo', duracion: min * 60, metrica: 'ftp', min: 56, max: 75 });
     const arr = Array.from({ length: n }, (_, i) => [{ nombre: `Arranque ${i + 1}/${n}: 10 paladas a tope`, duracion: 20, metrica: 'ftp', min: 140, max: 250 }, { nombre: 'Suave', duracion: 100, metrica: 'ftp', min: 40, max: 60 }]).flat();
     return { nombre: `Fondo ${m} min + ${n} arranques`, enfoque: 'potencia', bloques: [CAL, fondo(Math.max(5, m - n * 2)), ...arr, ENF] };
   },
-  kcalSeries: (p, k) => { const r = reps(8, k); const m = ronda(20 * k, 5); return { nombre: `${r} × 1 min + ${m} min de fondo`, enfoque: 'calorias', bloques: [CAL, ...series(r, { nombre: '1 min fuerte', duracion: 60, metrica: 'ftp', min: 105, max: 115 }, 60), SUAVE(120), { nombre: 'Fondo', duracion: m * 60, metrica: 'ftp', min: 56, max: 75 }, ENF] }; },
+  kcalSeries: (p, k) => { const r = reps(8, k); const m = ronda(20 * k, 5); return { nombre: `${r} × 1 min + ${m} min de fondo`, enfoque: 'calorias', bloques: [CAL, ...ACTIVACION, ...series(r, { nombre: '1 min fuerte', duracion: 60, metrica: 'ftp', min: 105, max: 115 }, 60), SUAVE(120), { nombre: 'Fondo', duracion: m * 60, metrica: 'ftp', min: 56, max: 75 }, ENF] }; },
   kcalMeta: (p, k, ctx) => { const v = ronda((ctx.kcalHabitual || 250) * (1.1 + 0.6 * p) * Math.min(1, k + 0.2), 50); return { tipo: 'objetivo', nombre: `Quema ${v} kcal`, enfoque: 'calorias', objetivo: { metrica: 'kcal', valor: v } }; },
 };
 // Sesiones de cada plan por orden de prioridad: con 3 días se usan las 3 primeras, con 5 todas.
@@ -193,7 +213,8 @@ const SEMANA_TIPO = {
   base: [SESIONES.fondoPulso([30, 60]), (p, k, c) => (p >= 0.25 ? SESIONES.fondoTempo([35, 60]) : SESIONES.fondoPulso([35, 50]))(p, k, c), SESIONES.fondo([40, 75]), SESIONES.fondoPulso([30, 45]), SESIONES.fondo([30, 40])],
   vo2: [SESIONES.vo2, SESIONES.fondo([30, 45]), (p, k, c) => (p >= 0.34 ? SESIONES.treinta15 : SESIONES.umbralCorto)(p, k, c), SESIONES.fondo([30, 40]), SESIONES.fondoPulso([25, 35])],
   umbral: [SESIONES.umbral, SESIONES.fondo([40, 60]), (p, k, c, s) => (s >= 4 && s % 2 === 0 ? SESIONES.vo2Corto : SESIONES.sweet)(p, k, c), SESIONES.fondo([30, 45]), SESIONES.fondoPulso([30, 40])],
-  potencia: [SESIONES.sprints, SESIONES.fuerza, SESIONES.arranques, SESIONES.fondo([30, 45]), SESIONES.fondoPulso([25, 35])],
+  // Con 3 días, una es un fondo puro: sin base aeróbica la potencia no se sostiene ni se recupera.
+  potencia: [SESIONES.sprints, SESIONES.fuerza, SESIONES.fondo([35, 50]), SESIONES.fondoPulso([25, 35]), SESIONES.arranques],
   calorias: [SESIONES.fondo([40, 70]), SESIONES.fondo([30, 45]), SESIONES.kcalSeries, SESIONES.kcalMeta, SESIONES.fondoPulso([30, 50])],
 };
 
@@ -234,24 +255,50 @@ export function ordenarSemana(nombres, diasSemana, buscar, domingoDuro = false) 
 // Duración de una sesión del plan en segundos (las de meta de calorías van a tu ritmo: no cuentan).
 export const duracionPlan = (e) => (e.bloques || []).reduce((a, b) => a + (b.duracion || 0), 0);
 
+// ---------- Topes de carga ----------
+// Trabajo por encima del 106 % del FTP (VO₂ y más): hasta 25 min por sesión y unos 40 min por semana.
+export const VO2_MAX_SESION = 25 * 60;
+export const VO2_MAX_SEMANA = 40 * 60;
+// La carga de trabajo de una semana sube como mucho un 15 % respecto a la última semana normal.
+export const SUBIDA_MAX = 1.15;
+// Planes intensos: quien está empezando hace primero unas semanas de base aeróbica.
+export const OBJETIVOS_INTENSOS = new Set(['umbral', 'vo2', 'potencia']);
+export const semanasDeBase = (objetivo, nivel, semanas) => (nivel === 'inicio' && OBJETIVOS_INTENSOS.has(objetivo) ? Math.min(3, Math.floor(semanas / 2)) : 0);
+
+// Segundos de trabajo por encima del 106 % del FTP (el punto medio del rango; los sprints «a tope» cuentan entero).
+export const segVo2 = (e) => (e?.bloques || [])
+  .filter((b) => esBloqueTrabajo(b) && b.metrica === 'ftp' && (b.min + Math.min(b.max, b.min + 30)) / 2 >= 106)
+  .reduce((a, b) => a + (b.duracion || 0), 0);
+// Segundos de trabajo intenso (desde el sweet spot, 88 % del FTP): lo que más cansa y lo que más debe subir despacio.
+export const segIntenso = (e) => (e?.bloques || [])
+  .filter((b) => esBloqueTrabajo(b) && b.metrica === 'ftp' && b.min >= 88)
+  .reduce((a, b) => a + (b.duracion || 0), 0);
+// Segundos de trabajo de una sesión: sin calentamiento, descansos ni enfriamiento (una meta de calorías, estimada).
+export const segTrabajo = (e) => (e?.bloques?.length
+  ? e.bloques.filter(esBloqueTrabajo).reduce((a, b) => a + (b.duracion || 0), 0)
+  : minutosSesion(e) * 60);
+
 // ctx = { kcalHabitual: kcal de una sesión normal, kcalSemana: kcal de una semana normal, sinHistorial,
 //         minutosMax: tope de minutos por sesión (de tu perfil) }
 export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx = {} }) {
   const obj = objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
   const vol = NIVELES_PLAN.find((n) => n.clave === nivel)?.volumen ?? 1;
-  const tipos = SEMANA_TIPO[obj.clave].slice(0, dias);
+  const cx = { ...ctx, nivelPlan: nivel };
+  const tiposBase = SEMANA_TIPO.base.slice(0, dias);
+  const tiposObj = SEMANA_TIPO[obj.clave].slice(0, dias);
+  const base = semanasDeBase(obj.clave, nivel, semanas);
   const entrenamientos = [];
   const agregar = (ent) => {
     if (!entrenamientos.some((x) => x.nombre === ent.nombre)) entrenamientos.push(ent);
     return ent.nombre;
   };
   // Con tope de minutos (tu perfil), una sesión que se pasa se rehace con menos volumen hasta que quepa.
-  const tope = ctx.minutosMax > 0 ? ctx.minutosMax * 60 : 0;
+  const tope = cx.minutosMax > 0 ? cx.minutosMax * 60 : 0;
   const ajustar = (fn, p, k, s) => {
-    let e = fn(p, k, ctx, s);
+    let e = fn(p, k, cx, s);
     for (let i = 0, kk = k; tope && i < 6 && duracionPlan(e) > tope; i++) {
       kk = Math.max(0.25, kk * Math.min(0.9, tope / duracionPlan(e)));
-      e = fn(p, kk, ctx, s);
+      e = fn(p, kk, cx, s);
     }
     // Aún largo: calentamiento de 5 min y enfriamiento de 3 (el nombre no cambia, no los menciona).
     if (tope && duracionPlan(e) > tope) {
@@ -259,22 +306,74 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     }
     return e;
   };
-  const crear = (fn, p, k, s) => {
+  // Arma una sesión sin guardarla todavía (la semana puede rehacerla con menos volumen).
+  const construir = (fn, p, k, s) => {
     let e = ajustar(fn, p, k, s);
     // Último recurso: una sesión más corta del mismo tipo (umbral largo → umbral corto, fondo con tempo → fondo).
     // Las pruebas no se recortan: miden siempre lo mismo.
     const otra = /^(Umbral|Sweet spot)/.test(e.nombre) ? SESIONES.umbralCorto : /^Fondo .*tempo/.test(e.nombre) ? SESIONES.fondo([20, 30]) : null;
     if (tope && duracionPlan(e) > tope && otra) e = ajustar(otra, p, k, s);
-    return agregar({ tipo: e.tipo || 'intervalos', ...e });
+    // Tope de trabajo por encima del 106 % del FTP en una sesión.
+    for (let i = 0, kk = k; i < 6 && segVo2(e) > VO2_MAX_SESION; i++) { kk *= 0.85; e = ajustar(fn, p, kk, s); }
+    return { tipo: e.tipo || 'intervalos', ...e };
   };
+  // Una semana con sus sesiones en orden de prioridad, respetando el tope de VO₂ semanal.
+  const armarSemana = (fns, p, k, s) => {
+    const ks = fns.map(() => k);
+    const lista = fns.map((fn, j) => construir(fn, p, ks[j], s));
+    for (let i = 0; i < 8; i++) {
+      const total = lista.reduce((a, e) => a + segVo2(e), 0);
+      if (total <= VO2_MAX_SEMANA) break;
+      const j = lista.reduce((m, e, x) => (segVo2(e) > segVo2(lista[m]) ? x : m), 0);
+      ks[j] *= 0.85;
+      lista[j] = construir(fns[j], p, ks[j], s);
+    }
+    return lista;
+  };
+  const trabajoDe = (lista) => lista.reduce((a, e) => a + segTrabajo(e), 0);
+  const intensoDe = (lista) => lista.reduce((a, e) => a + segIntenso(e), 0);
+  // Cabe si el trabajo total sube como mucho un 15 % y el intenso un 15 % (o 5 min, para que los pasos chicos avancen).
+  const cabe = (lista) => trabajoDe(lista) <= previo.total * SUBIDA_MAX
+    && intensoDe(lista) <= Math.max(previo.intenso * SUBIDA_MAX, previo.intenso + 300);
+  const esDescarga = (s) => (s + 1) % 4 === 0 && s < semanas - 1;
+  // El avance de cada semana normal (sin descarga) dentro de su fase: 0 en la primera, 1 en la última.
+  const avance = Array.from({ length: semanas }, (_, s) => {
+    if (esDescarga(s)) return 0;
+    const fase = Array.from({ length: semanas }, (_, x) => x).filter((x) => !esDescarga(x) && (x < base) === (s < base));
+    return fase.length > 1 ? fase.indexOf(s) / (fase.length - 1) : 0;
+  });
   const prueba = (nombre) => agregar({ ...structuredClone(PRUEBAS[nombre]), enfoque: 'pruebas' });
   let domingoDuro = false;
+  let previo = null; // trabajo total e intenso de la última semana normal (sin descarga), en segundos
+  let pPrevio = 0;
+  let intensoUlt = 0;
   const semanasPlan = Array.from({ length: semanas }, (_, s) => {
     // Descarga una de cada 4 semanas: la carga de la primera semana y un 30 % menos de volumen.
-    const descarga = (s + 1) % 4 === 0 && s < semanas - 1;
-    const p = descarga ? 0 : s / Math.max(1, semanas - 1);
+    const descarga = esDescarga(s);
+    const enBase = s < base;
+    const fns = enBase ? tiposBase : tiposObj;
+    // El avance va de 0 a 1 dentro de cada fase (la base y el plan); al pasar del uno al otro empieza de nuevo.
+    if (s === base && base) pPrevio = 0;
+    const meta = avance[s];
     const k = vol * (descarga ? 0.7 : 1);
-    const lista = tipos.map((fn) => crear(fn, p, k, s));
+    let p = meta;
+    let semana = armarSemana(fns, p, k, s);
+    // La carga sube poco a poco: si la semana se pasa del 15 % sobre la anterior, se avanza menos.
+    if (!descarga && previo != null && !cabe(semana) && meta > pPrevio) {
+      let mejor = null;
+      for (let i = 1; i <= 12; i++) {
+        const q = pPrevio + ((meta - pPrevio) * (12 - i)) / 12;
+        const otra = armarSemana(fns, q, k, s);
+        if (cabe(otra)) { mejor = { q, otra }; break; }
+      }
+      if (mejor) { p = mejor.q; semana = mejor.otra; } else { p = pPrevio; semana = armarSemana(fns, p, k, s); }
+      // Aun sin avanzar puede pasarse (una sesión que alterna con otra más larga): se recorta el volumen.
+      for (let i = 0, kk = k; i < 4 && !cabe(semana); i++) { kk *= 0.9; semana = armarSemana(fns, p, kk, s); }
+    }
+    // El intenso se compara con la más alta de las dos últimas semanas normales: algunos planes alternan
+    // una sesión cada semana (sweet spot y VO₂) y no por eso la carga debe bajar a la mitad.
+    if (!descarga) { previo = { total: trabajoDe(semana), intenso: Math.max(intensoDe(semana), intensoUlt) }; intensoUlt = intensoDe(semana); pPrevio = p; }
+    const lista = semana.map(agregar);
     const conPrueba = obj.prueba && (s === semanas - 1 || (semanas >= 6 && s === Math.floor(semanas / 2) - 1));
     // La prueba ocupa el lugar de la segunda sesión dura (así la semana no suma más intensidad);
     // en un plan sin sesiones duras, el de la última. Va al final de la semana, ya con la carga más baja.
@@ -290,11 +389,11 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
   });
   const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
   // Lo elegido queda en el plan: sirve para armar el siguiente y para ajustarlo cuando haya historial.
-  Object.assign(programa, { objetivo: obj.clave, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial, ...(tope ? { minutosMax: ctx.minutosMax } : {}) });
+  Object.assign(programa, { objetivo: obj.clave, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial, ...(tope ? { minutosMax: ctx.minutosMax } : {}), ...(base ? { semanasBase: base } : {}) });
   // Plan de calorías: meta semanal que arranca en tu promedio y sube un 10 % por semana (un 20 % menos en la descarga).
   if (obj.clave === 'calorias') {
-    const base = Math.max(300, ctx.kcalSemana || (ctx.kcalHabitual || 250) * dias);
-    programa.metaKcal = Array.from({ length: semanas }, (_, s) => ronda(base * 1.1 ** s * ((s + 1) % 4 === 0 && s < semanas - 1 ? 0.8 : 1), 50));
+    const kb = Math.max(300, ctx.kcalSemana || (ctx.kcalHabitual || 250) * dias);
+    programa.metaKcal = Array.from({ length: semanas }, (_, s) => ronda(kb * 1.1 ** s * ((s + 1) % 4 === 0 && s < semanas - 1 ? 0.8 : 1), 50));
   }
   return { programa, entrenamientos };
 }
@@ -328,7 +427,7 @@ export function semanaDe(programa, ahora = Date.now()) {
   const n = Math.floor((aFecha(claveDia(ahora)).getTime() - lunes) / (7 * DIA)) + 1;
   const ultimo = aFecha(programa.dias.at(-1).fecha).getTime();
   const total = programa.semanas || Math.floor((ultimo - lunes) / (7 * DIA)) + 1;
-  return { n, total, descarga: !!programa.objetivo && n % 4 === 0 && n < total };
+  return { n, total, descarga: !!(programa.objetivo || programa.conDescarga) && n % 4 === 0 && n < total };
 }
 
 // Meta de calorías de la semana de una fecha (o null si el plan no tiene).
@@ -404,7 +503,7 @@ export function semanasPlan(programa, sesiones, buscar, ahora = Date.now()) {
     s.esfuerzo = cuentan.reduce((a, d) => a + d.esfuerzo, 0);
     s.sesiones = cuentan.length;
     s.prueba = s.dias.some((d) => d.prueba);
-    s.descarga = !!programa.objetivo && s.n % 4 === 0 && s.n < total;
+    s.descarga = !!(programa.objetivo || programa.conDescarga) && s.n % 4 === 0 && s.n < total;
     const previa = semanas[i - 1];
     if (!previa) return;
     const usados = new Set();

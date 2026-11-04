@@ -958,6 +958,10 @@ export function progresoActual(t) {
 
 const splitHablado = (s) => `${Math.floor(s / 60)} ${String(s % 60).padStart(2, '0')}`;
 function metaHablada(b) {
+  const meta = metaHabladaSola(b);
+  return b.spmMeta ? `${meta}, a ${b.spmMeta[0]} a ${b.spmMeta[1]} golpes por minuto` : meta;
+}
+function metaHabladaSola(b) {
   const r = Ent.rangoWatts(b, ftp());
   if (r) return `${r.min} a ${r.max} watts`;
   if (b.metrica === 'split') return `split de ${splitHablado(b.min)} a ${splitHablado(b.max)}`;
