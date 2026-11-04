@@ -498,6 +498,27 @@ const REMEROS = {
 };
 const PIEL = '#E2B48C';
 
+// Remero, barca y remos realistas de cada clase, renderizados en Blender (tools/blender/remo_agua: remo_agua.py
+// --paso 24 --sprite --remo-corto --clase C, cámara carrera3d o cenital, y atlas_carrera.py). Un atlas por clase y
+// vista con una palada entera: el fotograma sale de la fase. ancla es el escálamo a ras de agua; ppm, píxeles por metro
+// del render en ese punto. Se descargan al pintar el primer bote de esa clase; mientras, se dibuja el bote vectorial.
+export const REMEROS_ATLAS = {
+  '3d': { w: 320, h: 196, cols: 4, n: 24, ancla: [160.0, 118.7], ppm: 81.93 },
+  '2d': { w: 356, h: 235, cols: 4, n: 24, ancla: [148.2, 117.0], ppm: 60.0 },
+};
+// La barca de Blender mide 5,4 m: de la popa al escálamo 1,97 m y del escálamo a la proa 3,43 m.
+const BARCA_REAL = { largo: 5.4, proa: 3.43 };
+export const srcRemero = (vista, clase) => `assets/carrera/remero${vista}_${clase}.webp`;
+function celdaRemero(vista, b) {
+  if (!BOTES[b.clase]) return null;
+  const im = imagen(srcRemero(vista, b.clase));
+  if (!im) return null;
+  const A = REMEROS_ATLAS[vista];
+  // Parado, el remero espera con las palas planas (justo después del final de la palada)
+  const f = Math.floor((b.spm ? b.fase : EMPUJE + 0.06) * A.n) % A.n;
+  return { im, A, sx: (f % A.cols) * A.w, sy: Math.floor(f / A.cols) * A.h };
+}
+
 // La vista realista es un vídeo de 720 px de alto escalado: más de 1,5 píxeles por punto no se nota y
 // cuesta mucho dibujarlo (con densidad 2,6 era el 70 % del tiempo de cada cuadro).
 const DPR_MAX = { real: 1.5 };
@@ -1157,6 +1178,16 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
   const deco = decoDe(b);
   let ancho = Math.max(7, largo * 0.09);
   if (b.clase === 'pirata' || b.clase === 'romano') ancho *= 1.25;
+  // Barca, remero y remos realistas vistos desde arriba, con la misma escala a lo largo y a lo ancho: como mucho el
+  // largo del bote y que los remos (1,9 m desde el eje) no pasen del 60 % del carril (remo es el 40 %). La proa sigue
+  // en x; el casco mide 1 m de manga.
+  const real = celdaRemero('2d', b);
+  const kx = real ? Math.min(largo / BARCA_REAL.largo, (remo * 1.5) / 1.9) / real.A.ppm : 0;
+  const ky = kx;
+  if (real) {
+    largo = BARCA_REAL.largo * kx * real.A.ppm;
+    ancho = 0.5 * kx * real.A.ppm;
+  }
   ctx.globalAlpha = b.yo ? 1 : 0.88;
   // Estela en V que crece con la velocidad; con un acelerón, más espuma.
   const estela = Math.min(largo * 1.4, b.v * ppm * 3 * (b.acelera ? 1.4 : 1));
@@ -1193,6 +1224,15 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
     ctx.fillStyle = '#B45309';
     ctx.beginPath(); ctx.moveTo(x + largo * 0.1, y); ctx.lineTo(x - 2, y - ancho * 0.35); ctx.lineTo(x - 2, y + ancho * 0.35); ctx.fill();
   }
+  if (real) {
+    const { im, A, sx, sy } = real;
+    const ex = x - largo * (BARCA_REAL.proa / BARCA_REAL.largo);
+    ctx.drawImage(im, sx, sy, A.w, A.h, ex - A.ancla[0] * kx, y - A.ancla[1] * ky, A.w * kx, A.h * ky);
+    ctx.shadowBlur = 0;
+    if (deco) decoracion2d(ctx, x, y, largo, ancho, b, deco, t, true);
+    ctx.globalAlpha = 1;
+    return palada(b.fase, b.spm);
+  }
   // Casco (la barca samurái tiene la popa recta)
   ctx.fillStyle = b.color;
   ctx.beginPath();
@@ -1208,35 +1248,7 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
   }
   ctx.fill();
   ctx.shadowBlur = 0;
-  if (deco) {
-    if (b.clase === 'vikingo') {
-      // Cabeza de dragón en la proa y escudos en las bordas
-      ctx.fillStyle = deco.marca;
-      ctx.beginPath(); ctx.arc(x + ancho * 0.5, y, ancho * 0.45, 0, Math.PI * 2); ctx.fill();
-      for (let k = 0; k < 5; k++) {
-        const sx = x - largo * (0.22 + k * 0.13);
-        for (const s of [-1, 1]) {
-          ctx.fillStyle = k % 2 ? deco.tela : deco.marca;
-          ctx.beginPath(); ctx.arc(sx, y + s * ancho * 0.62, Math.max(1.6, ancho * 0.28), 0, Math.PI * 2); ctx.fill();
-        }
-      }
-    } else if (b.clase === 'pirata') {
-      // Botavara y vela vistas desde arriba
-      ctx.strokeStyle = '#8B5E34';
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x - largo * 0.3, y); ctx.lineTo(x - largo * 0.75, y - ancho * 1.4); ctx.stroke();
-      ctx.fillStyle = 'rgba(241,245,249,0.85)';
-      ctx.beginPath(); ctx.moveTo(x - largo * 0.3, y); ctx.quadraticCurveTo(x - largo * 0.5, y - ancho * 2.2, x - largo * 0.75, y - ancho * 1.4); ctx.closePath(); ctx.fill();
-    } else if (b.clase === 'romano') {
-      ctx.strokeStyle = deco.tela;
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x - largo * 0.15, y); ctx.lineTo(x - largo * 0.9, y); ctx.stroke();
-    } else if (b.clase === 'samurai') {
-      ctx.fillStyle = deco.marca;
-      ctx.beginPath(); ctx.arc(x - largo * 0.82, y, ancho * 0.35, 0, Math.PI * 2); ctx.fill();
-    }
-    bandera2d(ctx, x - largo + 2, y, Math.max(7, ancho * 1.5), deco, t);
-  }
+  if (deco) decoracion2d(ctx, x, y, largo, ancho, b, deco, t);
   // Remos y remero, vistos desde arriba: mira a la popa (izquierda) y el cuerpo mueve los remos.
   const pa = palada(b.fase, b.spm);
   const px = x - largo * 0.5; // chumaceras
@@ -1296,6 +1308,37 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
   ctx.beginPath(); ctx.arc(hombro - rc * 0.1, y, rc, Math.PI * 0.5, Math.PI * 1.5, true); ctx.fill();
   ctx.globalAlpha = 1;
   return pa;
+}
+
+// Adornos de cada clase sobre el casco 2D (dragón y escudos, vela, estandarte...) y bandera en la popa.
+function decoracion2d(ctx, x, y, largo, ancho, b, deco, t, real = false) {
+  if (b.clase === 'vikingo') {
+    // Cabeza de dragón en la proa y escudos en las bordas
+    ctx.fillStyle = deco.marca;
+    ctx.beginPath(); ctx.arc(x + ancho * 0.5, y, ancho * 0.45, 0, Math.PI * 2); ctx.fill();
+    for (let k = 0; k < 5 && !real; k++) {
+      const sx = x - largo * (0.22 + k * 0.13);
+      for (const s of [-1, 1]) {
+        ctx.fillStyle = k % 2 ? deco.tela : deco.marca;
+        ctx.beginPath(); ctx.arc(sx, y + s * ancho * 0.62, Math.max(1.6, ancho * 0.28), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  } else if (b.clase === 'pirata') {
+    // Botavara y vela vistas desde arriba
+    ctx.strokeStyle = '#8B5E34';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - largo * 0.3, y); ctx.lineTo(x - largo * 0.75, y - ancho * 1.4); ctx.stroke();
+    ctx.fillStyle = 'rgba(241,245,249,0.85)';
+    ctx.beginPath(); ctx.moveTo(x - largo * 0.3, y); ctx.quadraticCurveTo(x - largo * 0.5, y - ancho * 2.2, x - largo * 0.75, y - ancho * 1.4); ctx.closePath(); ctx.fill();
+  } else if (b.clase === 'romano') {
+    ctx.strokeStyle = deco.tela;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - largo * 0.15, y); ctx.lineTo(x - largo * 0.9, y); ctx.stroke();
+  } else if (b.clase === 'samurai') {
+    ctx.fillStyle = deco.marca;
+    ctx.beginPath(); ctx.arc(x - largo * 0.82, y, ancho * 0.35, 0, Math.PI * 2); ctx.fill();
+  }
+  bandera2d(ctx, x - largo + 2, y, Math.max(7, ancho * 1.5), deco, t);
 }
 
 // Espuma en la proa de un rival que acelera.
@@ -1917,7 +1960,8 @@ function adornos3d(ctx, P, b, largo, t) {
       ctx.fillStyle = deco.marca;
       ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(1.5, c.s * 0.14), 0, Math.PI * 2); ctx.fill();
     }
-    for (let k = -2; k <= 2; k++) {
+    // Escudos en las bordas del drakkar vectorial (la barca realista es más corta y no los lleva)
+    for (let k = -2; k <= 2 && largo >= 8; k++) {
       for (const s of [-1, 1]) {
         const q = P(b.x + s * 0.42, b.dist + k * 0.9, 0.25);
         if (!q) continue;
@@ -2018,9 +2062,12 @@ function bandera3d(ctx, tope, deco, onda) {
 }
 
 function bote3d(ctx, P, b, t) {
-  const largo = 8;
-  const proa = P(b.x, b.dist + largo * 0.5);
-  const popa = P(b.x, b.dist - largo * 0.5);
+  // Con el atlas realista la barca mide lo que la de Blender y su centro va algo por delante del escálamo
+  const real = celdaRemero('3d', b);
+  const largo = real ? BARCA_REAL.largo : 8;
+  const centro = real ? b.dist - 0.4 + BARCA_REAL.proa - largo / 2 : b.dist;
+  const proa = P(b.x, centro + largo * 0.5);
+  const popa = P(b.x, centro - largo * 0.5);
   if (!proa || !popa) return;
   const anchoCasco = b.clase === 'pirata' || b.clase === 'romano' ? 0.6 : 0.45;
   // Estela en V con espuma que se abre y se desvanece
@@ -2030,7 +2077,7 @@ function bote3d(ctx, P, b, t) {
       ctx.strokeStyle = `rgba(255,255,255,${(0.4 - i * 0.08) * Math.min(1, b.v / 3)})`;
       ctx.lineWidth = Math.max(1, popa.s * 0.03);
       for (const s of [-1, 1]) {
-        const z0 = b.dist - largo * 0.5 - i * 2.5 * fuerza;
+        const z0 = centro - largo * 0.5 - i * 2.5 * fuerza;
         const a = P(b.x + s * (0.25 + i * 0.45 * fuerza), z0);
         const z = P(b.x + s * (0.7 + i * 0.45 * fuerza + b.v * 0.3), z0 - 2.5 * fuerza);
         if (a && z) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(z.x, z.y); ctx.stroke(); }
@@ -2038,7 +2085,7 @@ function bote3d(ctx, P, b, t) {
     }
     // Rastro de espuma detrás de la popa
     for (let i = 0; i < 8; i++) {
-      const zz = b.dist - largo * 0.5 - 0.6 - i * 1.4;
+      const zz = centro - largo * 0.5 - 0.6 - i * 1.4;
       const q = P(b.x + (sinMovimiento ? 0 : Math.sin(t * 3 + i) * 0.1), zz, 0);
       if (!q) continue;
       ctx.fillStyle = `rgba(255,255,255,${0.3 * (1 - i / 8) * Math.min(1, b.v / 3)})`;
@@ -2047,7 +2094,7 @@ function bote3d(ctx, P, b, t) {
   }
   // Ola de proa (más grande si acelera)
   if (b.v > 0) {
-    const q = P(b.x, b.dist + largo * 0.5, 0.05);
+    const q = P(b.x, centro + largo * 0.5, 0.05);
     if (q) {
       ctx.fillStyle = `rgba(255,255,255,${b.acelera ? 0.8 : 0.35})`;
       const n = b.acelera ? 10 : 4;
@@ -2057,6 +2104,12 @@ function bote3d(ctx, P, b, t) {
         ctx.beginPath(); ctx.arc(q.x + Math.cos(a) * r, q.y + Math.sin(a) * r * 0.3 + q.s * 0.05, Math.max(0.8, q.s * 0.05), 0, Math.PI * 2); ctx.fill();
       }
     }
+  }
+  if (real) {
+    remero3d(ctx, P, b, real, t);
+    adornos3d(ctx, P, { ...b, dist: centro }, largo, t);
+    marcaRival3d(ctx, P, b);
+    return;
   }
   // Casco como polígono proyectado
   const popaAncha = b.clase === 'samurai' ? 0.85 : 0.4;
@@ -2155,7 +2208,29 @@ function bote3d(ctx, P, b, t) {
     }
   }
   ctx.globalAlpha = 1;
-  // Marca del color del rival sobre su bote (las diferencias van en la tabla de la esquina)
+  marcaRival3d(ctx, P, b);
+}
+
+// Remero realista (atlas de Blender) visto desde la cámara de persecución. El render tiene la misma cámara que
+// pintar3d a 12,6 m del escálamo; aquí se escala por la distancia real y, a lo ancho, como la pista (fx ≠ f).
+function remero3d(ctx, P, b, { im, A, sx, sy }, t) {
+  const q = P(b.x, b.dist - 0.4, 0);
+  const q1 = P(b.x + 1, b.dist - 0.4, 0);
+  if (!q || !q1) return;
+  const ky = q.s / A.ppm;
+  const kx = Math.max(q1.x - q.x, q.s * 0.62) / A.ppm;
+  ctx.globalAlpha = b.yo ? 1 : 0.92;
+  if (b.brillo) {
+    ctx.shadowColor = '#FDE047';
+    ctx.shadowBlur = sinMovimiento ? 18 : 16 + 10 * Math.sin(t * 10);
+  }
+  ctx.drawImage(im, sx, sy, A.w, A.h, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, A.w * kx, A.h * ky);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+
+// Marca del color del rival sobre su bote (las diferencias van en la tabla de la esquina)
+function marcaRival3d(ctx, P, b) {
   if (!b.yo) {
     const q = P(b.x, b.dist, 1.9);
     if (q) {

@@ -5,7 +5,7 @@
 #   python tools/blender/remo_agua/remo_agua.py --blend /tmp/vk/vikingo.blend --salida /tmp/remo [--frames 1-96] [--res 960x540]
 # El agua se calcula aquí con NumPy (suma de olas periódica en espacio y tiempo) en vez del modificador Ocean: el espectro
 # del Ocean no se repite en el tiempo y el clip tiene que cerrar sin salto. Dos paladas = 96 fotogramas = 3,2 s.
-import bpy, bmesh, math, os, sys, argparse
+import bpy, bmesh, math, os, sys, argparse, json
 import numpy as np
 from mathutils import Vector, Matrix, Quaternion
 
@@ -18,9 +18,14 @@ ap.add_argument('--salida', default='salida')
 ap.add_argument('--frames', default='1-96')
 ap.add_argument('--res', default='960x540')
 ap.add_argument('--muestras', type=int, default=64)
-ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'cine', 'popa', 'cerca'))
+ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'cine', 'popa', 'cerca', 'retrato', 'carrera3d', 'cenital'))
 ap.add_argument('--paisaje', default='fiordo')
 ap.add_argument('--sprite', action='store_true', help='solo barca y remero sobre fondo transparente (rivales de la carrera)')
+ap.add_argument('--clase', default='vikingo', choices=('vikingo', 'pirata', 'samurai', 'polinesio', 'romano'),
+                help='ropa del remero y pintura de la barca (clases.py)')
+ap.add_argument('--remo-corto', action='store_true', help='remos acortados para que quepan en los carriles de la carrera 2D y 3D')
+ap.add_argument('--paso', type=int, default=0,
+                help='atlas de la carrera: N fotogramas repartidos en una palada (ignora --frames)')
 A = ap.parse_args([a for a in _argv if not a.endswith('.py')])
 SAL = os.path.abspath(A.salida)
 os.makedirs(os.path.join(SAL, 'frames'), exist_ok=True)
@@ -30,6 +35,15 @@ esc = bpy.context.scene
 col = esc.collection
 rig = bpy.data.objects['Vikingo']
 PB = rig.pose.bones
+# Texturas con ruta relativa rota (el .blend copiado a otra carpeta): se buscan por nombre en el repositorio
+for im in bpy.data.images:
+    if im.filepath and not os.path.exists(bpy.path.abspath(im.filepath)):
+        for d in ('../makehuman/ojos', '../vikingo/texturas'):
+            cand = os.path.join(AQUI, d, os.path.basename(im.filepath))
+            if os.path.exists(cand):
+                im.filepath = cand
+                im.reload()
+                break
 FPS = 30
 PALADA = 48                       # fotogramas por palada (1,6 s, 37,5 golpes/min, como la acción rowing)
 BUCLE = 2 * PALADA                # el clip cierra cada dos paladas
@@ -241,6 +255,10 @@ pies = caja('Reposapies', (0, -0.84, 0.20), (0.42, 0.04, 0.26), MAT['Madera'])
 pies.rotation_euler.x = math.radians(-35)
 caja('Proa', (0, 1.6, 0.40), (0.46, 1.6, 0.02), MAT['Madera'])
 caja('Popa', (0, -1.7, 0.38), (0.36, 1.1, 0.02), MAT['Madera'])
+# ropa del remero y pintura de la barca de cada clase
+exec(open(os.path.join(AQUI, 'clases.py')).read())
+vestir(A.clase)
+pintar_barca(A.clase)
 
 # muestreo de las manos para colocar las horquillas (perno donde el remo queda perpendicular a mitad de palada)
 rig.animation_data.action = bpy.data.actions['rowing_agua']
@@ -250,6 +268,9 @@ for f in range(1, PALADA + 1):
     manos.append(rig.matrix_world @ PB['ik_mano.L'].head)
 manos = np.array(manos)
 DENTRO, FUERA, PALA = 0.90, 1.95, 0.48   # interior (perno-puño), exterior hasta la pala, largo de la pala
+ALTO_PALA = 0.20
+if A.remo_corto:   # la carrera tiene carriles de 3 m: la pala llega a 1,9 m del eje en vez de 3,2
+    FUERA, PALA, ALTO_PALA = 0.78, 0.34, 0.17
 alto_empuje = manos[3:16, 2].mean()
 r_palanca = (FUERA + PALA * 0.5) / 0.75
 PERNO = {'L': Vector((0.80, -0.48, 0.0)), 'R': Vector((-0.80, -0.48, 0.0))}
@@ -271,7 +292,7 @@ for s, lado in ((1, 'L'), (-1, 'R')):
     tubo(bm, (-DENTRO + 0.28, 0, 0), (FUERA, 0, 0), 0.022, 12)          # caña
     tubo(bm, (-0.06, 0, 0), (0.06, 0, 0), 0.03, 12)                     # tope del perno
     m = bmesh.ops.create_cube(bm, size=1.0, calc_uvs=True)              # pala (cuadrada = vertical)
-    bmesh.ops.scale(bm, vec=(PALA, 0.014, 0.20), verts=m['verts'])
+    bmesh.ops.scale(bm, vec=(PALA, 0.014, ALTO_PALA), verts=m['verts'])
     bmesh.ops.translate(bm, vec=(FUERA + PALA / 2 - 0.04, 0, -0.02), verts=m['verts'])
     remo = malla('Remo.' + lado, bm, MAT['Madera'], True, piv)
     remo.modifiers.new('bisel', 'BEVEL').width = 0.004
@@ -280,7 +301,7 @@ for s, lado in ((1, 'L'), (-1, 'R')):
     # punta pintada
     bm = bmesh.new()
     m = bmesh.ops.create_cube(bm, size=1.0, calc_uvs=True)
-    bmesh.ops.scale(bm, vec=(0.12, 0.018, 0.205), verts=m['verts'])
+    bmesh.ops.scale(bm, vec=(0.12, 0.018, ALTO_PALA + 0.005), verts=m['verts'])
     bmesh.ops.translate(bm, vec=(FUERA + PALA - 0.10, 0, -0.02), verts=m['verts'])
     malla('PuntaPala.' + lado, bm, MAT['Laton'], True, remo)
     # giro de la pala (plumeo): plana en la recuperación
@@ -649,21 +670,58 @@ VISTAS = {
     'cine': ((6.0, -3.3, 2.0), (0.0, -0.05, 0.80), 46),
     'popa': ((3.2, -6.2, 1.35), (0.0, -0.3, 0.60), 40),
     'cerca': ((3.4, -2.6, 1.05), (0.0, -0.35, 0.70), 40),
+    'retrato': ((1.3, -2.2, 1.45), (0.0, -0.4, 1.0), 60),   # para revisar la ropa y el tocado de cada clase
 }
-cl, mira, lente = VISTAS[A.camara]
+w, h = (int(x) for x in A.res.split('x'))
+CARRERA = None
+if A.camara == 'carrera3d':
+    # Como la cámara de pintar3d (carrera.js): 13 m detrás del bote y 4,6 m sobre el agua, mirando al frente sin
+    # inclinarse (las verticales siguen verticales) y desplazada hacia abajo para encuadrar el bote.
+    # El perno (y = -0,48) está a 13 - 0,08 m: en la carrera el escálamo va 0,4 m por detrás del centro de un bote de 8 m.
+    TAN_W, V_C = 0.31, 0.345                # ancho del cuadro en tangentes y centro vertical (tangente bajo el horizonte)
+    cl, mira, lente = (0.0, -0.48 - 12.6, AGUA_Z + 4.6), (0.0, 100.0, AGUA_Z + 4.6), 36 / TAN_W
+    cam_d.sensor_fit = 'HORIZONTAL'; cam_d.sensor_width = 36
+    cam_d.shift_y = -V_C / TAN_W
+    F = w / TAN_W                            # píxeles por unidad de tangente
+    d0 = 12.6
+    CARRERA = {'vista': '3d', 'w': w, 'h': h, 'ancla': [w / 2, h / 2 + (4.6 / d0 - V_C) * F], 'ppm': F / d0}
+elif A.camara == 'cenital':
+    # Desde arriba, ortográfica, con la proa a la derecha como en la carrera 2D; el ancla es el perno en el agua.
+    cam_d.type = 'ORTHO'
+    ESC_O = 6.4                              # metros que caben a lo ancho
+    cam_d.ortho_scale = ESC_O
+    cl, mira, lente = (0.0, 0.25, 30.0), (0.0, 0.25, 0.0), 50
+    CARRERA = {'vista': '2d', 'w': w, 'h': h, 'ancla': [w / 2 + (-0.48 - 0.25) * w / ESC_O, h / 2], 'ppm': w / ESC_O}
+else:
+    cl, mira, lente = VISTAS[A.camara]
 cam.location = cl; cam_d.lens = lente
-cam.rotation_euler = (Vector(mira) - Vector(cl)).to_track_quat('-Z', 'Y').to_euler()
+if A.camara == 'cenital':
+    cam.rotation_euler = (0, 0, math.pi / 2)   # +Y (proa) a la derecha de la imagen
+else:
+    cam.rotation_euler = (Vector(mira) - Vector(cl)).to_track_quat('-Z', 'Y').to_euler()
 cam_d.clip_end = 2000
 
-w, h = (int(x) for x in A.res.split('x'))
 esc.render.resolution_x, esc.render.resolution_y = w, h
 esc.render.resolution_percentage = 100
 esc.render.engine = 'CYCLES'
 esc.render.film_transparent = A.sprite
 if A.sprite:
     agua.hide_render = True
+    # Plano de recorte en la flotación: lo que queda bajo el agua (pala en el empuje, obra viva) no se ve
+    bpy.ops.mesh.primitive_plane_add(size=60, location=(0, 0, AGUA_Z))
+    corte = bpy.context.active_object
+    m_corte = bpy.data.materials.new('Recorte'); m_corte.use_nodes = True
+    nt = m_corte.node_tree
+    for nd in list(nt.nodes):
+        if nd.type != 'OUTPUT_MATERIAL':
+            nt.nodes.remove(nd)
+    nt.links.new(nt.nodes.new('ShaderNodeHoldout').outputs[0], nt.nodes['Material Output'].inputs['Surface'])
+    corte.data.materials.append(m_corte)
+    corte.visible_shadow = False
+if CARRERA:
+    CARRERA.update({'clase': A.clase, 'paso': A.paso})
+    json.dump(CARRERA, open(os.path.join(SAL, 'carrera.json'), 'w'))
 # cámara para la app: con ella carrera.js proyecta los botes rivales sobre el clip
-import json
 json.dump({'camara': list(cl), 'mira': list(mira), 'lente': lente, 'res': [w, h], 'agua': AGUA_Z},
           open(os.path.join(SAL, 'camara.json'), 'w'))
 cy = esc.cycles
@@ -679,8 +737,12 @@ esc.view_settings.exposure = 0.5
 esc.render.image_settings.file_format = 'PNG'
 
 a, b_ = (int(x) for x in A.frames.split('-'))
+if A.paso:
+    a, b_ = 1, A.paso
 for f in range(a, b_ + 1):
-    t = (f - 1) / FPS
+    # con --paso, el fotograma f es la fase (f-1)/paso de la palada; la pala entra en el fotograma 2 de la acción,
+    # que es la fase 0 (el ataque) de palada() en carrera.js
+    t = ((f - 1) * PALADA / A.paso + 1) / FPS if A.paso else (f - 1) / FPS
     fr = remo_frame(t)
     esc.frame_set(int(fr), subframe=fr - int(fr))
     co, espuma = agua_en(t)
