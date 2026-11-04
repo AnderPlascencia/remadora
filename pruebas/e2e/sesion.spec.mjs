@@ -23,6 +23,12 @@ test('una sesión terminada se guarda con sus muestras y abre el resumen', async
   expect(s.muestras).toHaveLength(s.duracion);
   expect(s.distancia).toBeGreaterThan(100);
   expect(s.wattsProm).toBeGreaterThan(0);
+  // Reglas de XP por carga (v0.46.0): la sesión sabe que era la del plan y el calendario del plan está guardado.
+  expect(s.reglasXp).toBe(2);
+  expect(s.delDia).toBe('plan');
+  const cal = await page.evaluate(() => JSON.parse(localStorage.getItem('calendarioPlan') || 'null'));
+  expect(Object.values(cal || {})).toContain(plan);
+  await expect(page.locator('#hoja-xp')).toContainText('Carga del entrenamiento');
   // La copia de seguridad de la sesión en curso ya no hace falta.
   expect(await enCurso(page)).toBeNull();
 

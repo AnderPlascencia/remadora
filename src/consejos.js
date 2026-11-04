@@ -77,7 +77,6 @@ export function prevision(ent, { ftp = 0, clase = null, ctx = {}, debil = null, 
     extras.push({ clave: '20min', icono: 'i-reloj', titulo: `Rema ${min} min más, suave`, detalle: 'Las sesiones de 20 min o más suman Resistencia.', atributo: 'resistencia', puntos: 4 * fa('resistencia') });
   }
   if (ctx.mppPromedio > 0) extras.push({ clave: 'mpp', icono: 'i-sube', titulo: `Más de ${coma(ctx.mppPromedio * 1.02)} m por palada`, detalle: 'Palada larga y potente, sin subir la cadencia.', atributo: 'tecnica', puntos: 3 * fa('tecnica') });
-  if (intenso) extras.push({ clave: 'esfuerzo', icono: 'i-fuego', titulo: 'Rema fuerte hasta el final', detalle: 'Si al terminar marcas esfuerzo 8 o más.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
   const orden = extras.map((x) => ({ ...x, puntos: Math.max(1, Math.round(x.puntos)) }))
     .sort((a, b) => (b.atributo === debil) - (a.atributo === debil) || b.puntos - a.puntos);
   const seguro = redondear(seg);
@@ -190,7 +189,8 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
     if (s.duracion <= 150) logros.push({ icono: 'i-rayo', titulo: '500 m en menos de 2:30', atributo: 'agilidad', puntos: 5 * fa('agilidad') });
     else if (s.duracion <= 175) cerca.push({ icono: 'i-reloj', titulo: `Te faltaron ${s.duracion - 150} s para bajar de 2:30`, detalle: 'Sal fuerte y aguanta el último tramo.', atributo: 'agilidad', puntos: 5 * fa('agilidad') });
   }
-  if (s.rpe >= 8) logros.push({ icono: 'i-fuego', titulo: 'Sesión muy dura', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
+  // Desde las reglas de carga (v0.46.0) el esfuerzo 8 o más ya no suma Voluntad.
+  if (J.usaCarga(s)) { /* nada */ } else if (s.rpe >= 8) logros.push({ icono: 'i-fuego', titulo: 'Sesión muy dura', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
   else if (s.rpe == null && s.muestras?.length && esIntenso(s.tipoPlan)) cerca.push({ icono: 'i-fuego', titulo: '¿Fue muy dura? Márcalo abajo', detalle: 'Un esfuerzo de 8 o más suma Voluntad.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
   if (ctx.mppPromedio > 0 && s.paladas) {
     const mpp = s.distancia / s.paladas;

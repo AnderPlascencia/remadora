@@ -6,6 +6,7 @@ import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
+import * as XC from '../xp-carga.js';
 import * as B from '../base.js';
 import * as Cap from '../capacidades.js';
 import * as A from '../adaptacion.js';
@@ -30,6 +31,42 @@ export function guardarPrograma(p) {
   if (p && p.inicio !== leerPrograma()?.inicio) ajustes.escribir('eleccionDia', '');
   if (p) ajustes.escribir('programa', JSON.stringify(p));
   else { try { localStorage.removeItem('programa'); } catch { /* nada */ } }
+  // El calendario del juego (sesiones y descansos del plan) guarda los días pasados tal como eran.
+  guardarCalendario(XC.fusionarCalendario(leerCalendario(), p, E.claveDia(Date.now())));
+}
+function leerCalendario() {
+  try { return JSON.parse(ajustes.leer('calendarioPlan', 'null')); } catch { return null; }
+}
+function guardarCalendario(cal) {
+  ajustes.escribir('calendarioPlan', JSON.stringify(cal));
+  J.fijarCalendarioPlan(cal);
+}
+// Al arrancar: el calendario guardado o, la primera vez, el del plan actual.
+{
+  const cal = leerCalendario();
+  if (cal) J.fijarCalendarioPlan(cal);
+  else guardarCalendario(XC.calendarioDe(leerPrograma()));
+}
+
+// Lo que el juego necesita saber de una sesión al guardarla (o al estimar su XP antes de remar):
+// si era la sesión del día (del plan, recuperada o sugerida sin plan) y, si hay sesión del plan hoy, su tipo y su carga.
+export async function contextoXp(ent, sesiones, inicio = Date.now()) {
+  const out = { reglasXp: XC.REGLAS_XP_CARGA };
+  try {
+    const todos = await db.listar('entrenamientos');
+    const dia = await calcularDia(sesiones, todos);
+    if (dia && ent && ((dia.ent && dia.ent === ent.nombre) || (dia.id && String(dia.id) === String(ent.id)))) {
+      if (['plan', 'recuperar', 'sugerida'].includes(dia.fuente)) out.delDia = dia.fuente;
+    }
+    const hoy = P.deHoy(leerPrograma(), inicio);
+    const plan = hoy && (todos.find((x) => x.nombre === hoy.ent) || estado.baseActual.find((x) => x.nombre === hoy.ent));
+    const f = ftp();
+    if (plan && f) {
+      const sim = F.simular(plan, { ftp: f }, f).muestras;
+      if (sim.length) out.planDelDia = { ent: plan.nombre, tipo: Cap.tipoPlan(plan), carga: E.estres({ duracion: sim.length, muestras: sim }, f) };
+    }
+  } catch (e) { agregarLog(`contextoXp: ${e.message}`); }
+  return out;
 }
 
 // Guarda los entrenamientos de un plan nuevo: los del mismo nombre se actualizan (así un plan nuevo no usa

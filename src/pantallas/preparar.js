@@ -12,6 +12,7 @@ import { estado } from '../estado.js';
 import { pintarClasificacion, pintarZonas, ritmoObjetivo } from './ajustes.js';
 import { modoEnt } from './vivo.js';
 import { chipsAtr, filaCond, icoMoneda, inventario, leerPersonaje, opcConsejos, previsionDe } from './heroe.js';
+import { contextoXp } from './programa.js';
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
@@ -248,7 +249,8 @@ async function pintarPreparar() {
   caja.hidden = !ent && !rivales.length;
   if (caja.hidden) return;
   const reales = rivales.filter((r) => !r.falta);
-  const hip = sesionHipotetica(ent, reales, sesiones);
+  const hip = { ...sesionHipotetica(ent, reales, sesiones), ...(await contextoXp(ent, sesiones)) };
+  if (turno !== preparoTurno || estado.sesion) return;
   const est = J.estimarXp(sesiones, hip, { ftp: ftp(), per: leerPersonaje() });
   const condicion = [ent ? `completas «${escaparHtml(ent.nombre)}»` : `remas unos ${miles(hip.distancia)} m`, reales.length ? `vences a ${reales.length === 1 ? 'tu rival' : `tus ${reales.length} rivales`}` : ''].filter(Boolean).join(' y ');
   const partes = [...est.detalle.map(([k, v]) => [k, v]), ...(est.extra ? [['Misiones y logros', est.extra]] : [])].filter(([, v]) => v > 0);
