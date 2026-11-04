@@ -11,10 +11,12 @@ const ARCHIVOS = ['./', 'index.html', 'src/estilos.css', 'src/app.js', 'src/esta
 const CLASES = ['pirata', 'polinesio', 'romano', 'samurai', 'vikingo'];
 const RANGOS = ['novato', 'aprendiz', 'combatiente', 'guerrero', 'veterano', 'elite', 'campeon', 'maestro', 'legendario'];
 const HEROES = CLASES.flatMap((c) => RANGOS.flatMap((r) => [`assets/heroes/${c}_${r}.webp`, `assets/heroes/${c}_${r}_retrato.webp`]));
-// Paisajes de la carrera renderizados en Blender (fiordo ~70 KB, laguna ~190 KB, miniaturas de la tienda ~15 KB);
+// Paisajes de la carrera renderizados en Blender (fiordo ~70 KB, laguna ~190 KB, los cinco de la colección ~1 MB en
+// total, miniaturas de la tienda ~15 KB);
 // sin ellos se dibujan las formas sencillas.
 const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp', 'assets/carrera/fiordo_mini.webp',
   'assets/carrera/laguna.webp', 'assets/carrera/laguna_orilla.webp', 'assets/carrera/laguna_costa.webp', 'assets/carrera/laguna_mini.webp',
+  ...['canon', 'otono', 'cerezos', 'glaciar', 'mediterraneo'].flatMap((p) => ['', '_orilla', '_costa', '_mini'].map((s) => `assets/carrera/${p}${s}.webp`)),
   'assets/carrera/rival_vikingo.webp'];
 // Los vídeos de la vista realista (~1,2 MB) son de una clase: no se precargan al instalar. La app los pide con un
 // mensaje «precargar» cuando tu héroe es de esa clase (ver src/app.js).

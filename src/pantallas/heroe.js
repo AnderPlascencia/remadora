@@ -571,7 +571,8 @@ function pintarTienda(h, per) {
     <span class="monedas">${icoMoneda}${x.precio}</span>${inv[x.id] ? `<span class="tienes">Tienes ${inv[x.id]}</span>` : ''}
     <button type="button" class="boton chico" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button></div>`).join('');
   const elegido = paisajeElegido(per);
-  $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).map(([id, x]) => {
+  // Ordenados por precio: la colección se lee como una escalera, del gratis al más caro.
+  $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).sort(([, a], [, b]) => a.precio - b.precio).map(([id, x]) => {
     const tiene = tienePaisaje(per, id);
     const boton = id === elegido ? '<span class="paisaje-uso">En uso</span>'
       : tiene ? `<button type="button" class="boton chico" data-paisaje="${id}">Usar</button>`

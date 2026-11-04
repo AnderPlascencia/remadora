@@ -105,6 +105,164 @@ Object.assign(PAISAJES, {
   'laguna-dorada': variante('laguna', { nombre: 'Laguna dorada', texto: 'La laguna de las leyendas: agua y cielo de oro.', precio: 3000, filtro: 'sepia(.85) saturate(2.2) brightness(1.05)',
     colores: { agua2d: ['#C9A227', '#8C6D12'], cielo3d: ['#E8C45A', '#FBE7A1'], agua3d: ['#B8912A', '#6E5310'], reflejo: '255,225,140' } }),
 });
+// Colección de paisajes propios (v0.54.0): cinco escenarios con su panorama, su orilla 3D y su costa 2D, renderizados
+// en Blender con tools/blender/paisaje/coleccion (objetos.py, temas.py, panorama.py, orilla.py y costa.py).
+const propio = (id, x) => ({
+  ...x,
+  miniatura: `assets/carrera/${id}_mini.webp`,
+  panorama: { src: `assets/carrera/${id}.webp`, horizonte: 204 },
+  costa: `assets/carrera/${id}_costa.webp`,
+  orilla: { src: `assets/carrera/${id}_orilla.webp`, ...x.orilla },
+});
+Object.assign(PAISAJES, {
+  canon: propio('canon', {
+    nombre: 'Cañón del desierto',
+    texto: 'Mesetas rojas, saguaros y casas de adobe junto al río.',
+    precio: 700,
+    orilla: {
+      piezas: {
+        saguaro_alto: { x: 0, y: 0, w: 238, h: 651, pie: [0.5, 0.987], m: 10.18 },
+        saguaro: { x: 240, y: 0, w: 144, h: 450, pie: [0.5, 0.985], m: 7.03 },
+        mezquite: { x: 386, y: 0, w: 381, h: 327, pie: [0.5, 0.988], m: 5.11 },
+        adobe: { x: 0, y: 653, w: 314, h: 284, pie: [0.5, 0.926], m: 4.44 },
+        roca_grande: { x: 316, y: 653, w: 271, h: 152, pie: [0.5, 0.867], m: 2.37 },
+        salvia: { x: 589, y: 653, w: 186, h: 109, pie: [0.5, 0.853], m: 1.7 },
+        roca: { x: 777, y: 653, w: 135, h: 69, pie: [0.5, 0.776], m: 1.08 },
+        barril: { x: 914, y: 653, w: 78, h: 69, pie: [0.506, 0.919], m: 1.08 },
+        matas: { x: 0, y: 939, w: 79, h: 47, pie: [0.506, 0.918], m: 0.74 }
+      },
+      elegir: (r1, r2) => (r1 < 0.1 ? 'roca' : r1 < 0.17 ? 'roca_grande' : r1 < 0.21 && r2 < 0.5 ? 'adobe'
+        : r1 < 0.42 ? (r2 < 0.5 ? 'salvia' : 'barril') : r2 < 0.35 ? 'saguaro_alto' : r2 < 0.65 ? 'saguaro' : 'mezquite'),
+      fondo: (r2) => (r2 > 0.65 ? 'saguaro_alto' : r2 > 0.45 ? 'mezquite' : 'saguaro'),
+      apartar: { adobe: 4 },
+      borde: 'matas',
+      espejo: (s, r) => s > 0 && r > 0.5
+    },
+    colores: {
+      tierra2d: '#B8693A', agua2d: ['#3E7A78', '#2A5A5C'], cielo3d: ['#9DB6D6', '#D9DCDD'], agua3d: ['#4E6E7A', '#22404A'],
+      reflejo: '210,195,170', arena3d: '#D9A878', tierra3d: '#A85A30', bruma: 230
+    }
+  }),
+  otono: propio('otono', {
+    nombre: 'Lago de otoño',
+    texto: 'Bosque de arces rojos y dorados, cabañas de troncos y una canoa.',
+    precio: 1100,
+    orilla: {
+      piezas: {
+        pino: { x: 0, y: 0, w: 451, h: 752, pie: [0.5, 0.996], m: 11.75 },
+        arce_rojo: { x: 0, y: 754, w: 607, h: 692, pie: [0.5, 0.992], m: 10.82 },
+        arce_naranja: { x: 0, y: 1448, w: 514, h: 577, pie: [0.5, 0.992], m: 9.01 },
+        abedul: { x: 516, y: 1448, w: 130, h: 523, pie: [0.5, 0.995], m: 8.16 },
+        cabana: { x: 648, y: 1448, w: 374, h: 327, pie: [0.5, 0.935], m: 5.1 },
+        roca_grande: { x: 0, y: 2027, w: 288, h: 121, pie: [0.5, 0.836], m: 1.89 },
+        roca: { x: 290, y: 2027, w: 133, h: 72, pie: [0.5, 0.726], m: 1.13 },
+        helechos: { x: 425, y: 2027, w: 81, h: 51, pie: [0.506, 0.918], m: 0.79 },
+        canoa: { x: 508, y: 2027, w: 297, h: 42, pie: [0.5, 0.825], m: 0.66 }
+      },
+      elegir: (r1, r2) => (r1 < 0.08 ? 'roca' : r1 < 0.12 ? 'roca_grande' : r1 < 0.16 && r2 < 0.5 ? 'cabana'
+        : r1 < 0.2 && r2 < 0.5 ? 'canoa' : r1 < 0.4 ? (r2 < 0.5 ? 'abedul' : 'arce_naranja')
+          : r2 < 0.4 ? 'arce_rojo' : r2 < 0.7 ? 'pino' : 'arce_naranja'),
+      fondo: (r2) => (r2 > 0.65 ? 'pino' : r2 > 0.45 ? 'arce_rojo' : 'arce_naranja'),
+      apartar: { cabana: 4, canoa: -1 },
+      borde: 'helechos',
+      espejo: (s, r) => s > 0 && r > 0.5
+    },
+    colores: {
+      tierra2d: '#6A4A22', agua2d: ['#1E4A6A', '#123552'], cielo3d: ['#A2B8D4', '#D6DEE6'], agua3d: ['#2E4A62', '#10263A'],
+      reflejo: '230,170,120', arena3d: '#9E8E6A', tierra3d: '#6A3A1E', bruma: 230
+    }
+  }),
+  cerezos: propio('cerezos', {
+    nombre: 'Lago de los cerezos',
+    texto: 'Cerezos en flor, toriis rojos y un volcán nevado al fondo.',
+    precio: 1500,
+    orilla: {
+      piezas: {
+        cerezo: { x: 0, y: 0, w: 590, h: 550, pie: [0.5, 0.988], m: 8.6 },
+        pino: { x: 0, y: 552, w: 453, h: 500, pie: [0.499, 0.98], m: 7.81 },
+        bambu: { x: 455, y: 552, w: 168, h: 464, pie: [0.5, 0.987], m: 7.24 },
+        torii: { x: 0, y: 1054, w: 451, h: 358, pie: [0.5, 0.986], m: 5.59 },
+        cerezo_chico: { x: 453, y: 1054, w: 352, h: 353, pie: [0.501, 0.988], m: 5.51 },
+        linterna: { x: 807, y: 1054, w: 78, h: 145, pie: [0.5, 0.963], m: 2.27 },
+        roca_grande: { x: 0, y: 1414, w: 267, h: 111, pie: [0.5, 0.818], m: 1.74 },
+        roca: { x: 269, y: 1414, w: 150, h: 72, pie: [0.497, 0.726], m: 1.13 },
+        iris: { x: 421, y: 1414, w: 87, h: 54, pie: [0.5, 0.931], m: 0.84 }
+      },
+      elegir: (r1, r2) => (r1 < 0.08 ? 'roca' : r1 < 0.12 ? 'roca_grande' : r1 < 0.16 && r2 < 0.5 ? 'torii'
+        : r1 < 0.21 && r2 < 0.5 ? 'linterna' : r1 < 0.38 ? (r2 < 0.5 ? 'cerezo_chico' : 'bambu')
+          : r2 < 0.5 ? 'cerezo' : r2 < 0.75 ? 'pino' : 'cerezo_chico'),
+      fondo: (r2) => (r2 > 0.6 ? 'cerezo' : r2 > 0.4 ? 'pino' : 'bambu'),
+      apartar: { torii: 3, linterna: -1 },
+      borde: 'iris',
+      // Los cerezos se inclinan hacia +x: en la orilla derecha se espejan siempre para que miren al agua
+      espejo: (s) => s > 0
+    },
+    colores: {
+      tierra2d: '#3E5A2C', agua2d: ['#2A6A8A', '#1A4E6A'], cielo3d: ['#9DB6D8', '#DCE3EC'], agua3d: ['#3E7088', '#173E54'],
+      reflejo: '240,200,215', arena3d: '#BFB49A', tierra3d: '#3E5A2C', bruma: 230
+    }
+  }),
+  glaciar: propio('glaciar', {
+    nombre: 'Bahía glaciar',
+    texto: 'Cumbres nevadas, témpanos a la deriva, iglús y pingüinos.',
+    precio: 2100,
+    orilla: {
+      piezas: {
+        tempano_alto: { x: 0, y: 0, w: 470, h: 694, pie: [0.5, 0.969], m: 10.83 },
+        abeto: { x: 472, y: 0, w: 410, h: 612, pie: [0.5, 0.995], m: 9.57 },
+        abeto_bajo: { x: 0, y: 696, w: 246, h: 414, pie: [0.5, 0.991], m: 6.46 },
+        tempano: { x: 248, y: 696, w: 351, h: 361, pie: [0.499, 0.964], m: 5.64 },
+        iglu: { x: 601, y: 696, w: 257, h: 149, pie: [0.5, 0.863], m: 2.33 },
+        roca_grande: { x: 0, y: 1112, w: 297, h: 118, pie: [0.5, 0.833], m: 1.84 },
+        roca: { x: 299, y: 1112, w: 159, h: 69, pie: [0.5, 0.719], m: 1.08 },
+        pinguinos: { x: 460, y: 1112, w: 134, h: 53, pie: [0.5, 0.949], m: 0.83 },
+        hielo: { x: 596, y: 1112, w: 95, h: 53, pie: [0.5, 0.859], m: 0.83 }
+      },
+      elegir: (r1, r2) => (r1 < 0.1 ? 'roca' : r1 < 0.16 ? 'roca_grande' : r1 < 0.2 && r2 < 0.5 ? 'iglu'
+        : r1 < 0.25 && r2 < 0.5 ? 'pinguinos' : r1 < 0.42 ? (r2 < 0.5 ? 'tempano' : 'tempano_alto')
+          : r2 < 0.55 ? 'abeto' : 'abeto_bajo'),
+      fondo: (r2) => (r2 > 0.6 ? 'abeto' : r2 > 0.4 ? 'tempano_alto' : 'abeto_bajo'),
+      apartar: { iglu: 4, pinguinos: -1 },
+      borde: 'hielo',
+      espejo: (s, r) => s > 0 && r > 0.5
+    },
+    colores: {
+      tierra2d: '#DCE6EC', agua2d: ['#1E5A78', '#0E3E58'], cielo3d: ['#9CB6D6', '#DDE6EE'], agua3d: ['#2A5878', '#0C2E48'],
+      reflejo: '210,230,245', arena3d: '#E8EEF2', tierra3d: '#C9D6DE', bruma: 240
+    }
+  }),
+  mediterraneo: propio('mediterraneo', {
+    nombre: 'Costa mediterránea',
+    texto: 'Acantilados de caliza, cipreses, olivos y casitas blancas.',
+    precio: 2700,
+    orilla: {
+      piezas: {
+        cipres_alto: { x: 0, y: 0, w: 176, h: 760, pie: [0.5, 0.996], m: 11.88 },
+        pinonero: { x: 178, y: 0, w: 589, h: 670, pie: [0.5, 0.994], m: 10.47 },
+        cipres: { x: 769, y: 0, w: 116, h: 507, pie: [0.496, 0.995], m: 7.92 },
+        olivo: { x: 0, y: 762, w: 404, h: 365, pie: [0.499, 0.979], m: 5.7 },
+        casa: { x: 406, y: 762, w: 374, h: 359, pie: [0.5, 0.943], m: 5.6 },
+        buganvilla: { x: 782, y: 762, w: 213, h: 130, pie: [0.5, 0.885], m: 2.03 },
+        roca_grande: { x: 0, y: 1129, w: 287, h: 111, pie: [0.5, 0.822], m: 1.73 },
+        roca: { x: 289, y: 1129, w: 157, h: 73, pie: [0.503, 0.729], m: 1.14 },
+        barca: { x: 448, y: 1129, w: 322, h: 70, pie: [0.5, 0.844], m: 1.09 },
+        lavanda: { x: 772, y: 1129, w: 80, h: 42, pie: [0.506, 0.915], m: 0.65 }
+      },
+      elegir: (r1, r2) => (r1 < 0.08 ? 'roca' : r1 < 0.12 ? 'roca_grande' : r1 < 0.17 && r2 < 0.5 ? 'casa'
+        : r1 < 0.21 && r2 < 0.5 ? 'barca' : r1 < 0.36 ? (r2 < 0.5 ? 'buganvilla' : 'olivo')
+          : r2 < 0.35 ? 'cipres_alto' : r2 < 0.6 ? 'cipres' : r2 < 0.8 ? 'olivo' : 'pinonero'),
+      fondo: (r2) => (r2 > 0.7 ? 'pinonero' : r2 > 0.45 ? 'cipres_alto' : 'olivo'),
+      apartar: { casa: 4, barca: -1 },
+      borde: 'lavanda',
+      // Los piñoneros se inclinan hacia +x: en la orilla derecha se espejan siempre
+      espejo: (s) => s > 0
+    },
+    colores: {
+      tierra2d: '#8A8A55', agua2d: ['#1E6FB0', '#0F4E8A'], cielo3d: ['#8FB6E6', '#D6E3F0'], agua3d: ['#2E6FA8', '#0B3E6E'],
+      reflejo: '180,210,240', arena3d: '#E0D2B0', tierra3d: '#7A7A4A', bruma: 240
+    }
+  }),
+});
 let paisaje = PAISAJES.fiordo;
 // Dibuja con el filtro de color del paisaje (las variantes); sin filtro, tal cual.
 function conFiltro(ctx, dibujar) {
@@ -791,7 +949,12 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     const etq = `${m.toLocaleString('es-MX')} m`;
     const medio = ctx.measureText(etq).width / 2;
     if (x - medio < 2 || x + medio > ancho - 2) continue;
-    ctx.fillStyle = '#CBD5E1';
+    // Con borde oscuro: se lee igual sobre la nieve del glaciar que sobre la tierra oscura del fiordo
+    ctx.strokeStyle = 'rgba(15,23,42,0.7)';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(etq, x, alto - 4);
+    ctx.fillStyle = '#E2E8F0';
     ctx.fillText(etq, x, alto - 4);
   }
 
