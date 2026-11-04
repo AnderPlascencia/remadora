@@ -68,6 +68,7 @@ export function arrancarHeroe() {
   $('#btn-crear-heroe').addEventListener('click', () => {
     if (!claseElegida) return;
     guardarPersonaje({ clase: claseElegida, nombre: $('#heroe-nombre').value.trim() });
+    precargarVideosDeClase();
     confeti();
     pintarHeroe();
   });
@@ -535,6 +536,14 @@ function pintarTienda(h, per) {
   const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
   $('#inventario').innerHTML = tengo.length ? tengo.map((x) => `<li><div class="mision-fila"><span><b>${x.nombre}</b> · ${x.texto}</span><span class="recompensa"><span class="xp">×${inv[x.id]}</span></span></div></li>`).join('')
     : '<li class="vacio">Aún no tienes ventajas. Cómpralas aquí y elígelas en Entrenar antes de la carrera.</li>';
+}
+
+// Pide al service worker que guarde los vídeos de tu clase (la vista realista) para verlos sin conexión.
+// Los de las otras clases no se descargan.
+export function precargarVideosDeClase() {
+  const clase = leerPersonaje().clase;
+  if (!clase || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then((r) => r.active?.postMessage({ tipo: 'precargar', clase })).catch(() => {});
 }
 
 // El juego con la sesión recién terminada: la hoja de resumen lo usa dos veces y se calcula una.

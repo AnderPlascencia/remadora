@@ -289,14 +289,32 @@ async function restaurarRespaldo(archivo) {
   let datos;
   try { datos = JSON.parse(await archivo.text()); } catch { toast('Ese archivo no es un respaldo válido'); return; }
   if (!R.esRespaldo(datos)) { toast('Ese archivo no es un respaldo de Rower'); return; }
-  const { sesionesNuevas, entNuevos, ajustesResp, distintos } = R.planRestaurar(datos, {
+  const conv = R.convertir(datos);
+  if (conv.error) {
+    toast(conv.error === 'nuevo' ? 'Ese respaldo es de una versión más nueva de Rower: actualiza la app y vuelve a intentarlo' : 'Ese archivo no es un respaldo válido', 5000);
+    return;
+  }
+  datos = conv.datos;
+  const { sesionesNuevas, entNuevos, ajustesResp, distintos, invalidas } = R.planRestaurar(datos, {
     sesiones: await H.sesiones(),
     entrenamientos: await db.listar('entrenamientos'),
     programa: leerPrograma(),
     leer: (k) => ajustes.leer(k, null),
   });
-  for (const s of sesionesNuevas) await H.guardar(s);
-  for (const e of entNuevos) await db.guardar('entrenamientos', e);
+  // Todo en una transacción: si algo falla (disco lleno), no queda medio respaldo.
+  try {
+    await db.tx(['sesiones', 'muestras', 'entrenamientos'], 'readwrite', (t) => {
+      for (const s of sesionesNuevas) H.poner(t, s);
+      for (const e of entNuevos) t.objectStore('entrenamientos').put(e);
+    });
+  } catch (e) {
+    anotarError('restaurar respaldo', e);
+    toast('No se pudo restaurar el respaldo: no cambió nada. Libera espacio y vuelve a intentarlo.', 6000);
+    return;
+  } finally {
+    H.invalidar();
+  }
+  if (invalidas) agregarLog(`respaldo: ${invalidas} sesiones dañadas no se trajeron`);
   const nS = sesionesNuevas.length;
   const nE = entNuevos.length;
   // Lo que falta se toma del respaldo; si el héroe, el plan o los ajustes ya existen y son otros, se pregunta.
@@ -305,7 +323,7 @@ async function restaurarRespaldo(archivo) {
   for (const [k, v] of ajustesResp) {
     if (reemplazar || ajustes.leer(k, null) == null) ajustes.escribir(k, v);
   }
-  toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos${reemplazar ? ', con el héroe, el plan y los ajustes del respaldo' : ''}`);
+  toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos${reemplazar ? ', con el héroe, el plan y los ajustes del respaldo' : ''}${invalidas ? `. ${invalidas} ${invalidas === 1 ? 'sesión dañada no se trajo' : 'sesiones dañadas no se trajeron'}` : ''}`);
   // Con el héroe y los ajustes cambiados, lo más simple y seguro es volver a cargar la app.
   if (reemplazar) setTimeout(() => location.reload(), 1500);
   rellenarPerfil();

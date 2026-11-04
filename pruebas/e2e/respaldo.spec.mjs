@@ -33,7 +33,8 @@ test('respaldo de ida y vuelta: lo guardado en un teléfono se restaura en otro 
   expect(datos.app).toBe('remadora');
   expect(datos.sesiones).toHaveLength(1);
   expect(datos.programa).toBeTruthy();
-  expect(datos.ajustes.inicioHecho).toBe('1');
+  expect(datos.formato).toBe(2);
+  expect(datos.ajustes.inicioHecho).toBe(true);
   expect(datos.ajustes.personaje).toBeTruthy();
 
   // Otro teléfono: navegador limpio.
