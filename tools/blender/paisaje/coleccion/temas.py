@@ -1,0 +1,136 @@
+# Los cinco paisajes de la colección: qué piezas lleva la orilla 3D, cómo se reparte la tira de la costa 2D y la luz
+# de cada uno. El terreno y el cielo del panorama están en panorama.py.
+import math
+import objetos as o
+from objetos import M  # noqa: F401
+import piezas
+
+# luz: elevación y giro del sol (grados), color y fuerza; cielo: multiplicador del color del cielo físico
+TEMAS = {
+    'canon': {
+        'luz': {'elev': 30, 'rot': 120, 'color': (1.0, 0.88, 0.72), 'fuerza': 4.4, 'exp': -0.4},
+        'piezas': [
+            ('saguaro_alto', lambda: o.saguaro('saguaro_alto', 9.5, 1, 3)),
+            ('saguaro', lambda: o.saguaro('saguaro', 6.5, 4, 2)),
+            ('mezquite', lambda: o.mezquite('mezquite', 5.0, 2)),
+            ('adobe', lambda: o.adobe('adobe')),
+            ('roca_grande', lambda: o.roca_roja('roca_grande', 1.6, 3, 1.3)),
+            ('roca', lambda: o.roca_roja('roca', 0.8, 5, 1.0)),
+            ('barril', lambda: o.barril('barril', 0.6, 3)),
+            ('salvia', lambda: o.salvia('salvia', 1.0, 6)),
+            ('matas', lambda: o.matas('matas', 4, ['seco', 'salvia', 'seco'], alto=(0.3, 0.7))),
+        ],
+        'suelo': ('#B8693A', '#D08A52', '#E3B07A'),  # tierra oscura, tierra clara, arena junto al agua
+        'costa': {
+            'casas': ('adobe', lambda k: o.adobe(f'ad{k}')),
+            'grandes': [(0.55, lambda k, r: o.saguaro(f'sa{k}', 5 + 5 * r, k, 2 + (k % 2))), (1.0, lambda k, r: o.mezquite(f'me{k}', 4 + 2 * r, k))],
+            'n_grandes': 40,
+            'relleno': lambda k, r: o.salvia(f'sv{k}', 0.8 + 0.6 * r, k), 'n_relleno': 26,
+            'rocas': lambda k, r: o.roca_roja(f'ro{k}', 0.6 + 0.9 * r, k, 1.0 + 0.4 * r), 'n_rocas': 9,
+            'borde': lambda k: o.barril(f'ba{k}', 0.5, k), 'n_borde': 14,
+            'barca': None,
+        },
+    },
+    'otono': {
+        'luz': {'elev': 26, 'rot': 140, 'color': (1.0, 0.9, 0.78), 'fuerza': 4.0, 'exp': -0.35},
+        'piezas': [
+            ('arce_rojo', lambda: o.arbol('arce_rojo', 10, 1, ['arce', 'arce2', 'arce'])),
+            ('arce_naranja', lambda: o.arbol('arce_naranja', 8, 2, ['naranja', 'arce2', 'amarillo'])),
+            ('abedul', lambda: piezas.abedul('abedul', 8, 3, 'amarillo')),
+            ('pino', lambda: piezas.pino('pino', 11, 4)),
+            ('cabana', lambda: o.cabana('cabana')),
+            ('roca_grande', lambda: piezas.roca('roca_grande', 1.5, 6)),
+            ('roca', lambda: piezas.roca('roca', 0.8, 2)),
+            ('canoa', lambda: o.canoa_simple('canoa', 4.6, 'canoa_roja', 'troncos')),
+            ('helechos', lambda: o.matas('helechos', 4, ['helecho', 'naranja', 'seco'], alto=(0.3, 0.75))),
+        ],
+        'suelo': ('#5A4A22', '#8A5A26', '#9E8E6A'),
+        'costa': {
+            'casas': ('cabana', lambda k: o.cabana(f'ca{k}')),
+            'grandes': [(0.3, lambda k, r: o.arbol(f'ar{k}', 8 + 3 * r, k, ['arce', 'arce2', 'arce'])),
+                        (0.55, lambda k, r: o.arbol(f'an{k}', 7 + 3 * r, k, ['naranja', 'arce2', 'amarillo'])),
+                        (0.78, lambda k, r: piezas.abedul(f'ab{k}', 7 + 3 * r, k, 'amarillo')),
+                        (1.0, lambda k, r: piezas.pino(f'pi{k}', 9 + 4 * r, k))],
+            'n_grandes': 62,
+            'relleno': lambda k, r: o.arbol(f'rl{k}', 6 + 2 * r, k, ['arce2', 'naranja', 'amarillo']), 'n_relleno': 20,
+            'rocas': lambda k, r: piezas.roca(f'ro{k}', 0.5 + 0.6 * r, k), 'n_rocas': 7,
+            'borde': lambda k: o.matas(f'he{k}', k, ['helecho', 'naranja', 'seco']), 'n_borde': 18,
+            'barca': lambda k: o.canoa_simple(f'cn{k}', 4.6, 'canoa_roja', 'troncos'),
+        },
+    },
+    'glaciar': {
+        'luz': {'elev': 22, 'rot': 150, 'color': (1.0, 0.97, 0.94), 'fuerza': 3.6, 'exp': -0.55},
+        'piezas': [
+            ('tempano_alto', lambda: o.tempano('tempano_alto', 6.0, 8.0, 1)),
+            ('tempano', lambda: o.tempano('tempano', 4.2, 4.5, 2)),
+            ('abeto', lambda: o.abeto_nevado('abeto', 9, 3)),
+            ('abeto_bajo', lambda: o.abeto_nevado('abeto_bajo', 6, 5)),
+            ('iglu', lambda: o.iglu('iglu')),
+            ('roca_grande', lambda: o.roca('roca_grande', 1.5, 6, 'roca_osc', 'nieve')),
+            ('roca', lambda: o.roca('roca', 0.8, 2, 'roca_osc', 'nieve')),
+            ('pinguinos', lambda: o.pinguinos('pinguinos', 7, 5)),
+            ('hielo', lambda: o.tempano('hielo', 1.1, 0.6, 9)),
+        ],
+        'suelo': ('#C9D6DE', '#E8EEF2', '#DCE6EC'),
+        'costa': {
+            'casas': ('iglu', lambda k: o.iglu(f'ig{k}')),
+            'grandes': [(0.65, lambda k, r: o.abeto_nevado(f'ab{k}', 6 + 5 * r, k)), (1.0, lambda k, r: o.tempano(f'te{k}', 3 + 3 * r, 3 + 4 * r, k))],
+            'n_grandes': 45,
+            'relleno': lambda k, r: o.roca(f'rr{k}', 0.6 + 0.8 * r, k, 'roca_osc', 'nieve'), 'n_relleno': 14,
+            'rocas': lambda k, r: o.tempano(f'hi{k}', 0.8 + 0.8 * r, 0.5 + 0.4 * r, k), 'n_rocas': 10,
+            'borde': lambda k: o.pinguinos(f'pg{k}', k, 3 + k % 3), 'n_borde': 6,
+            'barca': None,
+        },
+    },
+    'cerezos': {
+        'luz': {'elev': 34, 'rot': 130, 'color': (1.0, 0.95, 0.9), 'fuerza': 4.0, 'exp': -0.4},
+        'piezas': [
+            ('cerezo', lambda: o.cerezo('cerezo', 8.5, 1, 0.6)),
+            ('cerezo_chico', lambda: o.cerezo('cerezo_chico', 5.5, 4, 0.3)),
+            ('pino', lambda: o.pino_jp('pino', 7.5, 2)),
+            ('bambu', lambda: o.bambu('bambu', 7.0, 5)),
+            ('torii', lambda: o.torii('torii')),
+            ('linterna', lambda: o.linterna('linterna')),
+            ('roca_grande', lambda: o.roca('roca_grande', 1.4, 6, 'granito', 'musgo')),
+            ('roca', lambda: o.roca('roca', 0.75, 2, 'granito', 'musgo')),
+            ('iris', lambda: o.matas('iris', 4, ['bambu', 'pino_jp2'], alto=(0.4, 0.8), flor='iris')),
+        ],
+        'suelo': ('#3E5A2C', '#5E7A3A', '#BFB49A'),
+        'costa': {
+            'casas': ('torii', lambda k: o.torii(f'to{k}')),
+            'grandes': [(0.55, lambda k, r: o.cerezo(f'ce{k}', 5 + 4 * r, k, r)), (0.8, lambda k, r: o.pino_jp(f'pj{k}', 6 + 2 * r, k)),
+                        (1.0, lambda k, r: o.bambu(f'bb{k}', 6 + 2 * r, k))],
+            'n_grandes': 60,
+            'relleno': lambda k, r: o.linterna(f'li{k}'), 'n_relleno': 6,
+            'rocas': lambda k, r: o.roca(f'ro{k}', 0.5 + 0.6 * r, k, 'granito', 'musgo'), 'n_rocas': 8,
+            'borde': lambda k: o.matas(f'ir{k}', k, ['bambu', 'pino_jp2'], flor='iris'), 'n_borde': 18,
+            'barca': None,
+        },
+    },
+    'mediterraneo': {
+        'luz': {'elev': 45, 'rot': 150, 'color': (1.0, 0.96, 0.88), 'fuerza': 4.6, 'exp': -0.45},
+        'piezas': [
+            ('cipres_alto', lambda: o.cipres('cipres_alto', 12, 1)),
+            ('cipres', lambda: o.cipres('cipres', 8, 2)),
+            ('pinonero', lambda: o.pinonero('pinonero', 10, 3)),
+            ('olivo', lambda: o.olivo('olivo', 5.5, 4)),
+            ('casa', lambda: o.casa_blanca('casa')),
+            ('buganvilla', lambda: o.buganvilla('buganvilla', 1.2, 5)),
+            ('roca_grande', lambda: o.roca('roca_grande', 1.5, 6, 'caliza', 'caliza2')),
+            ('roca', lambda: o.roca('roca', 0.8, 2, 'caliza', 'caliza2')),
+            ('barca', lambda: o.barca('barca')),
+            ('lavanda', lambda: o.matas('lavanda', 4, ['olivo2', 'olivo'], alto=(0.3, 0.6), flor='lavanda')),
+        ],
+        'suelo': ('#7A7A4A', '#A49A6A', '#E0D2B0'),
+        'costa': {
+            'casas': ('casa', lambda k: o.casa_blanca(f'cb{k}')),
+            'grandes': [(0.35, lambda k, r: o.cipres(f'ci{k}', 7 + 5 * r, k)), (0.75, lambda k, r: o.olivo(f'ol{k}', 4.5 + 2 * r, k)),
+                        (1.0, lambda k, r: o.pinonero(f'pn{k}', 8 + 3 * r, k))],
+            'n_grandes': 50,
+            'relleno': lambda k, r: o.buganvilla(f'bg{k}', 0.9 + 0.5 * r, k), 'n_relleno': 14,
+            'rocas': lambda k, r: o.roca(f'ro{k}', 0.5 + 0.7 * r, k, 'caliza', 'caliza2'), 'n_rocas': 9,
+            'borde': lambda k: o.matas(f'la{k}', k, ['olivo2', 'olivo'], flor='lavanda'), 'n_borde': 18,
+            'barca': lambda k: o.barca(f'bc{k}'),
+        },
+    },
+}
