@@ -2,6 +2,7 @@
 import { formatoSplit, formatoTiempo } from '../protocolo.js';
 import { dibujarPerfil } from '../grafica.js';
 import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
@@ -27,7 +28,7 @@ import { cerrarGuia } from './ayuda.js';
 // Recalcula los base para tu condición y tu FTP de ahora.
 async function actualizarBase() {
   const { h } = await estadoHeroe();
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   estado.condicionBase = B.condicionDe(sesiones, ftp());
   estado.baseActual = B.entrenamientosBase(h.nivel, ftp(), { condicion: estado.condicionBase });
   return h;
@@ -71,7 +72,7 @@ export async function pintarEntrenamientos() {
   $('#pt-programa').hidden = pestana !== 'programa';
   const h = await actualizarBase();
   const lista = propios(await db.listar('entrenamientos'));
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   const o = opcConsejos(h, sesiones);
   // «Quiero subir…»: con un atributo elegido, los entrenamientos se ordenan por lo que lo suben.
   const subir = ajustes.leer('subirAtr', '');
@@ -253,7 +254,7 @@ export function arrancarPlanes1() {
     // Al renombrar, las sesiones y el plan pasan al nombre nuevo (si quieres) para no partir tu historial en dos.
     const anterior = enEdicion.id != null ? todos.find((e) => e.id === enEdicion.id)?.nombre : null;
     const renombrar = anterior && anterior !== enEdicion.nombre
-      ? (await db.listar('sesiones')).filter((x) => x.entrenamiento === anterior) : [];
+      ? (await H.sesiones()).filter((x) => x.entrenamiento === anterior) : [];
     enEdicion.tipo = form.tipo.value;
     if (enEdicion.tipo === 'objetivo') {
       const valor = Number(form.obj_valor.value);
@@ -270,7 +271,7 @@ export function arrancarPlanes1() {
     }
     $('#ent-error').textContent = '';
     if (renombrar.length && confirm(`Tienes ${renombrar.length} ${renombrar.length === 1 ? 'sesión' : 'sesiones'} de «${anterior}». ¿Pasarlas a «${enEdicion.nombre}» para que sigan juntas en tus récords y comparaciones?`)) {
-      for (const x of renombrar) await db.guardar('sesiones', { ...x, entrenamiento: enEdicion.nombre });
+      for (const x of renombrar) await H.actualizar(x.id, { entrenamiento: enEdicion.nombre });
     }
     const prog = anterior && leerPrograma();
     if (prog?.dias.some((d) => d.ent === anterior)) guardarPrograma({ ...prog, dias: prog.dias.map((d) => (d.ent === anterior ? { ...d, ent: enEdicion.nombre } : d)) });
@@ -285,7 +286,7 @@ export async function llenarSelectorEntrenamientos(lista) {
   const todos = lista || (await db.listar('entrenamientos'));
   lista = propios(todos);
   if (!estado.baseActual.length) await actualizarBase();
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   const prog = leerPrograma();
   const sel = $('#sel-entrenamiento');
   const previo = sel.value || ajustes.leer('ultimoEnt', '');
@@ -344,7 +345,7 @@ export function semanaDelPlan(prog, sesiones) {
 }
 // La sesión del día (ver adaptacion.js): lo que toca según tu plan o, sin plan, según tu semana y tu cuerpo.
 export async function calcularDia(sesiones, todos) {
-  sesiones ??= await db.listar('sesiones');
+  sesiones ??= await H.sesiones();
   todos ??= await db.listar('entrenamientos');
   const f = ftp();
   return A.sesionDelDia({ programa: leerPrograma(), sesiones, entrenamientos: [...todos, ...estado.baseActual], ftp: f, cuerpo: f ? Cap.estadoCuerpo(sesiones, f) : null });
@@ -620,7 +621,7 @@ export function arrancarPlanes2() {
 
   $('#btn-borrar').addEventListener('click', async () => {
     if (estado.sesionAbierta && confirm('¿Borrar esta sesión?')) {
-      await db.borrar('sesiones', estado.sesionAbierta.id);
+      await H.borrar(estado.sesionAbierta.id);
       toast('Sesión borrada');
       cerrarHoja();
     }

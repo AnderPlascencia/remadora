@@ -38,3 +38,14 @@ assert.equal(Ent.zonaDe(160, 200).n, 3);
 assert.equal(Ent.ftpDesdePrueba(200), 190);
 assert.equal(Ent.bloquesEnWatts([{ metrica: 'ftp', min: 50, max: 60, duracion: 10 }], 200)[0].max, 120);
 console.log('estadisticas OK');
+
+// Caché de resúmenes: el mismo cálculo sobre las mismas muestras no se repite, y si la lista crece se recalcula.
+{
+  const { mejorPotencia: mp, mejorTiempo: mt } = await import('../src/estadisticas.js');
+  const ms = Array.from({ length: 120 }, (_, i) => ({ t: i + 1, w: 100, dist: (i + 1) * 4 }));
+  assert.equal(mp(ms, 60), 100);
+  assert.equal(mt(ms, 200), 50);
+  ms.push(...Array.from({ length: 60 }, (_, i) => ({ t: 121 + i, w: 300, dist: 484 + i * 6 })));
+  assert.equal(mp(ms, 60), 300);
+  assert.ok(mt(ms, 200) < 50);
+}

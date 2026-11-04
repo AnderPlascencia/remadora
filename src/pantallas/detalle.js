@@ -1,7 +1,7 @@
 // Detalle de una sesión guardada: hoja con gráficas, notas, compartir y exportar.
 import { formatoSplit, formatoTiempo } from '../protocolo.js';
 import { dibujar, dibujarBarras, dibujarPerfil } from '../grafica.js';
-import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { confeti } from '../efectos.js';
@@ -20,7 +20,7 @@ import { pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
 const TEXTO_RPE = ['', 'Muy fácil', 'Muy fácil', 'Fácil', 'Fácil', 'Moderado', 'Moderado', 'Duro', 'Duro', 'Muy duro', 'Máximo'];
 
 async function guardarSesionAbierta() {
-  if (estado.sesionAbierta?.id != null) await db.guardar('sesiones', estado.sesionAbierta);
+  if (estado.sesionAbierta?.id != null) await H.guardar(estado.sesionAbierta);
 }
 
 // Pulso máximo para el esfuerzo: el tuyo, o 220 − edad, o 190 como aproximación.

@@ -1,13 +1,18 @@
 // Utilidades de pantalla compartidas por toda la app: selector, iconos, ajustes guardados, avisos y sonidos.
 import { formatoTiempo } from './protocolo.js';
+import { token } from './grafica.js';
+import { defectoTexto } from './ajustes-guardados.js';
 
 export const $ = (sel) => document.querySelector(sel);
-export const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+// Color de una variable CSS del tema, leído una vez (ver grafica.js); al cambiar de tema se llama olvidarTokens.
+export const color = (v) => token(v);
 export const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
 export const COLOR_ZONA = ['#94A3B8', '#38BDF8', '#22C55E', '#FACC15', '#F97316', '#EF4444'];
 
+// Ajustes guardados en localStorage. Cada clave está en ajustes-guardados.js, con su valor por defecto: si no
+// se pasa uno, se usa el del registro.
 export const ajustes = {
-  leer(clave, defecto) {
+  leer(clave, defecto = defectoTexto(clave)) {
     try { return localStorage.getItem(clave) ?? defecto; } catch { return defecto; }
   },
   escribir(clave, valor) {

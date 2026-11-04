@@ -9,7 +9,8 @@ import { arrancarRegistro } from './registro.js';
 import { actualizarBotones, arrancarSesion1, arrancarSesion2 } from './pantallas/sesion.js';
 import { arrancarPlanes1, arrancarPlanes2, llenarSelectorEntrenamientos } from './pantallas/planes.js';
 import { arrancarProgreso, pintarHistorial } from './pantallas/progreso.js';
-import { arrancarHeroe, pintarLineaNivel } from './pantallas/heroe.js';
+import { arrancarHeroe, pintarLineaNivel, precargarVideosDeClase } from './pantallas/heroe.js';
+import { VERSION } from './version.js';
 import { arrancarDetalle } from './pantallas/detalle.js';
 import { arrancarPrograma, limpiarSobrantesDePlan, pintarPrograma, revisarPlanAuto } from './pantallas/programa.js';
 import { arrancarInicio } from './pantallas/inicio.js';
@@ -54,6 +55,7 @@ limpiarSobrantesDePlan().then(() => llenarSelectorEntrenamientos()).then(revisar
 dibujarVivo();
 pintarLineaNivel();
 
+// La versión va en la URL del service worker: es la de src/version.js y cada versión nueva instala uno nuevo.
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register(`sw.js?v=${VERSION}`).then(() => precargarVideosDeClase()).catch(() => {});
 }

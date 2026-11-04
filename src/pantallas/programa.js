@@ -1,6 +1,7 @@
 // Programa de entrenamiento: asistente, semanas del plan y lo de hoy.
 import * as F from '../fantasma.js';
 import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
@@ -100,7 +101,7 @@ export async function pintarPrograma() {
     $('#p-dias').querySelectorAll('select').forEach((x, i) => { x.value = previos[i] || ''; });
     return;
   }
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   const estados = P.estadoDias(prog, sesiones);
   const c = P.cumplimiento(estados);
   $('#prog-nombre').textContent = prog.nombre;
@@ -260,7 +261,7 @@ function pintarPlanFuturo(prog, sesiones, buscar) {
 // ---------- Asistente de plan por objetivo ----------
 // Ritmo actual y distancia habitual, sacados de tu historial (o de tu FTP) para que no tengas que escribirlos.
 export async function contextoPlan() {
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   let split2k = null;
   for (const x of sesiones.slice(-30)) {
     const t = x.muestras?.length ? E.mejorTiempo(x.muestras, 2000) : null;
@@ -373,7 +374,7 @@ export function arrancarPrograma() {
 async function pintarPlanMeta() {
   const dist = Number($('#pm-dist').value);
   if (!$('#pm-inicio').value) $('#pm-inicio').value = E.claveDia(Date.now());
-  const sesiones = await db.listar('sesiones');
+  const sesiones = await H.sesiones();
   let mejor = null;
   for (const s of sesiones) {
     for (const d of [dist, ...Ent.DISTANCIAS_PREDICCION]) {
@@ -417,7 +418,7 @@ export async function limpiarSobrantesDePlan() {
 }
 
 async function pintarRecomendacion() {
-  const r = E.recomendacion(await db.listar('sesiones'), ftp());
+  const r = E.recomendacion(await H.sesiones(), ftp());
   const el = $('#recomendacion');
   // «Vas equilibrado» no pide nada: solo se muestra cuando hay algo que cambiar hoy.
   el.hidden = !r || r.tipo === 'normal';
@@ -434,7 +435,7 @@ export function delProgramaHoy(s) {
 let hoyTurno = 0;
 export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const turno = ++hoyTurno;
-  const [sesiones, todos] = await Promise.all([db.listar('sesiones'), db.listar('entrenamientos')]);
+  const [sesiones, todos] = await Promise.all([H.sesiones(), db.listar('entrenamientos')]);
   if (turno !== hoyTurno) return;
   const prog = leerPrograma();
   const dia = await calcularDia(sesiones, todos);
@@ -476,7 +477,7 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const caja = $('#hoy-sugerencia');
   const [texto, boton] = [caja.querySelector('span'), caja.querySelector('button')];
   let sug = null;
-  const h = J.estadoJuego(sesiones, { ftp: ftp(), per: leerPersonaje() });
+  const h = H.estadoJuegoDe(sesiones, { ftp: ftp(), per: leerPersonaje() });
   const jefe = J.claseDe(leerPersonaje().clase) && h.capitulo?.listo ? h.capitulo : null;
   // El jefe es una prueba a tope: solo se propone si hoy no toca otra cosa del plan y estás fresco.
   const jefeHoy = jefe && ent?.id !== jefe.preparar && !['plan', 'recuperar'].includes(dia?.fuente)
@@ -515,7 +516,7 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
 export async function revisarPlanAuto() {
   const prog = leerPrograma();
   if (!prog?.dias?.length || estado.sesion) return;
-  const [sesiones, ents] = await Promise.all([db.listar('sesiones'), db.listar('entrenamientos')]);
+  const [sesiones, ents] = await Promise.all([H.sesiones(), db.listar('entrenamientos')]);
   const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp() });
   if (!r) return;
   for (const e of r.entrenamientos) if (!ents.some((x) => x.nombre === e.nombre)) await db.guardar('entrenamientos', { ...e, dePlan: true });

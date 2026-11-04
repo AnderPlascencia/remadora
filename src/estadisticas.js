@@ -2,8 +2,23 @@
 // Una muestra de sesión es { t, w, spm, split, dist, nivel, fc } con t en segundos activos.
 import { enRango } from './entrenamientos.js';
 
+// Resúmenes por sesión: récords y curva de potencia se piden muchas veces sobre las mismas muestras.
+// Se guardan junto a la lista de muestras (si cambia la lista o crece, la clave ya no coincide); una sesión
+// guardada de nuevo llega con otra lista, así que la caché se invalida sola.
+const resumenes = new WeakMap();
+function recordar(muestras, clave, calc) {
+  if (!muestras || typeof muestras !== 'object') return calc();
+  let m = resumenes.get(muestras);
+  if (!m || m.largo !== muestras.length) { m = { largo: muestras.length, v: new Map() }; resumenes.set(muestras, m); }
+  if (!m.v.has(clave)) m.v.set(clave, calc());
+  return m.v.get(clave);
+}
+
 // Mayor potencia media sostenida durante `segs` segundos.
 export function mejorPotencia(muestras, segs) {
+  return recordar(muestras, `w${segs}`, () => calcMejorPotencia(muestras, segs));
+}
+function calcMejorPotencia(muestras, segs) {
   if (muestras.length < segs) return null;
   let suma = 0;
   let mejor = 0;
@@ -17,6 +32,9 @@ export function mejorPotencia(muestras, segs) {
 
 // Menor tiempo (s) en el que se recorrieron `metros` dentro de la sesión.
 export function mejorTiempo(muestras, metros) {
+  return recordar(muestras, `t${metros}`, () => calcMejorTiempo(muestras, metros));
+}
+function calcMejorTiempo(muestras, metros) {
   let j = 0;
   let mejor = null;
   for (let i = 0; i < muestras.length; i++) {

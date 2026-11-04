@@ -1,7 +1,7 @@
 // Progreso: historial, tendencia, récords y resumen semanal.
 import { formatoSplit, formatoTiempo } from '../protocolo.js';
 import { dibujar, dibujarBarras } from '../grafica.js';
-import * as db from '../db.js';
+import * as H from '../historial.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
 import * as J from '../juego.js';
@@ -258,7 +258,7 @@ function pintarHeroeProgreso(lista) {
   const clase = J.claseDe(per.clase);
   caja.hidden = !clase || !lista.length;
   if (caja.hidden) return;
-  const h = J.estadoJuego(lista, { ftp: ftp(), per });
+  const h = H.estadoJuegoDe(lista, { ftp: ftp(), per });
   const lunes = new Date(`${J.lunesDe(Date.now())}T00:00`).getTime();
   const semanas = Array.from({ length: 8 }, (_, i) => {
     const desde = lunes - (7 - i) * 7 * 864e5;
@@ -275,7 +275,7 @@ function pintarHeroeProgreso(lista) {
 }
 
 export async function pintarHistorial() {
-  const lista = (await db.listar('sesiones')).sort((a, b) => b.fecha - a.fecha);
+  const lista = (await H.sesiones()).sort((a, b) => b.fecha - a.fecha);
   estado.cacheSesiones = lista;
   $('#progreso-vacio').hidden = lista.length > 0;
   $('#progreso-contenido').hidden = !lista.length;

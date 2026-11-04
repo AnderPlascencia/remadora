@@ -9,6 +9,18 @@ export function pasoRedondo(v) {
   return PASOS.find((p) => p >= v) ?? Math.ceil(v / 1000) * 1000;
 }
 
+// Colores del tema (variables CSS): getComputedStyle obliga al navegador a recalcular estilos, así que se leen
+// una vez y se guardan hasta que cambia el tema (olvidarTokens).
+const tokens = new Map();
+export function token(nombre, defecto = '') {
+  if (!tokens.has(nombre)) {
+    const v = typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(nombre).trim() : '';
+    tokens.set(nombre, v);
+  }
+  return tokens.get(nombre) || defecto;
+}
+export function olvidarTokens() { tokens.clear(); }
+
 export function ajustarLienzo(canvas, ancho, alto, dpr = window.devicePixelRatio || 1) {
   const w = Math.round(ancho * dpr);
   const h = Math.round(alto * dpr);
@@ -17,6 +29,31 @@ export function ajustarLienzo(canvas, ancho, alto, dpr = window.devicePixelRatio
   canvas.height = h;
   return true;
 }
+
+// Rango de tiempo y escala de cada eje. opciones.rango = [tMin, tMax] fija el eje X.
+export function marco(series, opciones = {}) {
+  let tMin = Infinity;
+  let tMax = -Infinity;
+  if (opciones.rango) [tMin, tMax] = opciones.rango;
+  else {
+    for (const s of series) for (const [t] of s.puntos) { tMin = Math.min(tMin, t); tMax = Math.max(tMax, t); }
+    if (!isFinite(tMin)) { tMin = 0; tMax = 60; }
+    if (opciones.ventana) tMin = Math.max(tMin, tMax - opciones.ventana);
+    if (tMax - tMin < 10) tMax = tMin + 10;
+  }
+
+  const escalas = {};
+  for (const eje of ['izq', 'der']) {
+    let max = 0;
+    for (const s of series) if (s.eje === eje) for (const [t, v] of s.puntos) if (t >= tMin) max = Math.max(max, v);
+    for (const b of opciones.metas || []) if (b.eje === eje && b.hasta >= tMin && b.desde <= tMax) max = Math.max(max, b.max);
+    if (opciones.decimales && max > 0 && max < 20) escalas[eje] = Math.ceil(max * 1.15 * 2) / 2;
+    else escalas[eje] = max > 0 ? 4 * pasoRedondo((max * 1.15) / 4) : 40;
+  }
+  return { tMin, tMax, escalas };
+}
+
+const MARGEN = { izq: 40, der: 40, arr: 10, aba: 22 };
 
 export function dibujar(canvas, series, opciones = {}) {
   const dpr = window.devicePixelRatio || 1;
@@ -27,30 +64,14 @@ export function dibujar(canvas, series, opciones = {}) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);
 
-  const estilo = getComputedStyle(document.documentElement);
-  const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
-  const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
+  const colorTexto = token('--texto-suave', '#888');
+  const colorRejilla = token('--rejilla', '#333');
 
-  const m = { izq: 40, der: 40, arr: 10, aba: 22 };
+  const m = MARGEN;
   const w = ancho - m.izq - m.der;
   const h = alto - m.arr - m.aba;
 
-  let tMin = Infinity;
-  let tMax = -Infinity;
-  for (const s of series) for (const [t] of s.puntos) { tMin = Math.min(tMin, t); tMax = Math.max(tMax, t); }
-  if (!isFinite(tMin)) { tMin = 0; tMax = 60; }
-  if (opciones.ventana) tMin = Math.max(tMin, tMax - opciones.ventana);
-  if (tMax - tMin < 10) tMax = tMin + 10;
-
-  const escalas = {};
-  for (const eje of ['izq', 'der']) {
-    let max = 0;
-    for (const s of series) if (s.eje === eje) for (const [t, v] of s.puntos) if (t >= tMin) max = Math.max(max, v);
-    for (const b of opciones.metas || []) if (b.eje === eje && b.hasta >= tMin && b.desde <= tMax) max = Math.max(max, b.max);
-    if (opciones.decimales && max > 0 && max < 20) escalas[eje] = Math.ceil(max * 1.15 * 2) / 2;
-    else escalas[eje] = max > 0 ? 4 * pasoRedondo((max * 1.15) / 4) : 40;
-  }
-
+  const { tMin, tMax, escalas } = marco(series, opciones);
   const X = (t) => m.izq + ((t - tMin) / (tMax - tMin)) * w;
   const Y = (v, eje) => m.arr + h - (v / escalas[eje]) * h;
 
@@ -143,6 +164,63 @@ export function dibujar(canvas, series, opciones = {}) {
 
 }
 
+// Eje de la gráfica en vivo: una ventana fija que avanza a saltos de `paso` segundos. Mientras la ventana no
+// salta, el eje no cambia y cada segundo solo se dibuja el tramo nuevo.
+export function ventanaVivo(tUltimo, ventana = 300, paso = 60) {
+  const ini = Math.max(0, Math.ceil((tUltimo - ventana) / paso) * paso);
+  return [ini, ini + ventana];
+}
+
+// Qué hay que dibujar: 'nada' (no cambió), 'nuevo' (mismo marco, solo puntos nuevos) o 'todo'.
+export function planVivo(previo, firma, ultimos) {
+  if (!previo || previo.firma !== firma) return 'todo';
+  if (ultimos.every((t, i) => t === previo.ultimos[i])) return 'nada';
+  if (ultimos.some((t, i) => t == null || previo.ultimos[i] == null || t < previo.ultimos[i])) return 'todo';
+  return 'nuevo';
+}
+
+// Gráfica en vivo de un lienzo: repinta todo solo si cambian el tamaño, la escala, el tema, las metas o la
+// ventana; si no, añade los tramos nuevos. Devuelve lo que hizo ('todo', 'nuevo' o 'nada').
+export function crearGraficaVivo() {
+  let previo = null;
+  const pintar = (canvas, series, opciones = {}) => {
+    const ultimo = Math.max(0, ...series.map((s) => s.puntos.at(-1)?.[0] ?? 0));
+    const rango = ventanaVivo(ultimo, opciones.ventana || 300);
+    const op = { ...opciones, rango };
+    const dpr = window.devicePixelRatio || 1;
+    const { escalas } = marco(series, op);
+    const firma = JSON.stringify([canvas.clientWidth, canvas.clientHeight, dpr, rango, escalas, op.metas || [],
+      series.map((s) => [s.color, s.eje]), token('--texto-suave'), token('--rejilla')]);
+    const ultimos = series.map((s) => s.puntos.at(-1)?.[0] ?? null);
+    const plan = planVivo(previo?.canvas === canvas ? previo : null, firma, ultimos);
+    if (plan === 'todo') dibujar(canvas, series, op);
+    else if (plan === 'nuevo') {
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const m = MARGEN;
+      const w = canvas.clientWidth - m.izq - m.der;
+      const h = canvas.clientHeight - m.arr - m.aba;
+      const X = (t) => m.izq + ((t - rango[0]) / (rango[1] - rango[0])) * w;
+      const Y = (v, eje) => m.arr + h - (v / escalas[eje]) * h;
+      series.forEach((s, i) => {
+        // Desde el último punto ya dibujado, para que el tramo nuevo quede unido.
+        const nuevos = s.puntos.filter(([t]) => t >= rango[0] && t >= previo.ultimos[i]);
+        if (nuevos.length < 2) return;
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        nuevos.forEach(([t, v], j) => (j ? ctx.lineTo(X(t), Y(v, s.eje)) : ctx.moveTo(X(t), Y(v, s.eje))));
+        ctx.stroke();
+      });
+    }
+    if (plan !== 'nada') previo = { canvas, firma, ultimos };
+    return plan;
+  };
+  // Para cuando el mismo lienzo se usó para otra cosa: el próximo dibujo es completo.
+  pintar.reiniciar = () => { previo = null; };
+  return pintar;
+}
+
 // Perfil completo de un entrenamiento por intervalos: eje X = tiempo del entrenamiento,
 // eje Y = watts. Cada intervalo con meta de potencia pinta su rango en verde y el resto en rojo.
 // puntos: [[t, watts], ...] de la sesión (opcional); ahora: segundo actual (opcional).
@@ -156,9 +234,8 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);
 
-  const estilo = getComputedStyle(document.documentElement);
-  const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
-  const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
+  const colorTexto = token('--texto-suave', '#888');
+  const colorRejilla = token('--rejilla', '#333');
 
   const total = bloques.reduce((a, b) => a + b.duracion, 0) || 60;
   const tFin = Math.max(total, puntos.length ? puntos.at(-1)[0] : 0);
@@ -244,7 +321,7 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
 
   // Potencia real
   if (puntos.length) {
-    ctx.strokeStyle = estilo.getPropertyValue('--texto').trim() || '#fff';
+    ctx.strokeStyle = token('--texto', '#fff');
     ctx.lineWidth = 2;
     ctx.beginPath();
     puntos.forEach(([t, v], i) => (i ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v))));
@@ -253,7 +330,7 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
 
   // Marca de "ahora"
   if (ahora != null && ahora <= tFin) {
-    ctx.strokeStyle = estilo.getPropertyValue('--acento').trim() || '#39f';
+    ctx.strokeStyle = token('--acento', '#39f');
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(ahora), m.arr); ctx.lineTo(X(ahora), m.arr + h); ctx.stroke();
   }
@@ -269,9 +346,8 @@ export function dibujarBarras(canvas, datos, { color = '#F2A33A', formato = (v) 
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);
-  const estilo = getComputedStyle(document.documentElement);
-  const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
-  const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
+  const colorTexto = token('--texto-suave', '#888');
+  const colorRejilla = token('--rejilla', '#333');
   const m = { izq: 8, der: 8, arr: 20, aba: 22 };
   const w = ancho - m.izq - m.der;
   const h = alto - m.arr - m.aba;
@@ -306,11 +382,10 @@ export function dibujarAvance(canvas, puntos, meta, estimadoFin = null) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ancho, alto);
-  const estilo = getComputedStyle(document.documentElement);
-  const colorTexto = estilo.getPropertyValue('--texto-suave').trim() || '#888';
-  const colorRejilla = estilo.getPropertyValue('--rejilla').trim() || '#333';
-  const colorLinea = estilo.getPropertyValue('--acento').trim() || '#F2A33A';
-  const colorMeta = estilo.getPropertyValue('--exito').trim() || '#22C55E';
+  const colorTexto = token('--texto-suave', '#888');
+  const colorRejilla = token('--rejilla', '#333');
+  const colorLinea = token('--acento', '#F2A33A');
+  const colorMeta = token('--exito', '#22C55E');
 
   const ultimo = puntos.at(-1) || [0, 0];
   const tFin = Math.max(60, ultimo[0], estimadoFin && estimadoFin < ultimo[0] * 4 ? estimadoFin : 0) * 1.05;
