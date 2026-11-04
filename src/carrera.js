@@ -2214,7 +2214,7 @@ function bote3d(ctx, P, b, t) {
 // Remero realista (atlas de Blender) visto desde la cámara de persecución. El render tiene la misma cámara que
 // pintar3d a 12,6 m del escálamo; aquí se escala por la distancia real y, a lo ancho, como la pista (fx ≠ f).
 // Fracción de la perspectiva real con la que se inclinan los botes de las calles laterales (aprobada con Ander)
-const INCLINA_CALLE = 0.6;
+const INCLINA_CALLE = 1;
 function remero3d(ctx, P, b, { im, A, sx, sy }, t) {
   const q = P(b.x, b.dist - 0.4, 0);
   const q1 = P(b.x + 1, b.dist - 0.4, 0);
