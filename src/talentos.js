@@ -63,7 +63,7 @@ export const CLASES_TALENTO = {
     talentos: {
       m1: { nombre: 'Pax romana', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP desde tu tercera sesión de la semana.` },
       m2: { nombre: 'Hortator', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `Cada minuto remado sin detenerte avanzas ${g} m más.` },
-      m3: { nombre: 'Ley de la legión', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada día de racha (hasta 7 días).` },
+      m3: { nombre: 'Ley de la legión', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada día de racha del plan (hasta 7 días).` },
       m4: { nombre: 'Marcha de la legión', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Con 2 días de racha o más, empiezas la carrera ${g} m por delante.` },
       maestria: { nombre: 'Triunfo romano', tipo: 'xp', g: [75, 150, 225], texto: (g) => `Al completar 4 sesiones en una semana o llegar a tu meta semanal de km, +${g} XP (una vez por semana).` },
     },

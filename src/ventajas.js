@@ -19,7 +19,7 @@ export const objetoVentaja = (id) => OBJETOS_VENTAJA.find((x) => x.id === id) ||
 // Las pruebas (500 m, 2000 m, FTP) y los jefes de capítulo se reman sin objetos.
 export const esPrueba = (ent) => !!ent && (ent.pruebaFtp || /^Prueba|^2000 m$/.test(ent.nombre || '') || (ent.bloques || []).some((b) => b.prueba));
 
-// clase y grados = { m1: 0..3, … } de tu héroe; final = { meta } o { duracion } si la carrera tiene final; racha = días seguidos contando hoy.
+// clase y grados = { m1: 0..3, … } de tu héroe; final = { meta } o { duracion } si la carrera tiene final; racha = días seguidos cumpliendo el plan, contando hoy.
 export function nuevaVentaja({ clase = null, grados = {}, objeto = null, final = null, racha = 0 } = {}) {
   const e = {
     clase, grados, objeto, final,

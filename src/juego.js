@@ -30,6 +30,10 @@ export const TEXTO_ATRIBUTOS = 'Muestran lo que has entrenado en las últimas 6 
 // así nadie pierde XP, monedas ni títulos.
 export const ETAPA12_DESDE = '2026-11-04';
 export const esEtapa12 = (fecha) => claveDia(fecha) >= ETAPA12_DESDE;
+// Racha del plan (decisión de Ander): desde este día la racha cuenta días seguidos cumpliendo el plan. Vale un día de
+// plan con su sesión terminada y un descanso respetado (o en el que recuperaste una sesión del plan); un día fuera del
+// calendario vale si remaste, como antes. Las sesiones anteriores siguen con la racha de días seguidos remando.
+export const RACHA_PLAN_DESDE = '2026-11-04';
 
 // Cómo sube cada atributo, con tus vatios: lo mismo que calcula gananciaSesion, dicho en claro.
 // f = tu FTP (0 si no lo tienes). Devuelve frases cortas, de la que más suma a la que menos.
@@ -41,7 +45,7 @@ export function comoSubir(clave, f = 0) {
     resistencia: [`Cada minuto entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} (zonas 2 y 3): +0,5`, 'Sesiones de 20 min o más: +4'],
     recuperacion: ['Un día de descanso después de un día duro: +4', `Una sesión suave (media por debajo de ${vatios(f, 0.75)}): +2, o +5 si ayer fue duro`, 'Con banda de pulso: +3 por cada descanso en que el pulso baja 20 lpm en un minuto'],
     tecnica: [`Cada minuto con la potencia pareja (±8 %) y la cadencia estable, por encima de ${vatios(f, 0.55)}: +0,6 (hasta ${TOPE_TECNICA_MIN} min)`, 'Con el 70 % de la sesión así (10 min o más): +3', 'Si el bloque pide una cadencia, solo cuenta remando a esa cadencia'],
-    voluntad: ['Terminar el entrenamiento completo: +3', 'Cumplir una semana entera de tu plan: +5', 'Cada día de racha: +0,5 (hasta 7)'],
+    voluntad: ['Terminar el entrenamiento completo: +3', 'Cumplir una semana entera de tu plan: +5', 'Cada día seguido cumpliendo el plan (sesiones y descansos): +0,5 (hasta 7)'],
     gasto: ['Cada 50 kcal quemadas: +1', 'Los fondos largos en zona 2 son lo que más quema con menos fatiga'],
   }[clave] || [];
 }
@@ -446,7 +450,7 @@ export const CONSTANCIA = {
 // hecha antes de cumplir los requisitos se guarda hasta que el capítulo se abre. Las sesiones anteriores siguen las
 // reglas de antes (solo la prueba, en la misma sesión que completa los requisitos), así nadie pierde un capítulo.
 // xp: la nominal (se paga a la mitad desde el 29 de octubre, como todo); xpAntes: la de un jefe vencido con las reglas viejas.
-// El requisito de racha de «Mar abierto» depende de la decisión D3 (racha diaria o semanal): está aislado aquí.
+// El requisito de racha de «Mar abierto»: días seguidos cumpliendo el plan (también los descansos respetados).
 export const REQ_MAR_ABIERTO = ['racha', 4];
 export const CAPITULOS = [
   { nombre: 'El despertar', historia: 'Tu bote despierta en un muelle olvidado. Para zarpar, demuestra que puedes remar.', nivel: 10,
@@ -476,7 +480,7 @@ export const esSesionClave = (s) => !!s.delPrograma && TIPOS_CLAVE.has(s.tipoPla
 export const ganaAltaMar = (s) => !s.carreraSinTerminar && (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.dificultad === 'altamar' && r.diferencia > 0);
 // Entrenamiento que prepara el botón «Enfrentar» de cada jefe.
 export const PRUEBA_JEFE = { p500: 'base:prueba-500', p2000: 'base:prueba-2000', pftp: 'base:prueba-ftp', mejor500: 'base:prueba-500', mejor2000: 'base:prueba-2000' };
-export const REQ_TEXTO = { sesiones: 'Sesiones', km: 'Kilómetros', z2min: 'Minutos en zona 2', z4min: 'Minutos en zona 4+', fantasmas: 'Fantasmas vencidos', racha: 'Días seguidos' };
+export const REQ_TEXTO = { sesiones: 'Sesiones', km: 'Kilómetros', z2min: 'Minutos en zona 2', z4min: 'Minutos en zona 4+', fantasmas: 'Fantasmas vencidos', racha: 'Días seguidos cumpliendo el plan' };
 
 // «Vence a las 4 clases» desde v0.44.1: cuántas clases distintas puedes contar si cada carrera aporta una sola
 // (emparejamiento máximo entre carreras ganadas y clases vencidas en ellas). carreras = [[clase, …], …].
@@ -755,6 +759,19 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     porDia.set(k, d);
   }
   const descansoRespetado = (k) => { const d = porDia.get(k); return !d || (d.carga <= XC.DESCANSO_CARGA_MAX && d.ifMax < XC.DESCANSO_IF_MAX); };
+  // Racha del plan: días con la sesión del plan terminada (se va llenando sesión a sesión) y día anterior a tu primera sesión.
+  const planHecho = new Set();
+  const primerDia = orden.length ? claveDia(orden[0].fecha) : null;
+  const diaCumplido = (k, conDias) => (!(k in cal) ? conDias.has(k) : cal[k] ? planHecho.has(k) : descansoRespetado(k) || planHecho.has(k));
+  // Racha hasta el día k: k suma si está cumplido; un día de plan aún sin hacer no la corta (el día no ha terminado),
+  // pero remar fuerte en un descanso sí.
+  const rachaPlan = (k, conDias, abierto = true) => {
+    let r = 0;
+    if (diaCumplido(k, conDias)) r = 1;
+    else if (!abierto || !(k in cal) || !cal[k]) return 0;
+    for (let d = claveDia(diaMs(k) - 864e5), n = 0; primerDia && d >= primerDia && n < 400 && diaCumplido(d, conDias); d = claveDia(diaMs(d) - 864e5), n++) r++;
+    return r;
+  };
   const diaMs = (k) => new Date(`${k}T12:00`).getTime();
   // Semana del plan cumplida: todas sus sesiones terminadas (también otro día de esa semana) y todos sus descansos respetados.
   const semanaCumplida = (lunes) => {
@@ -847,8 +864,10 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const anteayer = claveDia(s.fecha - 2 * 864e5);
     const nuevoDia = !dias.has(hoy);
     dias.add(hoy);
+    if (s.tiempoMeta != null && ((XC.esDelDia(s) && s.delDia !== 'sugerida') || (cal[hoy] && s.entrenamiento === cal[hoy]))) planHecho.add(hoy);
     let racha = 0;
-    for (let d = s.fecha; dias.has(claveDia(d)); d -= 864e5) racha++;
+    if (hoy >= RACHA_PLAN_DESDE) racha = rachaPlan(hoy, dias);
+    else for (let d = s.fecha; dias.has(claveDia(d)); d -= 864e5) racha++;
     const m = medidas(s, ftp);
     let records = 0;
     if (s.muestras?.length) {
@@ -1060,7 +1079,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     xpPorSesion,
     ritmo: ritmoReciente(orden, ahora),
     factorXp: fHoy,
-    contexto: contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio: mppN ? mppSuma / mppN : 0, sinPulso: !hayPulso }),
+    contexto: contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio: mppN ? mppSuma / mppN : 0, sinPulso: !hayPulso, rachaAyer: rachaPlan(claveDia(ahora - 864e5), dias, false) }),
   };
 }
 
@@ -1075,9 +1094,10 @@ export function talentosPorRepartir(arbol, clase, nivel, libres) {
 }
 
 // Lo que necesita una sesión de hoy para estimar sus atributos: racha si remas hoy, tu % en rango de siempre, etc.
-function contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio, sinPulso }) {
+function contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio, sinPulso, rachaAyer = 0 }) {
   let racha = 1;
-  for (let d = ahora - 864e5; dias.has(claveDia(d)); d -= 864e5) racha++;
+  if (claveDia(ahora) >= RACHA_PLAN_DESDE) racha = rachaAyer + 1; // si cumples hoy lo del plan
+  else for (let d = ahora - 864e5; dias.has(claveDia(d)); d -= 864e5) racha++;
   const pcts = orden.filter((s) => s.pctEnRango != null).slice(-8).map((s) => s.pctEnRango);
   return {
     racha, mppPromedio, sinPulso, cargaAyer: cargaDia.get(claveDia(ahora - 864e5)) || 0,
