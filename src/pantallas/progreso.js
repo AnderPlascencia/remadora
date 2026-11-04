@@ -3,10 +3,11 @@ import { formatoSplit, formatoTiempo } from '../protocolo.js';
 import { dibujar, dibujarBarras } from '../grafica.js';
 import * as H from '../historial.js';
 import * as E from '../estadisticas.js';
+import { rangoZona2 } from '../pulso.js';
 import * as P from '../programa.js';
 import * as J from '../juego.js';
 import * as Cap from '../capacidades.js';
-import { $, ajustes, color, fcMaxima, fechaCorta, formatoMeta, ftp, ico, miles } from '../ui.js';
+import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { avanzado, guardarRespaldo } from './ajustes.js';
@@ -154,7 +155,7 @@ function miniLinea(puntos) {
 // Cómo has mejorado: cada capacidad con su % frente a las 6 semanas anteriores y su evolución de 12 semanas.
 // En sencillo se ve el nombre fácil y el %; con «Datos avanzados», también el valor técnico y cómo se mide.
 function pintarCapacidades() {
-  const opc = { ftp: ftp(), peso: ajustes.num('peso', 75), fcMax: fcMaxima() };
+  const opc = { ftp: ftp(), peso: ajustes.num('peso', 75), fcMax: refFc() };
   const caps = Cap.capacidades(estado.cacheSesiones, opc);
   const hist = Cap.historialCapacidades(estado.cacheSesiones, opc);
   const fmt = (c, v) => (c.unidad === 'm/palada' ? v.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : c.unidad === 'ml/kg/min' || c.unidad === 'kJ' ? v.toLocaleString('es-MX', { minimumFractionDigits: 1 }) : miles(v));
@@ -214,9 +215,9 @@ export function pintarCurva() {
       : 'Cada punto es tu mejor media para esa duración. Con marcas de 3 y 12 min calculo tu potencia crítica.';
 }
 
-// Mi motor: watts a un pulso fijo (70 % del máximo), semana a semana. Si suben, el corazón rinde más.
+// Mi motor: watts al techo de tu zona 2, semana a semana. Si suben, el corazón rinde más.
 export function pintarMotor() {
-  const fcRef = fcMaxima() ? Math.round(fcMaxima() * 0.7) : 0;
+  const fcRef = rangoZona2(refFc()).max;
   const datos = Cap.motorSemanal(estado.cacheSesiones, fcRef);
   dibujarBarras($('#grafica-motor'), datos.map((d, i) => ({ etiqueta: fechaCorta(d.inicio), valor: d.w || 0, resaltar: i === datos.length - 1 })), { color: color('--fc'), formato: (v) => `${v}` });
   const con = datos.filter((d) => d.w);

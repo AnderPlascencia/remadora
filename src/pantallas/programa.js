@@ -12,10 +12,11 @@ import * as B from '../base.js';
 import * as Cap from '../capacidades.js';
 import * as A from '../adaptacion.js';
 import * as Pf from '../perfil.js';
-import { $, COLOR_ZONA, ajustes, escaparHtml, ftp, ico, miles, perfil, toast } from '../ui.js';
+import { $, COLOR_ZONA, ajustes, escaparHtml, ftp, ico, miles, perfil, previoHoy, toast } from '../ui.js';
+import { PREGUNTAS_PREVIAS } from '../pulso.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
-import { asistente, estimarFtp, leerMmss, libreConFantasmas } from './preparar.js';
+import { asistente, estimarFtp, guardarFtp, leerMmss, libreConFantasmas } from './preparar.js';
 import { vistaPrevia } from './vivo.js';
 import { agregarLog } from '../registro.js';
 import {
@@ -359,6 +360,11 @@ export function arrancarPrograma() {
     const ent = await obtenerEnt(b.dataset.entrenar);
     if (ent) usarEnt(ent);
   });
+  $('#antes-remar').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-antes]');
+    if (b) { responderAntes(b.dataset.antes, b.dataset.valor); return; }
+    if (e.target.closest('#antes-cambiar')) { estado.antesAbierto = true; H.sesiones().then(pintarAntes); }
+  });
   $('#btn-cambiar').addEventListener('click', () => {
     const abierto = $('#otra-cosa').hidden;
     $('#otra-cosa').hidden = !abierto;
@@ -461,14 +467,19 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const factor = prog?.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;
   if (factor && esDelDia && dia.ent) avisosHoy.push(`Tus rangos del plan van un ${Math.abs(factor)} % más ${factor > 0 ? 'altos' : 'bajos'} según cómo te fue.`);
   // Semáforo de fatiga en una línea, para no apretar de más.
-  const cuerpo = ftp() ? Cap.estadoCuerpo(sesiones, ftp()) : null;
+  // Sin FTP no hay carga que medir, pero lo que respondiste antes de remar sigue contando.
+  const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo: previoHoy() });
   $('#hoy-cuerpo').hidden = !cuerpo;
   if (cuerpo) {
     $('#hoy-cuerpo').dataset.estado = cuerpo.clave;
-    $('#hoy-cuerpo').textContent = `${cuerpo.nombre} · ${cuerpo.horas ? Cap.textoRecuperacion(cuerpo.horas).toLowerCase() : 'puedes entrenar'}`;
+    const motivo = cuerpo.motivos?.[0];
+    $('#hoy-cuerpo').textContent = `${cuerpo.nombre} · ${motivo || (cuerpo.horas ? Cap.textoRecuperacion(cuerpo.horas).toLowerCase() : 'puedes entrenar')}`;
   }
   $('#hoy-ajuste').hidden = !avisosHoy.length;
   $('#hoy-ajuste').textContent = avisosHoy.join(' ');
+  // En ámbar si el cambio de hoy vino de cómo te encuentras (atención, no error).
+  $('#hoy-ajuste').classList.toggle('atencion', !!cuerpo?.motivos?.length);
+  pintarAntes(sesiones);
   $('#btn-hoy-detalle').hidden = !ent;
   const abierto = !!ent && ajustes.si('hoyDetalle', false);
   $('#btn-hoy-detalle').textContent = abierto ? 'Ocultar detalles' : 'Ver detalles';
@@ -484,6 +495,8 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   // El jefe es una prueba a tope: solo se propone si hoy no toca otra cosa del plan y estás fresco.
   const jefeHoy = jefe && ent?.id !== jefe.preparar && !['plan', 'recuperar'].includes(dia?.fuente)
     && !(cuerpo && ['cargado', 'agotado'].includes(cuerpo.clave)) && !(dia?.fuente === 'sugerida' && /suave|dis-mant/.test(dia.id));
+  // El FTP también baja: repetir la prueba cada 6–8 semanas, y bajarlo si varias sesiones duras se quedan cortas.
+  const revFtp = ftp() ? E.revisarFtp(sesiones, ftp()) : null;
   // Un plan armado sin historial se ajusta a lo que remas cuando ya hay 4 sesiones desde que empezó.
   const desdePlan = prog ? sesiones.filter((x) => E.claveDia(x.fecha) >= prog.inicio).length : 0;
   if (prog?.sinHistorial && prog.objetivo && desdePlan >= 4 && dia?.fuente !== 'terminado') {
@@ -498,6 +511,10 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
       : { texto: `Terminaste «${prog.nombre}». ¡Bien hecho!`, boton: 'Nuevo plan', accion: () => { ajustes.escribir('pestanaPlanes', 'programa'); irA('entrenamientos'); } };
   } else if (jefeHoy) {
     sug = { texto: `${jefe.jefe.nombre} te espera: ${jefe.jefe.texto.charAt(0).toLowerCase()}${jefe.jefe.texto.slice(1)} (+${miles(jefe.xp)} XP).`, boton: 'Enfrentar', accion: () => prepararEntrenamiento(jefe.preparar) };
+  } else if (revFtp?.bajar) {
+    sug = { texto: `Tus últimas ${revFtp.bajar.cortas} sesiones fuertes se quedaron cortas. ¿Bajo tu FTP a ${revFtp.bajar.ftp} W? Tus zonas se ajustan solas.`, boton: 'Bajar', accion: () => { guardarFtp(revFtp.bajar.ftp, true); toast(`FTP: ${revFtp.bajar.ftp} W`); pintarHoy(); } };
+  } else if (revFtp?.repetir && ent?.id !== 'base:prueba-ftp' && !['plan', 'recuperar'].includes(dia?.fuente)) {
+    sug = { texto: `Tu última prueba FTP fue hace ${Math.round(revFtp.repetir / 7)} semanas: repítela para que tus zonas sigan siendo las tuyas.`, boton: 'Elegir', accion: () => elegirEnt('base:prueba-ftp') };
   } else if (dia?.fuente === 'descanso' && dia.alternativa && !ent) {
     sug = { texto: '¿Quieres remar igual? Que sea suave.', boton: 'Fondo suave', accion: () => elegirEnt(dia.alternativa) };
   } else if (!prog && ajustes.si('ftpEstimado', false) && sesiones.length >= 3 && !sesiones.some((x) => x.pruebaWatts) && ent?.id !== 'base:prueba-ftp') {
@@ -513,13 +530,44 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
     boton.onclick = sug.accion || null;
   }
 }
+// ---------- Antes de remar: sueño y dolor (opcional) ----------
+// Solo antes de la primera sesión del día y nunca durante una. Responder recalcula tu estado y la sesión de hoy.
+function pintarAntes(sesiones) {
+  const hoy = E.claveDia(Date.now());
+  const caja = $('#antes-remar');
+  const yaRemo = sesiones.some((x) => E.claveDia(x.fecha) === hoy);
+  caja.hidden = !!estado.sesion || yaRemo;
+  if (caja.hidden) return;
+  const r = previoHoy() || {};
+  const completo = r.sueno && r.dolor && !estado.antesAbierto;
+  $('#antes-preguntas').hidden = completo;
+  $('#antes-plegado').hidden = !completo;
+  if (completo) {
+    const sueno = { bien: 'Dormiste bien', regular: 'Dormiste regular', mal: 'Dormiste mal' }[r.sueno];
+    const dolor = { no: 'sin dolor', leve: 'molestia leve', si: 'con dolor o malestar' }[r.dolor];
+    $('#antes-plegado span').textContent = `${sueno} · ${dolor}`;
+    return;
+  }
+  $('#antes-preguntas').innerHTML = Object.entries(PREGUNTAS_PREVIAS).map(([clave, q]) => `<div class="antes-pregunta" role="group" aria-label="${q.texto}">
+      <span>${q.texto}</span><div class="antes-chips">${q.opciones.map(([v, t]) => `<button type="button" class="chip" data-antes="${clave}" data-valor="${v}" aria-pressed="${r[clave] === v}">${t}</button>`).join('')}</div></div>`).join('');
+}
+async function responderAntes(clave, valor) {
+  const hoy = E.claveDia(Date.now());
+  const r = { ...(previoHoy() || {}), dia: hoy, [clave]: valor };
+  ajustes.escribir('antesDeRemar', JSON.stringify(r));
+  if (r.sueno && r.dolor) estado.antesAbierto = false;
+  await revisarPlanAuto();
+  pintarHoy();
+}
+
 // Adaptación automática: revisa el plan al abrir la app y después de cada sesión, y lo cambia sin preguntar.
 // Lo que cambió se explica en la tarjeta Hoy.
 export async function revisarPlanAuto() {
   const prog = leerPrograma();
   if (!prog?.dias?.length || estado.sesion) return;
   const [sesiones, ents] = await Promise.all([H.sesiones(), db.listar('entrenamientos')]);
-  const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp() });
+  const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo: previoHoy() });
+  const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo });
   if (!r) return;
   for (const e of r.entrenamientos) if (!ents.some((x) => x.nombre === e.nombre)) await db.guardar('entrenamientos', { ...e, dePlan: true });
   guardarPrograma(r.programa);

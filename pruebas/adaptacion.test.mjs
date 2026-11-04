@@ -64,8 +64,11 @@ for (let w = 3; w >= 1; w--) for (const d of [0, 2, 5]) nuevo.push(ses(-(w * 7) 
 const r1c = A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: nuevo, entrenamientos, ftp: 200, ahora });
 assert.equal(r1c.programa.dias.find((d) => d.fecha === hoy).ent, 'Umbral 3 × 8 min', 'no hay falsa alarma de fatiga');
 
-// 3. Dos fondos con desacople bajo → el próximo fondo dura 10 min más.
-const fondo = (d) => ses(d, { desacople: 3, muestras: muestras(2400, 140) });
+// 3. Dos fondos con desacople bajo en un tramo estable de 40 min → el próximo fondo dura 10 min más.
+const fondo = (d) => ses(d, { desacople: 3, desacopleSeg: 2700, duracion: 3000, muestras: muestras(3000, 140) });
+// Con un desacople medido en solo 25 min estables no basta: la regla pide 40.
+const corto = (d) => ses(d, { desacople: 3, desacopleSeg: 1500, muestras: muestras(1800, 140) });
+assert.ok(!A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: [corto(-4), corto(-2)], entrenamientos, ftp: 200, ahora }).programa.dias.some((d) => d.alargado), 'el fondo largo pide 40 min');
 const r4 = A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: [fondo(-4), fondo(-2)], entrenamientos, ftp: 200, ahora });
 const alargado = r4.programa.dias.find((d) => d.alargado);
 assert.ok(alargado && alargado.fecha > hoy);

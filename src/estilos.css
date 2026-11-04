@@ -1592,6 +1592,14 @@ details.mas-detalle[hidden] { display: none; }
 .hoja-capacidad .metricas { margin: 8px 0; }
 .hoja-capacidad .ayuda { margin: 0; }
 .hoy-ajuste { margin: 6px 0 0; font-size: var(--t-s); color: var(--primario); font-weight: 600; }
+.hoy-ajuste.atencion { color: var(--aviso); }
+/* Antes de remar: dos preguntas opcionales, debajo de Empezar; se pliegan a una línea al responder. */
+.antes-remar { margin: 12px 0 0; }
+.antes-pregunta { margin: 8px 0 0; }
+.antes-pregunta > span { display: block; font-size: var(--t-s); color: var(--texto-suave); margin-bottom: 6px; }
+.antes-chips { display: flex; gap: 8px; flex-wrap: nowrap; }
+.antes-chips .chip { flex: 1 1 0; justify-content: center; min-width: 0; }
+.antes-plegado { margin: 6px 0 0; font-size: var(--t-s); color: var(--texto-suave); }
 
 .hoy-cuerpo { --ch-color: var(--exito); margin: 8px 0 0; font-size: var(--t-s); font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .hoy-cuerpo::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--ch-color); flex: none; }

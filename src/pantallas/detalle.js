@@ -8,7 +8,7 @@ import { confeti } from '../efectos.js';
 import * as V from '../ventajas.js';
 import * as Cap from '../capacidades.js';
 import {
-  $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fechaCorta, formatoMeta, ftp, ico, miles, toast,
+  $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fcRef, fechaCorta, formatoMeta, ftp, ico, miles, toast,
 } from '../ui.js';
 import { estado } from '../estado.js';
 import { avanzado } from './ajustes.js';
@@ -205,7 +205,7 @@ function pintarCapacidadSesion(s) {
   const caja = $('#hoja-capacidad');
   caja.hidden = !s.muestras?.length;
   if (caja.hidden) return;
-  const a = Cap.analisisSesion(s, { ftp: ftp(), fcMax: fcMaxima() });
+  const a = Cap.analisisSesion(s, { ftp: ftp(), fcMax: fcRef() });
   // Si tus watts no se parecen al plan (un fondo remado a tirones), se dice así y no «Entrenaste Sprints».
   const nombre = avanzado() ? a.nombre : a.simple;
   const { etiqueta, plan } = Cap.tituloCapacidad(a.tipo, s.tipoPlan);
@@ -235,7 +235,7 @@ function dibujarHojaGraficas(s) {
     $('#hoja-perfil').hidden = !s.bloques;
     if (s.bloques) dibujarPerfil($('#hoja-grafica-perfil'), Ent.bloquesEnWatts(s.bloques, s.ftp || ftp()), m.map((x) => [x.t, x.w]));
     if (conFc && fcMax) {
-      const seg = E.tiempoEnZonasFc(m, fcMax);
+      const seg = E.tiempoEnZonasFc(m, fcRef());
       dibujarBarras($('#hoja-zonas-fc'), E.ZONAS_FC.map((z, i) => ({ etiqueta: `Z${z.n}`, valor: Math.round(seg[i] / 6) / 10, resaltar: seg[i] === Math.max(...seg) })), {
         color: color('--fc'), formato: (v) => `${v} min`,
       });

@@ -12,7 +12,7 @@ import * as B from '../base.js';
 import * as C from '../consejos.js';
 import * as Cap from '../capacidades.js';
 import * as A from '../adaptacion.js';
-import { $, ajustes, descargar, escaparHtml, fcMaxima, ftp, ico, marcaFecha, miles, toast } from '../ui.js';
+import { $, ajustes, descargar, escaparHtml, fcRef, ftp, ico, marcaFecha, miles, previoHoy, toast } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA, vistaActiva } from '../navegacion.js';
 import { avanzado, cerrarTripulacion } from './ajustes.js';
@@ -349,7 +349,7 @@ export async function calcularDia(sesiones, todos) {
   sesiones ??= await H.sesiones();
   todos ??= await db.listar('entrenamientos');
   const f = ftp();
-  return A.sesionDelDia({ programa: leerPrograma(), sesiones, entrenamientos: [...todos, ...estado.baseActual], ftp: f, cuerpo: f ? Cap.estadoCuerpo(sesiones, f) : null });
+  return A.sesionDelDia({ programa: leerPrograma(), sesiones, entrenamientos: [...todos, ...estado.baseActual], ftp: f, cuerpo: Cap.estadoCuerpo(f ? sesiones : [], f, Date.now(), { previo: previoHoy() }) });
 }
 
 let enEdicion = null;
@@ -575,7 +575,7 @@ export function leyendaPerfil(bloques, conPotencia = false) {
 // Perfil y bloques de un entrenamiento (en la hoja de detalle y en la tarjeta «Hoy»). El lienzo debe estar visible.
 export function pintarBloquesEnt(ent, canvas, lista, leyenda) {
   const intervalos = Ent.tipoDe(ent) === 'intervalos';
-  if (intervalos) lista.innerHTML = filasBloques(ent.bloques, ftp(), fcMaxima());
+  if (intervalos) lista.innerHTML = filasBloques(ent.bloques, ftp(), fcRef());
   else {
     const m = Ent.METRICAS_OBJETIVO[ent.objetivo.metrica];
     lista.innerHTML = `<li>Meta: <b>${miles(ent.objetivo.valor)} ${m.unidad}</b> <span class="suave">al ritmo que quieras; termina al llegar.</span></li>`;

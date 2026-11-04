@@ -45,5 +45,5 @@ const AYUDAS = {
   dificultad: 'Bahía, Costa y Alta mar cambian qué tan fuerte reman los fantasmas. Cuanto más difícil, más XP por cada uno que venzas.',
   referencia: 'Una línea amarilla en tu carril con tu sesión anterior o tu mejor marca de este entrenamiento: así ves si vas por delante.',
   ventaja: 'Objetos de la tienda que te dan metros extra en la carrera. Solo cuentan contra los fantasmas, nunca en tus estadísticas.',
-  ftp: 'La potencia que aguantas cerca de una hora. La app la calcula sola con tus sesiones, y la Prueba FTP 20 min la afina.',
+  ftp: 'La potencia que aguantas cerca de una hora. La app la calcula sola con tus sesiones, y la Prueba FTP 20 min la afina: repítela cada 6 a 8 semanas. Los watts de la RW200 salen de su propia calibración: compáralos contigo, no con un Concept2 ni con otra máquina.',
 };
