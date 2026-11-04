@@ -9,7 +9,9 @@ Colección de bote por clase (etapa 15).
 - Cada clase tiene su colección de 8 piezas en Héroe › Tienda: 5 velas con emblema de su cultura, un mascarón de proa (y su versión dorada) y unas palas de remo. Las 5 clases siguen la misma escalera: la vela clásica es gratis, la vela de rango se gana en el nivel 20 y el mascarón en el 40, las palas, la vela de taller y la épica se compran (600, 1200 y 2200 monedas) y la vela legendaria y el mascarón dorado se ganan con la hazaña de clase.
 - Hazañas de clase (1000 XP nominales y 300 monedas): 75 000 paladas (vikingo), 60 fantasmas vencidos (pirata), 400 minutos técnicos (samurái), 750 km (polinesio) y 10 semanas del plan cumplidas (romano). Cuenta todo tu historial; quien ya la cumplía la cobra en su siguiente sesión.
 - El bote de cada clase guarda su propio equipo, así que al cambiar de clase no pierdes nada. Las velas de color siguen a la venta y valen para cualquier bote. La que tenías elegida sigue puesta.
-- En la carrera, los rivales de Alta mar llevan la vela épica de su clase y los legendarios, la legendaria. Las piezas son solo de aspecto: no dan metros, XP ni ventajas.
+- En la carrera, los rivales de Alta mar llevan la vela épica de su clase y los legendarios, la legendaria.
+- Cada pieza da una ventaja pequeña en las carreras contra fantasmas, con un tope de 25 m por carrera entre todas y nunca en las pruebas. Las velas dan de 5 a 15 m de salida según su escalón, y la legendaria suma un efecto de su clase. El mascarón da un 1 % más de distancia en los primeros 2 min (el dorado, un 2 %) y las palas, 1 m cada 100 paladas. Las velas de color dan de 4 a 12 m de salida.
+- Tienda de ventajas revisada: pasan de 6 a 12 y se ofrecen 6 cada semana (antes 4), y cada una se puede comprar en lote de 3 por el precio de 2,5. Las de siempre son más fuertes: Salida adelantada 20 m, Viento de cola 3 %, Segunda oportunidad hasta 15 m, Estandarte +25 XP y 10 monedas, y el Mapa baja a 40 monedas. Las nuevas son Corriente favorable, Segundo aire, Cuerno de guerra, Botín del corsario, Bitácora del capitán y Talismán de la clase.
 
 ## 0.55.0 · 2026-11-04
 

@@ -1,5 +1,6 @@
 // Colección de bote por clase (etapa 15): 5 velas, mascarón (y su versión dorada) y palas para cada clase.
-// Solo aspecto: no dan metros, XP ni ventajas. Las 5 clases siguen la misma escalera, para que ninguna salga ganando:
+// Desde la revisión de la tienda, cada pieza da una ventaja pequeña en las carreras contra fantasmas (nunca en las
+// pruebas ni en tus metros o récords), con un tope de 25 m por carrera para todo el equipo (TOPE_EQUIPO_M). Las 5 clases siguen la misma escalera, para que ninguna salga ganando:
 // clásica (gratis), de rango (nivel 20), palas (600), de taller (1200), mascarón (nivel 40), épica (2200) y la
 // legendaria con el mascarón dorado (hazaña de clase). El dibujo de cada emblema vive en carrera.js (campo emblema);
 // sin dibujo propio, la pieza se pinta con sus colores.
@@ -145,4 +146,39 @@ export function velaDeRival(clase, { dificultad = null, rango = null } = {}) {
   if (rango === 'legendario') return PIEZAS[`${clase}-legendaria`];
   if (dificultad === 'altamar') return PIEZAS[`${clase}-epica`];
   return null;
+}
+
+// Ventaja de cada pieza en la carrera. Velas: metros de salida por escalón (la legendaria suma su efecto de clase);
+// mascarón: un % más de distancia en los primeros 2 min; palas: 1 m cada 100 paladas.
+export const SALIDA_VELA = { clasica: 0, rango: 5, taller: 8, epica: 12, legendaria: 15 };
+export const SALIDA_VELA_COLOR = { carmesi: 4, esmeralda: 6, medianoche: 8, hielo: 10, oro: 12 };
+export const INICIO_PROA = { proa: 0.01, 'proa-oro': 0.02 };
+export const PALAS_M = 1;
+export const EFECTO_LEGENDARIO = {
+  vikingo: '+1 m cada 50 paladas',
+  pirata: '+4 m cada vez que adelantas a un fantasma',
+  samurai: '+1 m por cada minuto seguido remando sin pausas',
+  polinesio: '+3 m cada 500 m',
+  romano: '+2 m por día de racha del plan (hasta 7)',
+};
+export function ventajaTexto(x, id = x?.id) {
+  if (!x) return '';
+  if (!x.escalon) return SALIDA_VELA_COLOR[id] ? `Ventaja: empiezas ${SALIDA_VELA_COLOR[id]} m por delante` : '';
+  if (x.tipo === 'palas') return `Ventaja: +${PALAS_M} m cada 100 paladas`;
+  if (x.tipo === 'proa') return `Ventaja: +${INICIO_PROA[x.escalon] * 100} % de distancia en los primeros 2 min`;
+  const m = SALIDA_VELA[x.escalon];
+  if (!m) return 'Sin ventaja: la vela de siempre';
+  return `Ventaja: empiezas ${m} m por delante${x.escalon === 'legendaria' ? ` y ${EFECTO_LEGENDARIO[x.clase]}` : ''}`;
+}
+// Lo que da el equipo en la carrera (para nuevaVentaja): { salida, inicio, porPaladas, legendaria } o null.
+export function bonoEquipo(equipo) {
+  if (!equipo) return null;
+  const vela = PIEZAS[equipo.vela];
+  const b = {
+    salida: vela ? SALIDA_VELA[vela.escalon] || 0 : SALIDA_VELA_COLOR[equipo.vela] || 0,
+    inicio: INICIO_PROA[PIEZAS[equipo.proa]?.escalon] || 0,
+    porPaladas: PIEZAS[equipo.palas] ? PALAS_M : 0,
+    legendaria: vela?.escalon === 'legendaria' ? vela.clase : null,
+  };
+  return b.salida || b.inicio || b.porPaladas || b.legendaria ? b : null;
 }

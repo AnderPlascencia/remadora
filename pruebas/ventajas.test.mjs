@@ -61,15 +61,47 @@ assert.equal(remar(V.nuevaVentaja(), 1200), 0);
   cerca(V.metrosVentaja(V.nuevaVentaja({ clase: 'romano', grados: { m4: 1 }, racha: 1 })), 0, 'sin racha no hay salida');
 }
 // Objetos
-assert.equal(remar(V.nuevaVentaja({ objeto: 'salida' }), 10), 15);
-cerca(remar(V.nuevaVentaja({ objeto: 'viento' }), 600), 0.02 * 4 * 120, 'viento');
+assert.equal(remar(V.nuevaVentaja({ objeto: 'salida' }), 10), 20);
+cerca(remar(V.nuevaVentaja({ objeto: 'viento' }), 600), 0.03 * 4 * 120, 'viento');
 assert.equal(remar(V.nuevaVentaja({ objeto: 'ancla' }), 600), 0, 'sin final no hay ancla');
 cerca(remar(V.nuevaVentaja({ objeto: 'ancla', final: { duracion: 600 } }), 600), 0.02 * 4 * 181, 'ancla por tiempo');
 cerca(remar(V.nuevaVentaja({ objeto: 'ancla', final: { meta: 2000 } }), 500), 0.02 * 4 * 126, 'ancla por distancia');
-// Segunda oportunidad: perder por menos de 10 m es empate
-assert.equal(V.diferenciaFinal(-8, V.nuevaVentaja({ objeto: 'segunda' })), 0);
-assert.equal(V.diferenciaFinal(-12, V.nuevaVentaja({ objeto: 'segunda' })), -12);
-assert.equal(V.diferenciaFinal(-8, V.nuevaVentaja({ objeto: 'salida' })), 7);
+// Segunda oportunidad: perder por menos de 15 m es empate
+assert.equal(V.diferenciaFinal(-14, V.nuevaVentaja({ objeto: 'segunda' })), 0);
+assert.equal(V.diferenciaFinal(-16, V.nuevaVentaja({ objeto: 'segunda' })), -16);
+assert.equal(V.diferenciaFinal(-8, V.nuevaVentaja({ objeto: 'salida' })), 12);
+// Ventajas nuevas (etapa 15)
+assert.equal(V.OBJETOS_VENTAJA.length, 12);
+cerca(remar(V.nuevaVentaja({ objeto: 'corriente' }), 300), 0.015 * 4 * 300, 'corriente');
+assert.equal(remar(V.nuevaVentaja({ objeto: 'corriente' }), 1200), 30, 'corriente con tope de 30 m');
+assert.equal(remar(V.nuevaVentaja({ objeto: 'aire', final: { duracion: 600 } }), 600), 0, 'segundo aire solo si vas detrás');
+cerca(remar(V.nuevaVentaja({ objeto: 'aire', final: { duracion: 600 } }), 600, { detras: true }), 0.03 * 4 * 61, 'segundo aire en el último minuto');
+{
+  const e = V.nuevaVentaja({ objeto: 'cuerno' });
+  for (let i = 0; i < 5; i++) V.alAdelantar(e, 10 + i);
+  assert.equal(V.metrosVentaja(e), 15, 'cuerno: 3 veces');
+}
+{
+  // Talismán: los talentos rinden un 25 % más y el tope sube a 50 m.
+  const con = V.nuevaVentaja({ clase: 'romano', grados: { m2: 2 }, objeto: 'talisman' });
+  cerca(remar(con, 180), 6 * 1.25, 'talismán');
+  const sin = remar(V.nuevaVentaja({ clase: 'polinesio', grados: { m2: 3 } }), 3600, { v: 5 });
+  const tal = remar(V.nuevaVentaja({ clase: 'polinesio', grados: { m2: 3 }, objeto: 'talisman' }), 3600, { v: 5 });
+  assert.equal(sin, 40);
+  assert.equal(tal, 50);
+}
+// Equipo del bote: salida de la vela, mascarón en los primeros 2 min, palas cada 100 paladas, tope de 25 m.
+{
+  const e = V.nuevaVentaja({ equipo: { salida: 8, inicio: 0.01, porPaladas: 1 } });
+  cerca(V.metrosVentaja(e), 8, 'vela de taller');
+  cerca(remar(e, 600), 8 + 0.01 * 4 * 120 + 3, 'mascarón y palas (300 paladas)');
+  assert.equal(e.eventos.filter((x) => x.nombre === 'Mascarón').length, 1, 'un solo aviso del mascarón');
+  assert.equal(remar(V.nuevaVentaja({ equipo: { salida: 15, porPaladas: 1, legendaria: 'vikingo' } }), 3600), V.TOPE_EQUIPO_M);
+  cerca(V.metrosVentaja(V.nuevaVentaja({ equipo: { salida: 15, legendaria: 'romano' }, racha: 4 })), 23, 'Sol invicto: 2 m por día');
+  const k = V.nuevaVentaja({ equipo: { salida: 15, legendaria: 'pirata' } });
+  V.alAdelantar(k, 5);
+  cerca(V.metrosVentaja(k), 19, 'Kraken');
+}
 // Pruebas sin objetos
 assert.ok(V.esPrueba({ nombre: 'Prueba 500 m' }));
 assert.ok(!V.esPrueba({ nombre: 'Pirámide' }));

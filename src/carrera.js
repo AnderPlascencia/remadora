@@ -314,6 +314,7 @@ export function comprarVelas(per, id, monedas) {
 // también puede ser una vela de color de VELAS). Los rivales llevan la vela de su categoría (b.vela).
 let equipoYo = null;
 export function usarEquipo(equipo) { equipoYo = equipo || null; }
+export const equipoEnUso = () => equipoYo;
 // Lo que se dibuja de un bote: los colores de su clase y, si lleva pieza, su tela, su marca y su emblema
 // (emblema, proa y palas: el dibujo de cada uno lo pone el arte; sin dibujo propio, basta con los colores).
 const decoCache = new Map();

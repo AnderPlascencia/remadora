@@ -8,7 +8,7 @@ import * as XC from './xp-carga.js';
 import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
 import { objeto } from './objetos.js';
 import { hazanaDeClase } from './coleccion-bote.js';
-import { tiendaVentajas, XP_ESTANDARTE } from './ventajas.js';
+import { tiendaVentajas, XP_ESTANDARTE, XP_ESTANDARTE_ANTES, MONEDAS_ESTANDARTE, XP_BITACORA, MONEDAS_BOTIN } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
 
 // Cada atributo representa una capacidad física real (la que mide Progreso › Mis capacidades).
@@ -502,6 +502,13 @@ export function clasesEnCarrerasDistintas(carreras) {
 
 // Logros permanentes: una sola vez. Los hitos excepcionales dan entre 300 y 600 XP.
 export const COLECCION_DESDE = '2026-11-04';
+// Monedas de las ventajas de la tienda (desde la revisión de la etapa 15): Estandarte y Botín del corsario.
+export function monedasDeVentaja(s, m) {
+  if (claveDia(s.fecha) < COLECCION_DESDE || !m.ganados) return 0;
+  if (s.ventajaUsada === 'estandarte') return MONEDAS_ESTANDARTE;
+  if (s.ventajaUsada === 'botin') return MONEDAS_BOTIN * m.ganados;
+  return 0;
+}
 // Minutos técnicos de las sesiones de antes de la etapa 12 (para la hazaña samurái), calculados una vez por sesión.
 const cacheTecnica = new Map();
 function minutosTecnicos(s, ftp) {
@@ -704,7 +711,7 @@ function gananciaSesion(s, m, ctx) {
     detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, vencidos.reduce((a, r) => a + xpPorFantasma(r.dificultad), 0)]);
   }
   if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
-  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', XP_ESTANDARTE]);
+  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', XP_ESTANDARTE_ANTES]);
   // Talentos de la clase (solo los grados aprendidos antes de esta sesión): números fijos con tope por sesión.
   if (ctx.clase) {
     const rivales = s.carreraSinTerminar ? 0 : (s.rivales || (s.rival ? [s.rival] : [])).length;
@@ -725,7 +732,9 @@ function bonosDeJuego(s, m, ctx) {
     detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, Math.round(vencidos.reduce((a, r) => a + valor(r), 0))]);
   }
   if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
-  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', XP_ESTANDARTE]);
+  const tiendaNueva = claveDia(s.fecha) >= COLECCION_DESDE;
+  if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', tiendaNueva ? XP_ESTANDARTE : XP_ESTANDARTE_ANTES]);
+  if (tiendaNueva && s.ventajaUsada === 'bitacora' && sinPausas(s) && !s.carreraSinTerminar) detalle.push(['Bitácora del capitán', XP_BITACORA]);
   if (ctx.clase) detalle.push(...xpTalentos(ctx.clase, ctx.grados || {}, datosTalento(s, m, ctx)));
   const f = factorXp(s.fecha);
   return detalle.map(([k, v]) => [k, Math.round(v * f)]);
@@ -940,7 +949,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     if (s.fecha >= ahora - VENTANA_ATRIBUTOS_DIAS * 864e5 && s.fecha <= ahora) for (const [k, v] of Object.entries(atrSesion)) recientes[k] += v;
     if (s.fcProm > 0) hayPulso = true;
     // Etapa 12: la mitad de monedas por sesión (1 por cada 50 XP que se ven), para que la colección dure.
-    const monedasSesion = Math.floor((esEtapa12(s.fecha) ? gan.xp : gan.xpBase) / 50);
+    const monedasSesion = Math.floor((esEtapa12(s.fecha) ? gan.xp : gan.xpBase) / 50) + monedasDeVentaja(s, m);
     monedas += monedasSesion;
 
     // Misiones del día y de la semana

@@ -106,11 +106,15 @@ export function arrancarHeroe() {
     if (!b) return;
     const { per, h } = await estadoHeroe();
     const x = J.tiendaSemana(J.lunesDe(Date.now())).find((y) => y.id === b.dataset.comprar);
-    if (!x || h.monedas < x.precio) return;
+    // Lote: 3 por el precio de 2,5.
+    const lote = b.dataset.lote != null;
+    const n = lote ? V.LOTE : 1;
+    const precio = lote ? V.precioLote(x) : x.precio;
+    if (!x || h.monedas < precio) return;
     const inv = per.inventario || {};
-    guardarPersonaje({ inventario: { ...inv, [x.id]: (inv[x.id] || 0) + 1 }, gastado: (per.gastado || 0) + x.precio });
+    guardarPersonaje({ inventario: { ...inv, [x.id]: (inv[x.id] || 0) + n }, gastado: (per.gastado || 0) + precio });
     vibrar(60);
-    toast(`${x.nombre} a tu bolsa. Elígela en Entrenar antes de la carrera.`);
+    toast(`${lote ? `${n} × ` : ''}${x.nombre} a tu bolsa. Elígela en Entrenar antes de la carrera.`);
     pintarHeroe();
     pintarChips();
   });
@@ -608,7 +612,8 @@ function pintarColeccion(h, per) {
         : falta ? `<span class="bloqueada">${falta}</span>`
           : `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" ${h.monedas < precio ? 'disabled' : ''}>${h.monedas < precio ? `Te faltan ${miles(precio - h.monedas)}` : 'Comprar'}</button>`;
     const etiqueta = tiene ? (precio && !x.como?.gratis ? 'Comprado' : 'Ganado') : precio ? `${icoMoneda}${miles(precio)}` : '';
-    return `<div class="objeto velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}">${muestraDe(x)}<b>${x.nombre}</b><small>${CB.TIPOS[tipo]} · ${x.texto}</small>
+    const ventaja = CB.ventajaTexto(CB.PIEZAS[x.id] || x, x.id);
+    return `<div class="objeto velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}">${muestraDe(x)}<b>${x.nombre}</b><small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}
       <span class="monedas">${x.como?.gratis ? 'Gratis' : etiqueta}</span>${boton}</div>`;
   };
   const faltaDe = (x) => (x.como.nivel ? `Llega al nivel ${x.como.nivel}` : x.como.hazana ? `Cumple «${hz?.nombre || 'la hazaña de clase'}»` : '');
@@ -620,17 +625,18 @@ function pintarColeccion(h, per) {
   caja.innerHTML = `${propias.join('')}<h3 class="tienda-sub">Velas de color · para cualquier bote</h3>${deColor.join('')}`;
 }
 
-const ICONO_VENTAJA = { salida: 'i-play', viento: 'i-sube', ancla: 'i-baja', segunda: 'i-corazon', estandarte: 'i-trofeo', mapa: 'i-fantasma' };
+const ICONO_VENTAJA = { salida: 'i-play', viento: 'i-sube', ancla: 'i-baja', segunda: 'i-corazon', estandarte: 'i-trofeo', mapa: 'i-fantasma', corriente: 'i-remo', aire: 'i-rayo', cuerno: 'i-voz', botin: 'i-diana', bitacora: 'i-reloj', talisman: 'i-fuego' };
 function pintarTienda(h, per) {
   const lunes = J.lunesDe(Date.now());
   const items = J.tiendaSemana(lunes);
   const inv = per.inventario || {};
   const sig = new Date(`${lunes}T12:00`);
   sig.setDate(sig.getDate() + 7);
-  $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. Ventajas de un solo uso para tus carreras contra fantasmas: una por carrera y nunca en las pruebas. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.`;
+  $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. Ventajas de un solo uso para tus carreras contra fantasmas: una por carrera y nunca en las pruebas. En lote salen 3 por el precio de 2,5. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.`;
   $('#tienda').innerHTML = items.map((x) => `<div class="objeto ventaja"><span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b><small>${x.texto}</small>
     <span class="monedas">${icoMoneda}${x.precio}</span>${inv[x.id] ? `<span class="tienes">Tienes ${inv[x.id]}</span>` : ''}
-    <button type="button" class="boton chico" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button></div>`).join('');
+    <button type="button" class="boton chico" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button>
+    <button type="button" class="boton chico lote" data-comprar="${x.id}" data-lote ${h.monedas < V.precioLote(x) ? 'disabled' : ''}>${V.LOTE} por ${icoMoneda}${V.precioLote(x)}</button></div>`).join('');
   const elegido = paisajeElegido(per);
   // Ordenados por precio: la colección se lee como una escalera, del gratis al más caro.
   $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).sort(([, a], [, b]) => a.precio - b.precio).map(([id, x]) => {

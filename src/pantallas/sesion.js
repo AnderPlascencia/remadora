@@ -32,6 +32,8 @@ import { estadoHeroe, guardarPersonaje, inventario, leerPersonaje, nombreAtribut
 import { abrirSesion, fcParaEsfuerzo } from './detalle.js';
 import { contextoXp, delProgramaHoy, ftpDelPlan, pintarHoy, revisarPlanAuto } from './programa.js';
 import * as XC from '../xp-carga.js';
+import { bonoEquipo } from '../coleccion-bote.js';
+import { equipoEnUso } from '../carrera.js';
 
 // ---------- Conexión y estado en vivo ----------
 export const remadora = new Remadora();
@@ -269,8 +271,11 @@ function crearVentaja(ent, racha) {
   const meta = ent?.objetivo?.metrica === 'distancia' ? ent.objetivo.valor : null;
   const dur = meta ? null : duracionCarrera();
   const final = meta ? { meta } : dur ? { duracion: dur } : null;
-  if (objeto === 'ancla' && !final) { toast('El Ancla al rival solo sirve en carreras con final: no se gastará'); objeto = null; }
-  return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha });
+  if (objeto && V.objetoVentaja(objeto)?.necesitaFinal && !final) { toast(`${V.objetoVentaja(objeto).nombre} solo sirve en carreras con final: no se gastará`); objeto = null; }
+  if (objeto === 'talisman' && !clave) { toast('El Talismán necesita una clase: no se gastará'); objeto = null; }
+  // Las piezas del bote solo dan ventaja en las carreras normales, nunca en las pruebas.
+  const equipo = V.esPrueba(ent) ? null : bonoEquipo(equipoEnUso());
+  return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha, equipo });
 }
 
 // Días seguidos contando hoy (la sesión que empieza ya cuenta).

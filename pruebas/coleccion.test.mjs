@@ -81,3 +81,26 @@ assert.equal(CB.velaDeRival(null, { dificultad: 'altamar' }), null);
   assert.equal(new Date(logro.fecha).toISOString().slice(0, 10), '2026-11-05', 'se cobra en la primera sesión desde el cambio');
   assert.equal(logro.monedas, 300);
 }
+
+// Ventajas del equipo (revisión de la tienda): cuanto más alta la pieza, más ventaja; con su tope en ventajas.js.
+assert.equal(CB.bonoEquipo({ vela: 'vikingo-clasica' }), null);
+assert.deepEqual(CB.bonoEquipo({ vela: 'vikingo-taller', proa: 'vikingo-proa', palas: 'vikingo-palas' }), { salida: 8, inicio: 0.01, porPaladas: 1, legendaria: null });
+assert.deepEqual(CB.bonoEquipo({ vela: 'romano-legendaria', proa: 'romano-proa-oro' }), { salida: 15, inicio: 0.02, porPaladas: 0, legendaria: 'romano' });
+assert.equal(CB.bonoEquipo({ vela: 'oro' }).salida, 12, 'las velas de color también dan salida');
+for (const clase of CB.CLASES_COLECCION) {
+  const salidas = ['clasica', 'rango', 'taller', 'epica', 'legendaria'].map((e) => CB.SALIDA_VELA[e]);
+  assert.deepEqual(salidas, [...salidas].sort((a, b) => a - b), 'más alta, más ventaja');
+  assert.match(CB.ventajaTexto(CB.PIEZAS[`${clase}-legendaria`]), /15 m por delante y \+/);
+}
+assert.equal(CB.ventajaTexto(VELAS.hielo, 'hielo'), 'Ventaja: empiezas 10 m por delante');
+assert.equal(CB.ventajaTexto(CB.PIEZAS['pirata-palas']), 'Ventaja: +1 m cada 100 paladas');
+
+// Monedas de las ventajas: Estandarte +10 y Botín +20 por fantasma, solo desde la revisión.
+{
+  const s = (k, v) => ({ fecha: new Date(`${k}T18:00`).getTime(), ventajaUsada: v });
+  assert.equal(J.monedasDeVentaja(s('2026-11-05', 'botin'), { ganados: 3 }), 60);
+  assert.equal(J.monedasDeVentaja(s('2026-11-05', 'estandarte'), { ganados: 1 }), 10);
+  assert.equal(J.monedasDeVentaja(s('2026-11-05', 'botin'), { ganados: 0 }), 0);
+  assert.equal(J.monedasDeVentaja(s('2026-10-30', 'botin'), { ganados: 3 }), 0);
+}
+console.log('coleccion OK');
