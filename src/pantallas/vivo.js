@@ -804,6 +804,7 @@ export function pintarModoEnt() {
 
 export function abrirModoRemo() {
   $('#modo-remo').hidden = false;
+  carreraEnt.tapado = true;
   if (!ajustes.si('consejoModoRemo', false)) { ajustes.escribir('consejoModoRemo', '1'); toast('Doble toque para pausar · desliza a los lados para cambiar de vista', 5000); }
   const intervalos = !!estado.sesion?.bloques || (!estado.sesion && !!estado.entrenamientoPrevio && Ent.tipoDe(estado.entrenamientoPrevio) === 'intervalos');
   $('#mr-perfil').hidden = !intervalos;
@@ -827,5 +828,7 @@ let gestoHecho = 0;
 
 export function cerrarModoRemo() {
   $('#modo-remo').hidden = true;
+  carreraEnt.tapado = false;
+  if (carreraEnt.estado) carreraEnt.actualizar(carreraEnt.estado);
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }

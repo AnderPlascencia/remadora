@@ -326,6 +326,7 @@ export async function pintarHeroe() {
   pintarAvisosHeroe(h, sesiones);
   for (const b of document.querySelectorAll('.heroe-tabs button')) {
     b.classList.toggle('activa', b.dataset.hp === seccionHeroe);
+    b.setAttribute('aria-selected', String(b.dataset.hp === seccionHeroe));
   }
   for (const el of document.querySelectorAll('.hp')) el.hidden = el.id !== `hp-${seccionHeroe}`;
   ({ ficha: pintarFicha, talentos: pintarTalentos, niveles: pintarNiveles, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
