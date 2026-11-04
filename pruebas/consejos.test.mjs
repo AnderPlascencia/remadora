@@ -41,7 +41,9 @@ for (const id of ['base:dis-mant', 'base:dis-suave', 'base:rit-suave', 'base:pal
 // Prueba 500 m: el bono de 2:30 no se da por seguro, se ofrece como extra.
 {
   const p = C.prevision(porId('base:prueba-500'), opc);
-  assert.ok(!p.seguro.agilidad, 'sin bono seguro');
+  // Desde la etapa 9 el 500 m se simula al 135 % del FTP: la Agilidad por el tiempo sobre el 106 % sí es segura
+  // (unos 6 puntos), pero los 5 del bono de 2:30 no se suman.
+  assert.ok(p.seguro.agilidad > 0 && p.seguro.agilidad < 8, `sin bono seguro: ${p.seguro.agilidad}`);
   assert.ok(p.extras.some((x) => x.clave === '500' && x.puntos === 5));
 }
 // Remo libre: sin bono por terminar ni riesgo.
@@ -54,7 +56,8 @@ for (const id of ['base:dis-mant', 'base:dis-suave', 'base:rit-suave', 'base:pal
   const r = C.mejoresPara('agilidad', bases, opc);
   assert.equal(r[0].ent.id, 'base:pot-mejora');
   const i500 = r.findIndex((x) => x.ent.id === 'base:prueba-500');
-  assert.ok(i500 > 0 && r[i500].si, 'la Prueba 500 m aparece con su condición');
+  // Al 135 % del FTP el 500 m ya sube Agilidad por sí mismo (etapa 9): aparece, detrás de VO2 máx.
+  assert.ok(i500 > 0 && (r[i500].si || r[i500].p.seguro.agilidad > 0), 'la Prueba 500 m aparece detrás de VO2 máx');
 }
 // En vivo: puntos al día y un reto que no te saca de tu rango.
 {
@@ -114,7 +117,7 @@ for (const id of ['base:dis-mant', 'base:dis-suave', 'base:rit-suave', 'base:pal
 }
 // Títulos por atributo.
 {
-  assert.deepEqual(J.tituloAtributo('fuerza', 10), { actual: null, siguiente: { nombre: 'Aprendiz de la fuerza', meta: 50, faltan: 40 } });
+  assert.deepEqual(J.tituloAtributo('fuerza', 10), { actual: null, siguiente: { nombre: 'Iniciado de la fuerza', meta: 50, faltan: 40 } });
   assert.equal(J.tituloAtributo('tecnica', 420).actual, 'Experto de la técnica');
   assert.equal(J.tituloAtributo('voluntad', 3000).siguiente, null);
 }
