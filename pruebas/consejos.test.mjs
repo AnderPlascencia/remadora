@@ -123,4 +123,9 @@ for (const id of ['base:dis-mant', 'base:dis-suave', 'base:rit-suave', 'base:pal
   assert.equal(J.tituloAtributo('tecnica', 420).actual, 'Experto de la técnica');
   assert.equal(J.tituloAtributo('voluntad', 3000).siguiente, null);
 }
+// Resumen del plegable de retos: nunca «0 retos para sumar más».
+assert.equal(C.resumenRetos(1), 'Un reto para sumar más');
+assert.equal(C.resumenRetos(3, true), '3 retos para sumar más');
+assert.equal(C.resumenRetos(0, true), 'Un aviso antes de empezar');
+assert.equal(C.resumenRetos(0), '');
 console.log('consejos: ok');

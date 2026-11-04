@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.51.1 · 2026-11-04
+
+- Hoy: cuando la única fila del plegable es el aviso de riesgo, dice «Un aviso antes de empezar» en vez de «0 retos para sumar más».
+
 ## 0.51.0 · 2026-11-04
 
 Pulso y métricas (etapa 13).

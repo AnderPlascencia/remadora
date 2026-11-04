@@ -215,3 +215,10 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
 }
 
 export const textoPuntos = (x) => `${x.puntos > 0 ? '+' : '−'}${Math.abs(x.puntos)} ${nombre(x.atributo)}`;
+
+// Resumen del plegable de retos de la tarjeta Hoy. Sin retos y solo con el aviso de riesgo no dice «0 retos».
+export function resumenRetos(retos, hayRiesgo = false) {
+  if (retos === 1) return 'Un reto para sumar más';
+  if (retos > 1) return `${retos} retos para sumar más`;
+  return hayRiesgo ? 'Un aviso antes de empezar' : '';
+}
