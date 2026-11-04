@@ -5,6 +5,7 @@ import * as F from './fantasma.js';
 import * as Ent from './entrenamientos.js';
 import * as J from './juego.js';
 import { tipoPlan } from './capacidades.js';
+import { tecnicaDeSesion, BONO_PCT } from './tecnica.js';
 
 // Tipos de sesión hechos para apretar. En el resto (fondo, técnica, calorías, remo libre) los retos no piden
 // sprints ni minutos en zona 4: romperían el día suave, que es lo que deja fresco para la próxima dura.
@@ -25,11 +26,13 @@ export function conRango(ent) {
 // Sesión imaginaria: el entrenamiento remado a tu FTP, completo.
 export function sesionDePlan(ent, ftp = 0) {
   const f = ftpO(ftp);
-  const muestras = F.simular(ent, { ftp: f }, f).muestras;
+  const { muestras, cortes } = F.simular(ent, { ftp: f }, f);
   if (!muestras.length) return null;
   const fin = muestras.at(-1);
+  // Los bloques con su duración simulada: la Técnica los mira por separado.
+  const bloques = Ent.tipoDe(ent) === 'intervalos' ? ent.bloques.map((b, i) => ({ ...b, duracion: (cortes[i] ?? fin.t) - (cortes[i - 1] ?? 0) })) : null;
   return {
-    fecha: Date.now(), duracion: fin.t, distancia: Math.round(fin.dist), muestras, ftp: f,
+    fecha: Date.now(), duracion: fin.t, distancia: Math.round(fin.dist), muestras, ftp: f, bloques,
     wattsProm: Math.round(muestras.reduce((a, x) => a + x.w, 0) / muestras.length), tiempoMeta: fin.t, entrenamiento: ent?.nombre || null,
   };
 }
@@ -52,7 +55,8 @@ export function prevision(ent, { ftp = 0, clase = null, ctx = {}, debil = null, 
   const seg = A(base);
   const fa = (k) => J.factorAtributo(k, clase);
   const extras = [];
-  if (rango && base.pctEnRango < 85) {
+  const nueva = J.esEtapa12(base.fecha);
+  if (!nueva && rango && base.pctEnRango < 85) {
     const d = A({ ...base, pctEnRango: 85 }).tecnica - seg.tecnica;
     if (d >= 0.5) extras.push({ clave: 'rango', icono: 'i-diana', titulo: 'Mantén el rango el 85 % del tiempo', detalle: ctx.pctMedio != null ? `Tu media es ${ctx.pctMedio} %. Sigue el indicador verde.` : 'Sigue el indicador verde en cada tramo.', atributo: 'tecnica', puntos: d });
   }
@@ -76,7 +80,7 @@ export function prevision(ent, { ftp = 0, clase = null, ctx = {}, debil = null, 
     const min = Math.ceil((1200 - base.duracion) / 60);
     extras.push({ clave: '20min', icono: 'i-reloj', titulo: `Rema ${min} min más, suave`, detalle: 'Las sesiones de 20 min o más suman Resistencia.', atributo: 'resistencia', puntos: 4 * fa('resistencia') });
   }
-  if (ctx.mppPromedio > 0) extras.push({ clave: 'mpp', icono: 'i-sube', titulo: `Más de ${coma(ctx.mppPromedio * 1.02)} m por palada`, detalle: 'Palada larga y potente, sin subir la cadencia.', atributo: 'tecnica', puntos: 3 * fa('tecnica') });
+  if (!nueva && ctx.mppPromedio > 0) extras.push({ clave: 'mpp', icono: 'i-sube', titulo: `Más de ${coma(ctx.mppPromedio * 1.02)} m por palada`, detalle: 'Palada larga y potente, sin subir la cadencia.', atributo: 'tecnica', puntos: 3 * fa('tecnica') });
   const orden = extras.map((x) => ({ ...x, puntos: Math.max(1, Math.round(x.puntos)) }))
     .sort((a, b) => (b.atributo === debil) - (a.atributo === debil) || b.puntos - a.puntos);
   const seguro = redondear(seg);
@@ -121,7 +125,7 @@ export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, 
   let reto;
   const fuera = rango && ((rango.max && w > rango.max) || (rango.min && w < rango.min));
   if (fuera || (rango && zona && zona.umbral > (rango.max || Infinity))) {
-    // Con un tramo marcado, lo que suma es quedarte en él: Técnica por cada minuto en rango.
+    // Con un tramo marcado, lo que suma es quedarte en él con la potencia pareja: Técnica por cada minuto así.
     const v = totales.tecnica;
     const porSeg = (0.6 / 60) * J.factorAtributo('tecnica', clase);
     const falta = Math.floor(v) + 1 - v;
@@ -129,7 +133,7 @@ export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, 
     reto = {
       atributo: 'tecnica', puntos: 1, progreso: fuera ? 0 : 1 - falta, faltanSeg: fuera ? null : Math.max(1, Math.ceil(falta / porSeg)),
       titulo: fuera ? `Vuelve a tu rango: ${txt}` : `Quédate en ${txt}`,
-      detalle: 'Cada minuto en rango suma Técnica.', corto: 'En rango sumas Técnica',
+      detalle: 'Cada minuto en rango, con la potencia pareja y la cadencia estable, suma Técnica.', corto: 'En rango y parejo sumas Técnica',
     };
   } else if (!rango && !esIntenso(tipo) && tipo != null && (!zona || zona.atributo !== 'resistencia')) {
     // Día suave sin rango en watts (fondo por pulso, meta de distancia o calorías): solo zonas 2 y 3.
@@ -176,7 +180,14 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
   const agiSeg = (s.muestras || []).filter((x) => x.w / f >= 1.06).length;
   if (agiSeg >= 20) logros.push({ icono: 'i-rayo', titulo: `${agiSeg} s por encima de ${w106} W`, atributo: 'agilidad', puntos: (agiSeg / 20) * fa('agilidad') });
   else if (s.muestras?.length && esIntenso(s.tipoPlan)) cerca.push({ icono: 'i-rayo', titulo: agiSeg ? `Solo ${agiSeg} s por encima de ${w106} W` : `Nada por encima de ${w106} W`, detalle: 'Un sprint de 20 s al final ya cuenta.', atributo: 'agilidad', puntos: fa('agilidad') });
-  if (s.pctEnRango != null) {
+  if (J.esEtapa12(s.fecha)) {
+    const t = tecnicaDeSesion(s, f);
+    if (t.minutos >= 1) logros.push({ icono: 'i-diana', titulo: `${Math.round(t.minutos)} min con la potencia pareja y la cadencia estable`, atributo: 'tecnica', puntos: real.tecnica });
+    else if (t.ventanas >= 4) cerca.push({ icono: 'i-diana', titulo: 'La potencia subía y bajaba mucho', detalle: 'Palada a palada, intenta que los vatios no varíen más de un 8 %.', atributo: 'tecnica', puntos: 0.6 * fa('tecnica') });
+    if (t.ventanas && t.pct < BONO_PCT && t.pct >= BONO_PCT - 0.2 && s.duracion >= 600) {
+      cerca.push({ icono: 'i-diana', titulo: `Parejo el ${Math.round(t.pct * 100)} % del tiempo (meta 70 %)`, detalle: 'Con el 70 % de la sesión pareja ganas el bono de Técnica.', atributo: 'tecnica', puntos: 3 * fa('tecnica') });
+    }
+  } else if (s.pctEnRango != null) {
     if (s.pctEnRango >= 85) logros.push({ icono: 'i-diana', titulo: `En rango el ${s.pctEnRango} % del tiempo`, atributo: 'tecnica', puntos: (m.min * s.pctEnRango) / 100 * 0.6 * fa('tecnica') });
     else {
       const d = A({ ...s, pctEnRango: 85 }).tecnica - real.tecnica;
@@ -192,7 +203,7 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
   // Desde las reglas de carga (v0.46.0) el esfuerzo 8 o más ya no suma Voluntad.
   if (J.usaCarga(s)) { /* nada */ } else if (s.rpe >= 8) logros.push({ icono: 'i-fuego', titulo: 'Sesión muy dura', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
   else if (s.rpe == null && s.muestras?.length && esIntenso(s.tipoPlan)) cerca.push({ icono: 'i-fuego', titulo: '¿Fue muy dura? Márcalo abajo', detalle: 'Un esfuerzo de 8 o más suma Voluntad.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
-  if (ctx.mppPromedio > 0 && s.paladas) {
+  if (!J.esEtapa12(s.fecha) && ctx.mppPromedio > 0 && s.paladas) {
     const mpp = s.distancia / s.paladas;
     const meta = ctx.mppPromedio * 1.02;
     if (mpp > meta) logros.push({ icono: 'i-sube', titulo: `${coma(mpp)} m por palada`, detalle: 'Más que tu media.', atributo: 'tecnica', puntos: 3 * fa('tecnica') });

@@ -1,5 +1,5 @@
 // Héroe y tienda: personaje, nivel, atributos, árbol, tienda y paisajes.
-import { PAISAJES, comprarPaisaje, paisajeElegido, tienePaisaje, usarPaisaje } from '../carrera.js';
+import { PAISAJES, VELAS, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarVelas, velasElegidas } from '../carrera.js';
 import * as H from '../historial.js';
 import { hablar } from '../voz.js';
 import { confeti } from '../efectos.js';
@@ -36,6 +36,7 @@ export function arrancarHeroe() {
   }
   // Paisaje de la carrera: el fiordo es gratis; los demás se compran en la tienda.
   usarPaisaje(paisajeElegido(leerPersonaje()));
+  usarVelas(velasElegidas(leerPersonaje()));
   $('#vista-heroe').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-preparar]');
     if (!b) return;
@@ -128,6 +129,38 @@ export function arrancarHeroe() {
       toast(`¡${PAISAJES[id].nombre} es tuyo! Ya lo verás en tu próxima carrera.`);
     }
     usarPaisaje(id);
+    vibrar(60);
+    pintarHeroe();
+  });
+  $('#tienda-velas').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-velas]');
+    if (!b) return;
+    const id = b.dataset.velas;
+    const { per, h } = await estadoHeroe();
+    if (id === '') {
+      guardarPersonaje({ vela: null });
+      toast('Tu bote vuelve a sus velas de siempre.');
+    } else if (tieneVelas(per, id)) {
+      guardarPersonaje({ vela: id });
+      toast(`Tu bote ahora lleva: ${VELAS[id].nombre}.`);
+    } else {
+      const cambios = comprarVelas(per, id, h.monedas);
+      if (!cambios) return;
+      guardarPersonaje(cambios);
+      confeti();
+      toast(`¡${VELAS[id].nombre} son tuyas! Las verás en tu próxima carrera.`);
+    }
+    usarVelas(id);
+    vibrar(60);
+    pintarHeroe();
+  });
+  // Puntos de talento sobrantes (con el árbol completo): se cambian por monedas.
+  $('#vista-heroe').addEventListener('click', async (e) => {
+    if (!e.target.closest('[data-canjear-puntos]')) return;
+    const { per, h } = await estadoHeroe();
+    if (!h.puntosSobrantes) return;
+    guardarPersonaje({ puntosCanjeados: (per.puntosCanjeados || 0) + h.puntosSobrantes });
+    toast(`Cambiaste ${h.puntosSobrantes} ${h.puntosSobrantes === 1 ? 'punto' : 'puntos'} de talento por ${miles(h.puntosSobrantes * J.MONEDAS_POR_PUNTO)} monedas.`);
     vibrar(60);
     pintarHeroe();
   });
@@ -331,7 +364,7 @@ function pintarFicha(h, per, clase, sesiones) {
       <summary><span class="atr-nombre">${a.nombre}${a.clave === clase.favorito ? ' <span class="fav" title="Favorito de tu clase: crece un 15 % más">★ +15 %</span>' : ''}</span>
         <span class="atr-valor"><b>${miles(h.atributos[a.clave])}</b><small class="${sube ? 'sube' : ''}">${sube ? `+${miles(sube)} esta semana` : 'sin cambios esta semana'}</small></span>
         <span class="atr-barra" aria-hidden="true"><i style="width:${(100 * h.atributos[a.clave]) / maximo}%"></i></span>
-        <span class="atr-titulo">${tituloCorto(a.clave, h.atributos[a.clave])}</span></summary>
+        <span class="atr-titulo">${tituloCorto(a.clave, h.atributosTotal[a.clave])}</span></summary>
       <ul>${J.comoSubir(a.clave, f).map((t) => `<li>${t}</li>`).join('')}</ul>${nota}
       <button type="button" class="boton chico${rec?.atributo.clave === a.clave ? ' primario' : ''}" data-preparar="${r.base || ''}" data-reto="${r.reto}">Entrenar ${a.nombre.toLowerCase()}: ${escaparHtml(r.entrenamiento || 'Remo libre suave')}</button>
     </details>`;
@@ -343,6 +376,7 @@ function pintarFicha(h, per, clase, sesiones) {
     : ''; // Sin sesiones, «Esta semana» ya invita a remar la primera: no se repite aquí.
   // Héroe nuevo: los 7 atributos en una lista compacta, sin barras vacías ni «sin cambios esta semana».
   $('#heroe-atributos').classList.toggle('vacio', !Object.values(h.atributos).some((v) => v > 0));
+  $('#heroe-atributos-nota').textContent = J.TEXTO_ATRIBUTOS;
   // Los premios de capítulos y logros son insignias.
   const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
   const ganadas = premios.filter(([id]) => h.insignias.has(id)).length;
@@ -385,10 +419,10 @@ function pintarSemanaHeroe(h, sesiones, f) {
     return `<li><div><b>${escaparHtml(ent?.nombre || 'Remo libre')}</b><small>Para ${a.nombre} · vas en ${miles(h.atributos[a.clave] || 0)}</small></div>
       <span class="cond-pts">${pts ? `+${pts} ${a.nombre.slice(0, 3)}.` : ''}</span><button type="button" class="boton chico" data-preparar="${id || ''}" data-reto="${J.RECOMENDACION_ATRIBUTO[a.clave].reto}">Preparar</button></li>`;
   }).join('');
-  const cercano = J.ATRIBUTOS.map((a) => ({ a, t: J.tituloAtributo(a.clave, h.atributos[a.clave]) })).filter((x) => x.t.siguiente)
+  const cercano = J.ATRIBUTOS.map((a) => ({ a, t: J.tituloAtributo(a.clave, h.atributosTotal[a.clave]) })).filter((x) => x.t.siguiente)
     .sort((x, y) => x.t.siguiente.faltan - y.t.siguiente.faltan)[0];
   caja.innerHTML = `${meta}<div class="solo-avanzado"><p class="etq-campo">Semana sugerida para equilibrarte</p><ul class="semana-sugerida">${filas}</ul></div>
-    ${cercano ? `<p class="titulo-cerca">${ico('i-trofeo')}<span>${cercano.a.nombre} ${miles(h.atributos[cercano.a.clave] || 0)} → título <b>«${cercano.t.siguiente.nombre}»</b>. Te faltan ${miles(cercano.t.siguiente.faltan)}.</span></p>` : ''}`;
+    ${cercano ? `<p class="titulo-cerca">${ico('i-trofeo')}<span>${cercano.a.nombre} ${miles(h.atributosTotal[cercano.a.clave] || 0)} en total → título <b>«${cercano.t.siguiente.nombre}»</b>. Te faltan ${miles(cercano.t.siguiente.faltan)}.</span></p>` : ''}`;
 }
 
 // «+1 / 2 / 3 XP»: resalta el valor del grado que tienes (o del siguiente, si aún no lo aprendiste).
@@ -406,6 +440,17 @@ function pintarTalentos(h, per, clase) {
   $('#talentos-libres').textContent = `${h.talentosPorRepartir > 0
     ? `Tienes ${pts(h.talentosPorRepartir)} de talento para repartir.${guardados > 0 ? ` Guardas ${pts(guardados)} más para cuando se abran otros talentos.` : ''}`
     : h.talentosLibres > 0 ? `Guardas ${pts(h.talentosLibres)}: ahora no hay ningún talento que puedas subir.` : 'Sin puntos libres.'} Ganas 1 punto cada 3 niveles.${antiguo ? ' Los talentos cambiaron: te devolvimos todos tus puntos para que los repartas de nuevo.' : ''}`;
+  // Con el árbol lleno, los puntos que sobran se cambian por monedas (no hay otra cosa que hacer con ellos).
+  const canje = $('#talentos-canje');
+  if (canje) {
+    canje.hidden = !h.puntosSobrantes;
+    canje.innerHTML = h.puntosSobrantes ? `<span>Te sobran ${pts(h.puntosSobrantes)}: ya no caben en tu árbol. Cámbialos por ${icoMoneda}${miles(h.puntosSobrantes * J.MONEDAS_POR_PUNTO)} (${J.MONEDAS_POR_PUNTO} por punto).</span> <button type="button" class="boton chico" data-canjear-puntos>Cambiar</button>` : '';
+  }
+  // Aviso único del cambio del Triunfo romano (etapa 12).
+  if (clase.clave === 'romano' && !ajustes.si('avisoTriunfo12', false)) {
+    ajustes.escribir('avisoTriunfo12', '1');
+    toast('Cambio en tu Triunfo romano: ahora se gana con 4 sesiones en la semana o al llegar a tu meta semanal de km.', 6000);
+  }
   const fila = (t) => {
     const g = J.grado(arbol, clase.clave, t.slot);
     const motivo = J.motivoBloqueo(t.slot, est, arbol, clase.clave);
@@ -530,8 +575,19 @@ function pintarTienda(h, per) {
     const boton = id === elegido ? '<span class="paisaje-uso">En uso</span>'
       : tiene ? `<button type="button" class="boton chico" data-paisaje="${id}">Usar</button>`
         : `<button type="button" class="boton chico" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
-    return `<div class="objeto paisaje${id === elegido ? ' activo' : ''}"><img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"><b>${x.nombre}</b><small>${x.texto}</small>
+    return `<div class="objeto paisaje${id === elegido ? ' activo' : ''}"><img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"${x.filtro ? ` style="filter:${x.filtro}"` : ''}><b>${x.nombre}</b><small>${x.texto}</small>
       <span class="monedas">${x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis'}</span>${boton}</div>`;
+  }).join('');
+  const vela = velasElegidas(per);
+  $('#tienda-velas').innerHTML = [['', { nombre: 'Velas de tu clase', texto: 'Los colores de siempre de tu bote.', precio: 0 }], ...Object.entries(VELAS)].map(([id, x]) => {
+    const tiene = !id || tieneVelas(per, id);
+    const enUso = (vela || '') === id;
+    const muestra = id ? `<span class="velas-muestra" aria-hidden="true" style="background:linear-gradient(90deg, ${x.tela} 0 70%, ${x.marca} 70%)"></span>` : '';
+    const boton = enUso ? '<span class="paisaje-uso">En uso</span>'
+      : tiene ? `<button type="button" class="boton chico" data-velas="${id}">Usar</button>`
+        : `<button type="button" class="boton chico" data-velas="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
+    return `<div class="objeto velas${enUso ? ' activo' : ''}">${muestra}<b>${x.nombre}</b><small>${x.texto}</small>
+      <span class="monedas">${!id ? 'Gratis' : tiene ? 'Comprado' : `${icoMoneda}${miles(x.precio)}`}</span>${boton}</div>`;
   }).join('');
   const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
   $('#inventario').innerHTML = tengo.length ? tengo.map((x) => `<li><div class="mision-fila"><span><b>${x.nombre}</b> · ${x.texto}</span><span class="recompensa"><span class="xp">×${inv[x.id]}</span></span></div></li>`).join('')

@@ -1,10 +1,11 @@
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
-import { gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo } from './talentos.js';
+import { gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
+import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
 import { objeto } from './objetos.js';
 import { tiendaVentajas, XP_ESTANDARTE } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
@@ -15,13 +16,20 @@ export const ATRIBUTOS = [
   { clave: 'agilidad', nombre: 'Agilidad', capacidad: 'VO₂máx y potencia', detalle: 'Sprints y series cortas por encima de tu FTP' },
   { clave: 'resistencia', nombre: 'Resistencia', capacidad: 'Base aeróbica', detalle: 'Minutos en zonas 2 y 3, sesiones de 20 min o más' },
   { clave: 'recuperacion', nombre: 'Recuperación', capacidad: 'Recuperación', detalle: 'Pulso que baja en los descansos, días suaves y descansos a tiempo' },
-  { clave: 'tecnica', nombre: 'Técnica', capacidad: 'Técnica y economía', detalle: 'Tiempo en rango y buena distancia por palada' },
+  { clave: 'tecnica', nombre: 'Técnica', capacidad: 'Técnica y economía', detalle: 'Potencia pareja palada a palada y cadencia estable' },
   { clave: 'voluntad', nombre: 'Voluntad', capacidad: 'Constancia', detalle: 'Rachas, entrenamientos completos y semanas del plan cumplidas' },
   { clave: 'gasto', nombre: 'Gasto', capacidad: 'Gasto calórico', detalle: 'Calorías quemadas' },
 ];
 // Desde esta semana: atributo Gasto en la meta semanal, misiones por capacidad y pruebas del plan como jefes.
 // Las semanas anteriores se calculan como antes, así nadie pierde XP ni cambia una misión ya hecha.
 export const CAPACIDADES_DESDE = '2026-11-02';
+// Los atributos que se ven son los de las últimas 6 semanas: si dejas de entrenar algo, baja.
+export const VENTANA_ATRIBUTOS_DIAS = 42;
+export const TEXTO_ATRIBUTOS = 'Muestran lo que has entrenado en las últimas 6 semanas: si dejas de trabajar uno, baja. Los títulos miran todo lo que has remado y no se pierden.';
+// Etapa 12 (misiones con peso, talentos igualados, monedas, Técnica nueva): desde este día. Lo anterior no cambia,
+// así nadie pierde XP, monedas ni títulos.
+export const ETAPA12_DESDE = '2026-11-04';
+export const esEtapa12 = (fecha) => claveDia(fecha) >= ETAPA12_DESDE;
 
 // Cómo sube cada atributo, con tus vatios: lo mismo que calcula gananciaSesion, dicho en claro.
 // f = tu FTP (0 si no lo tienes). Devuelve frases cortas, de la que más suma a la que menos.
@@ -32,7 +40,7 @@ export function comoSubir(clave, f = 0) {
     agilidad: [`Cada 20 s por encima de ${vatios(f, 1.06)}: +1`, 'Un 500 m a fondo en menos de 2:30: +5'],
     resistencia: [`Cada minuto entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} (zonas 2 y 3): +0,5`, 'Sesiones de 20 min o más: +4'],
     recuperacion: ['Un día de descanso después de un día duro: +4', `Una sesión suave (media por debajo de ${vatios(f, 0.75)}): +2, o +5 si ayer fue duro`, 'Con banda de pulso: +3 por cada descanso en que el pulso baja 20 lpm en un minuto'],
-    tecnica: ['Cada minuto dentro del rango de un entrenamiento: hasta +0,6', 'Más metros por palada que tu media: +3'],
+    tecnica: [`Cada minuto con la potencia pareja (±8 %) y la cadencia estable, por encima de ${vatios(f, 0.55)}: +0,6 (hasta ${TOPE_TECNICA_MIN} min)`, 'Con el 70 % de la sesión así (10 min o más): +3', 'Si el bloque pide una cadencia, solo cuenta remando a esa cadencia'],
     voluntad: ['Terminar el entrenamiento completo: +3', 'Cumplir una semana entera de tu plan: +5', 'Cada día de racha: +0,5 (hasta 7)'],
     gasto: ['Cada 50 kcal quemadas: +1', 'Los fondos largos en zona 2 son lo que más quema con menos fatiga'],
   }[clave] || [];
@@ -198,7 +206,7 @@ export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0,
 }
 
 // ---------- Talentos: por clase, en talentos.js ----------
-export { talentosDe, gradosEn, motivoBloqueo, puntosDeNivel, puntosGastados, grado, cualidadDe, lemaTalentos, tieneArbolAntiguo, valorDe } from './talentos.js';
+export { talentosDe, gradosEn, motivoBloqueo, puntosDeNivel, puntosGastados, grado, cualidadDe, lemaTalentos, tieneArbolAntiguo, valorDe, MONEDAS_POR_PUNTO } from './talentos.js';
 
 // ---------- Misiones ----------
 // La distancia es la fuente principal de XP; las misiones dan variedad con recompensas moderadas:
@@ -309,7 +317,7 @@ function semanalATuMedida(d, rit) {
   return { ...d, metas: [meta], xp: [d.id === 'ruta' ? xpRuta(meta) : d.xp[0]] };
 }
 // Qué preparar al tocar «Hacer ahora» en una misión: un entrenamiento base o Remo libre contra fantasmas ('').
-const PREPARAR_MISION = { rango: 'base:pot-mant', ritmo: 'base:rit-mant', bushido: 'base:rit-mant' };
+const PREPARAR_MISION = { rango: 'base:pot-mant', ritmo: 'base:rit-mant', bushido: 'base:rit-mant', parejo: 'base:rit-mant', semparejo: 'base:rit-mant', suave: 'base:dis-suave' };
 const prepararMision = (mi) => (mi.clave === 'atributo' ? PREPARAR_ATRIBUTO[mi.atributo] : PREPARAR_MISION[mi.clave]) ?? '';
 function elegir(pool, n, semilla, r = azar(semilla)) {
   const lista = [...pool];
@@ -325,7 +333,36 @@ export const lunesDe = (ms) => {
 };
 // rit (opcional) = ritmoReciente(): con historial, las metas se ajustan a lo que remas y no salen misiones imposibles.
 // cargaAyer: carga de ayer (para no pedir intensidad tras un día duro).
-export function misionesDelDia(dia, rit = null, { cargaAyer = 0 } = {}) {
+// ---------- Misiones de la etapa 12: pocas y con peso ----------
+// 3 diarias de ⅓ a ½ sesión de XP cada una (se pagan a la mitad, como todo desde el 29 de octubre): una de tu plan,
+// una de técnica o ritmo y una de juego. Al ser de grupos distintos, nunca salen dos casi iguales el mismo día.
+// Las monedas de las misiones bajan a 1 por cada 40 XP (la colección de paisajes y botes es a largo plazo).
+const monedasMision12 = (xp) => Math.max(5, Math.round(xp / 40 / 5) * 5);
+const crear12 = (d, r, semilla) => ({ ...crear(d, r, semilla), monedas: monedasMision12(d.xp[0]) });
+export const XP_MISION_DIARIA = { plan: 220, tecnica: 200, juego: 180 };
+const D12 = {
+  plan: (nombre) => ({ id: 'plan', nombre: 'Fiel al plan', texto: () => `Cumple «${nombre}», la sesión de tu plan de hoy`, metas: [1], xp: [XP_MISION_DIARIA.plan], valor: (d) => d.delPlan }),
+  descanso: { id: 'suave', nombre: 'Remo de recuperación', texto: () => 'Hoy toca descanso: si remas, que sea suave (15 min o más por debajo del 65 % de tu FTP)', metas: [1], xp: [XP_MISION_DIARIA.plan], valor: (d) => d.suaves },
+  delDia: { id: 'deldia', nombre: 'La sesión del día', texto: () => 'Completa la sesión que te sugiere Entrenar', metas: [1], xp: [XP_MISION_DIARIA.plan], valor: (d) => d.delDia },
+  tecnica: { id: 'parejo', nombre: 'Remo parejo', texto: (m) => `Rema ${m} min con la potencia pareja y la cadencia estable`, metas: [10, 15, 20], xp: [XP_MISION_DIARIA.tecnica, XP_MISION_DIARIA.tecnica, XP_MISION_DIARIA.tecnica], valor: (d) => d.tecMin },
+  ritmo: { id: 'ritmo', nombre: 'Ritmo de crucero', texto: () => 'Completa 10 min o más con ritmo estable', metas: [1], xp: [XP_MISION_DIARIA.tecnica], valor: (d) => d.estables },
+  rango: { id: 'rango', nombre: 'En tu rango', texto: (m) => `Mantén el ${m} % de un entrenamiento en tu rango de vatios`, metas: [80], xp: [XP_MISION_DIARIA.tecnica], valor: (d) => d.mejorPct },
+  fantasma: { id: 'fantasma', nombre: 'Caza de fantasmas', texto: () => 'Gánale a un fantasma', metas: [1], xp: [XP_MISION_DIARIA.juego], valor: (d) => d.ganados },
+  renida: { id: 'renida', nombre: 'Por un pelo', texto: () => 'Gánale a un fantasma por menos del 5 % de lo remado', metas: [1], xp: [XP_MISION_DIARIA.juego], valor: (d) => d.renidas },
+  altamar: { id: 'altamar', nombre: 'Mar adentro', texto: () => 'Gana una carrera en Alta mar', metas: [1], xp: [XP_MISION_DIARIA.juego], valor: (d) => d.altamar },
+};
+// planHoy: el entrenamiento del plan para hoy, '' si hoy es descanso del plan y null sin plan.
+function misionesDelDia12(dia, rit, planHoy) {
+  const semilla = `d${dia}`;
+  const r = azar(semilla);
+  const plan = planHoy ? D12.plan(planHoy) : planHoy === '' ? D12.descanso : D12.delDia;
+  const tecnica = [D12.tecnica, D12.ritmo, ...(rit?.conRango ? [D12.rango] : [])];
+  const juego = [D12.fantasma, D12.renida, ...(rit ? [D12.altamar] : [])];
+  return [crear12(plan, r, semilla), ...[tecnica, juego].map((pool) => crear12(pool[Math.floor(r() * pool.length)], r, semilla))];
+}
+
+export function misionesDelDia(dia, rit = null, { cargaAyer = 0, planHoy = null } = {}) {
+  if (dia >= ETAPA12_DESDE) return misionesDelDia12(dia, rit, planHoy);
   const semilla = `d${dia}`;
   const r = azar(semilla);
   if (!rit) return [crear(DIARIA_DIST, r, semilla), crear(DIARIA_DUR, r, semilla), ...elegir(DIARIAS, 3, semilla, r)];
@@ -361,12 +398,30 @@ function misionAtributo(clave) {
     || `con «${RECOMENDACION_ATRIBUTO[clave]?.entrenamiento}»`;
   return { id: 'atributo', atributo: clave, nombre: 'Héroe equilibrado', texto: (m) => `Sube ${m} puntos de ${a.nombre} esta semana ${como}`, metas: [META_ATRIBUTO[clave]], xp: [150], valor: (d) => Math.floor(d.atr?.[clave] || 0) };
 }
+// Semanales de la etapa 12: la misma línea que las diarias, cada una de una sesión de XP (400 nominales): tu plan,
+// técnica, el rival de la semana y la misión de tu clase.
+export const XP_MISION_SEMANAL = 400;
+function misionesDeSemana12(lunes, clase, rit, reto) {
+  const semilla = `s${lunes}`;
+  const r = azar(semilla);
+  const ses = entre(Math.round(rit?.sesSemana || 2), 2, 5);
+  const plan = rit?.conPlan
+    ? { id: 'semplan', nombre: 'Semana fiel', texto: (m) => `Cumple ${m} sesiones de tu plan esta semana`, metas: [ses], valor: (d) => d.delPlan }
+    : { id: 'disciplina', nombre: 'Disciplina de hierro', texto: (m) => `Entrena ${m} días distintos esta semana`, metas: [entre(ses + 1, 2, 5)], valor: (d) => d.dias.size };
+  const minTec = entre(Math.round((ses * 10) / 5) * 5, 15, 60);
+  const tecnica = { id: 'semparejo', nombre: 'Semana pareja', texto: (m) => `Suma ${m} min de remo parejo esta semana`, metas: [minTec], valor: (d) => d.tecMin };
+  const tema = MISION_CLASE[claseDe(clase)?.clave];
+  const lista = [plan, tecnica, reto, ...(tema ? [semanalATuMedida(tema, rit)] : [])];
+  return lista.map((d) => crear12({ ...d, xp: [XP_MISION_SEMANAL] }, r, semilla));
+}
+
 export function misionesDeSemana(lunes, clase = null, rit = null, atributo = null) {
   const semilla = `s${lunes}`;
   const r = azar(semilla);
   const tema = MISION_CLASE[claseDe(clase)?.clave];
   const rival = rivalDeLaSemana(lunes, clase);
   const reto = { id: 'rival', nombre: 'Rival de la semana', texto: () => `Gánale una carrera a un rival ${claseDe(rival).nombre.toLowerCase()}`, metas: [1], xp: [150], valor: (d) => d.vencidas.filter((k) => k === rival).length };
+  if (lunes >= ETAPA12_DESDE) return misionesDeSemana12(lunes, clase, rit, reto);
   // Con historial no se repiten dos misiones de una sesión larga (Fondo y la Travesía del océano).
   let pool = rit && tema?.id === 'oceano' ? SEMANALES.filter((d) => d.id !== 'fondo') : SEMANALES;
   if (rit && lunes >= CAPACIDADES_DESDE && rit.kcalSemana >= 300) pool = [...pool, SEMANAL_KCAL];
@@ -528,6 +583,12 @@ export function medidas(s, ftpActual) {
     margenMin: Math.min(Infinity, ...rivales.filter((r) => r.diferencia > 0).map((r) => r.diferencia)),
     t500: s.muestras?.length ? mejorTiempo(s.muestras, 500) : null,
     t2000: s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null,
+    // Etapa 12: la Técnica nueva y lo que miran sus misiones.
+    tec: esEtapa12(s.fecha) ? tecnicaDeSesion(s, f) : null,
+    delDia: XC.esDelDia(s) && s.tiempoMeta != null ? 1 : 0,
+    suave: activos >= 15 && (s.intensidad ?? factorIntensidad(s.muestras, f) ?? (s.wattsProm || 0) / f) < 0.65 ? 1 : 0,
+    renidas: rivales.filter((r) => r.diferencia > 0 && factorMargen(r.diferencia, s.distancia) >= 1).length,
+    altamar: rivales.some((r) => r.diferencia > 0 && r.dificultad === 'altamar') ? 1 : 0,
   };
 }
 
@@ -563,6 +624,7 @@ function datosTalento(s, m, ctx) {
   return {
     paladas: s.paladas || 0, metros: m.metros, min: m.min, ganados: m.ganados, rivales,
     sinPausas: sinPausas(s), delPrograma: !!s.delPrograma && s.tiempoMeta != null, racha: ctx.racha, sesSemana: ctx.sesSemana || 0,
+    antes: !esEtapa12(s.fecha), kmSemana: ctx.kmSemana ?? m.metros / 1000, metaSemanaKm: ctx.metaSemanaKm || 0,
   };
 }
 
@@ -580,8 +642,11 @@ function gananciaSesion(s, m, ctx) {
   else if (suave) at.recuperacion += 2;
   if (ctx.descansoATiempo) at.recuperacion += 4;
   at.recuperacion += recuperacionesFc(s) * 3;
-  if (s.pctEnRango != null) at.tecnica += (m.min * s.pctEnRango) / 100 * 0.6;
-  if (s.paladas && ctx.mppPromedio && s.distancia / s.paladas > ctx.mppPromedio * 1.02) at.tecnica += 3;
+  if (m.tec) at.tecnica += m.tec.puntos;
+  else {
+    if (s.pctEnRango != null) at.tecnica += (m.min * s.pctEnRango) / 100 * 0.6;
+    if (s.paladas && ctx.mppPromedio && s.distancia / s.paladas > ctx.mppPromedio * 1.02) at.tecnica += 3;
+  }
   const completo = s.tiempoMeta != null;
   const nueva = XC.usaCarga(s);
   if (completo) at.voluntad += 3;
@@ -667,10 +732,13 @@ function gananciaCarga(s, m, ctx, at, carga) {
 // Calendario del plan que usa el juego (ver xp-carga.js). La app lo fija al arrancar y al cambiar de plan.
 let calendarioPlan = null;
 export const fijarCalendarioPlan = (cal) => { calendarioPlan = cal || null; };
+// Meta semanal de km (Ajustes): la mira el Triunfo romano. La app la fija al arrancar y al cambiarla.
+let metaSemanaJuego = 10;
+export const fijarMetaSemana = (km) => { metaSemanaJuego = km > 0 ? km : 10; };
 
 // ---------- Estado completo del juego ----------
 // per = { clase, nombre, arbol: { clase: { slot: [fechas] } }, inventario: { id: n }, gastado, equipo }
-export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), calendario = calendarioPlan } = {}) {
+export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), calendario = calendarioPlan, metaSemanaKm = metaSemanaJuego } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
   const cal = calendario || {};
   // Días del plan (descansos y semanas) que ya se cobraron, desde la primera sesión con reglas de carga.
@@ -719,7 +787,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const claveClase = claseDe(per.clase)?.clave || null;
   const arbol = (claveClase && per.arbol?.[claveClase]) || {};
   const sesPorSemana = new Map();
+  const kmPorSemana = new Map();
   const atributos = Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0]));
+  const recientes = Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0])); // las últimas 6 semanas
   const mejores = {};
   const cargaDia = new Map();
   const dias = new Set();
@@ -739,7 +809,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const dia = { clave: null, misiones: [], hechas: new Set(), d: null };
   const semana = { clave: null, misiones: [], hechas: new Set(), d: null };
   const nuevoAgg = () => ({ metros: 0, min: 0, kcal: 0, z2min: 0, z4min: 0, sobreSeg: 0, spm24min: 0, vo2Seg: 0, delPlan: 0, maxKcal: 0, mejorRec: 0, mejorPct: 0, ganados: 0, sesiones: 0, dias: new Set(),
-    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0, vencidas: [], atr: Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0])) });
+    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0, vencidas: [], delDia: 0, suaves: 0, tecMin: 0, renidas: 0, altamar: 0, atr: Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0])) });
   // Atributos antes de cada semana (para elegir la meta de atributo) y si ya usaste banda de pulso.
   let semAtr = { lunes: null, atr: null, pulso: false };
   let hayPulso = false;
@@ -797,11 +867,12 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const descansoATiempo = !dias.has(ayer) && (cargaDia.get(anteayer) || 0) >= 60;
     const lunesS = lunesDe(s.fecha);
     sesPorSemana.set(lunesS, (sesPorSemana.get(lunesS) || 0) + 1);
+    kmPorSemana.set(lunesS, (kmPorSemana.get(lunesS) || 0) + m.metros / 1000);
     if (semAtr.lunes !== lunesS) semAtr = { lunes: lunesS, atr: { ...atributos }, pulso: hayPulso };
     const nueva = XC.usaCarga(s);
     const creditos = nueva ? creditosAntesDe(hoy) : null;
     const gan = gananciaSesion(s, m, {
-      grados, clase: claveClase, sesSemana: sesPorSemana.get(lunesS), racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0,
+      grados, clase: claveClase, sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0,
       cargaAntes: cargaDia.get(hoy) || 0, creditos, planPagado: planPagado.has(hoy), tipo: nueva ? tipoSesion(s, ftp) : null,
     });
     if (gan.pagaPlan) planPagado.add(hoy);
@@ -821,12 +892,14 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       atrSesion[k] = total;
       if (total >= 0.5) ganancias[k] = Math.round(total);
     }
+    if (s.fecha >= ahora - VENTANA_ATRIBUTOS_DIAS * 864e5 && s.fecha <= ahora) for (const [k, v] of Object.entries(atrSesion)) recientes[k] += v;
     if (s.fcProm > 0) hayPulso = true;
-    const monedasSesion = Math.floor(gan.xpBase / 50);
+    // Etapa 12: la mitad de monedas por sesión (1 por cada 50 XP que se ven), para que la colección dure.
+    const monedasSesion = Math.floor((esEtapa12(s.fecha) ? gan.xp : gan.xpBase) / 50);
     monedas += monedasSesion;
 
     // Misiones del día y de la semana
-    if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(s.fecha)), { cargaAyer: cargaDia.get(ayer) || 0 }), hechas: new Set(), d: nuevoAgg() });
+    if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(s.fecha)), { cargaAyer: cargaDia.get(ayer) || 0, planHoy: hoy in cal ? cal[hoy] : null }), hechas: new Set(), d: nuevoAgg() });
     const lunes = lunesDe(s.fecha);
     if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes)), atributoDeLaSemana(semAtr.atr, { sinPulso: !semAtr.pulso, lunes })), hechas: new Set(), d: nuevoAgg() });
     // Semanas seguidas con al menos una sesión
@@ -841,6 +914,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       agg.sobreSeg += m.sobreSeg; agg.spm24min += m.spm24min; agg.ganados += m.ganados; agg.sesiones++;
       agg.vo2Seg += m.vo2Seg; agg.delPlan += m.delPlan; agg.maxKcal = Math.max(agg.maxKcal, m.kcal); agg.mejorRec = Math.max(agg.mejorRec, m.fcRec60);
       agg.mejorPct = Math.max(agg.mejorPct, m.pct ?? 0);
+      agg.delDia += m.delDia; agg.suaves += m.suave; agg.tecMin += m.tec?.minutos || 0; agg.renidas += m.renidas; agg.altamar += m.altamar;
       agg.maxMetros = Math.max(agg.maxMetros, m.metros); agg.maxMin = Math.max(agg.maxMin, m.min);
       if (m.estable) agg.estables++;
       agg.vencidas.push(...m.clasesVencidas);
@@ -853,23 +927,24 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     // Constancia: semana, mes y bloques de 4 semanas
     const C = CONSTANCIA;
     const xpCons = (x) => Math.round(x);
+    const monCons = (m) => (esEtapa12(s.fecha) ? m / 2 : m); // etapa 12: la constancia da la mitad de monedas
     if (cons.semana !== lunes) {
       const anterior = cons.semana;
       const ok = cons.sesSemana >= 2;
       cons.semanasSeguidas = ok && anterior && claveDia(new Date(anterior + 'T12:00').getTime() + 7 * 864e5) === lunes ? cons.semanasSeguidas : 0;
       Object.assign(cons, { semana: lunes, sesSemana: 0 });
-      lograr(s.fecha, 'constancia', C.primeraSemana.texto, 10, null, xpCons(C.primeraSemana.xp));
+      lograr(s.fecha, 'constancia', C.primeraSemana.texto, monCons(10), null, xpCons(C.primeraSemana.xp));
     }
     cons.sesSemana++;
     if (cons.sesSemana === 2) {
       cons.semanasSeguidas++;
-      if (cons.semanasSeguidas === 4) { lograr(s.fecha, 'constancia', C.bloque4.texto, 80, null, xpCons(C.bloque4.xp)); cons.semanasSeguidas = 0; }
+      if (cons.semanasSeguidas === 4) { lograr(s.fecha, 'constancia', C.bloque4.texto, monCons(80), null, xpCons(C.bloque4.xp)); cons.semanasSeguidas = 0; }
     }
-    if (cons.sesSemana === 3) lograr(s.fecha, 'constancia', C.semana3.texto, 30, null, xpCons(C.semana3.xp));
-    if (cons.sesSemana === 5) lograr(s.fecha, 'constancia', C.semana5.texto, 20, null, xpCons(C.semana5.xp));
+    if (cons.sesSemana === 3) lograr(s.fecha, 'constancia', C.semana3.texto, monCons(30), null, xpCons(C.semana3.xp));
+    if (cons.sesSemana === 5) lograr(s.fecha, 'constancia', C.semana5.texto, monCons(20), null, xpCons(C.semana5.xp));
     const mes = hoy.slice(0, 7);
     if (cons.mes !== mes) Object.assign(cons, { mes, sesMes: 0, pagadoMes: false });
-    if (++cons.sesMes >= 12 && !cons.pagadoMes) { cons.pagadoMes = true; lograr(s.fecha, 'constancia', C.mes12.texto, 60, null, xpCons(C.mes12.xp)); }
+    if (++cons.sesMes >= 12 && !cons.pagadoMes) { cons.pagadoMes = true; lograr(s.fecha, 'constancia', C.mes12.texto, monCons(60), null, xpCons(C.mes12.xp)); }
 
     // Capítulo de la historia
     g.kmTotal += m.metros / 1000;
@@ -933,7 +1008,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   // Misiones de hoy y de esta semana aunque todavía no hayas remado.
   const hoy = claveDia(ahora);
   const lunes = lunesDe(ahora);
-  const diaHoy = dia.clave === hoy ? dia : { misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(ahora)), { cargaAyer: cargaDia.get(claveDia(ahora - 864e5)) || 0 }), hechas: new Set(), d: nuevoAgg() };
+  const diaHoy = dia.clave === hoy ? dia : { misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(ahora)), { cargaAyer: cargaDia.get(claveDia(ahora - 864e5)) || 0, planHoy: hoy in cal ? cal[hoy] : null }), hechas: new Set(), d: nuevoAgg() };
   const atrHoy = atributoDeLaSemana(atributos, { sinPulso: !hayPulso, lunes });
   const semanaHoy = semana.clave === lunes ? semana : { misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes)), atrHoy), hechas: new Set(), d: nuevoAgg() };
   // La XP que se muestra es la que se paga hoy (desde el 29 de octubre, la mitad).
@@ -947,7 +1022,10 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const xpPorSesion = ultimas.length ? ultimas.reduce((a, x) => a + x.xp + x.xpExtra, 0) / ultimas.length : 0;
 
   const nivel = nivelDe(xp);
-  const gastados = puntosGastados(arbol);
+  // Puntos canjeados por monedas (etapa 12): salen de los libres de todas las clases.
+  const canjeados = per.puntosCanjeados || 0;
+  const gastados = puntosGastados(arbol) + canjeados;
+  monedas += canjeados * MONEDAS_POR_PUNTO;
   const capitulo = cap < CAPITULOS.length ? {
     n: cap + 1, ...CAPITULOS[cap], xp: Math.round(CAPITULOS[cap].xp * fHoy),
     progreso: CAPITULOS[cap].req.map(([k, v]) => ({ clave: k, texto: REQ_TEXTO[k], meta: v, valor: Math.min(v, Math.round(capAgg[k] * 10) / 10) })),
@@ -965,7 +1043,10 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     talentos: puntosDeNivel(nivel),
     talentosLibres: puntosDeNivel(nivel) - gastados,
     talentosPorRepartir: claveClase ? talentosPorRepartir(arbol, claveClase, nivel, puntosDeNivel(nivel) - gastados) : 0,
-    atributos: Object.fromEntries(Object.entries(atributos).map(([k, v]) => [k, Math.round(v)])),
+    puntosSobrantes: claveClase ? puntosSobrantes(arbol, puntosDeNivel(nivel) - gastados) : 0,
+    // En pantalla, el nivel de las últimas 6 semanas (puede bajar); el acumulado solo da los títulos.
+    atributos: Object.fromEntries(Object.entries(recientes).map(([k, v]) => [k, Math.round(v)])),
+    atributosTotal: Object.fromEntries(Object.entries(atributos).map(([k, v]) => [k, Math.round(v)])),
     porSesion,
     logros,
     monedas: monedas - (per.gastado || 0),
@@ -1075,7 +1156,7 @@ export const RECOMENDACION_ATRIBUTO = {
   agilidad: { base: 'base:pot-mejora', entrenamiento: 'VO2 máx', reto: 'igual', texto: 'Series cortas por encima de tu FTP. Si te toca un vikingo, aguanta su salida fuerte.' },
   resistencia: { base: 'base:dis-mant', entrenamiento: 'Fondo', reto: 'igual', texto: 'Distancia larga en zona 2. Un polinesio acelera al final: guarda fuerzas para el último tramo.' },
   recuperacion: { base: null, entrenamiento: null, reto: 'inferior', texto: 'Remo libre suave en zona 1 y 2, o un día de descanso. Un rival inferior para remar sin presión.' },
-  tecnica: { base: 'base:rit-mant', entrenamiento: 'Ritmo de crucero', reto: 'igual', texto: 'Ritmo parejo y buena distancia por palada. Rema como un samurái: constante de principio a fin.' },
+  tecnica: { base: 'base:rit-mant', entrenamiento: 'Ritmo de crucero', reto: 'igual', texto: 'Potencia pareja palada a palada y cadencia estable. Rema como un samurái: constante de principio a fin.' },
   voluntad: { base: 'base:pal-mejora', entrenamiento: 'Paladas en pirámide', reto: 'superior', texto: 'Termina el entrenamiento completo y cuida tu racha. Un rival superior pone a prueba tu voluntad.' },
   gasto: { base: 'base:cal-mant', entrenamiento: 'Calorías', reto: 'inferior', texto: 'Un fondo largo en zona 2: es lo que más calorías quema con menos fatiga.' },
 };

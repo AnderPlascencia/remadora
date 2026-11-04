@@ -47,6 +47,8 @@ function guardarCalendario(cal) {
   const cal = leerCalendario();
   if (cal) J.fijarCalendarioPlan(cal);
   else guardarCalendario(XC.calendarioDe(leerPrograma()));
+  // La meta semanal de km también la mira el juego (Triunfo romano).
+  J.fijarMetaSemana(ajustes.num('metaSemana', 10));
 }
 
 // Lo que el juego necesita saber de una sesión al guardarla (o al estimar su XP antes de remar):

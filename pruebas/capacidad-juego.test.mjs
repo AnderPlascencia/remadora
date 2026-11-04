@@ -10,8 +10,8 @@ const antes = ids(J.misionesDelDia('2026-10-27', rit));
 assert.deepEqual(antes, ids(J.misionesDelDia('2026-10-27', { ...rit, conPlan: false, conPulso: false })));
 assert.ok(!antes.includes('plan'));
 
-// Después: con plan, la sesión del plan siempre es una de las misiones; 5 en total.
-for (let d = 2; d <= 15; d++) {
+// Después: con plan, la sesión del plan siempre es una de las misiones; 5 en total (hasta la etapa 12, que deja 3).
+for (let d = 2; d <= 3; d++) {
   const dia = `2026-11-${String(d).padStart(2, '0')}`;
   const l = J.misionesDelDia(dia, rit);
   assert.equal(l.length, 5, dia);
@@ -34,8 +34,8 @@ assert.ok(J.ATRIBUTOS.some((a) => a.clave === 'gasto'));
 
 // Misión semanal de calorías solo desde la fecha y con gasto habitual.
 assert.ok(!ids(J.misionesDeSemana('2026-10-26', null, rit)).includes('kcalsem'));
-const conKcal = Array.from({ length: 8 }, (_, i) => J.misionesDeSemana(J.lunesDe(Date.UTC(2026, 10, 2 + 7 * i, 12)), null, rit)).some((l) => ids(l).includes('kcalsem'));
-assert.ok(conKcal, 'kcalsem aparece alguna semana');
+// (Desde la etapa 12 las semanales son plan, técnica, rival y clase: ya no hay misión de calorías.)
+assert.ok(!ids(J.misionesDeSemana('2026-11-09', null, rit)).includes('kcalsem'));
 
 // El atributo Gasto sube 1 punto por cada 50 kcal.
 const ses = (kcal) => ({ fecha: Date.UTC(2026, 10, 3, 12), duracion: 1200, distancia: 4800, paladas: 480, wattsProm: 140, kcal,

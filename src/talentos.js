@@ -15,24 +15,26 @@ export const TOPE_TALENTOS_M = 40;
 export const TOPE_TALENTOS_XP = 150;
 
 // Por clase: cualidad, bote y sus 5 talentos. tipo: 'xp' o 'carrera'. g: lo que da cada grado.
+// Etapa 12: las clases quedan igualadas en unos 100 XP nominales (50 reales) por sesión con el árbol completo y el
+// perfil típico de cada clase (ver pruebas/etapa12.test.mjs). g0 y texto0: lo de antes, para las sesiones anteriores.
 export const CLASES_TALENTO = {
   vikingo: {
     cualidad: 'Fuerza', bote: 'drakkar', lema: 'Cada palada es un hachazo: sus mejoras cuentan paladas.',
     talentos: {
       m1: { nombre: 'Golpe de hacha', tipo: 'carrera', g: [100, 80, 60], texto: (g) => `Cada ${g} paladas recibes 1 palada extra.` },
-      m2: { nombre: 'Brazos de hacha', tipo: 'xp', g: [1, 2, 3], texto: (g) => `+${g} XP cada 10 paladas.` },
+      m2: { nombre: 'Brazos de hacha', tipo: 'xp', g: [3, 5, 7], g0: [1, 2, 3], texto: (g) => `+${g} XP cada 100 paladas.` },
       m3: { nombre: 'Salida del drakkar', tipo: 'carrera', g: [0.5, 1, 1.5], texto: (g) => `Tus primeras 20 paladas de la carrera te dan ${coma(g)} m extra cada una.` },
-      m4: { nombre: 'Saga de fuerza', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP al llegar a 500 paladas en una sesión.` },
-      maestria: { nombre: 'Botín de la saga', tipo: 'xp', g: [25, 50, 75], texto: (g) => `+${g} XP cada 1000 paladas.` },
+      m4: { nombre: 'Saga de fuerza', tipo: 'xp', g: [10, 20, 30], g0: [15, 30, 45], texto: (g) => `+${g} XP al llegar a 500 paladas en una sesión.` },
+      maestria: { nombre: 'Botín de la saga', tipo: 'xp', g: [20, 40, 60], g0: [25, 50, 75], texto: (g) => `+${g} XP cada 1000 paladas.` },
     },
   },
   pirata: {
     cualidad: 'Hurto', bote: 'balandra', lema: 'Les roba metros y botín a los fantasmas.',
     talentos: {
-      m1: { nombre: 'Bolsa ligera', tipo: 'xp', g: [10, 20, 30], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3).` },
+      m1: { nombre: 'Bolsa ligera', tipo: 'xp', g: [8, 16, 24], g0: [10, 20, 30], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3).` },
       m2: { nombre: 'Robar el viento', tipo: 'carrera', g: [30, 25, 20], texto: (g) => `Mientras vas detrás de un fantasma, cada ${g} paladas recibes 1 palada extra.` },
       m3: { nombre: 'Mano rápida', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Cada vez que adelantas a un fantasma le robas ${g} m.` },
-      m4: { nombre: 'Botín escondido', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP en cada sesión con carrera contra fantasmas.` },
+      m4: { nombre: 'Botín escondido', tipo: 'xp', g: [20, 40, 60], g0: [15, 30, 45], texto: (g) => `+${g} XP en cada sesión con carrera contra fantasmas.` },
       maestria: { nombre: 'Tesoro del capitán', tipo: 'xp', g: [40, 80, 120], texto: (g) => `Si les ganas a todos los fantasmas de la carrera, +${g} XP.` },
     },
   },
@@ -40,9 +42,9 @@ export const CLASES_TALENTO = {
     cualidad: 'Técnica', bote: 'barca', lema: 'La forma perfecta: remar sin interrupciones y rematar con precisión.',
     talentos: {
       m1: { nombre: 'Corte limpio', tipo: 'carrera', g: [40, 35, 30], texto: (g) => `Cada ${g} paladas seguidas sin detenerte recibes 1 palada extra.` },
-      m2: { nombre: 'Kata', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP si remas toda la sesión sin pausas (10 min o más).` },
+      m2: { nombre: 'Kata', tipo: 'xp', g: [25, 50, 75], g0: [15, 30, 45], texto: (g) => `+${g} XP si remas toda la sesión sin pausas (10 min o más).` },
       m3: { nombre: 'Kiai final', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `En los últimos 200 m de una carrera a distancia, cada 50 m avanzas ${g} m más.` },
-      m4: { nombre: 'Maestro del dojo', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP al terminar el entrenamiento que toca hoy en tu programa.` },
+      m4: { nombre: 'Maestro del dojo', tipo: 'xp', g: [20, 40, 60], g0: [15, 30, 45], texto: (g) => `+${g} XP al terminar el entrenamiento que toca hoy en tu programa.` },
       maestria: { nombre: 'Senda del maestro', tipo: 'xp', g: [30, 60, 90], texto: (g) => `+${g} XP si terminas el entrenamiento del programa sin pausas.` },
     },
   },
@@ -63,7 +65,7 @@ export const CLASES_TALENTO = {
       m2: { nombre: 'Hortator', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `Cada minuto remado sin detenerte avanzas ${g} m más.` },
       m3: { nombre: 'Ley de la legión', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada día de racha (hasta 7 días).` },
       m4: { nombre: 'Marcha de la legión', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Con 2 días de racha o más, empiezas la carrera ${g} m por delante.` },
-      maestria: { nombre: 'Triunfo romano', tipo: 'xp', g: [75, 150, 225], texto: (g) => `Al completar 5 sesiones en una semana, +${g} XP (una vez por semana).` },
+      maestria: { nombre: 'Triunfo romano', tipo: 'xp', g: [75, 150, 225], texto: (g) => `Al completar 4 sesiones en una semana o llegar a tu meta semanal de km, +${g} XP (una vez por semana).` },
     },
   },
 };
@@ -86,10 +88,26 @@ export function talentosDe(clase) {
     };
   });
 }
-// Valor del talento en su grado actual (0 si no se ha aprendido).
-export function valorDe(clase, slot, grado) {
+// Valor del talento en su grado actual (0 si no se ha aprendido). antes: con los valores de antes de la etapa 12.
+export function valorDe(clase, slot, grado, antes = false) {
   const t = CLASES_TALENTO[claveDe(clase)].talentos[slot];
-  return t && grado > 0 ? t.g[Math.min(grado, GRADOS_MAX) - 1] : 0;
+  return t && grado > 0 ? (antes && t.g0 ? t.g0 : t.g)[Math.min(grado, GRADOS_MAX) - 1] : 0;
+}
+// Triunfo romano: con 4 sesiones en la semana o al llegar a tu meta semanal de km, lo que pase antes (antes de la
+// etapa 12, solo con 5 sesiones). Se paga en la sesión que lo consigue, una vez por semana.
+export const SESIONES_TRIUNFO = 4;
+export function ganaTriunfo(d) {
+  if (d.antes) return d.sesSemana === 5;
+  const meta = d.metaSemanaKm > 0 ? d.metaSemanaKm : Infinity;
+  const ahora = d.sesSemana >= SESIONES_TRIUNFO || d.kmSemana >= meta;
+  const antes = d.sesSemana - 1 >= SESIONES_TRIUNFO || d.kmSemana - d.metros / 1000 >= meta;
+  return ahora && !antes;
+}
+// Puntos de talento sobrantes: los que ya no caben en el árbol completo. Se pueden cambiar por monedas.
+export const MONEDAS_POR_PUNTO = 150;
+export function puntosSobrantes(arbol, libres) {
+  const falta = SLOTS.reduce((a, slot) => a + (GRADOS_MAX - Math.min(GRADOS_MAX, arbol?.[slot]?.length || 0)) * COSTE_SLOT[slot], 0);
+  return Math.max(0, libres - falta);
 }
 
 // arbol = { slot: [fecha del grado 1, fecha del grado 2, …] } de la clase activa.
@@ -118,16 +136,17 @@ export function motivoBloqueo(slot, { nivel, libres }, arbol, clase) {
   return null;
 }
 
-// XP de los talentos en una sesión. d = { paladas, metros, min, ganados, rivales, sinPausas, delPrograma, racha, sesSemana }.
+// XP de los talentos en una sesión. d = { paladas, metros, min, ganados, rivales, sinPausas, delPrograma, racha, sesSemana,
+// antes (sesión anterior a la etapa 12), kmSemana (con esta sesión), metaSemanaKm }.
 // Devuelve [[nombre, xp], …]. Todo lo de la sesión suma como mucho TOPE_TALENTOS_XP; el Triunfo romano va aparte.
 export function xpTalentos(clase, grados, d) {
   const c = CLASES_TALENTO[claveDe(clase)];
-  const v = (slot) => valorDe(clase, slot, grados?.[slot] || 0);
+  const v = (slot) => valorDe(clase, slot, grados?.[slot] || 0, !!d.antes);
   const filas = [];
   const sumar = (slot, xp) => { if (xp > 0) filas.push([c.talentos[slot].nombre, Math.round(xp)]); };
   const k = claveDe(clase);
   if (k === 'vikingo') {
-    sumar('m2', v('m2') * Math.floor(d.paladas / 10));
+    sumar('m2', v('m2') * Math.floor(d.paladas / (d.antes ? 10 : 100)));
     if (d.paladas >= 500) sumar('m4', v('m4'));
     sumar('maestria', v('maestria') * Math.floor(d.paladas / 1000));
   } else if (k === 'pirata') {
@@ -154,6 +173,6 @@ export function xpTalentos(clase, grados, d) {
     if (x > 0) recortadas.push([n, x]);
     resto -= x;
   }
-  const triunfo = k === 'romano' && d.sesSemana === 5 && v('maestria') ? [[c.talentos.maestria.nombre, v('maestria')]] : [];
+  const triunfo = k === 'romano' && ganaTriunfo(d) && v('maestria') ? [[c.talentos.maestria.nombre, v('maestria')]] : [];
   return [...recortadas, ...triunfo];
 }
