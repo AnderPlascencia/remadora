@@ -111,3 +111,28 @@ test('sin conexión, el código sale de la caché', async () => {
   conRed = false;
   assert.equal((await sw.disparar('fetch', pedir('src/app.js'))).cuerpo, 'app');
 });
+
+test('al instalar se guardan el fiordo y las miniaturas, pero no los paisajes de pago', async () => {
+  const { PAISAJES } = await import('../src/carrera.js');
+  const sw = montar();
+  await sw.disparar('install', {});
+  for (const [id, x] of Object.entries(PAISAJES)) {
+    assert.ok(sw.pedidas.some((u) => u.endsWith(x.miniatura)), `miniatura de ${id}`);
+    for (const f of [x.panorama.src, x.costa, x.orilla.src]) {
+      const pedida = sw.pedidas.some((u) => u.endsWith(f));
+      // Las variantes del fiordo usan sus imágenes, que van siempre (es el paisaje gratis).
+      if (f.startsWith('assets/carrera/fiordo') || ['assets/carrera/orilla.webp', 'assets/carrera/costa.webp'].includes(f)) assert.ok(pedida, f);
+      else assert.ok(!pedida, `${f} (${id}) no debería precargarse`);
+    }
+  }
+});
+
+test('los paisajes comprados se guardan cuando la app lo pide, y solo imágenes de la carrera', async () => {
+  const sw = montar();
+  await sw.disparar('message', { data: { tipo: 'precargar', clase: null, archivos: [
+    'assets/carrera/canon.webp', 'assets/carrera/canon_orilla.webp', 'src/app.js', '../secreto.webp', 'https://otro.sitio/x.webp', 42,
+  ] } });
+  assert.ok(await sw.guardado('assets/carrera/canon.webp'));
+  assert.ok(await sw.guardado('assets/carrera/canon_orilla.webp'));
+  assert.deepEqual(sw.pedidas.map((u) => u.replace(ORIGEN, '')), ['assets/carrera/canon.webp', 'assets/carrera/canon_orilla.webp']);
+});
