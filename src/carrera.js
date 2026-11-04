@@ -504,7 +504,7 @@ const PIEL = '#E2B48C';
 // del render en ese punto. Se descargan al pintar el primer bote de esa clase; mientras, se dibuja el bote vectorial.
 export const REMEROS_ATLAS = {
   '3d': { w: 320, h: 196, cols: 4, n: 24, ancla: [160.0, 118.7], ppm: 81.93 },
-  '2d': { w: 356, h: 235, cols: 4, n: 24, ancla: [148.2, 117.0], ppm: 60.0 },
+  '2d': { w: 356, h: 251, cols: 4, n: 24, ancla: [148.2, 123.0], ppm: 60.0 },
 };
 // La barca de Blender mide 5,4 m: de la popa al escálamo 1,97 m y del escálamo a la proa 3,43 m.
 const BARCA_REAL = { largo: 5.4, proa: 3.43 };

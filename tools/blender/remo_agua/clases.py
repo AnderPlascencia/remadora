@@ -127,6 +127,13 @@ def _toro(nombre, centro, r, grueso, mat, inclina=0.0):
     return o
 
 
+def _vuelta_bota(hexa):
+    """La vuelta de piel de las botas tapa su borde recortado: se queda, teñida como cuero o tela de la clase."""
+    m = _tenir('Pelaje', hexa, 'VueltaBota')
+    for n in ('PelajeBotaL', 'PelajeBotaR'):
+        _poner(n, m)
+
+
 def vestir(clase):
     if clase == 'vikingo':
         return
@@ -142,7 +149,8 @@ def vestir(clase):
         pelo = _tinte('Pelo', (0.25, 0.22, 0.22))
         for n in ('Pelo', 'Barba', 'Bigote', 'Cejas', 'TrenzaBarba'):
             _poner(n, pelo)
-        _ocultar('MantoPelaje', 'TrenzaL', 'TrenzaR', 'Moño', 'AnilloMoño', 'PelajeBota', 'BrocheCapa')
+        _ocultar('MantoPelaje', 'TrenzaL', 'TrenzaR', 'Moño', 'AnilloMoño', 'BrocheCapa')
+        _vuelta_bota('#3A2A1E')
         rojo = _plano('Panuelo', '#B3261E', 0.75)
         o = _esfera('Panuelo', (c.x, c.y, c.z - r.z * 0.25), (r.x * 1.12, r.y * 1.12, r.z * 1.15), rojo, corte=c.z - r.z * 0.05)
         _a_hueso(o)
@@ -160,7 +168,8 @@ def vestir(clase):
         pelo = _tinte('Pelo', (0.12, 0.11, 0.11))
         for n in ('Pelo', 'Cejas', 'Moño'):
             _poner(n, pelo)
-        _ocultar('Barba', 'Bigote', 'TrenzaBarba', 'TrenzaL', 'TrenzaR', 'MantoPelaje', 'PelajeBota', 'Tatuaje', 'BrocheCapa')
+        _ocultar('Barba', 'Bigote', 'TrenzaBarba', 'TrenzaL', 'TrenzaR', 'MantoPelaje', 'Tatuaje', 'BrocheCapa')
+        _vuelta_bota('#4A4D55')
         blanco = _plano('Hachimaki', '#F1EEE6', 0.8)
         z = c.z - r.z * 0.35
         o = _esfera('Hachimaki', (c.x, c.y, z), (r.x * 1.1, r.y * 1.1, 0.022), blanco, seg=40)
@@ -169,12 +178,15 @@ def vestir(clase):
         _a_hueso(disco)
     elif clase == 'polinesio':
         # Torso descubierto con tatuajes, piel más morena, pareo rojo y collar de flores
-        _poner('Cuerpo', _tinte('Piel', (0.62, 0.48, 0.38)))
+        # El cuerpo de MakeHuman no tiene piel bajo la ropa (torso y pies): la camisa y las botas pasan a ser piel
+        piel = _tinte('Piel', (0.62, 0.48, 0.38))
+        for n in ('Cuerpo', 'Gambeson', 'Botas', 'Vendas'):
+            _poner(n, piel)
         _poner('Pantalon', _tenir('Pantalon', '#C2410C'))
         pelo = _tinte('Pelo', (0.15, 0.13, 0.12))
         for n in ('Pelo', 'Cejas', 'Moño'):
             _poner(n, pelo)
-        _ocultar('Gambeson', 'CorreaA', 'CorreaB', 'BrochePecho', 'MantoPelaje', 'Barba', 'Bigote', 'TrenzaBarba', 'TrenzaL', 'TrenzaR',
+        _ocultar('CorreaA', 'CorreaB', 'BrochePecho', 'MantoPelaje', 'Barba', 'Bigote', 'TrenzaBarba', 'TrenzaL', 'TrenzaR',
                  'PelajeBota', 'BrocheCapa', 'Brazales')
         cuello = rig.matrix_world @ rig.data.bones['neck01'].head_local
         flores = [_plano('Flor' + str(i), h, 0.6) for i, h in enumerate(('#F2C230', '#E8483A', '#F5F0E6', '#F06AA0'))]
@@ -191,7 +203,8 @@ def vestir(clase):
         pelo = _tinte('Pelo', (0.35, 0.28, 0.22))
         for n in ('Pelo', 'Cejas'):
             _poner(n, pelo)
-        _ocultar('Barba', 'Bigote', 'TrenzaBarba', 'TrenzaL', 'TrenzaR', 'Moño', 'AnilloMoño', 'MantoPelaje', 'PelajeBota', 'BrocheCapa', 'Tatuaje')
+        _ocultar('Barba', 'Bigote', 'TrenzaBarba', 'TrenzaL', 'TrenzaR', 'Moño', 'AnilloMoño', 'MantoPelaje', 'BrocheCapa', 'Tatuaje')
+        _vuelta_bota('#5A3A22')
         bronce = _plano('Bronce', '#B07A3A', 0.35, 1.0)
         o = _esfera('Galea', (c.x, c.y + 0.005, c.z - r.z * 0.45), (r.x * 1.16, r.y * 1.14, r.z * 1.38), bronce, corte=c.z - r.z * 0.5)
         _a_hueso(o)
@@ -203,6 +216,59 @@ def vestir(clase):
         cresta = _esfera('Cresta', (c.x, c.y + 0.01, tope), (0.024, r.y * 1.15, 0.11), _plano('CrestaRoja', '#A3171B', 0.9),
                          corte=tope, seg=32)
         _a_hueso(cresta)
+    rig.data.pose_position = 'POSE'
+    bpy.context.view_layer.update()
+
+
+def tapar_cuerpo(prendas=('Gambeson', 'Pantalon'), debajo=('Cuerpo', 'Botas', 'Vendas')):
+    """Oculta lo que queda bajo la ropa (piel del torso y los muslos, caña de las botas) para que no la atraviese al
+    doblar hombros y rodillas en la palada. Se mide en la pose de reposo: un vértice se oculta si está dentro de una
+    prenda o a menos de 3,5 cm por debajo de ella, y no cerca de su borde (allí se vería el hueco)."""
+    from mathutils.bvhtree import BVHTree
+    from mathutils.kdtree import KDTree
+    rig.data.pose_position = 'REST'
+    bpy.context.view_layer.update()
+    arboles = []
+    for n in prendas:
+        o = bpy.data.objects.get(n)
+        if not o:
+            continue
+        me = o.data
+        vs = [o.matrix_world @ v.co for v in me.vertices]
+        arboles.append(BVHTree.FromPolygons(vs, [tuple(p.vertices) for p in me.polygons]))
+        caras = {}
+        for p in me.polygons:
+            for e in p.edge_keys:
+                caras[e] = caras.get(e, 0) + 1
+        bordes = {i for e, c in caras.items() if c == 1 for i in e}
+        kd = KDTree(max(1, len(bordes)))
+        for i in bordes:
+            kd.insert(vs[i], i)
+        kd.balance()
+        arboles[-1] = (arboles[-1], kd if bordes else None)
+    for n in debajo:
+        o = bpy.data.objects.get(n)
+        if not o or not arboles:
+            continue
+        ocultos = []
+        for v in o.data.vertices:
+            w = o.matrix_world @ v.co
+            for bvh, kd in arboles:
+                loc, nor, _, d = bvh.find_nearest(w, 0.035)
+                if loc is None or (w - loc).dot(nor) > 0.002:
+                    continue
+                if kd and kd.find(w)[2] < 0.012:
+                    continue
+                ocultos.append(v.index)
+                break
+        if not ocultos:
+            continue
+        g = o.vertex_groups.new(name='BajoLaRopa')
+        g.add(ocultos, 1.0, 'REPLACE')
+        m = o.modifiers.new('BajoLaRopa', 'MASK')
+        m.vertex_group = g.name
+        m.invert_vertex_group = True
+        print('TAPAR', n, len(ocultos), 'de', len(o.data.vertices), flush=True)
     rig.data.pose_position = 'POSE'
     bpy.context.view_layer.update()
 

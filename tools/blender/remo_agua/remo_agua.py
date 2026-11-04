@@ -66,11 +66,12 @@ def _dir(n):
 
 
 X, Y, Z = (1, 0, 0), (0, 1, 0), (0, 0, 1)
-DEDO = {}
+DEDO, PALMA = {}, {}
 for s in 'LR':
     d = _dir('finger3-1.' + s)
     a = (rig.data.bones['finger2-1.' + s].head_local - rig.data.bones['finger5-1.' + s].head_local).normalized()
     palma = d.cross(a) if s == 'L' else a.cross(d)
+    PALMA[s] = tuple(palma.normalized())
     for f in range(1, 6):
         for k in (1, 2, 3):
             n = f'finger{f}-{k}.{s}'
@@ -134,8 +135,10 @@ for f in range(1, PALADA + 2):
             for k in (1, 2, 3):
                 n = f'finger{dd}-{k}.{s}'
                 r[n] = [(DEDO[n], 75 * (0.8 if k == 1 else 1.0))]
-        for k in (2, 3):
-            r[f'finger1-{k}.{s}'] = [(DEDO[f'finger1-{k}.{s}'], 35)]
+        # el pulgar se cierra sobre la caña (gira alrededor de la normal de la palma; en la izquierda, al revés)
+        eje_pulgar = tuple(Vector(PALMA[s]) * (1 if s == 'R' else -1))
+        for k in (1, 2, 3):
+            r[f'finger1-{k}.{s}'] = [(eje_pulgar, 30 if k == 1 else 40)]
     l = {'root': loc('root', (0, desliza, caida)),
          'remo': loc('remo', (0, desliza - 0.25 + py, asiento_z + pz + 0.2 - remo0.z))}
     for n in HUESOS:
@@ -258,6 +261,7 @@ caja('Popa', (0, -1.7, 0.38), (0.36, 1.1, 0.02), MAT['Madera'])
 # ropa del remero y pintura de la barca de cada clase
 exec(open(os.path.join(AQUI, 'clases.py')).read())
 vestir(A.clase)
+tapar_cuerpo()
 pintar_barca(A.clase)
 
 # muestreo de las manos para colocar las horquillas (perno donde el remo queda perpendicular a mitad de palada)
@@ -281,8 +285,15 @@ print('PERNO z', round(pz, 3), 'manos z', manos[:, 2].min().round(3), manos[:, 2
 
 PALAS, REMOS = {}, {}
 for s, lado in ((1, 'L'), (-1, 'R')):
+    # El puño del remo pasa por dentro del puño cerrado (centro de los dedos curvados), no por la muñeca
     mano = bpy.data.objects.new('Mano.' + lado, None); col.objects.link(mano)
-    c = mano.constraints.new('COPY_LOCATION'); c.target = rig; c.subtarget = 'ik_mano.' + lado
+    esc.frame_set(8)
+    mw = rig.matrix_world
+    dedos = [PB[f'finger{d}-{k}.{lado}'] for d in (3, 4) for k in (1, 2, 3)]
+    agarre = sum([mw @ ((p.head + p.tail) / 2) for p in dedos], Vector()) / len(dedos)
+    mano.parent = rig; mano.parent_type = 'BONE'; mano.parent_bone = 'wrist.' + lado
+    bpy.context.view_layer.update()
+    mano.matrix_world = Matrix.Translation(agarre)
     piv = bpy.data.objects.new('Perno.' + lado, None); col.objects.link(piv)
     piv.location = PERNO[lado]
     piv.rotation_euler.z = 0 if lado == 'L' else math.pi
@@ -740,9 +751,9 @@ a, b_ = (int(x) for x in A.frames.split('-'))
 if A.paso:
     a, b_ = 1, A.paso
 for f in range(a, b_ + 1):
-    # con --paso, el fotograma f es la fase (f-1)/paso de la palada; la pala entra en el fotograma 2 de la acción,
+    # con --paso, el fotograma f es la fase (f-1)/paso de la palada contada desde que la pala entra en el agua,
     # que es la fase 0 (el ataque) de palada() en carrera.js
-    t = ((f - 1) * PALADA / A.paso + 1) / FPS if A.paso else (f - 1) / FPS
+    t = T_ENT + (f - 1) * PALADA / A.paso / FPS if A.paso else (f - 1) / FPS
     fr = remo_frame(t)
     esc.frame_set(int(fr), subframe=fr - int(fr))
     co, espuma = agua_en(t)
