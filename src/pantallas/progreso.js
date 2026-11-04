@@ -52,7 +52,7 @@ function pintarPeriodos() {
     valor: Math.round(p.metros / 100) / 10,
     resaltar: i === arr.length - 1,
   }));
-  dibujarBarras($('#grafica-periodos'), datos, { color: color('--primario'), formato: (v) => `${v}` });
+  dibujarBarras($('#grafica-periodos'), datos, { color: color('--info'), formato: (v) => `${v}` });
   $('#grafica-periodos').setAttribute('aria-label', `Kilómetros por ${periodo}: ${datos.map((d) => `${d.etiqueta} ${d.valor}`).join(', ')}`);
 }
 

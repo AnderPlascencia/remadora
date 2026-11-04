@@ -276,8 +276,9 @@ export async function pintarHeroe() {
   const sesiones = await db.listar('sesiones');
   const h = J.estadoJuego(sesiones, { ftp: ftp(), per });
   $('#heroe-avatar').innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="84" height="84" alt="${clase.nombre} ${h.titulo}"><span class="emblema mini">${emblema(clase)}</span>`;
-  $('#heroe-titulo').textContent = per.nombre || `${clase.nombre} sin nombre`;
-  $('#heroe-clase').textContent = `${clase.nombre} · Rango ${h.titulo}`;
+  // Sin nombre, el título es la clase y la línea de abajo no la repite.
+  $('#heroe-titulo').textContent = per.nombre || clase.nombre;
+  $('#heroe-clase').textContent = per.nombre ? `${clase.nombre} · Rango ${h.titulo}` : `Rango ${h.titulo}`;
   pintarClasificacion(sesiones);
   $('#heroe-monedas').innerHTML = `${icoMoneda}${miles(h.monedas)}`;
   $('#heroe-nivel').textContent = h.nivel;
@@ -295,11 +296,12 @@ export async function pintarHeroe() {
   ({ ficha: pintarFicha, talentos: pintarTalentos, niveles: pintarNiveles, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
 }
 
-// Aviso arriba del héroe: el cambio a la mitad de XP (una vez). Los puntos de talento se anuncian en la línea de nivel.
+// Aviso arriba del héroe: el cambio a la mitad de XP (una vez, y solo en Ficha: en las otras subpestañas tapaba el contenido).
+// Los puntos de talento se anuncian en la línea de nivel.
 function pintarAvisosHeroe(h, sesiones) {
   const avisos = [];
   const veterano = sesiones.some((x) => x.fecha < J.XP_LENTA_DESDE);
-  if (Date.now() >= J.XP_LENTA_DESDE && veterano && !ajustes.si('avisoXpLenta', false)) {
+  if (seccionHeroe === 'ficha' && Date.now() >= J.XP_LENTA_DESDE && veterano && !ajustes.si('avisoXpLenta', false)) {
     avisos.push(`<div class="aviso info heroe-aviso"><span>Desde el 29 de octubre cada sesión, misión y logro da <b>la mitad de XP</b>. Tu nivel no cambia: solo cuesta más subir.</span><button type="button" class="boton chico" data-aviso-xp>Entendido</button></div>`);
   }
   $('#heroe-avisos').innerHTML = avisos.join('');
@@ -406,7 +408,7 @@ function pintarTalentos(h, per, clase) {
     const pips = Array.from({ length: t.max }, (_, i) => `<i class="${i < g ? 'lleno' : ''}"></i>`).join('');
     const accion = motivo
       ? `<span class="${g >= t.max ? 'ok-texto' : 'suave'}">${motivo}</span>`
-      : `<button type="button" class="boton ${g ? '' : 'primario'}" data-aprender="${t.slot}">${g ? 'Subir de grado' : 'Aprender'} · ${t.coste} ${t.coste === 1 ? 'punto' : 'puntos'}</button>`;
+      : `<button type="button" class="boton" data-aprender="${t.slot}">${g ? 'Subir de grado' : 'Aprender'} · ${t.coste} ${t.coste === 1 ? 'punto' : 'puntos'}</button>`;
     // Cuánto te daría el siguiente grado con lo que remas de verdad (solo los de XP).
     const xpEst = t.tipo === 'xp' && g < t.max ? J.xpTalentoEstimada(h, clase.clave, t.slot, g + 1) : null;
     const valor = xpEst == null ? '' : xpEst > 0
@@ -515,13 +517,13 @@ function pintarTienda(h, per) {
   $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. Ventajas de un solo uso para tus carreras contra fantasmas: una por carrera y nunca en las pruebas. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.`;
   $('#tienda').innerHTML = items.map((x) => `<div class="objeto ventaja"><span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b><small>${x.texto}</small>
     <span class="monedas">${icoMoneda}${x.precio}</span>${inv[x.id] ? `<span class="tienes">Tienes ${inv[x.id]}</span>` : ''}
-    <button type="button" class="boton chico primario" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button></div>`).join('');
+    <button type="button" class="boton chico" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button></div>`).join('');
   const elegido = paisajeElegido(per);
   $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).map(([id, x]) => {
     const tiene = tienePaisaje(per, id);
     const boton = id === elegido ? '<span class="paisaje-uso">En uso</span>'
       : tiene ? `<button type="button" class="boton chico" data-paisaje="${id}">Usar</button>`
-        : `<button type="button" class="boton chico primario" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
+        : `<button type="button" class="boton chico" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
     return `<div class="objeto paisaje${id === elegido ? ' activo' : ''}"><img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"><b>${x.nombre}</b><small>${x.texto}</small>
       <span class="monedas">${x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis'}</span>${boton}</div>`;
   }).join('');
