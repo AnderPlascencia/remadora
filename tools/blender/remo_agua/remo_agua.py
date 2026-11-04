@@ -18,7 +18,7 @@ ap.add_argument('--salida', default='salida')
 ap.add_argument('--frames', default='1-96')
 ap.add_argument('--res', default='960x540')
 ap.add_argument('--muestras', type=int, default=64)
-ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'cine', 'popa', 'cerca', 'retrato', 'carrera3d', 'cenital'))
+ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'cine', 'popa', 'cerca', 'retrato', 'lateral', 'arriba', 'manos', 'carrera3d', 'cenital'))
 ap.add_argument('--paisaje', default='fiordo')
 ap.add_argument('--sprite', action='store_true', help='solo barca y remero sobre fondo transparente (rivales de la carrera)')
 ap.add_argument('--clase', default='vikingo', choices=('vikingo', 'pirata', 'samurai', 'polinesio', 'romano'),
@@ -66,12 +66,13 @@ def _dir(n):
 
 
 X, Y, Z = (1, 0, 0), (0, 1, 0), (0, 0, 1)
-DEDO, PALMA = {}, {}
+DEDO, PALMA, TRAVES = {}, {}, {}
 for s in 'LR':
     d = _dir('finger3-1.' + s)
     a = (rig.data.bones['finger2-1.' + s].head_local - rig.data.bones['finger5-1.' + s].head_local).normalized()
     palma = d.cross(a) if s == 'L' else a.cross(d)
     PALMA[s] = tuple(palma.normalized())
+    TRAVES[s] = tuple(a)
     for f in range(1, 6):
         for k in (1, 2, 3):
             n = f'finger{f}-{k}.{s}'
@@ -104,12 +105,20 @@ def periodica(tabla, f):
 
 
 # (fotograma, deslizamiento del asiento, inclinación del tronco, avance del puño): las fases de animaciones.py
-CUERPO = [(1, (-0.30, 24, -0.08)), (7, (-0.16, 18, 0.06)), (13, (0.06, 2, 0.30)), (18, (0.12, -14, 0.62)),
-          (24, (0.10, -12, 0.42)), (33, (0.02, 12, 0.12)), (41, (-0.18, 22, -0.02)), (49, (-0.30, 24, -0.08))]
+# Empuje: primero las piernas con el tronco quieto; el tronco abre cuando las manos pasan las rodillas.
+# Recuperación: brazos, luego el tronco y el asiento solo cuando el tronco ya está adelante. (El avance del puño ya
+# no se usa: la mano sale del hombro y del ángulo del codo, ver codo_en.)
+CUERPO = [(1, (-0.30, 24, 0)), (7, (-0.13, 23, 0)), (11, (0.01, 19, 0)), (15, (0.10, 2, 0)), (18, (0.12, -14, 0)),
+          (24, (0.115, -13, 0)), (31, (0.10, 14, 0)), (37, (0.0, 22, 0)), (43, (-0.18, 24, 0)), (49, (-0.30, 24, 0))]
+CODO_FINAL = 82                   # grados en el final: manos a un puño de las costillas, codos detrás del tronco
 # altura del puño: alta en el empuje (hoja dentro), baja en la recuperación (hoja fuera)
 ALTURA = [(1, (0.175,)), (4, (0.205,)), (16, (0.20,)), (19, (0.19,)), (22, (0.125,)), (26, (0.11,)),
           (38, (0.11,)), (44, (0.125,)), (47, (0.16,)), (49, (0.175,))]
 
+# Perno de cada remo y distancia del perno al puño cerrado: con ellos el remo barre unos 50° hacia proa en el ataque
+# y unos 35° hacia popa en el final, y las manos se cruzan un par de centímetros a mitad de palada.
+PERNO_X, PERNO_Y = 0.72, -0.56
+AGARRE = 0.72
 Z_SUELO = -rig.location.z
 asiento_z = Z_SUELO + 0.45
 caida = asiento_z - rig.data.bones['root'].head_local.z
@@ -120,7 +129,9 @@ restr = []
 for lado in 'LR':
     for hueso, ik, polo in (('lowerleg02.', 'ik_pie.', 'polo_rodilla.'), ('lowerarm02.', 'ik_mano.', 'polo_codo.')):
         c = PB[hueso + lado].constraints.new('IK'); c.target = rig; c.subtarget = ik + lado
-        c.pole_target = rig; c.pole_subtarget = polo + lado; c.pole_angle = math.radians(-90); c.chain_count = 4
+        c.pole_target = rig; c.pole_subtarget = polo + lado; c.chain_count = 4
+        # el brazo derecho es simétrico al izquierdo: su polo va a +90° (con -90° el codo se metía hacia dentro)
+        c.pole_angle = math.radians(90 if (lado, hueso) == ('R', 'lowerarm02.') else -90)
         restr.append((hueso + lado, c))
 accion = bpy.data.actions.new('rowing_agua_ik')
 rig.animation_data.action = accion
@@ -139,8 +150,7 @@ for f in range(1, PALADA + 2):
         eje_pulgar = tuple(Vector(PALMA[s]) * (1 if s == 'R' else -1))
         for k in (1, 2, 3):
             r[f'finger1-{k}.{s}'] = [(eje_pulgar, 30 if k == 1 else 40)]
-    l = {'root': loc('root', (0, desliza, caida)),
-         'remo': loc('remo', (0, desliza - 0.25 + py, asiento_z + pz + 0.2 - remo0.z))}
+    l = {'root': loc('root', (0, desliza, caida))}
     for n in HUESOS:
         pb = PB[n]
         pb.rotation_mode = 'QUATERNION'
@@ -148,6 +158,78 @@ for f in range(1, PALADA + 2):
         pb.location = l.get(n, Vector())
         pb.keyframe_insert('rotation_quaternion', frame=f, group=n)
         pb.keyframe_insert('location', frame=f, group=n)
+
+# Segunda pasada: los brazos. Con el cuerpo ya animado se lee dónde está cada hombro y la mano se coloca a la
+# distancia que da el ángulo del codo de cada fase (CODO), a la altura del mango (ALTURA) y en el arco del puño de su
+# remo alrededor del perno: abiertas en el ataque, se cruzan a mitad de palada (la izquierda por encima y un poco por
+# delante) y se juntan en el final. La muñeca va detrás del puño, en línea con el antebrazo, y el codo apunta atrás y
+# algo afuera, a la altura del mango.
+_rb = rig.data.bones
+BRAZO = (_rb['upperarm01.L'].head_local - _rb['lowerarm01.L'].head_local).length
+ANTEBRAZO = (_rb['lowerarm01.L'].head_local - _rb['wrist.L'].head_local).length
+MUNECA = Vector((0, 0.075, -0.015))   # de puño cerrado a muñeca
+
+
+def codo_en(f):
+    """Ángulo del codo (grados) en el fotograma f de la acción: recto en el primer 60 % del empuje, se dobla hasta el
+    final (f = 18) y se estira lo primero de la recuperación."""
+    f = (f - 1) % PALADA + 1
+    if f <= 18:
+        p = (f - 1) / 17
+        k = min(1.0, max(0.0, (p - 0.6) / 0.4))
+        return 178 - (178 - CODO_FINAL) * (3 * k * k - 2 * k ** 3)
+    qq = min(1.0, (f - 18) / (0.25 * (PALADA - 17)))
+    return CODO_FINAL + (178 - CODO_FINAL) * (3 * qq * qq - 2 * qq ** 3)
+
+
+def _campana(f, centro, ancho):
+    x = min(1.0, abs(f - centro) / ancho)
+    return 1 - (3 * x * x - 2 * x ** 3)
+
+
+def muneca_en(f):
+    """Giro de la muñeca (flexión, desviación) en grados: plana en toda la palada (la mano del modelo trae 14° de
+    flexión, que se quitan), recta también en el final aunque el antebrazo gire, y una caída breve al sacar la pala,
+    mientras los dedos hacen rodar el puño para plumear."""
+    f = (f - 1) % PALADA + 1
+    final = 1.0 if 15 <= f <= 20 else max(0.0, 1 - min(abs(f - 15), abs(f - 20)) / 5)
+    return 12 - 10 * _campana(f, 17, 4), -12 * final
+
+
+for f in range(1, PALADA + 2):
+    esc.frame_set(f)
+    pz, = periodica(ALTURA, f)
+    z_g = asiento_z + pz + 0.2
+    d = math.sqrt(BRAZO ** 2 + ANTEBRAZO ** 2 - 2 * BRAZO * ANTEBRAZO * math.cos(math.radians(codo_en(f))))
+    hom = {lado: rig.matrix_world.inverted() @ (rig.matrix_world @ PB['upperarm01.' + lado].head) for lado in 'LR'}
+    S = (hom['L'] + Vector((-hom['R'].x, hom['R'].y, hom['R'].z))) / 2   # hombro medio (lado izquierdo)
+    x_g, y_g = 0.3, S.y - d
+    for _ in range(3):
+        w = Vector((x_g, y_g, z_g)) + MUNECA
+        lat2 = (w.x - S.x) ** 2 + (w.z - S.z) ** 2
+        y_g = S.y - math.sqrt(max(d * d - lat2, 0.01)) - MUNECA.y
+        dy = y_g - PERNO_Y
+        x_g = PERNO_X - math.sqrt(max(AGARRE ** 2 - dy * dy, 0.04))
+    cruce = min(1.0, max(0.0, (0.10 - x_g) / 0.14))
+    if os.environ.get('BIO'):
+        print('MANO', f, round(y_g, 3), round(x_g, 3), round(S.y, 3), round(d, 3), flush=True)
+    l = {'remo': loc('remo', (0, y_g - remo0.y, z_g - remo0.z))}
+    for s_, lado in ((1, 'L'), (-1, 'R')):
+        arriba = cruce * (0.03 if lado == 'L' else -0.03)
+        delante = cruce * (-0.025 if lado == 'L' else 0.0)
+        rest = _rb['ik_mano.' + lado].head_local
+        l['ik_mano.' + lado] = loc('ik_mano.' + lado, (s_ * x_g - rest.x + MUNECA.x, MUNECA.y + delante, MUNECA.z + arriba))
+        # polo del codo detrás y abajo: en el final el codo queda detrás del tronco, algo afuera y casi a la altura del mango
+        rp = _rb['polo_codo.' + lado].head_local
+        l['polo_codo.' + lado] = loc('polo_codo.' + lado, (s_ * 0.5 - rp.x, S.y + 0.8 - rp.y, z_g - 0.8 - rp.z))
+    for n, v in l.items():
+        PB[n].location = v
+        PB[n].keyframe_insert('location', frame=f, group=n)
+    for lado in 'LR':
+        g, dv = muneca_en(f)
+        sg = 1 if lado == 'L' else -1
+        PB['wrist.' + lado].rotation_quaternion = q('wrist.' + lado, (TRAVES[lado], g * sg), (PALMA[lado], dv * sg))
+        PB['wrist.' + lado].keyframe_insert('rotation_quaternion', frame=f, group='wrist.' + lado)
 bpy.ops.pose.select_all(action='SELECT')
 bpy.ops.nla.bake(frame_start=1, frame_end=PALADA + 1, step=1, only_selected=False, visual_keying=True,
                  clear_constraints=False, use_current_action=False, bake_types={'POSE'})
@@ -156,6 +238,20 @@ bpy.data.actions.remove(accion)
 for n, c in restr:
     PB[n].constraints.remove(c)
 bpy.ops.object.mode_set(mode='OBJECT')
+if os.environ.get('BIO'):
+    # Medidas de los brazos en la palada: ángulo del codo, flexión de la muñeca, codo respecto al mango y al tronco
+    def _p(n, cola=False):
+        return rig.matrix_world @ (PB[n].tail if cola else PB[n].head)
+    for f in range(1, PALADA + 1, 3):
+        esc.frame_set(f)
+        fila = [f]
+        for lado in 'LR':
+            h, c, m = _p('upperarm01.' + lado), _p('lowerarm01.' + lado), _p('wrist.' + lado)
+            k = _p('finger3-1.' + lado)
+            codo = math.degrees((h - c).angle(m - c))
+            muneca = math.degrees((m - c).angle(k - m))
+            fila += [lado, round(codo), round(muneca), round(c.z - m.z, 2), round(c.y - _p('spine03').y, 2), round(abs(c.x) - abs(h.x), 2), round(m.x, 2)]
+        print('BIO', *fila, flush=True)
 
 
 # ════════ 2. Barca, asiento, reposapiés, horquillas y remos ════════
@@ -271,13 +367,13 @@ for f in range(1, PALADA + 1):
     esc.frame_set(f)
     manos.append(rig.matrix_world @ PB['ik_mano.L'].head)
 manos = np.array(manos)
-DENTRO, FUERA, PALA = 0.90, 1.95, 0.48   # interior (perno-puño), exterior hasta la pala, largo de la pala
+DENTRO, FUERA, PALA = AGARRE + 0.045, 1.95, 0.48   # interior (perno-punta del puño), exterior hasta la pala, largo de la pala
 ALTO_PALA = 0.20
 if A.remo_corto:   # la carrera tiene carriles de 3 m: la pala llega a 1,9 m del eje en vez de 3,2
     FUERA, PALA, ALTO_PALA = 0.78, 0.34, 0.17
 alto_empuje = manos[3:16, 2].mean()
-r_palanca = (FUERA + PALA * 0.5) / 0.75
-PERNO = {'L': Vector((0.80, -0.48, 0.0)), 'R': Vector((-0.80, -0.48, 0.0))}
+r_palanca = (FUERA + PALA * 0.5) / AGARRE
+PERNO = {'L': Vector((PERNO_X, PERNO_Y, 0.0)), 'R': Vector((-PERNO_X, PERNO_Y, 0.0))}
 # la pala en el empuje: centro 4 cm bajo la flotación. Pala = perno - (mano - perno)·r → perno = (pala + r·mano)/(1+r)
 pz = (AGUA_Z - 0.04 + r_palanca * alto_empuje) / (1 + r_palanca)
 PERNO['L'].z, PERNO['R'].z = pz + 0.015, pz - 0.015   # el remo izquierdo pasa por encima en el cruce de puños
@@ -316,7 +412,8 @@ for s, lado in ((1, 'L'), (-1, 'R')):
     bmesh.ops.translate(bm, vec=(FUERA + PALA - 0.10, 0, -0.02), verts=m['verts'])
     malla('PuntaPala.' + lado, bm, MAT['Laton'], True, remo)
     # giro de la pala (plumeo): plana en la recuperación
-    for f, g in ((1, 0), (19, 0), (24, 88), (38, 88), (44, 0), (49, 0)):
+    # cuadrada en el agua; se pluma al salir (fotograma 14) y se vuelve a cuadrar antes de entrar (47)
+    for f, g in ((1, 0), (14, 0), (19, 88), (39, 88), (45, 0), (49, 0)):
         remo.rotation_euler.x = math.radians(g * s)
         remo.keyframe_insert('rotation_euler', index=0, frame=f)
     for fc in remo.animation_data.action.fcurves if hasattr(remo.animation_data.action, 'fcurves') else []:
@@ -682,15 +779,18 @@ VISTAS = {
     'popa': ((3.2, -6.2, 1.35), (0.0, -0.3, 0.60), 40),
     'cerca': ((3.4, -2.6, 1.05), (0.0, -0.35, 0.70), 40),
     'retrato': ((1.3, -2.2, 1.45), (0.0, -0.4, 1.0), 60),   # para revisar la ropa y el tocado de cada clase
+    'lateral': ((3.2, -0.45, 1.0), (0.0, -0.45, 0.85), 45),   # de lado, para revisar brazos y piernas en la palada
+    'arriba': ((0.0, -0.55, 4.2), (0.0, -0.5, 0.6), 38),      # casi cenital, para revisar el cruce de manos
+    'manos': ((0.75, -1.75, 1.45), (0.05, -0.45, 0.85), 55),   # de frente y de cerca, para revisar el agarre
 }
 w, h = (int(x) for x in A.res.split('x'))
 CARRERA = None
 if A.camara == 'carrera3d':
     # Como la cámara de pintar3d (carrera.js): 13 m detrás del bote y 4,6 m sobre el agua, mirando al frente sin
     # inclinarse (las verticales siguen verticales) y desplazada hacia abajo para encuadrar el bote.
-    # El perno (y = -0,48) está a 13 - 0,08 m: en la carrera el escálamo va 0,4 m por detrás del centro de un bote de 8 m.
+    # El perno está a 12,6 m de la cámara (en la carrera, el escálamo va 0,4 m por detrás del centro del bote).
     TAN_W, V_C = 0.31, 0.345                # ancho del cuadro en tangentes y centro vertical (tangente bajo el horizonte)
-    cl, mira, lente = (0.0, -0.48 - 12.6, AGUA_Z + 4.6), (0.0, 100.0, AGUA_Z + 4.6), 36 / TAN_W
+    cl, mira, lente = (0.0, PERNO_Y - 12.6, AGUA_Z + 4.6), (0.0, 100.0, AGUA_Z + 4.6), 36 / TAN_W
     cam_d.sensor_fit = 'HORIZONTAL'; cam_d.sensor_width = 36
     cam_d.shift_y = -V_C / TAN_W
     F = w / TAN_W                            # píxeles por unidad de tangente
@@ -702,7 +802,7 @@ elif A.camara == 'cenital':
     ESC_O = 6.4                              # metros que caben a lo ancho
     cam_d.ortho_scale = ESC_O
     cl, mira, lente = (0.0, 0.25, 30.0), (0.0, 0.25, 0.0), 50
-    CARRERA = {'vista': '2d', 'w': w, 'h': h, 'ancla': [w / 2 + (-0.48 - 0.25) * w / ESC_O, h / 2], 'ppm': w / ESC_O}
+    CARRERA = {'vista': '2d', 'w': w, 'h': h, 'ancla': [w / 2 + (PERNO_Y - 0.25) * w / ESC_O, h / 2], 'ppm': w / ESC_O}
 else:
     cl, mira, lente = VISTAS[A.camara]
 cam.location = cl; cam_d.lens = lente
