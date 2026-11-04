@@ -17,7 +17,7 @@ test('sin conexión la app abre desde la caché y una sesión se guarda igual', 
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('#inicio-titulo')).toHaveText('Te doy la bienvenida a Rower');
+  await expect(page.locator('#inicio-titulo')).toHaveText('Hola, soy Rower');
   await completarBienvenida(page);
   await remar(page, 20_000);
   await terminar(page);

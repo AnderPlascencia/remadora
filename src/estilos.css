@@ -743,7 +743,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .podio-escalon { width: 100%; margin-top: 4px; border-radius: 8px 8px 0 0; background: var(--panel-2); font-weight: 800; padding-top: 6px; }
 .p1 .podio-escalon { height: 64px; background: #A16207; color: #FEF9C3; }
 .p2 .podio-escalon { height: 46px; background: #64748B; color: #F1F5F9; }
-.p3 .podio-escalon { height: 34px; background: #9A3412; color: #FFEDD5; }
+.p3 .podio-escalon { height: 34px; background: #8C5A33; color: #FDEBD8; } /* bronce: el rojo teja se leía como «mal» */
 .podio-resto { margin: 6px 0 0; color: var(--texto-suave); font-size: .9rem; }
 .podio-xp { margin: 8px 0 0; font-weight: 700; color: var(--xp); }
 
@@ -1995,3 +1995,10 @@ details.mas-detalle[hidden] { display: none; }
 .enlace-chevron { border: 0; background: transparent; padding: 0; min-height: 0; font: inherit; font-weight: 700; color: var(--primario-claro); cursor: pointer; text-decoration: none; }
 /* Pestañas de Planes (Entrenamientos/Programa): mismo estado activo neutro que los demás segmentados. */
 .planes-pestanas button[aria-pressed="true"] { background: var(--panel-2); color: var(--texto); box-shadow: inset 0 -2px 0 var(--primario-claro); }
+
+/* 0.46.4: pulidos. Héroe nuevo: atributos en lista compacta, sin barras vacías. */
+.atributos-guia.vacio { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.atributos-guia.vacio > details { margin: 0; }
+.atributos-guia.vacio > details[open] { grid-column: 1 / -1; }
+.atributos-guia.vacio .atr-valor small, .atributos-guia.vacio .atr-barra, .atributos-guia.vacio .atr-titulo { display: none; }
+#heroe-recomienda:empty { display: none; }

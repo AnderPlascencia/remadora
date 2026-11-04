@@ -339,7 +339,9 @@ function pintarFicha(h, per, clase, sesiones) {
   $('#heroe-recomienda').innerHTML = rec ? `<p>Te conviene subir <b>${rec.atributo.nombre}</b>, tu atributo más bajo.<span class="solo-avanzado"> ${rec.texto}</span></p>
     <div class="fila-botones"><button type="button" class="boton primario" data-preparar="${rec.base || ''}" data-reto="${rec.reto}">
     Preparar: ${escaparHtml(rec.entrenamiento || 'Remo libre')} en ${J.DIFICULTADES[J.DIFICULTAD_RETO[rec.reto]].nombre}</button></div>`
-    : '<p class="suave">Rema tu primera sesión y te diré qué te conviene trabajar.</p>';
+    : ''; // Sin sesiones, «Esta semana» ya invita a remar la primera: no se repite aquí.
+  // Héroe nuevo: los 7 atributos en una lista compacta, sin barras vacías ni «sin cambios esta semana».
+  $('#heroe-atributos').classList.toggle('vacio', !Object.values(h.atributos).some((v) => v > 0));
   // Los premios de capítulos y logros son insignias.
   const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
   const ganadas = premios.filter(([id]) => h.insignias.has(id)).length;
@@ -614,7 +616,9 @@ export async function pintarPodio(s) {
   ].sort((a, b) => b.pos - a.pos || (a.yo ? -1 : 1));
   const xp = s.carreraSinTerminar ? 0 : rivales.filter((r) => r.diferencia > 0 && r.clase).slice(0, 3).reduce((a, r) => a + J.xpPorFantasma(r.dificultad), 0);
   const lugar = filas.findIndex((f) => f.yo) + 1;
-  const dato = (f) => (f.tiempo != null ? formatoMeta(f.tiempo) : f.yo ? 'Tú' : `${f.dif > 0 ? '−' : '+'}${miles(Math.abs(f.dif))} m`);
+  // Sin tiempo, bajo tu nombre va tu clase (antes decía «Tú» dos veces); bajo los fantasmas, la diferencia.
+  const tuClase = J.claseDe(leerPersonaje().clase)?.nombre || '';
+  const dato = (f) => (f.tiempo != null ? formatoMeta(f.tiempo) : f.yo ? tuClase : `${f.dif > 0 ? '−' : '+'}${miles(Math.abs(f.dif))} m`);
   const bloque = (f, i) => `<div class="podio-puesto p${i + 1}${f.yo ? ' yo' : ''}">
       ${f.img ? `<img src="${f.img}" width="48" height="48" alt="">` : `<span class="podio-ico">${ico('i-fantasma')}</span>`}
       <b>${escaparHtml(f.nombre)}</b><small>${dato(f)}</small>
