@@ -329,6 +329,7 @@ export async function pintarHistorial() {
   $('#records-resto').innerHTML = hay.slice(4).map(tarjeta).join('');
   $('#records-mas-texto').textContent = `Ver los ${hay.length} récords`;
 
+  $('#historial-resumen').textContent = lista.length ? `${miles(lista.length)} ${lista.length === 1 ? 'sesión' : 'sesiones'}` : '';
   const visibles = lista.filter(filtroCoincide);
   const ul = $('#lista-sesiones');
   ul.innerHTML = '';

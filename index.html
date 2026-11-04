@@ -334,7 +334,7 @@
       <div id="heroe-crear" class="heroe-crear" hidden>
         <h2>Crea tu héroe</h2>
         <p class="ayuda">Tu héroe crece con cada entrenamiento real. Tu historial ya cuenta: empiezas con el nivel que te ganaste. Elige una clase: su atributo favorito crece un 15 % más rápido.</p>
-        <div id="clases" class="clases" role="radiogroup" aria-label="Clase"></div>
+        <div id="clases" class="inicio-clases" role="radiogroup" aria-label="Clase"></div>
         <label class="campo">Nombre de tu héroe <small>(opcional)</small>
           <input id="heroe-nombre" maxlength="20" autocomplete="off" placeholder="Ander el Implacable">
         </label>
@@ -509,10 +509,13 @@
       <div id="records" class="records"></div>
       <details id="records-mas" class="mas-detalle" hidden><summary id="records-mas-texto">Ver todos los récords</summary><div id="records-resto" class="records"></div></details>
 
-      <h2>Sesiones</h2>
+      <!-- El historial completo, plegado: Progreso se lee de un vistazo y las sesiones siguen a un toque. -->
+      <details class="seccion" data-seccion="historial">
+      <summary><h2>Historial</h2><span id="historial-resumen" class="seccion-resumen"></span></summary>
       <label class="campo">Mostrar <select id="filtro-ent"><option value="*">Todas las sesiones</option></select></label>
       <p id="resumen-historial" class="ayuda"></p>
       <ul id="lista-sesiones" class="lista"></ul>
+      </details>
       </div>
     </section>
 
@@ -541,6 +544,7 @@
           <select id="sel-minutos"><option value="">Sin elegir</option><option value="30">Hasta 30 min</option><option value="45">Hasta 45 min</option><option value="60">Hasta 60 min</option><option value="0">Sin límite</option></select>
         </label>
       </div>
+      <p class="ayuda">Esto lo usa el asistente para armar tu plan. Tu objetivo y los días del plan que sigues se cambian en <button type="button" class="enlace-chevron" data-ir="entrenamientos" data-pt="programa">Planes › Programa ›</button></p>
       <div class="fila-dos">
         <label class="campo"><span>FTP (W) <span id="ftp-estimado" class="etq-estimado" hidden>estimado</span> <button type="button" class="ayuda-q" data-ayuda="ftp" aria-label="¿Qué es el FTP?">?</button></span>
           <input id="in-ftp" type="number" min="30" max="1000" inputmode="numeric" placeholder="Se calcula solo"></label>

@@ -62,7 +62,7 @@ export function arrancarHeroe() {
     const b = e.target.closest('[data-clase]');
     if (!b) return;
     claseElegida = b.dataset.clase;
-    for (const x of document.querySelectorAll('#clases .clase')) x.setAttribute('aria-checked', String(x === b));
+    for (const x of document.querySelectorAll('#clases [data-clase]')) x.setAttribute('aria-checked', String(x === b));
     $('#btn-crear-heroe').disabled = false;
   });
   $('#btn-crear-heroe').addEventListener('click', () => {
@@ -267,8 +267,9 @@ export async function pintarHeroe() {
   $('#heroe-crear').hidden = !!clase;
   $('#heroe-ficha').hidden = !clase;
   if (!clase) {
-    $('#clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase" role="radio" aria-checked="${c.clave === claseElegida}" data-clase="${c.clave}">
-      <img class="clase-retrato" src="${srcHeroe(c.clave, 1, true)}" width="84" height="84" alt=""><b>${c.nombre}</b><span class="fav">+15 % ${nombreAtributo(c.favorito)}</span><small>${c.lema} ${c.para}</small></button>`).join('');
+    // La misma tarjeta que en la bienvenida: elegir clase se ve igual en los dos sitios.
+    $('#clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase-mini" role="radio" aria-checked="${c.clave === claseElegida}" data-clase="${c.clave}">
+      <img src="${srcHeroe(c.clave, 1, true)}" width="56" height="56" alt=""><b>${c.nombre}</b><small>+15 % ${nombreAtributo(c.favorito)}</small><span class="lema">${c.para}</span></button>`).join('');
     $('#btn-crear-heroe').disabled = !claseElegida;
     if (per.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
     return;
