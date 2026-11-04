@@ -155,8 +155,12 @@ actualización de firmware (`1530`) ni en el servicio `1400`, que solo escucha p
 El diseño de la interfaz sigue la skill [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT), incluida en `.claude/skills/`.
 
 
-El pipeline experimental del vikingo en 3D (`tools/blender/`, no se usa en la app) parte de la malla base, el
-esqueleto y los ojos de [MakeHuman](https://makehumancommunity.org) (CC0) y optimiza con [glTF Transform](https://gltf-transform.dev) (MIT).
+El vikingo realista (`tools/blender/`) parte de la malla base, el esqueleto y los ojos de
+[MakeHuman](https://makehumancommunity.org) (CC0) y optimiza con [glTF Transform](https://gltf-transform.dev) (MIT). Los
+remeros de la carrera 2D y 3D salen de `tools/blender/remo_agua`: `remo_agua.py --clase C --paso 24 --sprite --remo-corto`
+con la cámara `carrera3d` o `cenital` (y `clases.py` para la ropa y la barca de cada clase), y `atlas_carrera.py` los
+empaqueta en `assets/carrera/remero{2d,3d}_<clase>.webp` (con escala 0.65: en un móvil cada píxel del atlas ocupa
+como mucho 0,62 píxeles de pantalla).
 
 El formato de los mensajes se tomó como referencia del proyecto
 [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift). El código de esta app es propio.

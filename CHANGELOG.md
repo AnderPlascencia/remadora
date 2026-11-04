@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.55.0 · 2026-11-04
+
+Botes, remeros y remos realistas en la carrera.
+
+- En la carrera 2D y 3D, tu bote y los rivales llevan el remero, la barca y los remos realistas de su clase, renderizados en Blender: vikingo, pirata (pañuelo rojo y barba negra), samurái (kimono índigo y hachimaki), polinesio (pareo y collar de flores) y romano (túnica roja y casco de bronce con cresta). Cada barca lleva la madera y la franja de su clase; mástiles, velas y adornos se siguen dibujando encima.
+- La palada se ve como en un bote de dos remos de verdad, revisada con el entrenador: brazos rectos mientras empujan las piernas, el tronco abre cuando las manos pasan las rodillas y los codos se doblan al final, por detrás del tronco y a la altura del mango; las manos agarran el puño de su remo, se cruzan a mitad de palada y la muñeca va plana. En la recuperación, brazos, tronco y asiento, por ese orden, y la pala se pluma al salir del agua.
+- En la vista 3D los botes de las calles laterales se inclinan hacia el centro siguiendo la perspectiva de la pista.
+- Las imágenes de cada clase se descargan la primera vez que sale un bote de esa clase (mientras, se ve el bote dibujado de antes); las de tu clase se guardan para usarlas sin conexión.
+
 ## 0.54.1 · 2026-11-04
 
 - La app pesa ~730 KB menos al instalarse: solo se precargan las miniaturas de la tienda y el fiordo gratis. Cada paisaje de pago (la laguna y los cinco de la colección) se descarga al comprarlo, y al abrir la app si ya lo tenías, para correr sin conexión.
