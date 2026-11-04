@@ -274,11 +274,10 @@ function crearVentaja(ent, racha) {
 }
 
 // Días seguidos contando hoy (la sesión que empieza ya cuenta).
+// Racha del plan contando hoy (si cumples lo de hoy), la misma que da XP y voluntad.
 async function rachaConHoy() {
-  const lista = await H.sesiones();
-  const hoy = E.claveDia(Date.now());
-  const r = E.racha(lista);
-  return lista.some((x) => E.claveDia(x.fecha) === hoy) ? r : r + 1;
+  const { h } = await estadoHeroe();
+  return h.contexto?.racha || 1;
 }
 
 // reanudar: la copia de una sesión que quedó a medias (al recuperar, «Seguir»). Se sigue en la misma sesión,
