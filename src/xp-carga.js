@@ -1,10 +1,13 @@
 // XP por carga y por cumplir el plan (acuerdo D1 entre recompensas y el entrenador, etapa 6).
-// Solo las sesiones guardadas con reglasXp = REGLAS_XP_CARGA se cuentan así; las anteriores siguen igual.
+// Solo las sesiones guardadas con reglasXp 2 o más se cuentan así; las anteriores siguen igual.
 // Los valores de aquí son los que se pagan tal cual (no pasan por el factor de XP lenta).
 import { claveDia } from './estadisticas.js';
 
-export const REGLAS_XP_CARGA = 2;
-export const usaCarga = (s) => (s?.reglasXp || 0) >= REGLAS_XP_CARGA;
+// 2: XP por carga (etapa 6). 3: además fantasmas según el margen, récords con tope y jefes con varias formas
+// de vencerlos (etapa 9). Las sesiones nuevas guardan la última versión; cada regla mira desde qué versión aplica.
+export const REGLAS_XP_CARGA = 3;
+export const usaCarga = (s) => (s?.reglasXp || 0) >= 2;
+export const usaReglas9 = (s) => (s?.reglasXp || 0) >= 3;
 
 // XP base: 5 por punto de carga hasta 30, 2,5 de 30 a 60 y nada por encima. El tope es del día, no de cada sesión.
 export const CARGA_TOPE_DIA = 60;

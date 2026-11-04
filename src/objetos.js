@@ -60,6 +60,11 @@ export const OBJETOS = [
   o('kabuto', 'Kabuto', 'cabeza', 'epica', 'samurai'),
   o('corona-hielo', 'Corona de hielo', 'cabeza', 'epica', 'artico'),
   o('armadura-gladiador', 'Armadura de bronce', 'torso', 'epica', 'gladiador'),
+  // Jefes de los capítulos 6 a 9 (etapa 9): se ganan como insignia, no se visten.
+  o('yelmo-lava', 'Yelmo de lava', 'cabeza', 'epica', 'leyenda'),
+  o('manto-escarcha', 'Manto de escarcha', 'torso', 'epica', 'leyenda'),
+  o('ancla-abismo', 'Ancla del abismo', 'bote', 'epica', 'leyenda'),
+  o('corona-mares', 'Corona de los mares', 'cabeza', 'epica', 'leyenda'),
 
   o('aura-fuego', 'Aura de fuego', 'aura', 'legendaria', 'leyenda', { color: '#F97316' }),
   o('aura-hielo', 'Aura de hielo', 'aura', 'legendaria', 'leyenda', { color: '#38BDF8' }),

@@ -158,20 +158,22 @@ export async function crearRivales(ent, { vista = false } = {}) {
   let guardadas = null;
   const sesiones = async () => (guardadas ??= await db.listar('sesiones'));
   const elegidos = rivalesElegidos();
-  // Rivales de otras clases: su rango sale de tu nivel y su FTP del tuyo.
+  // Rivales de otras clases: su FTP sale del tuyo y, en Remo libre, de tu ritmo real de las últimas semanas.
   const nClase = elegidos.filter((k) => k === 'clase').length;
   let deClase = [];
   if (nClase) {
     const per = leerPersonaje();
     const h = J.estadoJuego(await sesiones(), { ftp: ftp(), per });
     const base = ftp() || estimarFtp(await sesiones()) || 150;
-    deClase = J.rivalesPara(nClase, { miClase: per.clase, nivel: h.nivel, ftp: base, peso: ajustes.num('peso', 75), factor: Pf.factorClasificacion(ajustes.leer('sexo', '')), dificultad: dificultadActual(), lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString() });
+    deClase = J.rivalesPara(nClase, { miClase: per.clase, nivel: h.nivel, ftp: base, peso: ajustes.num('peso', 75), factor: Pf.factorClasificacion(ajustes.leer('sexo', '')), dificultad: dificultadActual(), lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString(), ritmo: ent ? null : J.ritmoLibre(await sesiones()) });
   }
   for (const clave of elegidos) {
     let r = null;
     if (clave === 'clase') {
       const d = deClase.shift();
-      r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase, perfil: d.perfil }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, dificultad: d.dificultad, clasificacion: d.clasificacion };
+      // Con un FTP estimado (sin prueba), las metas cortas no pasan del 115 %: un FTP de más daría un rival imposible.
+      const tope = !ftp() || ajustes.si('ftpEstimado', false) ? 1.15 : null;
+      r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase, perfil: d.perfil, tope }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, dificultad: d.dificultad, clasificacion: d.clasificacion };
     }
     if (r) lista.push({ ...r, clave, color: COLORES_RIVAL[lista.length] });
   }
@@ -208,9 +210,8 @@ const fechaMini = (f) => new Date(f).toLocaleDateString('es-MX', { day: 'numeric
 function tarjetaRival(r) {
   if (r.clase) {
     const c = J.claseDe(r.clase);
-    const rango = J.RANGOS.find((x) => x.id === r.rango);
     return `<div class="rival-tarjeta" style="--chip:${r.color}"><img src="${srcRetratoRango(r.clase, r.rango)}" width="56" height="56" alt="">
-      <div><b>${escaparHtml(r.nombre.split(' (')[0])}</b><small>${c.nombre} ${rango?.nombre || ''} · ${r.ftp} W</small>
+      <div><b>${escaparHtml(r.nombre.split(' (')[0])}</b><small>${c.nombre} · ${escaparHtml(r.clasificacion || '')} · ${r.ftp} W</small>
       <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
   }
   let detalle = '';

@@ -357,7 +357,7 @@ function pintarFicha(h, per, clase, sesiones) {
   }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
 
-// «Aprendiz de la fuerza · 12 para Iniciado».
+// «Iniciado de la fuerza · 12 para Diestro».
 function tituloCorto(clave, valor) {
   const t = J.tituloAtributo(clave, valor);
   const sig = t.siguiente ? `${miles(t.siguiente.faltan)} para <b>${t.siguiente.nombre.split(' ')[0]}</b>` : 'Título máximo';
@@ -494,10 +494,12 @@ function pintarMisiones(h) {
   $('#mis-diarias').innerHTML = pendientesPrimero(h.diarias).map((m) => filaMision(m)).join('');
   $('#mis-semanales').innerHTML = pendientesPrimero(h.semanales).map((m) => filaMision(m)).join('');
   const c = h.capitulo;
-  $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p><p class="cap-avance">La historia avanza venciendo jefes, no con tu nivel: ${c.listo ? `vence a ${c.jefe.nombre} para pasar al capítulo ${c.n + 1 <= J.CAPITULOS.length ? c.n + 1 : 'final'}.` : 'cumple lo de abajo y desbloqueas al jefe del capítulo.'}</p></div>
+  $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p><p class="cap-avance">${c.listo
+      ? `Vence a ${c.jefe.nombre} para ${c.n < J.CAPITULOS.length ? `pasar al capítulo ${c.n + 1}` : 'terminar la historia'}.`
+      : `El jefe se desbloquea al cumplir lo de abajo o al llegar al nivel ${c.nivel}.`}${c.pendiente ? ' Ya lo venciste antes de tiempo: en cuanto se desbloquee, el capítulo es tuyo con tu próxima sesión.' : ''}</p></div>
     <ul class="lista misiones">${c.progreso.map((r) => filaMision({ clave: `cap-${r.clave}`, texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
-    <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}${
-      c.listo ? ' · ¡ya puedes enfrentarlo!' : ' · se desbloquea al cumplir lo de arriba'}</small></div>
+    <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}, ${J.OTRAS_FORMAS_JEFE}${
+      c.listo ? ' · ¡ya puedes enfrentarlo!' : ` · se desbloquea al cumplir lo de arriba o en el nivel ${c.nivel}`}</small></div>
       <span class="premio"><span class="xp">+${miles(c.xp)} XP</span> ${icoMoneda}${c.monedas + J.PREMIO_INSIGNIA} + insignia</span>
       ${c.listo ? `<button type="button" class="boton primario jefe-boton" data-preparar="${c.preparar}">Enfrentar: ${NOMBRE_PRUEBA[c.preparar]}</button>` : ''}</div>`
     : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
@@ -550,7 +552,9 @@ export function pintarXpSesion(s, previas, resumen) {
   const ascenso = subio && J.rangoDe(g.nivelDespues).id !== J.rangoDe(g.nivelAntes).id;
   const puntos = subio ? J.puntosDeNivel(g.nivelDespues) - J.puntosDeNivel(g.nivelAntes) : 0;
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
-  caja.innerHTML = `<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
+  // Vencer a un jefe es un hito: tarjeta propia con su insignia, antes que todo lo demás.
+  const jefe = g.jefe ? `<div class="jefe-vencido" role="status">${ico('i-trofeo')}<div><b>¡Jefe vencido!</b><span>${escaparHtml(g.jefe.nombre)} cae y terminas el capítulo ${g.jefe.capitulo} de ${J.CAPITULOS.length}.</span><small>Insignia ${escaparHtml(O.objeto(g.jefe.objeto)?.nombre || '')}</small></div></div>` : '';
+  caja.innerHTML = `${jefe}<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
     ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.rangoDe(g.nivelDespues).nombre}.` : ''}</span>` : ''}
     ${puntos > 0 && clase && h.talentosPorRepartir > 0 ? `<span class="subio-talento">+${puntos} ${puntos === 1 ? 'punto' : 'puntos'} de talento <button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></span>` : ''}
     <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div style="width:${h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100}%"></div></div>

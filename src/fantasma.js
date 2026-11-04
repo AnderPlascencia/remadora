@@ -36,6 +36,25 @@ export const ESTILOS = {
   romano: { texto: 'Ritmo de metrónomo con un ataque corto cada 5 min', f: (t) => (t % 300 >= 270 ? 1.07 : 0.993) },
 };
 
+// Fracción del FTP a la que un rival rema una meta de distancia (validado con el entrenador, etapa 9): un 500 m
+// sale al 135 %, un 2000 m al 112 % y un fondo de 21 km al 85 %. Entre puntos se interpola sobre el logaritmo de
+// la distancia, así 2001 m no pide de golpe menos que 2000 m. tope: con un FTP estimado (sin prueba) lo corto
+// se queda en el 115 %, para que un FTP inflado no dé un rival imposible.
+export const REL_DISTANCIA = [[500, 1.35], [1000, 1.25], [2000, 1.12], [5000, 1.0], [10000, 0.92], [21097, 0.85]];
+export function relDistancia(metros, tope = null) {
+  const P = REL_DISTANCIA;
+  let rel;
+  if (!(metros > P[0][0])) rel = P[0][1];
+  else if (metros >= P.at(-1)[0]) rel = P.at(-1)[1];
+  else {
+    const i = P.findIndex(([d]) => d >= metros);
+    const [d0, r0] = P[i - 1];
+    const [d1, r1] = P[i];
+    rel = r0 + ((r1 - r0) * Math.log(metros / d0)) / Math.log(d1 / d0);
+  }
+  return tope ? Math.min(tope, rel) : rel;
+}
+
 // Perfil del fantasma: un nivel por nombre o uno a la medida { ftp, nombre, estilo? }.
 function perfil(nivel) {
   if (typeof nivel === 'string') return { clave: nivel, ...NIVELES[nivel] };
@@ -45,7 +64,7 @@ function perfil(nivel) {
   const estilo = ESTILOS[nivel.estilo] || null;
   // El samurái apenas varía; el pirata, mucho.
   const variacion = nivel.estilo === 'samurai' ? cercano.variacion / 2 : nivel.estilo === 'pirata' ? cercano.variacion * 1.6 : cercano.variacion;
-  return { ...cercano, variacion, clave: 'personalizado', nombre: nivel.nombre || `${ftp} W`, ftp, estilo };
+  return { ...cercano, variacion, clave: 'personalizado', nombre: nivel.nombre || `${ftp} W`, ftp, estilo, tope: nivel.tope || null };
 }
 
 // Sesión simulada: { nivel, nombre, muestras: [{ t, dist, w, spm }] }.
@@ -62,9 +81,11 @@ export function simular(ent, nivel, ftpUsuario = 0) {
   const fase = p.ftp * 0.37;
   const ruido = (tt) => p.variacion * (0.6 * Math.sin(tt / 37 + fase) + 0.4 * Math.sin(tt / 11.3 + 2 * fase));
 
-  const remar = (rel, hasta, durEstimada) => {
-    const w0 = p.ftp * rel;
+  // media: en las metas, que la potencia media (con el cansancio) sea la pedida; el cansancio resta de media
+  // fatiga · 0,4 (la media de avance^1,5), así que la salida va un poco por encima.
+  const remar = (rel, hasta, durEstimada, media = false) => {
     const cansa = rel >= 0.85 && durEstimada > 120;
+    const w0 = (p.ftp * rel) / (media && cansa ? 1 - p.fatiga * 0.4 : 1);
     const t0 = t;
     const spm = Math.round(Math.min(36, Math.max(18, p.spm + (rel - 0.75) * 20)));
     while (!hasta(t, dist) && t < 4 * 3600) {
@@ -90,10 +111,10 @@ export function simular(ent, nivel, ftpUsuario = 0) {
       cortes.push(t);
     }
   } else if (ent?.objetivo) {
-    const rel = 0.9;
+    const rel = ent.objetivo.metrica === 'distancia' ? relDistancia(ent.objetivo.valor, p.tope) : 0.9;
     const v = velocidad(p.ftp * rel);
     const { metrica, valor } = ent.objetivo;
-    if (metrica === 'distancia') remar(rel, (_, d) => d >= valor, valor / v);
+    if (metrica === 'distancia') remar(rel, (_, d) => d >= valor, valor / v, true);
     else if (metrica === 'paladas') {
       const dur = Math.round((valor * 60) / 26);
       remar(rel, (tt) => tt >= dur, dur);
