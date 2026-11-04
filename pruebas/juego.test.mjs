@@ -127,8 +127,8 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   assert.equal(despues.talentosLibres, despues.talentos - 2);
 
   const tienda = J.tiendaSemana('2026-01-05');
-  assert.equal(tienda.length, 4);
-  assert.equal(new Set(tienda.map((x) => x.id)).size, 4);
+  assert.equal(tienda.length, 6);
+  assert.equal(new Set(tienda.map((x) => x.id)).size, 6);
   assert.deepEqual(tienda, J.tiendaSemana('2026-01-05'), 'igual toda la semana');
   console.log('juego extra OK', e.monedas, e.logros.map((l) => l.texto));
 }
