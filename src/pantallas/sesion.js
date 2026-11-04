@@ -129,7 +129,10 @@ export function arrancarSesion1() {
   }
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-ir]');
-    if (b) irA(b.dataset.ir);
+    if (!b) return;
+    irA(b.dataset.ir);
+    // Un enlace puede llevar también a una subpestaña (por ejemplo Planes › Programa).
+    if (b.dataset.pt) document.querySelector(`.vista.activa [data-pt="${b.dataset.pt}"]`)?.click();
   });
   pintarChips();
   $('#btn-grabar').addEventListener('click', async (e) => {

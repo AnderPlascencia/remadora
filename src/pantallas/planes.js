@@ -64,7 +64,7 @@ function copiarBase(ent) {
 export async function pintarEntrenamientos() {
   pintarPrograma();
   const pestana = ajustes.leer('pestanaPlanes', 'entrenamientos');
-  document.querySelectorAll('[data-pt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pt === pestana)));
+  document.querySelectorAll('.planes-pestanas [data-pt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pt === pestana)));
   $('#pt-entrenamientos').hidden = pestana !== 'entrenamientos';
   $('#pt-programa').hidden = pestana !== 'programa';
   const h = await actualizarBase();
