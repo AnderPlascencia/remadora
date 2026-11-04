@@ -35,14 +35,14 @@ for (const [id, x] of Object.entries(PAISAJES)) {
   for (let r1 = 0; r1 < 1; r1 += 0.01) for (let r2 = 0; r2 < 1; r2 += 0.05) { nombres.add(x.orilla.elegir(r1, r2)); nombres.add(x.orilla.fondo(r2)); }
   for (const n of nombres) assert.ok(x.orilla.piezas[n], `${id}: falta la pieza ${n}`);
 }
-// Las imágenes existen en el repo y el service worker las guarda para correr sin conexión
+// Las imágenes existen en el repo. El service worker guarda al instalar las miniaturas de la tienda y el paisaje
+// gratis; los de pago se descargan al comprarlos (ver pruebas/sw.test.mjs).
 const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 for (const [id, x] of Object.entries(PAISAJES)) {
-  for (const src of [x.panorama.src, x.orilla.src, x.costa, x.miniatura]) {
-    assert.ok(existsSync(new URL(`../${src}`, import.meta.url)), `${id}: no existe ${src}`);
-    const [, nombre, sufijo] = src.match(/carrera\/([a-z]+?)(_orilla|_costa|_mini)?\.webp$/);
-    assert.ok(sw.includes(src) || (sw.includes(`'${nombre}'`) && sw.includes(`'${sufijo || ''}'`)), `${id}: sw.js no guarda ${src}`);
-  }
+  for (const src of [x.panorama.src, x.orilla.src, x.costa, x.miniatura]) assert.ok(existsSync(new URL(`../${src}`, import.meta.url)), `${id}: no existe ${src}`);
+  const base = x.miniatura.match(/carrera\/([a-z]+)_mini\.webp$/)[1];
+  assert.ok(sw.includes(x.miniatura) || sw.includes(`'${base}'`), `${id}: sw.js no guarda su miniatura`);
+  if (x.precio === 0) for (const src of [x.panorama.src, x.orilla.src, x.costa]) assert.ok(sw.includes(src), `${id}: sw.js no guarda ${src}`);
 }
 
 // Los cinco paisajes de la colección: propios (no variantes de color), a la venta y con precios distintos

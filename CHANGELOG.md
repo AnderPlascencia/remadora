@@ -11,6 +11,10 @@ Colección de bote por clase (etapa 15).
 - El bote de cada clase guarda su propio equipo, así que al cambiar de clase no pierdes nada. Las velas de color siguen a la venta y valen para cualquier bote. La que tenías elegida sigue puesta.
 - En la carrera, los rivales de Alta mar llevan la vela épica de su clase y los legendarios, la legendaria. Las piezas son solo de aspecto: no dan metros, XP ni ventajas.
 
+## 0.54.1 · 2026-11-04
+
+- La app pesa ~730 KB menos al instalarse: solo se precargan las miniaturas de la tienda y el fiordo gratis. Cada paisaje de pago (la laguna y los cinco de la colección) se descarga al comprarlo, y al abrir la app si ya lo tenías, para correr sin conexión.
+
 ## 0.54.0 · 2026-11-04
 
 Cinco paisajes nuevos para la carrera.
