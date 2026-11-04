@@ -58,4 +58,7 @@ pintarLineaNivel();
 // La versión va en la URL del service worker: es la de src/version.js y cada versión nueva instala uno nuevo.
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register(`sw.js?v=${VERSION}`).then(() => precargarRecursos()).catch(() => {});
+  // Al actualizar, el mensaje anterior llega al service worker viejo, cuya caché borra el nuevo al activarse:
+  // se repite cuando el nuevo toma el control para que los paisajes comprados sigan disponibles sin conexión.
+  navigator.serviceWorker.addEventListener('controllerchange', () => precargarRecursos());
 }
