@@ -1,6 +1,7 @@
 // Capacidades físicas: qué entrenó cada sesión, sus datos clave y cómo va cada capacidad en el tiempo.
 // Sin dependencias de la interfaz. Las cifras salen de estadisticas.js; aquí solo se agrupan y se leen.
 import * as E from './estadisticas.js';
+import { pulsoDePct, refPulso, ZONA2, efectoPrevio } from './pulso.js';
 
 const DIA = 864e5;
 const VENTANA = 42 * DIA; // 6 semanas: lo que tarda en notarse un bloque de entrenamiento
@@ -52,7 +53,7 @@ export function analisisSesion(s, { ftp = 0, fcMax = 0 } = {}) {
   const tec = E.tecnica(s);
   const desacople = s.desacople ?? E.desacople(m);
   if (tipo === 'fondo') {
-    const zona = fcMax && s.fcProm ? E.zonaFc(s.fcProm, fcMax) : null;
+    const zona = refPulso(fcMax).max && s.fcProm ? E.zonaFc(s.fcProm, fcMax) : null;
     datos.push({ etq: 'Pulso medio', valor: s.fcProm ? `${s.fcProm} lpm${zona ? ` · Z${zona.n}` : ''}` : '-', ayuda: 'En fondo conviene la zona 2.' });
     datos.push({ etq: 'Desacople', valor: desacople != null ? `${decimal(desacople)} %` : '-', ayuda: 'Cuánto se despegó el pulso de los watts entre la 1.ª y la 2.ª mitad.' });
     datos.push({ etq: 'Metros/palada', valor: tec.metrosPorPalada ?? '-', ayuda: 'Más metros con el mismo esfuerzo = mejor técnica.' });
@@ -87,7 +88,7 @@ export function analisisSesion(s, { ftp = 0, fcMax = 0 } = {}) {
   } else if (tipo === 'calorias') {
     datos.push({ etq: 'Calorías', valor: s.kcal ?? '-', ayuda: 'Estimadas con tus watts y tu peso.' });
     datos.push({ etq: 'Calorías/hora', valor: s.duracion ? Math.round((s.kcal * 3600) / s.duracion) : '-', ayuda: 'Ritmo de gasto.' });
-    datos.push({ etq: 'Trabajo', valor: `${s.kj ?? E.trabajoKj(m)} kJ`, ayuda: 'Energía que entregaste al volante (1 kJ ≈ 1 kcal quemada).' });
+    datos.push({ etq: 'Trabajo', valor: `${s.kj ?? E.trabajoKj(m)} kJ`, ayuda: `Energía que entregaste al volante: tu cuerpo gastó unas ${E.kcalDeKj(s.kj ?? E.trabajoKj(m))} kcal (1 kJ ≈ 1,2 kcal).` });
     lectura = 'Para quemar más, suma minutos en zona 2: es lo que más calorías da con menos fatiga.';
   } else {
     datos.push({ etq: 'Watts prom', valor: s.pruebaWatts ? `${s.pruebaWatts} W` : `${s.wattsProm} W`, ayuda: 'Media del tramo de prueba.' });
@@ -135,7 +136,7 @@ function medir(ss, { ftp, peso, fcRef }) {
 export const CAPACIDADES = [
   { clave: 'base', nombre: 'Base aeróbica', simple: 'Motor', entrena: 'Fondos suaves largos', unidad: 'W', como: (c) => `Watts a ${c.fcRef} lpm`, falta: 'Necesita tu pulso: rema 20 min o más con banda o reloj conectado.' },
   { clave: 'umbral', nombre: 'Umbral (FTP)', simple: 'Ritmo sostenido', entrena: 'Bloques largos a ritmo fuerte', unidad: 'W', como: () => 'Potencia de una hora', falta: 'Haz la Prueba FTP 20 min o una sesión de 20 min.' },
-  { clave: 'vo2', nombre: 'VO₂máx', simple: 'Pulmones', entrena: 'Series de 2 a 4 min muy fuertes', unidad: 'ml/kg/min', como: () => 'Estimado con tu mejor 5 min', falta: 'Rema 5 min a fondo para estimarlo.' },
+  { clave: 'vo2', nombre: 'Índice de VO₂', simple: 'Pulmones', entrena: 'Series de 2 a 4 min muy fuertes', unidad: 'ml/kg/min', como: () => 'Índice con tu mejor 5 min: compáralo contigo, no es un VO₂máx de laboratorio', falta: 'Rema 5 min a fondo para calcularlo.' },
   { clave: 'anaerobica', nombre: 'Capacidad anaeróbica', simple: 'Batería', entrena: 'Series cortas por encima de tu ritmo', unidad: 'kJ', como: () => 'W′ con tus mejores marcas de 2 a 20 min', falta: 'Necesita marcas de dos duraciones, por ejemplo 3 y 12 min.' },
   { clave: 'potencia', nombre: 'Potencia y sprint', simple: 'Explosión', entrena: 'Sprints de 10 a 20 s', unidad: 'W', como: () => 'Mejor 10 s', falta: 'Haz un sprint de 10 s.' },
   { clave: 'tecnica', nombre: 'Técnica', simple: 'Técnica', entrena: 'Paladas largas y controladas', unidad: 'm/palada', como: () => 'Metros por palada', falta: 'Rema una sesión para medirla.' },
@@ -146,7 +147,7 @@ export const CAPACIDADES = [
 // ftpAntes: el FTP que tenías hace 6 semanas (lo guarda cada sesión).
 export function capacidades(sesiones, { ftp = 0, peso = 0, fcMax = 0, ahora = Date.now() } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
-  const fcRef = fcMax ? Math.round(fcMax * 0.7) : 0;
+  const fcRef = pulsoDePct(ZONA2.max, fcMax); // el techo de tu zona 2
   const recientes = enVentana(orden, ahora - VENTANA, ahora + 1);
   const previas = enVentana(orden, ahora - 2 * VENTANA, ahora - VENTANA);
   const ftpAntes = previas.map((s) => s.ftp).filter(Boolean).at(-1) || null;
@@ -165,7 +166,7 @@ export function capacidades(sesiones, { ftp = 0, peso = 0, fcMax = 0, ahora = Da
 // Sirve para las mini gráficas de «Cómo has mejorado».
 export function historialCapacidades(sesiones, { ftp = 0, peso = 0, fcMax = 0, semanas = 12, ahora = Date.now() } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
-  const fcRef = fcMax ? Math.round(fcMax * 0.7) : 0;
+  const fcRef = pulsoDePct(ZONA2.max, fcMax); // el techo de tu zona 2
   const ventanas = lunes(semanas, ahora).map((ini, i, l) => {
     const fin = i === l.length - 1 ? ahora + 1 : ini + 7 * DIA;
     const ss = enVentana(orden, fin - VENTANA, fin);
@@ -192,11 +193,23 @@ export function horasPorCarga(carga) {
   return carga < 40 ? 8 : carga < 70 ? 16 : carga < 100 ? 24 : carga < 150 ? 36 : carga < 200 ? 48 : 72;
 }
 
+// Orden de los estados, del mejor al peor: las respuestas de antes de remar y la variabilidad del pulso
+// solo pueden empeorar el estado, nunca mejorarlo.
+const ORDEN_CUERPO = ['fresco', 'listo', 'cargado', 'agotado'];
+const peor = (a, b) => (ORDEN_CUERPO.indexOf(b) > ORDEN_CUERPO.indexOf(a) ? b : a);
+
 // Estado de hoy: nombre, horas hasta estar listo, carga de 7 días contra tu rango seguro y reparto suave/fuerte.
-export function estadoCuerpo(sesiones, ftp, ahora = Date.now()) {
+// previo: tus respuestas de hoy antes de remar ({ sueno, dolor }), o null. motivos: por qué empeoró el estado
+// (dolor, sueño o variabilidad del pulso baja), para explicarlo en Hoy y en el plan.
+export function estadoCuerpo(sesiones, ftp, ahora = Date.now(), { previo = null } = {}) {
   const dias = E.forma(sesiones, ftp, 60, ahora);
   const hoy = dias.at(-1);
-  if (!hoy || !dias.some((d) => d.carga > 0)) return null;
+  const efecto = efectoPrevio(previo);
+  const hrv = E.variabilidadBaja(sesiones, ahora);
+  if (!hoy || !dias.some((d) => d.carga > 0)) {
+    // Sin carga registrada, tus respuestas siguen contando.
+    return efecto ? { clave: efecto.clave, ...ESTADOS_CUERPO[efecto.clave], horas: 0, motivos: [efecto.motivo], ratio: null, seguro: null } : null;
+  }
   const cond = (hoy.condicion * 41 + hoy.carga) / 42; // tras sumar la carga de hoy
   const fat = (hoy.fatiga * 6 + hoy.carga) / 7;
   const fres = cond - fat;
@@ -218,13 +231,16 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now()) {
   // Una sesión dura reciente manda aunque la tendencia diga que estás fresco.
   if (horas >= 12 && (clave === 'fresco' || clave === 'listo')) clave = 'cargado';
   else if (horas > 0 && clave === 'fresco') clave = 'listo';
+  const motivos = [];
+  if (efecto) { clave = peor(clave, efecto.clave); motivos.push(efecto.motivo); }
+  if (hrv?.baja) { clave = peor(clave, 'cargado'); motivos.push(`Tu variabilidad del pulso bajó (${hrv.hoy} ms, lo normal en ti es ${hrv.base})`); }
   const semana = dias.slice(-7).reduce((a, d) => a + d.carga, 0);
   const seguro = ratio != null ? { min: Math.round(cond * 7 * 0.8), max: Math.round(cond * 7 * 1.3) } : null;
   const reparto = E.distribucionIntensidad(sesiones, ftp, 7, ahora);
   return {
     clave, ...ESTADOS_CUERPO[clave], horas, ratio: ratio == null ? null : Math.round(ratio * 100) / 100,
     condicion: Math.round(cond), fatiga: Math.round(fat), frescura: Math.round(fres),
-    semana: Math.round(semana), seguro, reparto,
+    semana: Math.round(semana), seguro, reparto, motivos, rmssd: hrv,
   };
 }
 

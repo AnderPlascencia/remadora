@@ -130,7 +130,7 @@ const PRUEBAS = [
   ['prueba-ftp', 'Prueba FTP 20 min', 'Calcula tu FTP para ajustar las intensidades.', '20 min a tu máximo sostenido'],
   ['prueba-5min', 'Prueba 5 min', 'Mide tu potencia de VO₂máx (plan VO₂máx).', '5 min a tope'],
   ['prueba-potencia', 'Prueba de potencia', 'Mide tu pico de watts y tu mejor minuto (plan de potencia).', '10 paladas y 1 min a tope'],
-  ['prueba-pulso', 'Prueba de pulso fijo 30 min', 'Cuántos watts das a pulso suave: tu motor aeróbico (plan de base).', '30 min al 70 % de tu pulso máximo'],
+  ['prueba-pulso', 'Prueba de pulso fijo 30 min', 'Cuántos watts das a pulso suave: tu motor aeróbico (plan de base).', '30 min a pulso fijo, en lo alto de tu zona 2'],
 ].map(([clave, nombre, proposito, resumen]) => ({ ...structuredClone(PRUEBAS_PLAN[nombre] || EJEMPLOS.find((x) => x.nombre === nombre)), id: `base:${clave}`, base: true, enfoque: 'pruebas', dificultad: null, proposito, ...(resumen ? { resumen } : {}) }));
 export const NOMBRES_PRUEBA = new Set(PRUEBAS.map((p) => p.nombre));
 

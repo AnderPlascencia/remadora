@@ -5,8 +5,9 @@
 //  - 'intervalos': { tipo, nombre, bloques: [{ nombre, fin?, duracion (s), cantidad?, metrica, min, max, nivel? }] }
 //    fin: 'tiempo' (por defecto, usa duracion), 'distancia' (cantidad en m) o 'paladas' (cantidad de paladas).
 //    metrica: 'watts' (min/max en W), 'ftp' (min/max en % del FTP), 'split' (min/max en s por 500 m),
-//    'spm' (golpes/min), 'fc' (pulso en lpm), 'fcpct' (% del pulso máximo) o '' (libre).
+//    'spm' (golpes/min), 'fc' (pulso en lpm), 'fcpct' (% de la reserva de pulso o del pulso máximo) o '' (libre).
 //    nivel (1-24, opcional): resistencia que se pide a la consola si la resistencia automática está activa.
+import { pulsoDePct, usaReserva } from './pulso.js';
 
 // Zonas de potencia como % del FTP.
 export const ZONAS = [
@@ -36,10 +37,11 @@ export function wattsDeSplit(split) {
   return split > 0 ? Math.round(2.8 / (split / 500) ** 3) : 0;
 }
 
-// Rango de pulso en lpm (convierte % del pulso máximo). null si el bloque no es por pulso.
-export function rangoFc(b, fcMax) {
+// Rango de pulso en lpm. null si el bloque no es por pulso. 'fcpct' es % de tu reserva de pulso si conoces
+// tu pulso en reposo (fcRef = { max, reposo }), o % de tu pulso máximo (fcRef = número).
+export function rangoFc(b, fcRef) {
   if (b.metrica === 'fc') return { min: b.min, max: b.max };
-  if (b.metrica === 'fcpct' && fcMax) return { min: Math.round((b.min * fcMax) / 100), max: Math.round((b.max * fcMax) / 100) };
+  if (b.metrica === 'fcpct') { const min = pulsoDePct(b.min, fcRef); return min ? { min, max: pulsoDePct(b.max, fcRef) } : null; }
   return null;
 }
 
@@ -49,6 +51,10 @@ export const ACTIVACION = [1, 2, 3].flatMap((i) => [
   { nombre: `Calentamiento: arranque progresivo ${i}/3`, duracion: 15, metrica: 'ftp', min: 95, max: 115 },
   { nombre: 'Calentamiento suave', duracion: 45, metrica: 'ftp', min: 40, max: 60 },
 ]);
+
+// La prueba FTP con su consejo de reparto: salir fuerte de más es el error que más la estropea.
+export const CONSEJO_FTP = 'Sal un poco por debajo de lo que crees aguantar los 5 primeros minutos, mantén en el centro y vacíate en los 3 últimos';
+const PRUEBA_FTP_BLOQUE = { nombre: 'Prueba: máximo sostenido', duracion: 1200, metrica: '', min: 0, max: 0, prueba: true, consejo: CONSEJO_FTP };
 
 // Texto corto de la meta de un bloque, con la cadencia pedida si la hay (spmMeta: [min, max]).
 export function textoMeta(b, ftp, fcMax = 0) {
@@ -60,7 +66,8 @@ function textoMetaSolo(b, ftp, fcMax) {
   if (b.metrica === 'fc') return `${b.min}–${b.max} lpm`;
   if (b.metrica === 'fcpct') {
     const r = rangoFc(b, fcMax);
-    return r ? `${r.min}–${r.max} lpm (${b.min}–${b.max}% pulso máx)` : `${b.min}–${b.max}% pulso máx`;
+    const de = usaReserva(fcMax) ? 'reserva de pulso' : 'pulso máx';
+    return r ? `${r.min}–${r.max} lpm (${b.min}–${b.max}% ${de})` : `${b.min}–${b.max}% ${de}`;
   }
   const r = rangoWatts(b, ftp);
   if (b.metrica === 'ftp') return r ? `${r.min}–${r.max} W (${b.min}–${b.max}% FTP)` : `${b.min}–${b.max}% FTP`;
@@ -355,7 +362,8 @@ export const EJEMPLOS = [
     pruebaFtp: true,
     bloques: [
       { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 },
-      { nombre: 'Prueba: máximo sostenido', duracion: 1200, metrica: '', min: 0, max: 0, prueba: true },
+      ...ACTIVACION,
+      PRUEBA_FTP_BLOQUE,
       { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 },
     ],
   },
@@ -504,7 +512,7 @@ const ENF_P = { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max:
 const CAL_P = { nombre: 'Calentamiento', duracion: 600, metrica: 'ftp', min: 56, max: 75 };
 export const PRUEBAS = {
   'Prueba FTP 20 min': { tipo: 'intervalos', nombre: 'Prueba FTP 20 min', pruebaFtp: true, bloques: [
-    CAL_P, { nombre: 'Prueba: máximo sostenido', duracion: 1200, metrica: '', min: 0, max: 0, prueba: true }, ENF_P] },
+    CAL_P, ...ACTIVACION, PRUEBA_FTP_BLOQUE, ENF_P] },
   'Prueba 5 min': { tipo: 'intervalos', nombre: 'Prueba 5 min', prueba: true, bloques: [
     CAL_P, { nombre: 'Prueba: 5 min a tope', duracion: 300, metrica: '', min: 0, max: 0, prueba: true }, ENF_P] },
   'Prueba de potencia': { tipo: 'intervalos', nombre: 'Prueba de potencia', prueba: true, bloques: [
@@ -514,5 +522,5 @@ export const PRUEBAS = {
     { nombre: 'Prueba: 1 min a tope', duracion: 60, metrica: '', min: 0, max: 0, prueba: true }, ENF_P] },
   'Prueba de pulso fijo 30 min': { tipo: 'intervalos', nombre: 'Prueba de pulso fijo 30 min', prueba: true, bloques: [
     { ...CAL_P, max: 70 },
-    { nombre: 'Prueba: 30 min al 70 % de tu pulso máximo', duracion: 1800, metrica: 'fcpct', min: 68, max: 72, prueba: true }, ENF_P] },
+    { nombre: 'Prueba: 30 min a pulso fijo (techo de tu zona 2)', duracion: 1800, metrica: 'fcpct', min: 68, max: 72, prueba: true }, ENF_P] },
 };

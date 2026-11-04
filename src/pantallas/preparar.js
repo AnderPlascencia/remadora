@@ -311,12 +311,8 @@ export function pintarFtpEstado() {
   $('#ftp-estimado').hidden = !(ftp() && ajustes.si('ftpEstimado', false));
 }
 
-// FTP aproximado sin prueba: el 95 % de la mejor media de watts de tus últimas 20 sesiones (por fecha,
-// sin importar en qué orden venga la lista).
-export function estimarFtp(sesiones) {
-  const w = [...sesiones].sort((a, b) => a.fecha - b.fecha).slice(-20).map((s) => s.wattsProm || 0).filter((x) => x > 0);
-  return w.length ? Math.round(Math.max(...w) * 0.95) : 0;
-}
+// FTP aproximado sin prueba (estadisticas.js): no se infla con un 500 m.
+export const estimarFtp = (sesiones) => E.ftpEstimadoDe(sesiones);
 
 async function fantasmaPerso(ent, sesiones) {
   const { modo, valor } = perso();

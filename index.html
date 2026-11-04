@@ -170,6 +170,12 @@
         <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
       </div>
 
+      <div id="antes-remar" class="antes-remar" hidden>
+        <span class="etq-campo">Antes de remar <small>(opcional)</small></span>
+        <div id="antes-preguntas"></div>
+        <p id="antes-plegado" class="antes-plegado" hidden><span></span> · <button type="button" id="antes-cambiar" class="enlace-chevron">Cambiar ›</button></p>
+      </div>
+
       <div id="pausa-aviso" class="aviso suave-aviso" hidden aria-live="polite">En pausa: empieza a remar para continuar</div>
 
       <div id="en-vivo" hidden>
@@ -571,12 +577,20 @@
 
       <details class="seccion" data-seccion="avanzado">
       <summary><h2>Pulso y zonas</h2></summary>
-      <label class="campo">Pulso máximo (lpm) <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
-      <p class="ayuda">Con la edad de tu perfil se calcula el pulso máximo (220 menos la edad). Si conoces el tuyo, escríbelo aquí.</p>
+      <div class="fila-dos">
+        <label class="campo"><span>Pulso máximo (lpm) <span id="fcmax-fuente" class="etq-estimado" hidden>estimado</span></span>
+          <input id="in-fcmax" type="number" min="100" max="230" inputmode="numeric" placeholder="ej. 185"></label>
+        <label class="campo">Pulso en reposo (lpm) <input id="in-fcreposo" type="number" min="30" max="110" inputmode="numeric" placeholder="ej. 58"></label>
+      </div>
+      <p id="fcmax-ayuda" class="ayuda">Si no lo escribes, la app usa el más alto que alcances en tus sesiones (o, mientras tanto, 220 menos tu edad).</p>
+      <p class="ayuda">Con tu pulso en reposo (tómalo al despertar, aún acostado), las zonas salen de tu reserva de pulso: la zona 2 es del 60 al 70 % entre el reposo y el máximo.</p>
       <p class="ayuda">Pulso: sirve cualquier banda o reloj que transmita la frecuencia cardíaca por Bluetooth. En un Huawei Watch activa "Compartir datos de frecuencia cardíaca" en Ajustes del entrenamiento del reloj, empieza un entrenamiento en el reloj y luego toca el corazón de la barra de arriba.</p>
       <div class="solo-avanzado">
         <h3 class="sub-ajustes">Zonas de potencia</h3>
         <table id="tabla-zonas" class="tabla"></table>
+        <h3 class="sub-ajustes">Bandas de remo</h3>
+        <table id="tabla-bandas" class="tabla"></table>
+        <p class="ayuda">El split es el de la RW200: no lo compares con un Concept2.</p>
       </div>
       </details>
 

@@ -6,6 +6,7 @@ import * as F from '../fantasma.js';
 import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
+import { rangoZona2 } from '../pulso.js';
 import { hablar } from '../voz.js';
 import * as J from '../juego.js';
 import * as O from '../objetos.js';
@@ -13,7 +14,7 @@ import * as V from '../ventajas.js';
 import * as Cap from '../capacidades.js';
 import * as A from '../adaptacion.js';
 import {
-  $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, escaparHtml, fcMaxima, ftp, ico, miles, reajustarTextos, toast, vibrar,
+  $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, escaparHtml, fcMaxima, fcRef, ftp, ico, miles, reajustarTextos, toast, vibrar,
 } from '../ui.js';
 import { estado } from '../estado.js';
 import { vistaActiva } from '../navegacion.js';
@@ -275,7 +276,7 @@ export function pintar() {
   const dist = estado.sesion ? Math.round(estado.sesion.dist) : 0;
   const f = ftp();
   const zona = Ent.zonaDe(actual.watts, f);
-  const zfc = E.zonaFc(actual.fc, ajustes.num('fcMax', 0));
+  const zfc = E.zonaFc(actual.fc, fcRef());
   $('#m-watts').textContent = actual.watts;
   $('#m-nivel-etq').textContent = actual.nivel && avanzado() ? `· resistencia ${actual.nivel}` : '';
   $('#m-zona').textContent = zona ? textoZona(zona) : '';
@@ -391,7 +392,7 @@ function medidaDeBloque(b) {
   if (rw) return { etq: 'Rango de potencia', valor: actual.watts, ...rw, unidad: 'W', txt: (x) => String(x), potencia: true };
   if (b.metrica === 'split') return { etq: 'Rango de split', valor: actual.split, min: b.min, max: b.max, unidad: '/500', txt: formatoSplit, alReves: true };
   if (b.metrica === 'spm') return { etq: 'Rango de golpes', valor: actual.spm, min: b.min, max: b.max, unidad: 'g/min', txt: (x) => String(x) };
-  const rf = Ent.rangoFc(b, fcMaxima());
+  const rf = Ent.rangoFc(b, fcRef());
   if (rf) return { etq: 'Rango de pulso', valor: actual.fc || 0, ...rf, unidad: 'lpm', txt: (x) => String(x) };
   return null;
 }
@@ -406,7 +407,7 @@ function pintarRango() {
   if (!m) {
     caja.classList.add('libre');
     $('#mr-rango-etq').textContent = info?.terminado ? 'Entrenamiento completado' : 'Intervalo libre';
-    $('#mr-rango-meta').textContent = info?.siguiente ? `Luego ${Ent.textoMeta(info.siguiente, ftp(), fcMaxima())}` : '';
+    $('#mr-rango-meta').textContent = info?.siguiente ? `Luego ${Ent.textoMeta(info.siguiente, ftp(), fcRef())}` : '';
     $('#mr-rango-valor').textContent = actual.watts;
     $('#mr-rango-unidad').textContent = 'W';
     $('#mr-rango-ind').textContent = info?.terminado ? '' : 'Rema a tu gusto';
@@ -434,7 +435,7 @@ function pintarRango() {
   $('#mr-banda-max').textContent = m.txt(m.alReves ? m.min : m.max);
   $('#mr-aguja').style.left = `${Math.min(100, Math.max(0, m.valor ? pos(m.valor) : 0))}%`;
   const resta = Ent.textoResta(info);
-  const sig = info.siguiente ? ` · luego ${Ent.textoMeta(info.siguiente, ftp(), fcMaxima())}` : '';
+  const sig = info.siguiente ? ` · luego ${Ent.textoMeta(info.siguiente, ftp(), fcRef())}` : '';
   $('#mr-rango-pie').textContent = `${resta} en este rango${sig}${pctSes != null ? ` · ${pctSes}% en rango` : ''}`;
 }
 
@@ -514,8 +515,8 @@ export function vigilarTipoSesion(t) {
   }
   const tipo = estado.sesion.tipoPlan;
   if (tipo === 'fondo' && fcMaxima() && actual.fc) {
-    // En un fondo el pulso no debería pasar del 75 % del máximo (zona 2) más de un minuto seguido.
-    estado.sesion.fcAltaSeg = actual.fc > fcMaxima() * 0.75 ? (estado.sesion.fcAltaSeg || 0) + 1 : 0;
+    // En un fondo el pulso no debería pasar de la zona 2 (con 3 lpm de margen) más de un minuto seguido.
+    estado.sesion.fcAltaSeg = actual.fc > rangoZona2(fcRef()).max + 3 ? (estado.sesion.fcAltaSeg || 0) + 1 : 0;
     if (estado.sesion.fcAltaSeg === 60) hablar('Pulso alto para un fondo. Baja un poco los watts', { clave: 'fc-fondo', cadaSeg: 180 });
   }
   if (tipo === 'calorias') {
@@ -693,7 +694,7 @@ function pintarObjetivo(t) {
   $('#mr-meta-texto').textContent = `${Math.floor(p.hecho)} de ${p.meta} ${unidad}${p.estimadoSeg != null ? ` · ≈ ${formatoTiempo(p.estimadoSeg)}` : ''}`;
 }
 
-const textoSiguiente = (b, f) => `${b.nombre || 'intervalo'} · ${Ent.finDe(b) === 'tiempo' ? '' : `${Ent.textoCantidad(b)} · `}${Ent.textoMeta(b, f, fcMaxima())}`;
+const textoSiguiente = (b, f) => `${b.nombre || 'intervalo'} · ${Ent.finDe(b) === 'tiempo' ? '' : `${Ent.textoCantidad(b)} · `}${Ent.textoMeta(b, f, fcRef())}`;
 
 function pintarBloque(t) {
   const f = ftp();
@@ -721,7 +722,7 @@ function pintarBloque(t) {
   const { i, bloque: b, siguiente } = info;
   const nombre = `${i + 1}/${estado.sesion.plan.length} · ${b.nombre || 'Intervalo'}`;
   const resta = Ent.textoResta(info);
-  const meta = b.metrica ? Ent.textoMeta(b, f, fcMaxima()) : 'Libre';
+  const meta = b.metrica ? Ent.textoMeta(b, f, fcRef()) : 'Libre';
   $('#bloque-nombre').textContent = nombre;
   $('#bloque-resta').textContent = resta;
   $('#bloque-meta').textContent = b.metrica ? `Meta: ${meta}` : 'Libre';
@@ -730,7 +731,7 @@ function pintarBloque(t) {
   $('#mr-nombre').textContent = nombre;
   $('#mr-meta-texto').textContent = meta;
   $('#mr-resta').textContent = resta;
-  $('#mr-resta-etq').textContent = siguiente ? `luego ${Ent.textoMeta(siguiente, f, fcMaxima())}` : 'último';
+  $('#mr-resta-etq').textContent = siguiente ? `luego ${Ent.textoMeta(siguiente, f, fcRef())}` : 'último';
   $('#mr-barra').style.width = `${100 * info.fraccion}%`;
   marcarRango(Ent.enRango(b, actual.watts, actual.spm, f, actual.split, actual.fc), !!Ent.rangoWatts(b, f), bloqueSuave(b));
 }
@@ -779,7 +780,7 @@ export async function vistaPrevia() {
   } else {
     const b = ent.bloques[0];
     $('#bloque-resta').textContent = `${Ent.soloTiempo(ent) ? '' : '≈ '}${formatoTiempo(Ent.duracionTotal(ent))}`;
-    $('#bloque-meta').textContent = `${ent.bloques.length} intervalos · empieza: ${b.nombre || 'intervalo'} ${Ent.textoMeta(b, ftp(), fcMaxima())}`;
+    $('#bloque-meta').textContent = `${ent.bloques.length} intervalos · empieza: ${b.nombre || 'intervalo'} ${Ent.textoMeta(b, ftp(), fcRef())}`;
     if (ent.bloques.some((x) => x.metrica === 'ftp') && !ftp()) {
       $('#bloque-siguiente').textContent = 'Tus watts aparecen tras tu primera sesión de 10 min';
       $('#bloque-indicador').textContent = '';

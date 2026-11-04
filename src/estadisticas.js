@@ -1,6 +1,7 @@
 // Cálculos de seguimiento: récords, comparación con la sesión anterior y progreso por periodo.
 // Una muestra de sesión es { t, w, spm, split, dist, nivel, fc } con t en segundos activos.
-import { enRango } from './entrenamientos.js';
+import { enRango, esBloqueTrabajo } from './entrenamientos.js';
+import { fcMax5De, pctDePulso } from './pulso.js';
 
 // Resúmenes por sesión: récords y curva de potencia se piden muchas veces sobre las mismas muestras.
 // Se guardan junto a la lista de muestras (si cambia la lista o crece, la clave ya no coincide); una sesión
@@ -305,18 +306,18 @@ export const ZONAS_FC = [
   { n: 5, nombre: 'Máxima', min: 90, max: 100 },
 ];
 
-export function zonaFc(fc, fcMax) {
-  if (!fc || !fcMax) return null;
-  const pct = (100 * fc) / fcMax;
-  if (pct < 50) return null;
+// Las zonas son % de tu reserva de pulso si conoces tu pulso en reposo (ref = { max, reposo }), o de tu máximo.
+export function zonaFc(fc, ref) {
+  const pct = pctDePulso(fc, ref);
+  if (pct == null || pct < 50) return null;
   return ZONAS_FC.find((z) => pct < z.max) || ZONAS_FC.at(-1);
 }
 
 // Segundos en cada zona de pulso [z1..z5].
-export function tiempoEnZonasFc(muestras, fcMax) {
+export function tiempoEnZonasFc(muestras, ref) {
   const res = [0, 0, 0, 0, 0];
   for (const x of muestras) {
-    const z = zonaFc(x.fc, fcMax);
+    const z = zonaFc(x.fc, ref);
     if (z) res[z.n - 1] += 1;
   }
   return res;
@@ -569,6 +570,71 @@ export function factorIntensidad(muestras, ftp) {
 export function trabajoKj(muestras) {
   return Math.round((muestras || []).reduce((a, x) => a + (x.w || 0), 0) / 1000);
 }
+// Calorías que cuesta ese trabajo: el cuerpo rinde un 20 % más o menos, así que 1 kJ en el volante ≈ 1,2 kcal.
+export const KCAL_POR_KJ = 1.2;
+export const kcalDeKj = (kj) => Math.round((kj || 0) * KCAL_POR_KJ);
+
+// Bandas clásicas del remo, en % del FTP, con su split en la RW200 (W = 2,8 / (s/m)³).
+// Sirven de guía: los watts y el split de la RW200 no se comparan con los de un Concept2.
+export const BANDAS_REMO = [
+  { clave: 'UT2', nombre: 'Fondo suave', min: 56, max: 75 },
+  { clave: 'UT1', nombre: 'Fondo firme', min: 76, max: 87 },
+  { clave: 'AT', nombre: 'Umbral', min: 88, max: 100 },
+  { clave: 'TR', nombre: 'Transporte de oxígeno (VO₂)', min: 101, max: 115 },
+  { clave: 'AN', nombre: 'Anaeróbico', min: 116, max: 150 },
+];
+const splitDeW = (w) => Math.round(500 * (2.8 / w) ** (1 / 3));
+// Cada banda con sus watts y su split (el split rápido va con los watts altos).
+export const bandasRemo = (ftp) => BANDAS_REMO.map((b) => ({
+  ...b,
+  ...(ftp > 0 ? { wMin: Math.round((ftp * b.min) / 100), wMax: Math.round((ftp * b.max) / 100), splitRapido: splitDeW((ftp * b.max) / 100), splitLento: splitDeW((ftp * b.min) / 100) } : {}),
+}));
+
+// FTP aproximado sin prueba, con tus últimas 20 sesiones (por fecha, sin importar el orden de la lista):
+// el 95 % de la media de una sesión de 20 min o más, o el 90 % de una de 10 a 20 min. Las más cortas no cuentan:
+// un 500 m va al 140 % del FTP o más y lo inflaba.
+export function ftpEstimadoDe(sesiones) {
+  const w = [...(sesiones || [])].sort((a, b) => a.fecha - b.fecha).slice(-20).map((s) => {
+    const d = s.duracion || 0;
+    return s.wattsProm > 0 ? (d >= 1200 ? s.wattsProm * 0.95 : d >= 600 ? s.wattsProm * 0.9 : 0) : 0;
+  }).filter((x) => x > 0);
+  return w.length ? Math.round(Math.max(...w)) : 0;
+}
+
+// ¿Toca revisar el FTP? Repetir la prueba cada 6–8 semanas, y bajarlo si varias sesiones duras se quedan cortas.
+// sesiones: con pruebaFtp/pruebaWatts para saber la última prueba, y pctEnRango/pctBajo/bloques para las duras.
+// Devuelve { repetir: días desde la última prueba (si pasan de 42), bajar: { ftp, cortas } } o null si nada.
+export const DIAS_REPETIR_FTP = 42;
+export function revisarFtp(sesiones, ftp, ahora = Date.now()) {
+  if (!(ftp > 0)) return null;
+  const orden = [...(sesiones || [])].filter((s) => s.fecha <= ahora).sort((a, b) => a.fecha - b.fecha);
+  const prueba = orden.filter((s) => s.pruebaFtp || s.pruebaWatts).at(-1);
+  const desde = prueba ? Math.floor((ahora - prueba.fecha) / 864e5) : null;
+  const res = {};
+  if (desde != null && desde >= DIAS_REPETIR_FTP) res.repetir = desde;
+  // Duras de los últimos 21 días después de la última prueba, con metas en watts por encima del 88 % del FTP.
+  const duras = orden.filter((s) => s.fecha > ahora - 21 * 864e5 && (!prueba || s.fecha > prueba.fecha) && s.pctEnRango != null && s.bloques?.some((b) => b.metrica === 'watts' && b.min >= ftp * 0.88));
+  const cortas = duras.slice(-4).filter((s) => s.pctEnRango < 60 && (s.pctBajo ?? 100) > (s.pctAlto ?? 0));
+  if (cortas.length >= 3) {
+    // Cuánto diste de verdad en sus bloques de trabajo duros respecto a lo pedido, y el FTP que eso supone.
+    const ratios = cortas.map((s) => {
+      let t = 0;
+      const r = [];
+      for (const b of s.bloques) {
+        const ini = t;
+        t += b.duracion || 0;
+        if (b.metrica !== 'watts' || b.min < ftp * 0.88 || !s.muestras?.length) continue;
+        const w = s.muestras.filter((x) => x.t >= ini && x.t < t).map((x) => x.w);
+        if (w.length >= 20) r.push(media(w) / ((b.min + b.max) / 2));
+      }
+      return r.length ? media(r) : null;
+    }).filter((x) => x != null).sort((a, b) => a - b);
+    const ratio = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 0.95;
+    const nuevo = Math.round(ftp * Math.min(0.97, Math.max(0.85, ratio)));
+    if (nuevo < ftp) res.bajar = { ftp: nuevo, cortas: cortas.length };
+  }
+  return res.repetir || res.bajar ? res : null;
+}
 
 // Curva de potencia: mejor media para cada duración (s) que quepa en la sesión.
 export const DURACIONES_CURVA = [5, 10, 30, 60, 120, 180, 300, 600, 720, 1200, 1800, 3600];
@@ -618,7 +684,9 @@ export function saldoWPrima(muestras, cp, wPrima) {
   });
 }
 
-// VO₂máx aproximado (ml/kg/min) desde la potencia de 5 min, con la ecuación de ergómetro del ACSM.
+// Índice de VO₂ (ml/kg/min) desde la potencia de 5 min, con la ecuación de ergómetro del ACSM.
+// No es tu VO₂máx de laboratorio (la ecuación es de bicicleta y los watts dependen de la máquina):
+// sirve para compararte contigo mismo, no con otros.
 export function vo2maxEstimado(w5, peso) {
   if (!w5 || !peso) return null;
   return Math.round(((10.8 * w5) / peso + 7) * 10) / 10;
@@ -629,17 +697,46 @@ export function vo2maxEstimado(w5, peso) {
 const CALENTAMIENTO = 300;
 const conPulso = (muestras) => (muestras || []).filter((x) => x.t > CALENTAMIENTO && x.fc > 0 && x.w > 0);
 
-// Desacople aeróbico (%): cuánto cae la relación watts/pulso de la primera a la segunda mitad.
-// Menos de 5 % en una sesión continua de 40 min o más = buena base aeróbica.
-export function desacople(muestras, minSeg = 1200) {
-  const m = conPulso(muestras);
+// Tramo principal estable de una sesión, el único donde tiene sentido comparar watts y pulso:
+//  - con bloques (guardados con su duración): el bloque de trabajo más largo, sin sus 3 primeros minutos
+//    (el pulso aún sube); si es el primero de la sesión, también sin los 5 primeros de la sesión;
+//  - sin bloques (remo libre): sin los 5 primeros minutos ni los 2 últimos (enfriamiento).
+// En los dos casos solo quedan los segundos a potencia estable (±15 % de la mediana del tramo).
+export function tramoPrincipal(muestras, bloques = null) {
+  let m = conPulso(muestras);
+  if (bloques?.length) {
+    let ini = 0;
+    let mejor = null;
+    for (const b of bloques) {
+      const d = b.duracion || 0;
+      if (esBloqueTrabajo(b) && d >= 600 && (!mejor || d > mejor.d)) mejor = { ini, d };
+      ini += d;
+    }
+    if (!mejor) return [];
+    m = m.filter((x) => x.t >= mejor.ini + 180 && x.t < mejor.ini + mejor.d);
+  } else {
+    const fin = (muestras?.at(-1)?.t ?? 0) - 120;
+    m = m.filter((x) => x.t < fin);
+  }
+  if (!m.length) return [];
+  const orden = m.map((x) => x.w).sort((a, b) => a - b);
+  const med = orden[Math.floor(orden.length / 2)];
+  return m.filter((x) => Math.abs(x.w - med) <= med * 0.15);
+}
+
+// Desacople aeróbico (%): cuánto cae la relación watts/pulso de la primera a la segunda mitad del tramo principal.
+// Hace falta un tramo estable de 20 min; para alargar el fondo (adaptación) se piden 40 (DESACOPLE_FONDO_LARGO).
+export const DESACOPLE_FONDO_LARGO = 2400;
+export function desacopleDe(muestras, bloques = null, minSeg = 1200) {
+  const m = tramoPrincipal(muestras, bloques);
   if (m.length < minSeg) return null;
   const mitad = Math.floor(m.length / 2);
   const ef = (xs) => media(xs.map((x) => x.w)) / media(xs.map((x) => x.fc));
   const a = ef(m.slice(0, mitad));
   const b = ef(m.slice(mitad));
-  return Math.round(((a - b) / a) * 1000) / 10;
+  return { pct: Math.round(((a - b) / a) * 1000) / 10, seg: m.length };
 }
+export const desacople = (muestras, minSeg = 1200, bloques = null) => desacopleDe(muestras, bloques, minSeg)?.pct ?? null;
 
 // Deriva cardíaca (lpm/min): pendiente del pulso en los tramos a potencia estable (±10 % de la mediana).
 export function derivaCardiaca(muestras) {
@@ -681,17 +778,40 @@ export function recuperacionPulso(fcFin, fc60) {
   return fcFin - fc60;
 }
 
+// Recuperación a 60 s tras el último bloque de trabajo (no tras el enfriamiento, cuando el pulso ya bajó):
+// pulso medio de los 5 últimos segundos del bloque contra el de los segundos 58 a 62 después.
+// null si no hay bloques, o si la sesión acabó antes de ese minuto (entonces se mide al terminar, como antes).
+export function recuperacionTrasTrabajo(muestras, bloques) {
+  if (!bloques?.length || !muestras?.length) return null;
+  let t = 0;
+  let fin = null;
+  for (const b of bloques) { t += b.duracion || 0; if (esBloqueTrabajo(b)) fin = t; }
+  if (fin == null) return null;
+  const fcEn = (a, b) => { const v = muestras.filter((x) => x.t >= a && x.t <= b && x.fc > 0).map((x) => x.fc); return v.length >= 3 ? media(v) : null; };
+  const a = fcEn(fin - 5, fin);
+  const b = fcEn(fin + 58, fin + 62);
+  return a && b ? recuperacionPulso(Math.round(a), Math.round(b)) : null;
+}
+
 // Pulso máximo observado: el mejor promedio de 5 s de todo el historial, para no fiarse de un pico suelto.
 export function fcMaxObservada(sesiones) {
-  let mejor = 0;
-  for (const s of sesiones) {
-    const fcs = (s.muestras || []).map((x) => x.fc || 0);
-    for (let i = 4; i < fcs.length; i++) {
-      const v = fcs.slice(i - 4, i + 1);
-      if (v.every((x) => x > 0)) mejor = Math.max(mejor, media(v));
-    }
-  }
-  return mejor ? Math.round(mejor) : null;
+  const mejor = Math.max(0, ...(sesiones || []).map(fcMax5De));
+  return mejor || null;
+}
+
+// RMSSD del calentamiento de una sesión: los primeros 180 latidos, a esfuerzo bajo (más tarde, el ejercicio la aplasta).
+export const rmssdSesion = (s) => s.rmssd ?? (s.rr?.length ? rmssd(s.rr.slice(0, 180)) : null);
+// Variabilidad del pulso baja: la de tu última sesión (de las últimas 36 h) por debajo del 80 % de tu mediana
+// de las 10 anteriores. Hacen falta 4 anteriores con RR; si no, null.
+export function variabilidadBaja(sesiones, ahora = Date.now()) {
+  const con = [...(sesiones || [])].filter((s) => s.fecha <= ahora).sort((a, b) => a.fecha - b.fecha)
+    .map((s) => ({ fecha: s.fecha, v: rmssdSesion(s) })).filter((x) => x.v > 0);
+  const hoy = con.at(-1);
+  if (!hoy || hoy.fecha < ahora - 36 * 36e5) return null;
+  const antes = con.slice(-11, -1).map((x) => x.v).sort((a, b) => a - b);
+  if (antes.length < 4) return null;
+  const base = antes[Math.floor(antes.length / 2)];
+  return { hoy: hoy.v, base, baja: hoy.v < base * 0.8 };
 }
 
 // RMSSD (ms) de una lista de intervalos RR en ms. Se descartan los RR imposibles (< 300 o > 2000 ms)

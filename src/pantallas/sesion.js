@@ -16,10 +16,11 @@ import * as Cap from '../capacidades.js';
 import * as Pf from '../perfil.js';
 import { crearReloj } from '../reloj.js';
 import { VERSION } from '../version.js';
-import { $, ajustes, escaparHtml, fcMaxima, formatoMeta, ftp, ico, miles, perfil, pitido, toast, vibrar } from '../ui.js';
+import { $, ajustes, escaparHtml, fcMaxima, fcRef, formatoMeta, ftp, ico, miles, perfil, pitido, toast, vibrar } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
-import { repararSesiones, ritmoObjetivo, selVariante } from './ajustes.js';
+import { actualizarFcMax, repararSesiones, ritmoObjetivo, selVariante } from './ajustes.js';
+import { fcMax5s } from '../pulso.js';
 import { crearReferencias, crearRivales, estimarFtp, ftpAutomatico, hayCarrera, pintarChips } from './preparar.js';
 import {
   abrirModoRemo, carreraActual, carreraEnt, carreraRemo, cerrarModoRemo, dibujarVivo, duracionCarrera, modoEnt, pintar, pintarModoEnt, retratoPropio, velocidadReciente, vigilarTipoSesion, vistaPrevia,
@@ -211,6 +212,8 @@ export function actualizarBotones() {
   $('#sel-entrenamiento').disabled = !!estado.sesion;
   // Antes de remar se muestra la tarjeta Preparar; durante la sesión, solo una línea de resumen.
   $('#preparar').hidden = !!estado.sesion;
+  // Las preguntas de antes de remar, nunca durante la sesión (al terminar, Hoy decide si siguen).
+  if (estado.sesion) $('#antes-remar').hidden = true;
   $('#linea-nivel').hidden = !!estado.sesion || !$('#linea-nivel').textContent;
   // Métricas y gráfica solo con la remadora conectada o durante la sesión.
   const vivo = !!estado.sesion || remadora.conectada;
@@ -286,7 +289,7 @@ async function iniciarSesion(reanudar = null) {
   const intervalos = estado.entrenamientoActivo && Ent.tipoDe(estado.entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
   const plan = reanudar ? reanudar.plan || null
-    : intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(estado.entrenamientoActivo.bloques, calMin, enfMin), ftpDelPlan(estado.entrenamientoActivo), fcMaxima()) : null;
+    : intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(estado.entrenamientoActivo.bloques, calMin, enfMin), ftpDelPlan(estado.entrenamientoActivo), fcRef()) : null;
   $('#perfil-vivo').hidden = !plan;
   if (plan) $('#vivo-leyenda').innerHTML = leyendaPerfil(estado.entrenamientoActivo.bloques, true);
   const rivales = reanudar ? [] : await crearRivales(estado.entrenamientoActivo);
@@ -523,10 +526,17 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     kj: E.trabajoKj(m),
     vi: E.variabilidadPotencia(m),
     intensidad: E.factorIntensidad(m, registro.ftp),
-    desacople: E.desacople(m),
     derivaFc: E.derivaCardiaca(m),
   });
-  if (s.rr?.length) registro.rr = s.rr;
+  // Desacople solo en el tramo principal estable (el bloque de trabajo más largo, o el remo libre sin sus extremos).
+  const dsc = E.desacopleDe(m, registro.bloques);
+  Object.assign(registro, { desacople: dsc?.pct ?? null, desacopleSeg: dsc?.seg ?? null });
+  const fc5 = fcMax5s(m);
+  if (fc5) registro.fcMax5 = fc5;
+  // Recuperación de pulso a 60 s tras el último bloque de trabajo, si la sesión siguió un minuto más.
+  const recTrabajo = E.recuperacionTrasTrabajo(m, registro.bloques);
+  if (recTrabajo != null) Object.assign(registro, { fcRec60: recTrabajo, fcRecDe: 'trabajo' });
+  if (s.rr?.length) { registro.rr = s.rr; registro.rmssd = E.rmssd(s.rr.slice(0, 180)); }
   if (s.ajusteCalentamiento) registro.ajusteCalentamiento = s.ajusteCalentamiento;
   if (s.pruebaFtp && ent) {
     let desde = 0;
@@ -600,7 +610,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   await revisarPlanAuto();
   pintarHoy();
   pintarLineaNivel();
-  if (!recuperada) medirRecuperacionPulso(registro);
+  if (!recuperada && registro.fcRec60 == null) medirRecuperacionPulso(registro);
+  actualizarFcMax(previas.concat(registro));
   return true;
 }
 
@@ -998,7 +1009,7 @@ function avanceBloque(t) {
     if (estado.sesion.bloqueAnterior !== -1) { pitido(988, 0.25); vibrar(250); }
     estado.sesion.bloqueAnterior = i;
     estado.sesion.fueraSeguidos = 0;
-    hablar(`${b.nombre || 'Intervalo'}. ${metaHablada(b)}, ${cantidadHablada(b)}`, { urgente: true });
+    hablar(`${b.nombre || 'Intervalo'}. ${metaHablada(b)}, ${cantidadHablada(b)}${b.consejo ? `. ${b.consejo}` : ''}`, { urgente: true });
     if (b.nivel && ajustes.si('resAuto', false)) {
       remadora.fijarResistencia(b.nivel);
       agregarLog(`resistencia automática: nivel ${b.nivel}`);

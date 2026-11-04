@@ -28,6 +28,21 @@ export function pulsoDeMas(muestras, previas) {
   return Math.round(hoy.fc - media(otras.map((c) => c.fc)));
 }
 
+// Recuperación de pulso de tu última sesión contra la media de las 5 anteriores del mismo tipo (fondo con fondo,
+// series con series): tras un fondo el pulso baja menos que tras unas series, y mezclarlas daba falsas alarmas.
+// Hacen falta 3 del mismo tipo; si no, null.
+export function recuperacionComparada(sesiones, ftp = 0) {
+  const recs = [...sesiones].filter((s) => s.fcRec60 != null).sort((a, b) => a.fecha - b.fecha);
+  const ultima = recs.at(-1);
+  if (!ultima) return null;
+  // El tipo que guardó la sesión (el del plan) manda; si no lo tiene, se deduce de sus muestras.
+  const tipoDe = (s) => s.tipoPlan || tipoSesion(s, ftp);
+  const tipo = tipoDe(ultima);
+  const iguales = recs.slice(0, -1).filter((s) => tipoDe(s) === tipo).slice(-5);
+  if (iguales.length < 3) return null;
+  return { ultima, tipo, media: Math.round(media(iguales.map((s) => s.fcRec60))), n: iguales.length };
+}
+
 // Una sesión dura que se quedó corta: menos del 60 % en rango y, de lo que quedó fuera, más por debajo que por encima.
 // Las sesiones de antes de la v0.45 no separan bajo y alto: cuentan como antes (todo lo de fuera, por debajo).
 export const corta = (s) => s.pctEnRango < 60 && !(s.pctAlto != null && s.pctAlto >= (s.pctBajo ?? 0));
@@ -36,10 +51,11 @@ export const sobrada = (s) => s.pctEnRango > 95 || (s.pctAlto != null && s.pctAl
 
 // Revisa el plan. Devuelve { programa, entrenamientos, avisos } con lo que cambió, o null si no cambió nada.
 // entrenamientos: los guardados (para saber qué toca cada día); los nuevos que haga falta crear vuelven en la respuesta.
-export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, ahora = Date.now() }) {
+// cuerpo: el estado de hoy (estadoCuerpo), con lo que respondiste antes de remar y la variabilidad del pulso.
+export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, cuerpo = null, ahora = Date.now() }) {
   if (!programa?.dias?.length) return null;
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
-  const revision = `${E.claveDia(ahora)}:${orden.length}`;
+  const revision = `${E.claveDia(ahora)}:${orden.length}${cuerpo?.motivos?.length ? `:${cuerpo.clave}` : ''}`;
   if (programa.revision === revision) return null;
   const p = structuredClone(programa);
   p.revision = revision;
@@ -67,13 +83,18 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
   if (diaHoy && !hechoHoy && DURO.has(tipoDe(diaHoy.ent))) {
     const forma = ftp ? E.forma(orden, ftp, 1, ahora).at(-1) : null;
     const ratio = ftp ? E.ratioCarga(orden, ftp, ahora) : null;
-    const recs = orden.filter((s) => s.fcRec60 != null);
-    const recMala = recs.length >= 4 && recs.at(-1).fecha > ahora - 2 * DIA && recs.at(-1).fcRec60 < 0.8 * media(recs.slice(-6, -1).map((s) => s.fcRec60));
+    const rec = recuperacionComparada(orden, ftp);
+    const recMala = rec && rec.ultima.fecha > ahora - 2 * DIA && rec.ultima.fcRec60 < 0.8 * rec.media;
     let motivo = null;
-    if (forma && forma.condicion >= 10 && forma.frescura < -30) motivo = `Vienes muy cansado (frescura ${forma.frescura})`;
+    const avisado = cuerpo?.motivos?.length && ['cargado', 'agotado'].includes(cuerpo.clave);
+    if (avisado) motivo = cuerpo.motivos[0];
+    else if (forma && forma.condicion >= 10 && forma.frescura < -30) motivo = `Vienes muy cansado (frescura ${forma.frescura})`;
     else if (ratio != null && ratio > 1.5) motivo = 'Tu carga de esta semana se disparó';
     else if (recMala) motivo = 'Tu pulso tardó más de lo normal en bajar la última vez';
-    if (motivo) cambiarDia(diaHoy, sesionFondo(30, { pulso: true }), `${motivo}: cambié «${diaHoy.ent}» por un fondo suave de 30 min.`);
+    if (motivo) {
+      const min = avisado && cuerpo.clave === 'agotado' ? 20 : 30;
+      cambiarDia(diaHoy, sesionFondo(min, { pulso: true }), `${motivo}: cambié «${diaHoy.ent}» por un fondo muy suave de ${min} min${min === 20 ? ', o descansa' : ''}.`);
+    }
   }
 
   // 2. Cumplimiento de las sesiones duras: dos seguidas por debajo del rango bajan los rangos un 3 %;
@@ -95,8 +116,9 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
     }
   }
 
-  // 3. Base aeróbica: dos fondos seguidos con desacople bajo el 5 % → el próximo fondo dura 10 min más.
-  const fondos = orden.filter((s) => s.desacople != null && tipoSesion(s, ftp) === 'fondo');
+  // 3. Base aeróbica: dos fondos seguidos con desacople bajo el 5 % en un tramo estable de 40 min o más
+  //    → el próximo fondo dura 10 min más. Un desacople de 20 min no basta: casi nadie se despega tan pronto.
+  const fondos = orden.filter((s) => s.desacople != null && (s.desacopleSeg ?? s.duracion ?? 0) >= E.DESACOPLE_FONDO_LARGO && tipoSesion(s, ftp) === 'fondo');
   const [f1, f2] = fondos.slice(-2);
   if (f1 && f2 && recientes.includes(f2) && f1.desacople < 5 && f2.desacople < 5 && p.extraFondo < 30) {
     const prox = p.dias.find((d) => d.fecha > hoy && /^Fondo (\d+) min/.test(d.ent) && !d.alargado);

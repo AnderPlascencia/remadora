@@ -13,6 +13,7 @@ import * as R from '../respaldo.js';
 import { VERSION } from '../version.js';
 import { olvidarTokens } from '../grafica.js';
 import { $, COLOR_ZONA, ajustes, color, descargar, escaparHtml, ftp, ico, perfil, toast } from '../ui.js';
+import { TEXTO_FUENTE_FC, fcMaxDeHistorial, fcMaxEfectiva } from '../pulso.js';
 import { estado } from '../estado.js';
 import { irA, vistaActiva } from '../navegacion.js';
 import { asistente, estimarFtp, guardarFtp, leerMmss, pintarFtpEstado } from './preparar.js';
@@ -35,9 +36,14 @@ export function arrancarAjustes1() {
   campoNumero('#in-ftp', 'ftp', '', () => { ajustes.escribir('ftpEstimado', '0'); ajustes.escribir('ftpDePerfil', '0'); pintarFtpEstado(); pintarZonas(); pintarClasificacion(); vistaPrevia(); });
   campoNumero('#in-altura', 'altura', '', () => alCambiarPerfil());
   campoNumero('#in-meta-semana', 'metaSemana', '10', () => J.fijarMetaSemana(ajustes.num('metaSemana', 10)));
-  campoNumero('#in-fcmax', 'fcMax', '');
+  // Escribirlo a mano lo fija; borrarlo vuelve al observado o a la edad.
+  campoNumero('#in-fcmax', 'fcMax', '', () => {
+    ajustes.escribir('fcMaxDeEdad', '0');
+    ajustes.escribir('fcMaxFuente', ajustes.num('fcMax', 0) ? 'manual' : '');
+    H.sesiones().then(actualizarFcMax);
+  });
+  campoNumero('#in-fcreposo', 'fcReposo', '');
   campoNumero('#in-edad', 'edad', '', () => { aplicarEdad(); alCambiarPerfil(); });
-  $('#in-fcmax').addEventListener('change', () => ajustes.escribir('fcMaxDeEdad', '0'));
   campoSelect('#sel-sexo', 'sexo', '', () => { pintarClasificacion(); alCambiarPerfil(); });
   campoSelect('#sel-experiencia', 'experiencia', '', () => alCambiarPerfil());
   campoSelect('#sel-dias-perfil', 'diasSemana', '3', () => { asistente.dias = perfil().dias; alCambiarPerfil(); });
@@ -98,13 +104,33 @@ function campoNumero(sel, clave, defecto, alCambiar) {
     alCambiar?.();
   });
 }
-// La edad rellena el pulso máximo (220 − edad) si no lo has puesto a mano.
+// Pulso máximo: el tuyo si lo escribiste; si no, el más alto de tus sesiones o, mientras no llegues cerca, 220 − edad.
+// Las versiones de antes no guardaban la fuente: un pulso que no salió de la edad era tuyo.
+export function fuenteFcMax() {
+  const f = ajustes.leer('fcMaxFuente', '');
+  if (f) return f;
+  if (ajustes.si('fcMaxDeEdad', false)) return 'edad';
+  return ajustes.num('fcMax', 0) ? 'manual' : '';
+}
+export function actualizarFcMax(sesiones = []) {
+  if (fuenteFcMax() !== 'manual') {
+    const r = fcMaxEfectiva({ edad: ajustes.num('edad', 0), observada: fcMaxDeHistorial(sesiones) });
+    if (r.fcMax) {
+      ajustes.escribir('fcMax', String(r.fcMax));
+      ajustes.escribir('fcMaxFuente', r.fuente);
+      ajustes.escribir('fcMaxDeEdad', r.fuente === 'edad' ? '1' : '0');
+      $('#in-fcmax').value = r.fcMax;
+    }
+  }
+  const f = fuenteFcMax();
+  $('#fcmax-fuente').hidden = !f || f === 'manual';
+  $('#fcmax-fuente').textContent = f === 'observada' ? 'observado' : 'estimado';
+  $('#fcmax-ayuda').textContent = TEXTO_FUENTE_FC[f] || 'Si no lo escribes, la app usa el más alto que alcances en tus sesiones (o, mientras tanto, 220 menos tu edad).';
+}
+// La edad rellena el pulso máximo (220 − edad) si no lo has puesto a mano ni lo has alcanzado remando.
 export function aplicarEdad() {
-  const edad = ajustes.num('edad', 0);
-  if (!edad || (ajustes.num('fcMax', 0) && !ajustes.si('fcMaxDeEdad', false))) return;
-  ajustes.escribir('fcMax', String(Pf.fcMaxDeEdad(edad)));
-  ajustes.escribir('fcMaxDeEdad', '1');
-  $('#in-fcmax').value = Pf.fcMaxDeEdad(edad);
+  if (!ajustes.num('edad', 0) || fuenteFcMax() === 'manual') return;
+  H.sesiones().then(actualizarFcMax);
 }
 function campoSelect(sel, clave, defecto, alCambiar) {
   const el = $(sel);
@@ -113,7 +139,7 @@ function campoSelect(sel, clave, defecto, alCambiar) {
 }
 // Vuelve a escribir los campos de Ajustes (tras la bienvenida o un respaldo).
 export function rellenarPerfil() {
-  for (const [sel, clave, def] of [['#in-edad', 'edad', ''], ['#in-peso', 'peso', '75'], ['#in-altura', 'altura', ''], ['#in-ftp', 'ftp', ''], ['#in-fcmax', 'fcMax', ''],
+  for (const [sel, clave, def] of [['#in-edad', 'edad', ''], ['#in-peso', 'peso', '75'], ['#in-altura', 'altura', ''], ['#in-ftp', 'ftp', ''], ['#in-fcmax', 'fcMax', ''], ['#in-fcreposo', 'fcReposo', ''],
     ['#sel-sexo', 'sexo', ''], ['#sel-experiencia', 'experiencia', ''], ['#sel-dias-perfil', 'diasSemana', '3'], ['#sel-minutos', 'minutosSesion', '']]) $(sel).value = ajustes.leer(clave, def);
 }
 function alCambiarPerfil() { pintarPerfil(); ofrecerFtpInicial(); }
@@ -238,6 +264,7 @@ export function arrancarAjustes2() {
   });
   pintarZonas();
   pintarFtpEstado();
+  H.sesiones().then(actualizarFcMax);
   for (let n = 1; n <= 24; n++) selNivel.add(new Option(`Resistencia ${n}`, n));
   selNivel.value = 8;
   $('#btn-nivel-prueba').addEventListener('click', () => {
@@ -253,6 +280,10 @@ export function pintarZonas() {
   $('#tabla-zonas').innerHTML = `<thead><tr><th>Zona</th><th>% FTP</th><th>${f ? 'Watts' : ''}</th></tr></thead><tbody>${
     Ent.ZONAS.map((z) => `<tr><td><span class="z" style="background:${COLOR_ZONA[z.n - 1]}"></span>Z${z.n} ${z.nombre}</td><td>${z.min}–${z.max}%</td><td>${
       f ? `${Math.round((z.min * f) / 100)}–${Math.round((z.max * f) / 100)} W` : ''}</td></tr>`).join('')}</tbody>`;
+  // Bandas del remo en 3 columnas (cabe a 360 px): banda, watts (o % del FTP sin FTP) y split.
+  $('#tabla-bandas').innerHTML = `<thead><tr><th>Banda</th><th>${f ? 'Watts' : '% FTP'}</th><th>${f ? 'Split' : ''}</th></tr></thead><tbody>${
+    E.bandasRemo(f).map((b) => `<tr><td><b>${b.clave}</b> ${b.nombre}</td><td>${f ? `${b.wMin}–${b.wMax}` : `${b.min}–${b.max}%`}</td><td>${
+      f ? `${formatoSplit(b.splitRapido)}–${formatoSplit(b.splitLento)}` : ''}</td></tr>`).join('')}</tbody>`;
 }
 
 const selNivel = $('#sel-nivel-prueba');

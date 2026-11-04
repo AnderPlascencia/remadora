@@ -20,6 +20,8 @@ export const AJUSTES = {
   minutosSesion: A('numero', null, true),
   fcMax: A('numero', 0, true),
   fcMaxDeEdad: A('si', false, true),
+  fcMaxFuente: A('texto', '', true), // 'manual', 'observada' o 'edad' (pulso.js)
+  fcReposo: A('numero', 0, true),
   metaSemana: A('numero', 10, true),
   // Preferencias
   voz: A('si', true, true),
@@ -46,6 +48,7 @@ export const AJUSTES = {
   programa: A('json', null, false),
   calendarioPlan: A('json', null, false),
   eleccionDia: A('texto', '', false),
+  antesDeRemar: A('json', null, false), // { dia, sueno, dolor }: lo que respondiste hoy antes de remar
   // Dónde te quedaste en la pantalla
   modoEnt: A('texto', 'libre', false),
   ultimoEnt: A('texto', '', false),

@@ -23,6 +23,16 @@ export const ajustes = {
 };
 export const ftp = () => ajustes.num('ftp', 0);
 export const fcMaxima = () => ajustes.num('fcMax', 0);
+// Referencia de pulso para las zonas: el máximo y, si lo diste, el pulso en reposo (zonas con reserva de pulso).
+export const fcRef = () => ({ max: fcMaxima(), reposo: ajustes.num('fcReposo', 0) });
+// Lo que respondiste hoy antes de remar ({ sueno, dolor }), o null si no es de hoy.
+export function previoHoy(ahora = new Date()) {
+  try {
+    const r = JSON.parse(ajustes.leer('antesDeRemar', 'null'));
+    const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+    return r && r.dia === hoy ? r : null;
+  } catch { return null; }
+}
 // Tu perfil (Ajustes › Tu perfil y la bienvenida). minutos: null si no lo has elegido, 0 = sin límite.
 export function perfil() {
   const min = ajustes.leer('minutosSesion', '');
