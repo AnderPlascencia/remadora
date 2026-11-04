@@ -65,6 +65,14 @@ El registro Bluetooth de *Ajustes* se puede descargar para diagnosticar.
 - Vista previa del plan (Planes › Programa): lo que toca hoy con su forma de bloques, una gráfica del esfuerzo de cada semana (descargas y pruebas marcadas) y «Lo que sigue», semana a semana, con qué sesión sube respecto a la anterior. Lo futuro se marca como estimado porque el plan se ajusta solo.
 - Distancia según tus watts, con la misma fórmula que los fantasmas (W = 2,8 · v³): la consola sumaba ~20 % más metros de los que dan sus propios watts. La de la consola se guarda aparte; las sesiones antiguas se pasan una vez, con marcas y carreras recalculadas.
 - Tu perfil (edad, sexo, peso, altura, experiencia, días y tiempo por sesión): calorías con tu metabolismo basal, pulso máximo, FTP para empezar sin historial, puesto en la tripulación, volumen del primer plan y planes que no pasan del tiempo que tienes.
+- Sesión del día: con plan, la de hoy (o en un día libre, una de la semana que quedó sin hacer, sin juntar dos duras); sin plan, una sugerida con un esquema 80/20 según tu semana y tu cansancio. Siempre dice por qué toca.
+- Planes ordenados: nunca dos sesiones duras en días seguidos, la prueba sustituye a una dura, y en Programa ves la semana actual con su estado. Las variantes de cada semana ya no llenan tu lista y los restos de planes anteriores se borran solos.
+- Cada sesión guarda sus pausas (hora de inicio y fin), la hora real de fin y la versión de la app; el detalle muestra el tiempo parado. Al pulsar Seguir no se graban segundos hasta que vuelves a remar.
+- La meta se marca en el instante exacto en que la cruzas, no en el segundo siguiente.
+- La app pide a Chrome que no borre tus sesiones aunque falte espacio; Ajustes › Respaldo dice si lo consiguió.
+- Colores con un solo significado: dorado para actuar, verde agua para XP y nivel, amarillo para monedas, azul para consejos y novedades. Los consejos de cada pestaña no salen a media sesión ni en horizontal, y el primer día tras la bienvenida propone remar en vez de «Hoy descansas».
+- Sesiones que no se pierden: la copia de la sesión en curso vive en IndexedDB y solo se borra cuando la sesión quedó guardada; si guardar falla, la app avisa y ofrece intentarlo otra vez. El tiempo y los metros salen del reloj, así que no se pierden aunque Chrome frene la app en segundo plano. Los errores quedan en el registro de Ajustes y las reparaciones del historial corren una sola vez.
+- Al recuperar una sesión que quedó a medias, además de guardarla o descartarla puedes seguir remando: lo nuevo se suma a la misma sesión y el rato con la app cerrada cuenta como pausa.
 
 ## Archivos
 
@@ -117,11 +125,25 @@ En `src/` junto a `app.js` y `estado.js`: `navegacion.js` (cambio de pestaña y 
 | `guia.js` | Temas de la guía rápida y consejos de cada pestaña |
 | `grafica.js` | Gráficas en canvas |
 | `ui.js` | Utilidades de interfaz: `$`, ajustes guardados, avisos, iconos y `escaparHtml` (todo texto del usuario o de un respaldo que va en HTML pasa por aquí) |
-| `respaldo.js` | Qué guarda un respaldo y cómo se combina al restaurar |
-| `db.js` | Almacenamiento local (IndexedDB): sesiones, entrenamientos y estado (sesión en curso, versión de los datos) |
+| `respaldo.js` | Qué guarda un respaldo, su formato y su conversión, la validación de cada sesión y cómo se combina al restaurar |
+| `db.js` | Almacenamiento local (IndexedDB): sesiones, sus muestras aparte, entrenamientos y estado (sesión en curso, versión de los datos), con las migraciones de cada versión de la base |
+| `historial.js` | Única puerta a las sesiones guardadas: las junta con sus muestras, las guarda en memoria hasta el próximo cambio y calcula el estado del héroe una vez |
+| `ajustes-guardados.js` | Registro de los ajustes de localStorage: tipo, valor por defecto y si van en el respaldo |
 | `reloj.js` | Segundos de la sesión según la hora del sistema (no se pierden con la app en segundo plano) |
-| `version.js` | Número de versión que se ve en Ajustes (va junto con el de `sw.js`) |
+| `version.js` | La versión de la app, en un solo lugar: la ve Ajustes, la lleva la URL del service worker y abre el CHANGELOG |
 | `estilos.css` | Estilos de toda la app |
+
+## Versiones y publicación
+
+La versión vive solo en `src/version.js`. `src/app.js` registra `sw.js?v=<versión>`, así que cada versión nueva instala un service worker nuevo con su propia caché, y `CHANGELOG.md` empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`). Al cambiar algo: sube la versión en `src/version.js` y añade su entrada arriba en `CHANGELOG.md`.
+
+Para publicar:
+
+1. `npm run test:todo` en verde.
+2. `npm run publicar` arma la carpeta `publicar/` (no se sube al repo) con solo lo que carga el teléfono: `index.html`, `manifest.webmanifest`, `sw.js`, `src/` y `assets/`. Deja fuera `assets/characters/` (fuentes de arte), `tools/`, `docs/`, `.claude/` y `pruebas/`.
+3. Sube el contenido de `publicar/` al hosting con HTTPS (por ejemplo, GitHub Pages). Nada se publica ni se despliega solo: es un paso a mano y lo decide Ander.
+
+Las fuentes de arte nuevas (`.blend`, `.psd`, `.kra`, `.exr`, `.fbx`, `.glb`, `.wav`, `assets/characters/_source/`…) van por Git LFS según `.gitattributes`: instala Git LFS una vez (`git lfs install`) y haz `git add` como siempre. Lo que ya estaba en el historial se queda como estaba; no se reescribe.
 
 ## Seguridad
 
@@ -138,18 +160,10 @@ esqueleto y los ojos de [MakeHuman](https://makehumancommunity.org) (CC0) y opti
 
 El formato de los mensajes se tomó como referencia del proyecto
 [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift). El código de esta app es propio.
-- Sesión del día: con plan, la de hoy (o en un día libre, una de la semana que quedó sin hacer, sin juntar dos duras); sin plan, una sugerida con un esquema 80/20 según tu semana y tu cansancio. Siempre dice por qué toca.
-- Planes ordenados: nunca dos sesiones duras en días seguidos, la prueba sustituye a una dura, y en Programa ves la semana actual con su estado. Las variantes de cada semana ya no llenan tu lista y los restos de planes anteriores se borran solos.
-- Cada sesión guarda sus pausas (hora de inicio y fin), la hora real de fin y la versión de la app; el detalle muestra el tiempo parado. Al pulsar Seguir no se graban segundos hasta que vuelves a remar.
-- La meta se marca en el instante exacto en que la cruzas, no en el segundo siguiente.
-- La app pide a Chrome que no borre tus sesiones aunque falte espacio; Ajustes › Respaldo dice si lo consiguió.
-- Colores con un solo significado: dorado para actuar, verde agua para XP y nivel, amarillo para monedas, azul para consejos y novedades. Los consejos de cada pestaña no salen a media sesión ni en horizontal, y el primer día tras la bienvenida propone remar en vez de «Hoy descansas».
-- Sesiones que no se pierden: la copia de la sesión en curso vive en IndexedDB y solo se borra cuando la sesión quedó guardada; si guardar falla, la app avisa y ofrece intentarlo otra vez. El tiempo y los metros salen del reloj, así que no se pierden aunque Chrome frene la app en segundo plano. Los errores quedan en el registro de Ajustes y las reparaciones del historial corren una sola vez.
-- Al recuperar una sesión que quedó a medias, además de guardarla o descartarla puedes seguir remando: lo nuevo se suma a la misma sesión y el rato con la app cerrada cuenta como pausa.
 
 ## Pruebas
 
-`npm test` corre las pruebas unitarias de `pruebas/` (también lo hace GitHub en cada PR). Una de ellas comprueba que la versión de `src/version.js` y la de la caché en `sw.js` coincidan, y que todo módulo que importa la app esté en esa caché.
+`npm test` corre las pruebas unitarias de `pruebas/` (también lo hace GitHub en cada PR). Entre ellas: que la versión esté en un solo lugar, que la caché de `sw.js` coincida con los import de `src/`, que toda clave de localStorage esté en el registro de ajustes, cómo guarda y sirve el service worker (`pruebas/sw.test.mjs`) y qué entra en lo publicado.
 
 `npm run test:e2e` abre la app en Chromium con tamaño de teléfono, en modo demo y con el reloj simulado, y recorre los flujos que no pueden fallar: bienvenida, sesión terminada y guardada, recuperar una sesión tras cerrar la app, respaldo de ida y vuelta, modo remo en vertical y horizontal, y uso sin conexión (`pruebas/e2e/`). La primera vez hace falta `npm ci` y `npx playwright install chromium`. GitHub las corre en cada PR y, si fallan, deja el informe con capturas y trazas en los artefactos del trabajo «e2e».
 

@@ -1,0 +1,21 @@
+# Fuentes de arte nuevas en Git LFS: el repositorio guarda un puntero y el archivo va aparte.
+# Solo cubre archivos nuevos; lo que ya estaba en el historial se queda como está (no se reescribe).
+# Para trabajar con ellos: git lfs install (una vez por equipo) y luego git add/commit como siempre.
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.blend1 filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.kra filter=lfs diff=lfs merge=lfs -text
+*.xcf filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.hdr filter=lfs diff=lfs merge=lfs -text
+*.tif filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+assets/characters/_source/** filter=lfs diff=lfs merge=lfs -text
+
+# Ya estaban en el historial antes de LFS: siguen como archivos normales.
+tools/blender/vikingo/vikingo.blend !filter !diff !merge
+assets/characters/_source/lamina_clases_v1.png !filter !diff !merge

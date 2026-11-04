@@ -8,7 +8,8 @@
   "scripts": {
     "test": "node --test pruebas/*.test.mjs",
     "test:e2e": "playwright test",
-    "test:todo": "npm test && npm run test:e2e"
+    "test:todo": "npm test && npm run test:e2e",
+    "publicar": "node tools/publicar.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"
