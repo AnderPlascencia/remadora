@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.57.0 · 2026-11-05
+
+Las velas de la colección se ven en la carrera.
+
+- En la carrera 3D, cada bote realista lleva a proa una vela cuadrada con el emblema de su vela: los 25 emblemas de las cinco colecciones, de las franjas del norte al sol invicto, y los legendarios animados (brasas que suben, estrellas que titilan, el sol que gira). La tela ondea con el avance, más rápido cuanto más rápido vas.
+- Tu bote lleva su vela opaca y a un lado, para que no tape a tu remero, y un aro blanco discontinuo sobre el agua: se reconoce sin depender del color. Si tienes mascarón, se ve en la proa.
+- En 2D, la vela se ve tumbada, ondeando detrás de la popa, con el emblema a la vista.
+
 ## 0.56.0 · 2026-11-04
 
 Colección de bote por clase (etapa 15).
