@@ -25,6 +25,7 @@ export const AJUSTES = {
   metaSemana: A('numero', 10, true),
   // Preferencias
   voz: A('si', true, true),
+  cantidadVoz: A('texto', 'completa', true), // 'datos', 'entrenador' o 'completa' (voz.js)
   modoAuto: A('si', false, true),
   pausaAuto: A('si', true, true),
   resAuto: A('si', false, true),

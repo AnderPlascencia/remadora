@@ -5,7 +5,7 @@ import * as db from '../db.js';
 import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
-import { configurarVoz, hablar } from '../voz.js';
+import { configurarCantidad, configurarVoz, hablar } from '../voz.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
 import * as Pf from '../perfil.js';
@@ -54,6 +54,7 @@ export function arrancarAjustes1() {
     if (prog) { await rehacerPlan(prog, { ajustar: true, dias: perfil().dias, aviso: 'Rehice tu plan con tu perfil' }); pintarPerfil(); }
   });
   interruptor('#in-voz', 'voz', true, (v) => { configurarVoz(v); if (v) hablar('Avisos por voz activados'); });
+  campoSelect('#sel-cantidad-voz', 'cantidadVoz', 'completa', () => configurarCantidad(ajustes.leer('cantidadVoz', 'completa')));
   interruptor('#in-modo-auto', 'modoAuto', false);
   interruptor('#in-pausa-auto', 'pausaAuto', true);
   interruptor('#in-atr-vivo', 'atrVivo', true);
@@ -65,6 +66,7 @@ export function arrancarAjustes1() {
   });
   aplicarAvanzado();
   configurarVoz(ajustes.si('voz', true));
+  configurarCantidad(ajustes.leer('cantidadVoz', 'completa'));
   selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
   selVistaRemo.addEventListener('change', () => ajustes.escribir('vistaRemo', selVistaRemo.value));
   selTema.value = ajustes.leer('tema', 'oscuro');

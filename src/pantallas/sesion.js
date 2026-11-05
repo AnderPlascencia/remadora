@@ -6,7 +6,8 @@ import * as db from '../db.js';
 import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
-import { hablar, tiempoHablado } from '../voz.js';
+import { fijarSilencio, hablar, tiempoHablado } from '../voz.js';
+import * as G from '../guion-voz.js';
 import * as P from '../programa.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
@@ -356,6 +357,12 @@ async function iniciarSesion(reanudar = null) {
     eventosCarrera: [],
     lados: null,
     sprintAvisado: false,
+    // Voz del entrenador (guion-voz.js): tipo del guion, series hechas y avisos ya dichos.
+    guion: G.tipoGuion(estado.entrenamientoActivo, Cap.tipoPlan(estado.entrenamientoActivo)),
+    series: [],
+    inicioBloque: null,
+    avisos: {},
+    nAnimo: 0,
     retrato: rival ? await retratoPropio() : null,
   };
   if (reanudar) Object.assign(estado.sesion, estadoReanudado(reanudar));
@@ -375,9 +382,13 @@ async function iniciarSesion(reanudar = null) {
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* opcional */ }
   pitido(880, 0.15);
   const contra = rivales.length > 1 ? `. Remas contra ${rivales.length} fantasmas` : rival ? '. Remas contra tu fantasma' : '';
+  fijarSilencio(silencioDuro);
   if (reanudar) hablar(`Seguimos con ${estado.entrenamientoActivo ? estado.entrenamientoActivo.nombre : 'tu sesión'}`);
-  else if (estado.entrenamientoActivo) hablar(`Comienza ${estado.entrenamientoActivo.nombre}${contra}`);
-  else hablar(`Sesión iniciada${contra}`);
+  else if (estado.entrenamientoActivo) {
+    // El propósito de la sesión se dice al empezar, mientras se calienta: ahí caben las frases largas.
+    const prop = G.proposito(estado.sesion.guion, estado.entrenamientoActivo, plan, { carrera: !!rival });
+    hablar(`Comienza ${estado.entrenamientoActivo.nombre}${contra}.${prop ? ` ${prop}` : ''}`);
+  } else hablar(`Sesión iniciada${contra}`);
   if (ajustes.si('modoAuto', false)) abrirModoRemo();
   pintar();
   // En horizontal la carrera no cabe junto a los botones: se lleva a la vista al empezar.
@@ -850,7 +861,7 @@ function sincronizarSalida(t) {
     estado.sesion.lados = null;
     if (t > 0) {
       eventoCarrera('salida', '¡Salida! Empieza la carrera');
-      hablar('Fin del calentamiento. ¡Salida! Empieza la carrera', { urgente: true });
+      hablar('Fin del calentamiento. ¡Salida! Empieza la carrera. Salida fuerte 20 paladas y luego a tu ritmo', { urgente: true });
     }
   }
 }
@@ -917,9 +928,13 @@ function coachRitmo(t) {
     estado.sesion.parcial = { seg, n };
     estado.sesion.n500 = n;
     estado.sesion.t500 = t;
-    hablar(`${n * 500} metros. Parcial ${splitHablado(seg)}`, { clave: 'parcial', cadaSeg: 20 });
+    const cada = G.parcialCada(estado.sesion.guion, bloqueEnCurso());
+    if (cada && (n * 500) % cada === 0) hablar(`${n * 500} metros. Parcial ${splitHablado(seg)}${posicionHablada()}`, { clave: 'parcial', cadaSeg: 20 });
   }
-  if (t % 240 === 0 && estado.sesion.fueraSeguidos === 0) hablar(ANIMOS[(t / 240) % ANIMOS.length], { clave: 'animo', cadaSeg: 200 });
+  if (t % 240 === 0 && estado.sesion.fueraSeguidos === 0) {
+    const animo = animoDelEntrenador();
+    if (animo) hablar(animo, { clave: 'animo', cadaSeg: 200, capa: G.CAPA.animo });
+  }
   // En intervalos los descansos bajan el ritmo a propósito: ahí manda el aviso de rango.
   if (estado.sesion.plan || t < 60 || estado.sesion.dist < 100) return;
   const ref = estado.sesion.ritmo || (t * 500) / estado.sesion.dist;
@@ -928,8 +943,40 @@ function coachRitmo(t) {
   estado.sesion.lento = reciente > ref + (estado.sesion.ritmo ? 3 : 6) ? estado.sesion.lento + 1 : 0;
   if (estado.sesion.lento >= 20) {
     estado.sesion.lento = 0;
-    hablar(estado.sesion.ritmo ? `Vas más lento que tu ritmo objetivo de ${splitHablado(estado.sesion.ritmo)}. Aprieta` : 'Estás bajando el ritmo. Aprieta', { clave: 'lento', cadaSeg: 60 });
+    const texto = G.ritmoCae(estado.sesion.guion, estado.sesion.ritmo ? splitHablado(estado.sesion.ritmo) : '');
+    if (texto) hablar(texto, { clave: 'lento', cadaSeg: 60, capa: G.CAPA.correccion });
   }
+}
+
+// Bloque del plan que se está remando, o null.
+function bloqueEnCurso() {
+  const info = estado.sesion?.info;
+  return info && !info.terminado ? info.bloque : null;
+}
+
+// Últimos 10 s de un esfuerzo duro: la voz solo cuenta (las capas 2 y 3 callan).
+function silencioDuro() {
+  const s = estado.sesion;
+  const b = bloqueEnCurso();
+  return !!(s && b && G.DUROS.has(s.guion) && G.esTrabajo(b) && s.info.restaSeg > 0 && s.info.restaSeg <= 10);
+}
+
+// Con varios fantasmas, el parcial también dice el puesto («Vas 2º de 4. 12 metros atrás de…»).
+function posicionHablada() {
+  const s = estado.sesion;
+  if (s.rivales.length < 2 || (s.salida && !s.salida.hecha)) return '';
+  return `. ${carreraActual().texto.replace(/ · /g, '. ').replace(/(\d+) m /g, '$1 metros ')}`;
+}
+
+// Ánimo del entrenador cada 4 min: consejos del tipo de sesión; en las sesiones suaves, nunca «¡fuerte!».
+// En VO2, sprints y pruebas no hay ánimos durante el trabajo.
+function animoDelEntrenador() {
+  const s = estado.sesion;
+  if (G.SIN_ANIMO.has(s.guion)) return '';
+  const k = s.nAnimo++;
+  const consejo = G.consejo(s.guion, Math.floor(k / (G.SUAVES.has(s.guion) ? 1 : 2)));
+  if (G.SUAVES.has(s.guion)) return consejo;
+  return k % 2 === 0 && consejo ? consejo : ANIMOS[Math.floor(k / 2) % ANIMOS.length];
 }
 
 // Último parcial de 500 m: verde si va al ritmo objetivo (o mejor que tu promedio), rojo si no.
@@ -952,7 +999,9 @@ function avanceObjetivo(t) {
     mostrarFin();
   } else if (!p.completo && p.fraccion >= 0.5 && !estado.sesion.mitadAvisada) {
     estado.sesion.mitadAvisada = true;
-    hablar(`Vas a la mitad. Faltan ${Math.ceil(p.falta)} ${Ent.METRICAS_OBJETIVO[p.metrica].unidad === 'm' ? 'metros' : Ent.METRICAS_OBJETIVO[p.metrica].unidad}`);
+    const ritmo = t > 0 ? p.hecho / t : 0;
+    const queda = ritmo > 0 ? Math.round(p.falta / ritmo / 60) : 0;
+    hablar(`Vas a la mitad. Faltan ${Math.ceil(p.falta)} ${Ent.METRICAS_OBJETIVO[p.metrica].unidad === 'm' ? 'metros' : Ent.METRICAS_OBJETIVO[p.metrica].unidad}${queda >= 1 ? `. A este ritmo, unos ${queda === 1 ? '1 minuto' : `${queda} minutos`} más` : ''}`);
   }
 }
 
@@ -997,12 +1046,14 @@ function avanceBloque(t) {
   estado.sesion.bloques = paraPerfil(Ent.bloquesConDuracion(estado.sesion.estadoAv, estado.sesion.plan, medidas()));
   if (info.terminado) {
     if (estado.sesion.bloqueAnterior !== estado.sesion.plan.length) {
+      cerrarSerie(t);
       estado.sesion.bloqueAnterior = estado.sesion.plan.length;
       estado.sesion.tiempoMeta = info.desde;
       pitido(1046, 0.4);
       vibrar([200, 100, 200]);
       const pct = estado.sesion.segConMeta ? Math.round((100 * estado.sesion.segEnRango) / estado.sesion.segConMeta) : null;
-      hablar(`Entrenamiento completado${pct != null ? `. Estuviste en rango el ${pct} por ciento del tiempo` : ''}. ¿Sigues o terminas?`, { urgente: true });
+      const guion = estado.sesion.guion;
+      hablar(`${G.cierre(guion, { pctRango: pct, series: estado.sesion.series, cadenciaPct: guion === 'tecnica' ? pct : null })}. ¿Sigues o terminas?`, { urgente: true });
       mostrarFin();
     }
     return;
@@ -1011,14 +1062,19 @@ function avanceBloque(t) {
   const fin = Ent.finDe(b);
   if (i !== estado.sesion.bloqueAnterior) {
     if (estado.sesion.bloqueAnterior !== -1) { pitido(988, 0.25); vibrar(250); }
+    const anterior = estado.sesion.bloqueAnterior;
+    cerrarSerie(t);
     estado.sesion.bloqueAnterior = i;
     estado.sesion.fueraSeguidos = 0;
-    hablar(`${b.nombre || 'Intervalo'}. ${metaHablada(b)}, ${cantidadHablada(b)}${b.consejo ? `. ${b.consejo}` : ''}`, { urgente: true });
+    estado.sesion.inicioBloque = { t: info.desde, dist: estado.sesion.dist, con: estado.sesion.segConMeta, dentro: estado.sesion.segEnRango, picoW: 0 };
+    anunciarBloque(i, b, anterior);
     if (b.nivel && ajustes.si('resAuto', false)) {
       remadora.fijarResistencia(b.nivel);
       agregarLog(`resistencia automática: nivel ${b.nivel}`);
     }
   }
+  if (estado.sesion.inicioBloque) estado.sesion.inicioBloque.picoW = Math.max(estado.sesion.inicioBloque.picoW, actual.watts);
+  avisosDelBloque(i, b, fin, resta);
   if (fin === 'tiempo' && resta <= 3 && resta > 0) {
     pitido(660, 0.08);
     if (b.duracion > 10) hablar(String(resta), { urgente: true });
@@ -1035,12 +1091,72 @@ function avanceBloque(t) {
   Object.assign(estado.sesion, { segConMeta: cuenta.con, segEnRango: cuenta.dentro, segBajo: cuenta.bajo, segAlto: cuenta.alto });
   estado.sesion.fueraSeguidos = rango && rango !== 'dentro' ? estado.sesion.fueraSeguidos + 1 : 0;
   if (estado.sesion.fueraSeguidos >= 5 && info.restaSeg > 4) {
-    const potencia = !!Ent.rangoWatts(b, ftp());
-    const pulso = b.metrica === 'fc';
-    const texto = pulso ? (rango === 'bajo' ? 'Pulso bajo, sube la intensidad' : 'Pulso alto, baja la intensidad')
-      : rango === 'bajo' ? (potencia ? 'Sube la potencia' : 'Sube el ritmo') : (potencia ? 'Baja la potencia' : 'Baja el ritmo');
-    hablar(texto, { clave: 'fuera', cadaSeg: 20 });
+    const spm = b.metrica === 'spm';
+    const texto = G.correccion(estado.sesion.guion, {
+      rango, potencia: !!Ent.rangoWatts(b, ftp()), pulso: b.metrica === 'fc' || b.metrica === 'fcpct',
+      cadencia: spm ? actual.spm : 0, spmMin: spm ? b.min : 0, spmMax: spm ? b.max : 0,
+      serie: G.serieDe(estado.sesion.plan, i, estado.sesion.guion), enSerieSeg: t - info.desde, fueraSeg: estado.sesion.fueraSeguidos, trabajo: G.esTrabajo(b),
+    });
+    // La misma corrección, como mucho una vez por minuto (y cualquier corrección, una cada 20 s).
+    if (texto) hablar(texto, { clave: `fuera:${texto.replace(/\d+/g, '#')}`, cadaSeg: 60, capa: G.CAPA.correccion });
   }
+}
+
+// Al empezar un bloque: qué toca (nombre, meta y cantidad), la serie y, tras una serie dura, cómo fue.
+function anunciarBloque(i, b, anterior) {
+  const s = estado.sesion;
+  const serie = G.serieDe(s.plan, i, s.guion);
+  const nombre = (b.nombre || 'Intervalo').replace(/\s*\d+\s*\/\s*\d+\s*/g, ' ').trim();
+  const extra = serie ? `. ${G.inicioSerie(s.guion, serie)}` : '';
+  const consejo = b.consejo || (s.guion === 'tecnica' && G.esTrabajo(b) ? G.focoTecnica(serie ? serie.n - 1 : i) : '');
+  hablar(`${nombre}${extra}. ${metaHablada(b)}, ${cantidadHablada(b)}${consejo ? `. ${consejo}` : ''}`, { urgente: true });
+  const previa = anterior >= 0 ? s.plan[anterior] : null;
+  const hecha = s.series.at(-1);
+  if (previa && G.esTrabajo(previa) && !G.esTrabajo(b) && hecha) {
+    const texto = G.trasSerie(s.guion, { pct: hecha.pct, split: hecha.split ? splitHablado(hecha.split) : '', picoW: hecha.picoW });
+    if (texto) hablar(texto, { clave: 'tras-serie', capa: G.CAPA.correccion });
+  }
+}
+
+// Guarda cómo fue el bloque de trabajo que acaba (en rango, pico de watts y split medio) para el cierre.
+function cerrarSerie(t) {
+  const s = estado.sesion;
+  const ib = s.inicioBloque;
+  const b = s.bloqueAnterior >= 0 ? s.plan?.[s.bloqueAnterior] : null;
+  s.inicioBloque = null;
+  if (!ib || !G.esTrabajo(b)) return;
+  const con = s.segConMeta - ib.con;
+  const metros = s.dist - ib.dist;
+  const dur = t - ib.t;
+  s.series.push({ pct: con > 0 ? Math.round((100 * (s.segEnRango - ib.dentro)) / con) : null, picoW: ib.picoW, split: metros > 0 && dur > 0 ? Math.round((500 * dur) / metros) : 0 });
+  // Sprints: si el pico cae más de un 15 % frente al mejor en dos series seguidas, se avisa una vez.
+  if (s.guion === 'sprint' && !s.avisos.caePotencia && s.series.length >= 3) {
+    const mejor = Math.max(...s.series.map((x) => x.picoW || 0));
+    if (mejor > 0 && s.series.slice(-2).every((x) => x.picoW < mejor * 0.85)) {
+      s.avisos.caePotencia = true;
+      hablar(G.CAE_POTENCIA, { clave: 'cae-potencia', capa: G.CAPA.correccion });
+    }
+  }
+}
+
+// Avisos que dependen de cuánto falta del bloque: mitad de serie, prepárate, tiempo que queda y el final de una prueba.
+function avisosDelBloque(i, b, fin, resta) {
+  const s = estado.sesion;
+  if (fin !== 'tiempo' || !(b.duracion > 0) || resta <= 0) return;
+  const dicho = (k) => { const clave = `${k}-${i}`; if (s.avisos[clave]) return true; s.avisos[clave] = true; return false; };
+  const trabajo = G.esTrabajo(b);
+  if (trabajo && b.duracion >= 90 && resta === Math.round(b.duracion / 2)) {
+    const mitad = G.mitadSerie(s.guion);
+    if (mitad && !dicho('mitad')) hablar(mitad, { capa: G.CAPA.info });
+  }
+  if (trabajo && s.guion === 'fondo' && b.duracion >= 1200 && resta === Math.round(b.duracion / 4) && !dicho('deriva')) {
+    hablar(G.DERIVA_FONDO, { clave: 'deriva', capa: G.CAPA.correccion });
+  }
+  if (trabajo && s.guion === 'prueba' && b.duracion >= 600 && resta === 180 && !dicho('vaciate')) hablar(G.VACIATE, { capa: G.CAPA.info });
+  const cada = G.restanteCada(s.guion);
+  if (trabajo && cada && resta % cada === 0 && resta < b.duracion && resta > 180 && !dicho(`resta${resta}`)) hablar(`Quedan ${tiempoHablado(resta)}`, { capa: G.CAPA.info });
+  // Fin de un descanso antes de una serie: a 10 s, «Prepárate».
+  if (!trabajo && b.duracion >= 30 && resta === 10 && G.esTrabajo(s.plan[i + 1]) && !dicho('prep')) hablar(G.PREPARATE, { capa: G.CAPA.info });
 }
 
 // Al arrancar la app (en orden, desde app.js).
