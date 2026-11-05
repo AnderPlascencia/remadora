@@ -20,7 +20,7 @@ Modelo de grabación: ElevenLabs Multilingual v2. Las frases se graban una vez y
 - Diccionario: Valhalla → «Valjala».
 
 ## Pirata, el Corsario
-- Voz: muy grave y cavernosa, textura húmeda y gutural, como desde el fondo del mar (capitán maldito de barco fantasma, voz original). Grabaciones pasadas por aislador de voz para quitar el eco.
+- Voz: muy grave y cavernosa, textura húmeda y gutural, como desde el fondo del mar (capitán maldito de barco fantasma, voz original).
 - Personalidad: capitán temible, amenaza contenida y desprecio frío, con un toque de ironía.
 - Velocidad: algo más ágil que la muestra (1.05), teatral, alarga algunas palabras y suelta otras con golpe seco.
 - Intensidad: alta pero contenida, sombría.
