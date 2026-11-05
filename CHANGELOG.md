@@ -2,6 +2,22 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.61.0 · 2026-11-05
+
+El vikingo habla con su propia voz.
+
+- Si tu clase es vikingo, sus frases de ánimo («Cada palada, un hachazo», «Respira, guerrero; el mar espera»…) suenan con la voz grabada del personaje: grave, rasposa y con autoridad. Los datos (watts, ritmo, tiempo) siguen con la voz de siempre. Si el audio no se puede reproducir, la frase la dice la voz de siempre.
+- Las grabaciones se guardan al instalar la app, así que también suenan sin conexión. Las demás clases tendrán su voz más adelante.
+
+## 0.60.0 · 2026-11-05
+
+Tu clase y el juego también hablan (etapa 2 de la voz).
+
+- Con clase elegida, los ánimos de la voz son de tu personaje y se eligen según el momento: de esfuerzo en las series y las metas («Cada palada, un hachazo», «Al abordaje, que se escapan», «Un romano no se rinde. Nunca») y de calma en fondos, recuperaciones, técnica y descansos («Forma perfecta, mente en calma», «Sigue las estrellas, navegante»). No se repiten en la sesión. Sin clase siguen los ánimos de siempre.
+- Avisos del juego por voz, como mucho uno cada 5 minutos y nunca en recuperación, pruebas, el trabajo de VO2 o sprints ni los últimos segundos de un esfuerzo. Al empezar se oye el jefe si hoy lo enfrentas, y si no, tu racha. Durante la sesión se oyen los hitos de la hazaña de tu clase (25, 50, 75 y 100 %), «la misión Fiel al plan está cerca» al 75 % de la sesión del plan y, en el último 20 % de una carrera, «Tu rival está a 12 metros. Lo tienes». Las piezas del bote nunca se dicen por voz.
+- Al terminar, después de «Sesión terminada», la voz resume el juego: misiones cumplidas, jefe vencido, hito de hazaña, experiencia ganada y si subes de nivel.
+- Nueva línea de XP «Atento al entrenador» (+20 XP), una vez por sesión: respondiste a 3 o más correcciones de la voz volviendo a tu rango en menos de 20 segundos. No cuenta en las pruebas.
+
 ## 0.59.0 · 2026-11-05
 
 La voz del entrenador habla según el tipo de sesión (etapa 1 de la voz).

@@ -509,6 +509,13 @@ export function monedasDeVentaja(s, m) {
   if (s.ventajaUsada === 'botin') return MONEDAS_BOTIN * m.ganados;
   return 0;
 }
+// «Atento al entrenador» (voz, etapa 2): respondiste a 3 o más correcciones de la voz volviendo al rango en menos
+// de 20 s. Una vez por sesión y nunca en pruebas. 40 nominal: con la XP a la mitad se ve +20.
+export const ATENTO_DESDE = '2026-11-05';
+export const ATENTO_MIN = 3;
+export const XP_ATENTO = 40;
+export const esAtento = (s) => claveDia(s.fecha) >= ATENTO_DESDE && (s.atento || 0) >= ATENTO_MIN
+  && s.tipoPlan !== 'prueba' && !/^Prueba/.test(s.entrenamiento || '');
 // Minutos técnicos de las sesiones de antes de la etapa 12 (para la hazaña samurái), calculados una vez por sesión.
 const cacheTecnica = new Map();
 function minutosTecnicos(s, ftp) {
@@ -735,6 +742,7 @@ function bonosDeJuego(s, m, ctx) {
   const tiendaNueva = claveDia(s.fecha) >= COLECCION_DESDE;
   if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', tiendaNueva ? XP_ESTANDARTE : XP_ESTANDARTE_ANTES]);
   if (tiendaNueva && s.ventajaUsada === 'bitacora' && sinPausas(s) && !s.carreraSinTerminar) detalle.push(['Bitácora del capitán', XP_BITACORA]);
+  if (esAtento(s)) detalle.push(['Atento al entrenador', XP_ATENTO]);
   if (ctx.clase) detalle.push(...xpTalentos(ctx.clase, ctx.grados || {}, datosTalento(s, m, ctx)));
   const f = factorXp(s.fecha);
   return detalle.map(([k, v]) => [k, Math.round(v * f)]);
