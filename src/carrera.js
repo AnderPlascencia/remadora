@@ -2412,7 +2412,10 @@ function remero3d(ctx, P, b, { im, A, f, sx, sy }, t) {
   const pb = P(b.x, b.dist - 2.4, 0);
   const sesgo = INCLINA_CALLE * (pa && pb && Math.abs(pa.y - pb.y) > 0.5 ? (pa.x - pb.x) / (pa.y - pb.y) : 0);
   ctx.save();
-  ctx.transform(1, 0, sesgo, 1, -sesgo * q.y, 0);
+  // Se gira en lugar de sesgar: el sesgo aplastaba y estiraba al remero de las calles de los extremos
+  ctx.translate(q.x, q.y);
+  ctx.rotate(Math.atan(-sesgo));
+  ctx.translate(-q.x, -q.y);
   ctx.drawImage(im, sx, sy, A.w, A.h, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, A.w * kx, A.h * ky);
   const palas = b.yo ? decoDe(b)?.palas : null;
   if (palas) palasReal(ctx, '3d', f, palas, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, kx, ky);
