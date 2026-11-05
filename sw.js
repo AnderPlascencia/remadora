@@ -4,7 +4,7 @@
 const VERSION = `remadora-${new URL(self.location.href).searchParams.get('v') || 'dev'}`;
 const ARCHIVOS = ['./', 'index.html', 'src/estilos.css', 'src/app.js', 'src/estado.js', 'src/navegacion.js', 'src/registro.js', 'src/pantallas/ajustes.js', 'src/pantallas/preparar.js', 'src/pantallas/vivo.js', 'src/pantallas/sesion.js', 'src/pantallas/planes.js', 'src/pantallas/progreso.js', 'src/pantallas/heroe.js', 'src/pantallas/detalle.js', 'src/pantallas/programa.js', 'src/pantallas/inicio.js', 'src/pantallas/ayuda.js',
   'src/remadora.js', 'src/protocolo.js', 'src/variantes.js',
-  'src/grafica.js', 'src/db.js', 'src/historial.js', 'src/entrenamientos.js', 'src/estadisticas.js', 'src/voz.js', 'src/guion-voz.js', 'src/voz-juego.js', 'src/programa.js', 'src/fantasma.js', 'src/carrera.js', 'src/efectos.js', 'src/juego.js', 'src/xp-carga.js', 'src/talentos.js', 'src/tecnica.js', 'src/coleccion-bote.js', 'src/emblemas.js', 'src/ventajas.js', 'src/base.js', 'src/objetos.js', 'src/consejos.js', 'src/capacidades.js', 'src/adaptacion.js', 'src/pulso.js', 'src/perfil.js', 'src/guia.js', 'src/ui.js', 'src/ajustes-guardados.js', 'src/respaldo.js', 'src/reloj.js', 'src/version.js', 'manifest.webmanifest', 'assets/marca/rower-logo.svg', 'assets/marca/rower-marca.svg', 'assets/marca/rower-marca-clara.svg', 'assets/marca/rower-192.png', 'assets/marca/rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
+  'src/grafica.js', 'src/db.js', 'src/historial.js', 'src/entrenamientos.js', 'src/estadisticas.js', 'src/voz.js', 'src/guion-voz.js', 'src/voz-juego.js', 'src/voces-clase.js', 'src/programa.js', 'src/fantasma.js', 'src/carrera.js', 'src/efectos.js', 'src/juego.js', 'src/xp-carga.js', 'src/talentos.js', 'src/tecnica.js', 'src/coleccion-bote.js', 'src/emblemas.js', 'src/ventajas.js', 'src/base.js', 'src/objetos.js', 'src/consejos.js', 'src/capacidades.js', 'src/adaptacion.js', 'src/pulso.js', 'src/perfil.js', 'src/guia.js', 'src/ui.js', 'src/ajustes-guardados.js', 'src/respaldo.js', 'src/reloj.js', 'src/version.js', 'manifest.webmanifest', 'assets/marca/rower-logo.svg', 'assets/marca/rower-marca.svg', 'assets/marca/rower-marca-clara.svg', 'assets/marca/rower-192.png', 'assets/marca/rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
 
 // Ilustraciones de los héroes (5 clases × 9 rangos, figura y retrato): ~1.7 MB. Se guardan aparte para que,
 // si alguna falla, la app igual quede instalada; así los rangos que aún no has visto también salen sin conexión.
@@ -21,6 +21,15 @@ const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'as
 // mensaje «precargar» cuando tu héroe es de esa clase (ver src/app.js).
 const VIDEOS = { vikingo: ['assets/carrera/remo_vikingo.mp4', 'assets/carrera/remo_vikingo_v.mp4'] };
 
+// Frases de clase grabadas (~100 KB por clase, ver src/voces-clase.js): se guardan al instalar, sin bloquearlo.
+const VOCES = {
+  vikingo: [1, 2, 3, 4, 5, 6].map((n) => `assets/voces/vikingo/frase-${n}.mp3`),
+  romano: [1, 2, 3, 4, 5].map((n) => `assets/voces/romano/frase-${n}.mp3`),
+  polinesio: [1, 2, 3, 4, 5].map((n) => `assets/voces/polinesio/frase-${n}.mp3`),
+  samurai: [1, 2, 3, 4, 5, 6, 7].map((n) => `assets/voces/samurai/frase-${n}.mp3`),
+  pirata: [1, 2, 3, 4, 5].map((n) => `assets/voces/pirata/frase-${n}.mp3`),
+};
+
 // Solo se guardan respuestas completas: ni errores (404, 500), ni respuestas opacas, ni trozos de un vídeo (206).
 const sePuedeGuardar = (r) => !!r && r.ok && r.status !== 206;
 
@@ -33,7 +42,7 @@ async function guardarEnCache(peticion, respuesta) {
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION)
     .then((c) => c.addAll(ARCHIVOS.map((a) => new Request(a, { cache: 'reload' })))
-      .then(() => Promise.all([...HEROES, ...PAISAJE].map((a) => c.add(a).catch(() => {})))))
+      .then(() => Promise.all([...HEROES, ...PAISAJE, ...Object.values(VOCES).flat()].map((a) => c.add(a).catch(() => {})))))
     .then(() => self.skipWaiting()));
 });
 
