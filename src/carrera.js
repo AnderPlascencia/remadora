@@ -2307,9 +2307,9 @@ function velaReal3d(ctx, P, b, largo, t) {
   const deco = decoDe(b);
   if (!deco) return;
   const zP = b.dist + largo * 0.5 - 1.2;
-  const dx = b.yo ? 0.95 : 0;
-  const w = b.yo ? 1.3 : 1.8;
-  const [h0, h1] = b.yo ? [0.9, 2.05] : [1.0, 2.6];
+  const dx = b.yo ? 1.15 : 0;
+  const w = b.yo ? 1.6 : 1.8;
+  const [h0, h1] = b.yo ? [0.85, 2.3] : [1.0, 2.6];
   const base = P(b.x + dx, zP, 0.15);
   const tope = P(b.x + dx, zP, h1 + 0.2);
   const a = P(b.x + dx - w / 2, zP, h1);

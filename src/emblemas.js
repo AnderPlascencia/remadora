@@ -3,17 +3,12 @@
 // Los emblemas se dibujan en una caja de 24×24 centrada; las figuras son siluetas simples para que se lean de lejos.
 
 const SILUETAS = {
-  cuervos: 'M3 13c2-3 5-4 8-3l1-2 1 2c3-1 6 0 8 3l-3 1 1 3-4-2c-1 1-2 1-3 1s-2 0-3-1l-4 2 1-3z',
   lobo: 'M5 4l4 5h6l4-5 1 9-8 8-8-8z',
   calavera: 'M12 3a7 7 0 0 0-7 7c0 3 2 4 3 5v3h8v-3c1-1 3-2 3-5a7 7 0 0 0-7-7zM3 19l18 2-1 1L2 20zM21 19L3 21l1 1 18-2z',
   sables: 'M4 4l1-1 15 15 1 3-3-1zM20 4l-1-1L4 18l-1 3 3-1z',
   kraken: 'M12 3a5 5 0 0 0-5 5c0 2 1 3 2 4-3 1-5 4-6 8 2-2 4-4 6-4-1 2-1 4 0 6 1-2 2-4 3-5 1 1 2 3 3 5 1-2 1-4 0-6 2 0 4 2 6 4-1-4-3-7-6-8 1-1 2-2 2-4a5 5 0 0 0-5-5z',
   ola: 'M2 18c3 0 4-3 6-6s5-5 8-4c-2 1-3 3-2 5 1-1 3-1 4 0-2 0-3 2-2 4 2 1 4 0 6-1v4H2z',
   sakura: 'M12 4c1 2 1 4 0 6-1-2-1-4 0-6zM20 10c-2 1-4 1-6 0 2-1 4-1 6 0zM17 19c-2-1-3-3-3-5 2 1 3 3 3 5zM7 19c0-2 1-4 3-5 0 2-1 4-3 5zM4 10c2-1 4-1 6 0-2 1-4 1-6 0z',
-  'dragon-tormenta': 'M3 16c3-2 5-6 9-6 2 0 3-2 3-4l3 2-1 2 3 1-3 1c-1 3-4 5-8 5-2 0-4 1-6 3z',
-  tortuga: 'M12 6c4 0 6 3 6 6s-2 6-6 6-6-3-6-6 2-6 6-6zM10 3h4l-1 3h-2zM5 8l2 2-2 2-2-2zM19 8l2 2-2 2-2-2zM5 15l2 1-1 3-2-1zM19 15l-2 1 1 3 2-1z',
-  manta: 'M12 6c3 0 9 3 10 7-3 0-6-1-8 0l-1 9h-2l-1-9c-2-1-5 0-8 0 1-4 7-7 10-7z',
-  aguila: 'M12 5l2 3 8-3-4 6 3 1-6 2-2 6h-2l-2-6-6-2 3-1-4-6 8 3z',
   dragon: 'M6 21c0-6 2-10 5-12l-1-4 3 3 2-3v4c2 1 3 3 2 5l-3-1c-2 2-3 5-3 8z',
   sirena: 'M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM10 8h4l1 6-2 4 4 3h-5l-1-3-1 3H5l4-3-1-4z',
   grulla: 'M3 9c4 0 7 2 9 5l3-6 2-1 1 1-2 1-2 7c-1 3-4 4-7 3l2-2c-3 0-5-3-6-8z',
@@ -59,11 +54,76 @@ function emblema24(ctx, nombre, tela, marca, t) {
     return;
   }
   switch (nombre) {
-    case 'runas':
-      ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(12, 12, 8, 0, Math.PI * 2); ctx.stroke();
-      ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(12, 12, 5, 0, Math.PI * 2); ctx.stroke();
-      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; r(ctx, 12 + Math.cos(a) * 8 - 0.6, 12 + Math.sin(a) * 8 - 1.5, 1.2, 3); }
+    case 'runas': {
+      // Anillo doble con las runas ᚠᚢᚦᚨᚱᚲᚷᚹ talladas entre los dos (trazos de cada runa sobre su bastón)
+      ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(12, 12, 10.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(12, 12, 5.5, 0, Math.PI * 2); ctx.stroke();
+      const RUNAS = [[[0, -1, 0, 1], [0, -0.2, 0.6, -0.8], [0, 0.2, 0.6, -0.4]], [[0, -1, 0, 1], [0, -1, 0.6, -0.4], [0.6, -0.4, 0.6, 1]],
+        [[0, -1, 0, 1], [0, -0.5, 0.6, 0], [0.6, 0, 0, 0.5]], [[0, -1, 0, 1], [0, -0.6, 0.6, -1], [0, -0.1, 0.6, -0.5]],
+        [[0, -1, 0, 1], [0, -1, 0.6, -0.5], [0.6, -0.5, 0, 0], [0, 0, 0.6, 1]], [[0.5, -1, -0.2, 0], [-0.2, 0, 0.5, 1]],
+        [[-0.6, -1, 0.6, 1], [0.6, -1, -0.6, 1]], [[0, -1, 0, 1], [0, -1, 0.6, -0.5], [0.6, -0.5, 0, 0]]];
+      ctx.lineWidth = 0.6; ctx.lineCap = 'round';
+      RUNAS.forEach((trazos, i) => {
+        const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+        ctx.save(); ctx.translate(12 + Math.cos(a) * 8, 12 + Math.sin(a) * 8); ctx.rotate(a + Math.PI / 2); ctx.scale(1.15, 1.15);
+        ctx.beginPath(); trazos.forEach(([x0, y0, x1, y1]) => { ctx.moveTo(x0 - 0.3, y0); ctx.lineTo(x1 - 0.3, y1); }); ctx.stroke();
+        ctx.restore();
+      });
       break;
+    }
+    case 'cuervos':
+      // Dos cuervos enfrentados
+      for (const sx of [-1, 1]) {
+        ctx.save(); ctx.translate(12, 0); ctx.scale(sx, 1); ctx.translate(-12, 0);
+        ctx.beginPath(); ctx.ellipse(6.5, 14, 4.2, 2.6, -0.25, 0, Math.PI * 2); ctx.fill();
+        circulo(ctx, 10, 11.2, 1.9);
+        ctx.beginPath(); ctx.moveTo(11.5, 10.6); ctx.lineTo(13.6, 11.6); ctx.lineTo(11.6, 12.3); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(4, 13); ctx.lineTo(5.5, 6.5); ctx.lineTo(8.5, 12.5); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(3, 14.5); ctx.lineTo(0.6, 17.5); ctx.lineTo(3.6, 16.6); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(6, 16.4); ctx.lineTo(5.5, 19.5); ctx.moveTo(7.5, 16.2); ctx.lineTo(7.5, 19.5); ctx.lineWidth = 0.7; ctx.stroke();
+        ctx.fillStyle = tela; circulo(ctx, 10.4, 10.8, 0.45); ctx.fillStyle = marca;
+        ctx.restore();
+      }
+      break;
+    case 'tortuga':
+      // Honu: caparazón ovalado con dibujo, cabeza y cuatro aletas separadas
+      for (const [x, y, a] of [[6, 7.5, -0.8], [18, 7.5, 0.8], [7, 17.5, 0.7], [17, 17.5, -0.7]]) { ctx.beginPath(); ctx.ellipse(x, y, 3.2, 1.4, a, 0, Math.PI * 2); ctx.fill(); }
+      ctx.beginPath(); ctx.ellipse(12, 3.6, 1.8, 2.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(12, 19.5); ctx.lineTo(11, 22); ctx.lineTo(13, 22); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(12, 12.5, 5.6, 7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = tela; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.moveTo(10, 9); ctx.lineTo(14, 9); ctx.lineTo(15.5, 12.5); ctx.lineTo(14, 16); ctx.lineTo(10, 16); ctx.lineTo(8.5, 12.5); ctx.closePath();
+      ctx.moveTo(10, 9); ctx.lineTo(9, 6.5); ctx.moveTo(14, 9); ctx.lineTo(15, 6.5); ctx.moveTo(10, 16); ctx.lineTo(9, 18.5); ctx.moveTo(14, 16); ctx.lineTo(15, 18.5);
+      ctx.moveTo(8.5, 12.5); ctx.lineTo(6.5, 12.5); ctx.moveTo(15.5, 12.5); ctx.lineTo(17.5, 12.5); ctx.stroke();
+      break;
+    case 'manta':
+      // Rombo con las alas abiertas, aletas de la cabeza y cola fina
+      ctx.beginPath(); ctx.moveTo(10.5, 6); ctx.quadraticCurveTo(12, 7, 13.5, 6); ctx.quadraticCurveTo(17, 7.5, 23, 11.5);
+      ctx.quadraticCurveTo(17, 12.5, 12.8, 16); ctx.lineTo(11.2, 16); ctx.quadraticCurveTo(7, 12.5, 1, 11.5); ctx.quadraticCurveTo(7, 7.5, 10.5, 6); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(10.5, 6.2); ctx.lineTo(9.6, 3.6); ctx.lineTo(11.2, 5.8); ctx.moveTo(13.5, 6.2); ctx.lineTo(14.4, 3.6); ctx.lineTo(12.8, 5.8); ctx.fill();
+      ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(12, 16); ctx.quadraticCurveTo(12.6, 19.5, 11.6, 23); ctx.stroke();
+      break;
+    case 'aguila':
+      // Alas abiertas en horizontal con plumas, cabeza de perfil y cola
+      ctx.beginPath(); ctx.moveTo(12, 9); ctx.quadraticCurveTo(6, 6, 1, 6.5); ctx.lineTo(2.5, 8.5); ctx.lineTo(1.5, 9.6); ctx.lineTo(3.5, 10.6); ctx.lineTo(3, 11.8);
+      ctx.lineTo(5.5, 12.2); ctx.lineTo(5.5, 13.5); ctx.lineTo(8.5, 13); ctx.lineTo(10, 14.5); ctx.lineTo(14, 14.5); ctx.lineTo(15.5, 13); ctx.lineTo(18.5, 13.5); ctx.lineTo(18.5, 12.2);
+      ctx.lineTo(21, 11.8); ctx.lineTo(20.5, 10.6); ctx.lineTo(22.5, 9.6); ctx.lineTo(21.5, 8.5); ctx.lineTo(23, 6.5); ctx.quadraticCurveTo(18, 6, 12, 9); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(12, 11.5, 2.4, 4, 0, 0, Math.PI * 2); ctx.fill();
+      circulo(ctx, 12.4, 6.2, 1.9);
+      ctx.beginPath(); ctx.moveTo(13.8, 5.6); ctx.lineTo(16, 6.6); ctx.lineTo(13.9, 7.3); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(10.2, 14.5); ctx.lineTo(9, 20); ctx.lineTo(10.8, 19); ctx.lineTo(12, 21); ctx.lineTo(13.2, 19); ctx.lineTo(15, 20); ctx.lineTo(13.8, 14.5); ctx.fill();
+      ctx.fillStyle = tela; circulo(ctx, 12.9, 5.8, 0.4);
+      break;
+    case 'dragon-tormenta': {
+      // Serpiente larga en ondas con cabeza, y dos relámpagos
+      ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i <= 30; i++) { const x = 2.5 + i * 0.55; ctx.lineTo(x, 15 + Math.sin(i * 0.42) * 3.2 * (0.5 + i / 60)); }
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(18.5, 13.6); ctx.lineTo(22.5, 12.5); ctx.lineTo(21, 14.6); ctx.lineTo(22.6, 16); ctx.lineTo(18.8, 16.4); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(19.5, 13.5); ctx.lineTo(20.5, 10.5); ctx.lineTo(20.8, 13.2); ctx.fill();
+      for (const [x, y] of [[6, 2], [15, 3.5]]) { ctx.beginPath(); ctx.moveTo(x + 1.5, y); ctx.lineTo(x - 0.5, y + 4); ctx.lineTo(x + 1, y + 4); ctx.lineTo(x - 0.5, y + 8); ctx.lineTo(x + 2.5, y + 3.2); ctx.lineTo(x + 1, y + 3.2); ctx.lineTo(x + 2.5, y); ctx.fill(); }
+      break;
+    }
     case 'brasas': {
       ctx.beginPath(); ctx.moveTo(12, 3); ctx.bezierCurveTo(18, 9, 18, 14, 16, 18); ctx.bezierCurveTo(14, 21, 10, 21, 8, 18);
       ctx.bezierCurveTo(6, 14, 8, 11, 10, 9); ctx.bezierCurveTo(10, 12, 11, 13, 12, 13); ctx.bezierCurveTo(13, 9, 12, 6, 12, 3); ctx.fill();
@@ -106,7 +166,11 @@ function emblema24(ctx, nombre, tela, marca, t) {
       ctx.beginPath(); ctx.moveTo(12, 12); ctx.arc(12, 12, 9, Math.PI, Math.PI * 1.5); ctx.fill();
       ctx.fillStyle = '#94A3B8'; circulo(ctx, 12, 12, 2);
       break;
-    case 'filo': ctx.fillStyle = tela; r(ctx, 7, 2, 10, 20); ctx.fillStyle = marca; r(ctx, 7, 2, 2, 20); r(ctx, 15, 2, 2, 20); r(ctx, 7, 20, 10, 2); break;
+    case 'filo':
+      // Pala lacada en rojo con el filo negro
+      ctx.fillStyle = tela; ctx.beginPath(); ctx.ellipse(12, 12, 6, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = marca; ctx.lineWidth = 1.2; ctx.stroke();
+      break;
     case 'olas':
       ctx.lineWidth = 1.8;
       for (let k = 0; k < 3; k++) { ctx.beginPath(); for (let i = 0; i <= 12; i++) ctx.lineTo(3 + i * 1.5, 7 + k * 5 + Math.sin(i * 1.1) * 1.5); ctx.stroke(); }
@@ -173,4 +237,4 @@ export function pintarIcono(ctx, nombre, x, y, lado, tela, marca, t = 0) {
   ctx.restore();
 }
 
-export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos'];
+export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos', 'cuervos', 'tortuga', 'manta', 'aguila', 'dragon-tormenta'];
