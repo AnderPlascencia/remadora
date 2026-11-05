@@ -3,6 +3,7 @@
 // a la frecuencia de pantalla. Los remos se animan al ritmo de golpes por minuto de cada bote.
 import { distanciaEn } from './estadisticas.js';
 import { PIEZAS, velaDeRival } from './coleccion-bote.js';
+import { pintarTela, pintarIcono } from './emblemas.js';
 
 const carreras = new Set();
 let animando = false;
@@ -1249,7 +1250,7 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
     const ex = x - largo * (BARCA_REAL.proa / BARCA_REAL.largo);
     ctx.drawImage(im, sx, sy, A.w, A.h, ex - A.ancla[0] * kx, y - A.ancla[1] * ky, A.w * kx, A.h * ky);
     ctx.shadowBlur = 0;
-    if (deco) decoracion2d(ctx, x, y, largo, ancho, b, deco, t, true);
+    if (deco) velaReal2d(ctx, x, y, largo, ancho, b, deco, t, kx * A.ppm);
     ctx.globalAlpha = 1;
     return palada(b.fase, b.spm);
   }
@@ -2126,8 +2127,9 @@ function bote3d(ctx, P, b, t) {
     }
   }
   if (real) {
+    if (b.yo) aro3d(ctx, P, b.x, centro, largo);
     remero3d(ctx, P, b, real, t);
-    adornos3d(ctx, P, { ...b, dist: centro }, largo, t);
+    velaReal3d(ctx, P, { ...b, dist: centro }, largo, t);
     marcaRival3d(ctx, P, b);
     return;
   }
@@ -2236,6 +2238,136 @@ function bote3d(ctx, P, b, t) {
 // pintar3d a 12,6 m del escálamo; aquí se escala por la distancia real y, a lo ancho, como la pista (fx ≠ f).
 // Fracción de la perspectiva real con la que se inclinan los botes de las calles laterales (aprobada con Ander)
 const INCLINA_CALLE = 1;
+// ---------- Etapa 2 de arte: vela con emblema y marca de tu bote (barca realista) ----------
+// La tela (fondo, ribetes, emblema y pliegues) se pinta una vez en un canvas aparte; las animadas (legendarias)
+// se repintan unas 8 veces por segundo.
+const TELA_W = 96, TELA_H = 84;
+const telas = new Map();
+function telaDe(deco, t, clase) {
+  if (typeof document === 'undefined') return null;
+  // Sin vela de la colección, la clásica de su clase
+  if (!deco.emblema) deco = PIEZAS[`${clase}-clasica`] || deco;
+  const paso = deco.animado && !sinMovimiento ? Math.floor(t * 8) : 0;
+  const k = `${deco.tela}|${deco.marca}|${deco.emblema || ''}`;
+  let e = telas.get(k);
+  if (!e) { const c = document.createElement('canvas'); c.width = TELA_W; c.height = TELA_H; e = { c, paso: -1 }; telas.set(k, e); }
+  if (e.paso !== paso) {
+    const g = e.c.getContext('2d');
+    g.clearRect(0, 0, TELA_W, TELA_H);
+    pintarTela(g, deco, TELA_W, TELA_H, paso / 8);
+    e.paso = paso;
+  }
+  return e.c;
+}
+
+// Dibuja la tela en tiras verticales que ondean: la onda corre hacia atrás y va más rápida cuanto más rápido vas.
+// (x, y) es la esquina de arriba a la izquierda; con `tumbada` la tela se pinta en horizontal (vista desde arriba,
+// ondeando hacia la izquierda, que es la popa).
+function telaOndeante(ctx, src, x, y, w, h, t, v, tumbada = false) {
+  const N = 12;
+  const f = 3 + Math.min(6, (v || 0) * 1.4);
+  const amp = sinMovimiento ? 0 : (tumbada ? h : w) * 0.035;
+  for (let i = 0; i < N; i++) {
+    const o = Math.sin(t * f - i * 0.7) * amp * (i / N + 0.3);
+    const luz = sinMovimiento ? 0 : Math.cos(t * f - i * 0.7) * 0.035;
+    if (tumbada) {
+      // i = 0 junto al mástil (a la derecha de la tela) y la punta libre a la izquierda
+      const sx = TELA_W - (i + 1) * TELA_W / N;
+      const dx = x + w - (i + 1) * w / N;
+      ctx.drawImage(src, sx, 0, TELA_W / N + 0.5, TELA_H, dx - 0.3, y + o, w / N + 0.6, h);
+      if (luz) { ctx.fillStyle = luz > 0 ? `rgba(255,255,255,${luz})` : `rgba(0,0,0,${-luz})`; ctx.fillRect(dx, y + o, w / N + 0.3, h); }
+    } else {
+      const sx = i * TELA_W / N;
+      const dx = x + i * w / N;
+      ctx.drawImage(src, sx, 0, TELA_W / N + 0.5, TELA_H, dx - 0.3, y + o, w / N + 0.6, h);
+      if (luz) { ctx.fillStyle = luz > 0 ? `rgba(255,255,255,${luz})` : `rgba(0,0,0,${-luz})`; ctx.fillRect(dx, y + o, w / N + 0.3, h); }
+    }
+  }
+}
+
+// Aro blanco discontinuo sobre el agua alrededor de tu bote: se reconoce sin depender del color
+function aro3d(ctx, P, x, z, largo) {
+  const pts = [];
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    const q = P(x + Math.cos(a) * 0.75, z + Math.sin(a) * largo * 0.62, 0);
+    if (!q) return;
+    pts.push(q);
+  }
+  ctx.save();
+  ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 5]); ctx.stroke();
+  ctx.restore();
+}
+
+// Vela cuadrada con el emblema en un mástil a proa. En tu bote es algo más pequeña, opaca y va a un lado para no
+// tapar a tu remero; en los rivales cercanos se aclara un poco para que se vea la pista.
+function velaReal3d(ctx, P, b, largo, t) {
+  const deco = decoDe(b);
+  if (!deco) return;
+  const zP = b.dist + largo * 0.5 - 1.2;
+  const dx = b.yo ? 0.95 : 0;
+  const w = b.yo ? 1.3 : 1.8;
+  const [h0, h1] = b.yo ? [0.9, 2.05] : [1.0, 2.6];
+  const base = P(b.x + dx, zP, 0.15);
+  const tope = P(b.x + dx, zP, h1 + 0.2);
+  const a = P(b.x + dx - w / 2, zP, h1);
+  const c = P(b.x + dx + w / 2, zP, h0);
+  if (!base || !tope || !a || !c) return;
+  const cerca = P(b.x, b.dist);
+  const lejania = b.yo || !cerca ? 1 : Math.max(0, Math.min(1, (cerca.d - 10) / 10));
+  ctx.save();
+  ctx.globalAlpha = b.yo ? 1 : 0.55 + 0.4 * lejania;
+  // Mástil y verga
+  ctx.strokeStyle = '#6B4423';
+  ctx.lineWidth = Math.max(1.2, base.s * 0.05);
+  ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(tope.x, tope.y); ctx.stroke();
+  const sesgo = (tope.x - base.x) / (tope.y - base.y || -1);
+  ctx.beginPath(); ctx.moveTo(a.x + sesgo * (a.y - c.y) - 2, a.y); ctx.lineTo(c.x + sesgo * (a.y - c.y) + 2, a.y); ctx.stroke();
+  // Tela con el emblema, inclinada como el mástil
+  const src = telaDe(deco, t, b.clase);
+  if (src) {
+    ctx.transform(1, 0, sesgo, 1, -sesgo * c.y, 0);
+    telaOndeante(ctx, src, a.x, a.y, c.x - a.x, c.y - a.y, t + b.dist * 0.3, b.v);
+  }
+  ctx.restore();
+  // Mascarón de tu colección en la proa
+  if (deco.proa) {
+    const q = P(b.x, b.dist + largo * 0.5 - 0.1, 0.45);
+    if (q) {
+      const lado = Math.max(10, q.s * 0.55);
+      ctx.fillStyle = 'rgba(2,6,23,0.55)';
+      ctx.beginPath(); ctx.arc(q.x, q.y, lado * 0.62, 0, Math.PI * 2); ctx.fill();
+      pintarIcono(ctx, deco.proa.emblema, q.x, q.y, lado, deco.proa.tela, deco.proa.marca, t);
+    }
+  }
+}
+
+// En 2D (vista cenital) la vela se ve tumbada, ondeando por detrás de la popa, con el emblema a la vista.
+function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
+  const src = telaDe(deco, t, b.clase);
+  const mastil = x - largo * 0.93;
+  const w = (b.yo ? 1.25 : 1.0) * pxm;
+  const h = w * TELA_H / TELA_W;
+  if (src) {
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    telaOndeante(ctx, src, mastil - w, y - h / 2, w, h, t + x * 0.01, b.v, true);
+    ctx.restore();
+  }
+  ctx.fillStyle = '#6B4423';
+  ctx.beginPath(); ctx.arc(mastil, y, Math.max(1.5, pxm * 0.06), 0, Math.PI * 2); ctx.fill();
+  if (b.yo) {
+    // Aro discontinuo alrededor de tu bote
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.ellipse(x - largo * 0.5, y, largo * 0.6, Math.max(ancho * 1.6, pxm * 0.7), 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    if (deco.proa) pintarIcono(ctx, deco.proa.emblema, x - pxm * 0.15, y, Math.max(10, pxm * 0.55), deco.proa.tela, deco.proa.marca, t);
+  }
+}
+
 function remero3d(ctx, P, b, { im, A, sx, sy }, t) {
   const q = P(b.x, b.dist - 0.4, 0);
   const q1 = P(b.x + 1, b.dist - 0.4, 0);
