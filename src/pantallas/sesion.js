@@ -8,6 +8,7 @@ import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { fijarSilencio, hablar, tiempoHablado } from '../voz.js';
 import * as G from '../guion-voz.js';
+import * as VJ from '../voz-juego.js';
 import * as P from '../programa.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
@@ -363,6 +364,15 @@ async function iniciarSesion(reanudar = null) {
     inicioBloque: null,
     avisos: {},
     nAnimo: 0,
+    // Capa de juego de la voz (voz-juego.js): clase, frases ya dichas, último aviso, hitos y «Atento al entrenador».
+    claseVoz: leerPersonaje().clase ? J.claseDe(leerPersonaje().clase)?.clave || null : null,
+    frasesUsadas: new Set(),
+    ultimoJuego: null,
+    hitosVoz: [],
+    misionPlanVoz: false,
+    aTiroDicho: false,
+    atento: 0,
+    correccionEn: null,
     retrato: rival ? await retratoPropio() : null,
   };
   if (reanudar) Object.assign(estado.sesion, estadoReanudado(reanudar));
@@ -389,6 +399,7 @@ async function iniciarSesion(reanudar = null) {
     const prop = G.proposito(estado.sesion.guion, estado.entrenamientoActivo, plan, { carrera: !!rival });
     hablar(`Comienza ${estado.entrenamientoActivo.nombre}${contra}.${prop ? ` ${prop}` : ''}`);
   } else hablar(`Sesión iniciada${contra}`);
+  if (!reanudar) prepararVozJuego(estado.sesion);
   if (ajustes.si('modoAuto', false)) abrirModoRemo();
   pintar();
   // En horizontal la carrera no cabe junto a los botones: se lleva a la vista al empezar.
@@ -526,6 +537,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     delPrograma: delProgramaHoy(s),
     // Para el juego (xp-carga.js): reglas de XP por carga, si era la sesión del día y qué tocaba en el plan.
     ...(s.xpCtx || { reglasXp: XC.REGLAS_XP_CARGA }),
+    ...(s.atento ? { atento: s.atento } : {}),
     pctEnRango: s.segConMeta ? Math.round((100 * s.segEnRango) / s.segConMeta) : null,
     // Lo que quedó fuera, separado: por debajo (te costó) o por encima (te sobró). La adaptación del plan lo usa.
     pctBajo: s.segConMeta ? Math.round((100 * (s.segBajo || 0)) / s.segConMeta) : null,
@@ -622,6 +634,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   const recs = E.nuevosRecords(registro, previas);
   if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
+  if (!recuperada) setTimeout(() => decirResumenJuego(registro, previas), 0);
   await revisarPlanAuto();
   pintarHoy();
   pintarLineaNivel();
@@ -742,7 +755,10 @@ function avanzarSesion() {
   if (t % 5 === 0) actualizarAtrVivo();
   if (estado.sesion.rival && t % 60 === 0 && !calentando) {
     const dif = Math.round(estado.sesion.dist + V.metrosVentaja(estado.sesion.ventaja) - E.distanciaEn(estado.sesion.rival.muestras, t));
-    if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
+    const meta = estado.entrenamientoActivo?.objetivo?.metrica === 'distancia' ? estado.entrenamientoActivo.objetivo.valor : 0;
+    const aTiro = estado.sesion.aTiroDicho ? '' : VJ.rivalATiro({ dist: estado.sesion.dist, meta, dif });
+    if (aTiro && hablarJuego(aTiro, t)) estado.sesion.aTiroDicho = true;
+    else if (Math.abs(dif) >= 5) hablar(`Vas ${Math.abs(dif)} metros ${dif > 0 ? 'adelante' : 'atrás'} de tu fantasma`, { clave: 'fantasma', cadaSeg: 50 });
   }
   if (!estado.entrenamientoActivo) return;
   if (Ent.tipoDe(estado.entrenamientoActivo) === 'objetivo') {
@@ -935,6 +951,7 @@ function coachRitmo(t) {
     const animo = animoDelEntrenador();
     if (animo) hablar(animo, { clave: 'animo', cadaSeg: 200, capa: G.CAPA.animo });
   }
+  avisosDeJuego(t);
   // En intervalos los descansos bajan el ritmo a propósito: ahí manda el aviso de rango.
   if (estado.sesion.plan || t < 60 || estado.sesion.dist < 100) return;
   const ref = estado.sesion.ritmo || (t * 500) / estado.sesion.dist;
@@ -974,9 +991,89 @@ function animoDelEntrenador() {
   const s = estado.sesion;
   if (G.SIN_ANIMO.has(s.guion)) return '';
   const k = s.nAnimo++;
-  const consejo = G.consejo(s.guion, Math.floor(k / (G.SUAVES.has(s.guion) ? 1 : 2)));
-  if (G.SUAVES.has(s.guion)) return consejo;
-  return k % 2 === 0 && consejo ? consejo : ANIMOS[Math.floor(k / 2) % ANIMOS.length];
+  const suave = G.SUAVES.has(s.guion);
+  // Con clase, sus frases (de calma o de esfuerzo según el momento) sustituyen a los ánimos de siempre
+  // y, en los tipos suaves, se alternan con los consejos.
+  const deClase = s.claseVoz ? VJ.fraseClase(s.claseVoz, VJ.momentoAnimo(suave, bloqueEnCurso()), s.frasesUsadas) : '';
+  const consejo = G.consejo(s.guion, Math.floor(k / (suave && !deClase ? 1 : 2)));
+  if (suave) return deClase && k % 2 === 1 ? deClase : consejo || deClase;
+  return k % 2 === 0 && consejo ? consejo : deClase || ANIMOS[Math.floor(k / 2) % ANIMOS.length];
+}
+
+// ---------- Capa de juego de la voz (voz-juego.js) ----------
+
+// Al terminar: misiones, jefe, hazaña de clase y XP de la sesión, detrás de «Sesión terminada».
+function decirResumenJuego(registro, previas) {
+  try {
+    const per = leerPersonaje();
+    const antes = H.estadoJuegoDe(previas, { ftp: ftp(), per });
+    const despues = J.estadoJuego([...previas.filter((x) => x.fecha !== registro.fecha), registro], { ftp: ftp(), per });
+    const texto = VJ.resumenJuego(antes, despues, registro.fecha, J.claseDe(per.clase)?.clave || null);
+    if (texto) hablar(texto);
+  } catch (e) {
+    agregarLog(`resumen de juego por voz: ${e?.message || e}`);
+  }
+}
+
+// Aviso de juego en la capa 3, con sus reglas (uno cada 5 min, nunca en recuperación, pruebas ni trabajo de VO2
+// o sprints). inicio: el aviso de arranque, que se dice aunque la sesión sea una prueba (es antes del esfuerzo).
+function hablarJuego(texto, t, { inicio = false } = {}) {
+  const s = estado.sesion;
+  if (!texto || !s) return false;
+  if (!inicio && !VJ.juegoPuede(s.guion, { bloque: bloqueEnCurso(), t, ultimo: s.ultimoJuego })) return false;
+  const dicho = hablar(texto, { clave: 'juego', capa: G.CAPA.animo });
+  if (dicho) s.ultimoJuego = t;
+  return dicho;
+}
+
+// Al empezar: jefe o racha, y los hitos de la hazaña de clase que esta sesión puede cruzar remando.
+async function prepararVozJuego(s) {
+  try {
+    const { h } = await estadoHeroe();
+    if (estado.sesion !== s) return;
+    const ent = estado.entrenamientoActivo;
+    const cap = h.capitulo;
+    const jefe = cap && cap.listo && ent && cap.preparar && ent.id === cap.preparar ? cap.jefe.nombre : '';
+    s.hitosVoz = s.claseVoz ? VJ.hitosEnVivo(h.hazanas.find((x) => x.id === `clase-${s.claseVoz}`)) : [];
+    s.hazanaVoz = s.claseVoz ? h.hazanas.find((x) => x.id === `clase-${s.claseVoz}`)?.nombre : '';
+    s.misionPlanVoz = !!delProgramaHoy(s) && h.diarias.some((m) => m.id === 'plan' && !m.hecha);
+    const aviso = VJ.avisoInicio({ racha: h.contexto?.racha || 0, jefe });
+    // Se dice en cuanto calle la frase de arranque (la capa 3 no se pone en cola): lo intenta avisosDeJuego().
+    s.avisoInicioVoz = aviso;
+  } catch (e) {
+    agregarLog(`voz de juego: ${e?.message || e}`);
+  }
+}
+
+// Durante: hito de la hazaña de clase (paladas o km) y la misión del plan al 75 %.
+function avisosDeJuego(t) {
+  const s = estado.sesion;
+  if (s.avisoInicioVoz) {
+    if (hablarJuego(s.avisoInicioVoz, t, { inicio: true }) || t > 120) s.avisoInicioVoz = '';
+    return;
+  }
+  const hito = s.hitosVoz?.[0];
+  if (hito && (hito.medida === 'km' ? s.dist : s.paladas) >= hito.faltan) {
+    // Si se cruzan dos hitos sin poder decirlo, se dice el último.
+    while (s.hitosVoz[1] && (hito.medida === 'km' ? s.dist : s.paladas) >= s.hitosVoz[1].faltan) s.hitosVoz.shift();
+    const pct = s.hitosVoz[0].pct;
+    // El 100 % se dice aunque no toque (una vez en la vida); los demás esperan su turno.
+    if (hablarJuego(VJ.textoHito(s.hazanaVoz, pct), t, { inicio: pct >= 100 })) s.hitosVoz.shift();
+    return;
+  }
+  if (s.misionPlanVoz) {
+    const total = (s.bloques || []).reduce((a, b) => a + (b.duracion || 0), 0);
+    const avance = s.plan ? (total ? t / total : 0) : estado.entrenamientoActivo?.objetivo ? progresoActual(t).hecho / progresoActual(t).meta : 0;
+    if (avance >= 0.75 && hablarJuego(VJ.MISION_PLAN_75, t)) s.misionPlanVoz = false;
+  }
+}
+
+// «Atento al entrenador»: tras una corrección de rango, volver al rango en menos de 20 s cuenta como respondida.
+function seguirCorreccion(t, rango) {
+  const s = estado.sesion;
+  if (s.correccionEn == null) return;
+  if (t - s.correccionEn > 20) s.correccionEn = null;
+  else if (rango === 'dentro') { s.atento++; s.correccionEn = null; }
 }
 
 // Último parcial de 500 m: verde si va al ritmo objetivo (o mejor que tu promedio), rojo si no.
@@ -1090,6 +1187,8 @@ function avanceBloque(t) {
   const cuenta = Ent.contarRango({ con: estado.sesion.segConMeta, dentro: estado.sesion.segEnRango, bajo: estado.sesion.segBajo || 0, alto: estado.sesion.segAlto || 0 }, b, rango, t - info.desde);
   Object.assign(estado.sesion, { segConMeta: cuenta.con, segEnRango: cuenta.dentro, segBajo: cuenta.bajo, segAlto: cuenta.alto });
   estado.sesion.fueraSeguidos = rango && rango !== 'dentro' ? estado.sesion.fueraSeguidos + 1 : 0;
+  const s0 = estado.sesion;
+  seguirCorreccion(t, rango);
   if (estado.sesion.fueraSeguidos >= 5 && info.restaSeg > 4) {
     const spm = b.metrica === 'spm';
     const texto = G.correccion(estado.sesion.guion, {
@@ -1098,7 +1197,7 @@ function avanceBloque(t) {
       serie: G.serieDe(estado.sesion.plan, i, estado.sesion.guion), enSerieSeg: t - info.desde, fueraSeg: estado.sesion.fueraSeguidos, trabajo: G.esTrabajo(b),
     });
     // La misma corrección, como mucho una vez por minuto (y cualquier corrección, una cada 20 s).
-    if (texto) hablar(texto, { clave: `fuera:${texto.replace(/\d+/g, '#')}`, cadaSeg: 60, capa: G.CAPA.correccion });
+    if (texto && hablar(texto, { clave: `fuera:${texto.replace(/\d+/g, '#')}`, cadaSeg: 60, capa: G.CAPA.correccion }) && G.esTrabajo(b)) s0.correccionEn = t;
   }
 }
 
