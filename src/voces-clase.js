@@ -26,6 +26,15 @@ export const GRABADAS = {
     'Lejos se llega remando parejo': 'frase-4.mp3',
     'La isla está detrás del horizonte': 'frase-5.mp3',
   },
+  samurai: {
+    'Forma perfecta, mente en calma': 'frase-1.mp3',
+    'Cada palada igual que la anterior': 'frase-2.mp3',
+    'Respira. Empuja. Recupera': 'frase-3.mp3',
+    'La paciencia corta más que la espada': 'frase-4.mp3',
+    'Sin prisa, sin pausa': 'frase-5.mp3',
+    'Corta el agua. Ahora': 'frase-6.mp3',
+    'Un solo corte, con todo': 'frase-7.mp3',
+  },
 };
 
 const PORTEXTO = new Map(Object.entries(GRABADAS)

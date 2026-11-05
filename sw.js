@@ -26,6 +26,7 @@ const VOCES = {
   vikingo: [1, 2, 3, 4, 5, 6].map((n) => `assets/voces/vikingo/frase-${n}.mp3`),
   romano: [1, 2, 3, 4, 5].map((n) => `assets/voces/romano/frase-${n}.mp3`),
   polinesio: [1, 2, 3, 4, 5].map((n) => `assets/voces/polinesio/frase-${n}.mp3`),
+  samurai: [1, 2, 3, 4, 5, 6, 7].map((n) => `assets/voces/samurai/frase-${n}.mp3`),
 };
 
 // Solo se guardan respuestas completas: ni errores (404, 500), ni respuestas opacas, ni trozos de un vídeo (206).
