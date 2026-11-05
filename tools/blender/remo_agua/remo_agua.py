@@ -21,6 +21,8 @@ ap.add_argument('--muestras', type=int, default=64)
 ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'cine', 'popa', 'cerca', 'retrato', 'lateral', 'arriba', 'manos', 'carrera3d', 'cenital'))
 ap.add_argument('--paisaje', default='fiordo')
 ap.add_argument('--sprite', action='store_true', help='solo barca y remero sobre fondo transparente (rivales de la carrera)')
+ap.add_argument('--capa', default='todo', choices=('todo', 'remero', 'barca'),
+                help='con --sprite: solo el remero (la barca y los remos tapan sin verse) o solo la barca y los remos')
 ap.add_argument('--clase', default='vikingo', choices=('vikingo', 'pirata', 'samurai', 'polinesio', 'romano'),
                 help='ropa del remero y pintura de la barca (clases.py)')
 ap.add_argument('--remo-corto', action='store_true', help='remos acortados para que quepan en los carriles de la carrera 2D y 3D')
@@ -829,6 +831,26 @@ if A.sprite:
     nt.links.new(nt.nodes.new('ShaderNodeHoldout').outputs[0], nt.nodes['Material Output'].inputs['Surface'])
     corte.data.materials.append(m_corte)
     corte.visible_shadow = False
+    # Capas: el remero y la barca por separado, para que carrera.js incline la barca hacia el punto de fuga sin
+    # deformar al remero. El remero es todo lo que cuelga del esqueleto o se deforma con él.
+    def _del_remero(o):
+        p = o
+        while p:
+            if p == rig:
+                return True
+            p = p.parent
+        return any(m.type == 'ARMATURE' and m.object == rig for m in getattr(o, 'modifiers', []))
+    if A.capa != 'todo':
+        for o in esc.objects:
+            if o.type not in ('MESH', 'CURVE', 'SURFACE', 'META', 'FONT') or o.hide_render or o == corte:
+                continue
+            if A.capa == 'barca' and _del_remero(o):
+                o.hide_render = True
+            elif A.capa == 'remero' and not _del_remero(o):
+                if o.name == 'Gotas':
+                    o.hide_render = True
+                else:
+                    o.is_holdout = True
 if CARRERA:
     CARRERA.update({'clase': A.clase, 'paso': A.paso})
     json.dump(CARRERA, open(os.path.join(SAL, 'carrera.json'), 'w'))

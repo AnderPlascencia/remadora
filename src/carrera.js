@@ -526,10 +526,14 @@ const PIEL = '#E2B48C';
 export const REMEROS_ATLAS = {
   '3d': { w: 208, h: 127, cols: 4, n: 24, ancla: [104.0, 77.2], ppm: 53.25 },
   '2d': { w: 231, h: 163, cols: 4, n: 24, ancla: [93.2, 80.0], ppm: 39.0 },
+  // Remero solo de la vista 3D (atlas_capas.py): su celda, a la misma escala, empieza en `origen` dentro de la de la barca
+  remero3d: { w: 52, h: 86, cols: 6, n: 24, origen: [72.8, 0.0] },
 };
 // La barca de Blender mide 5,4 m: de la popa al escálamo 1,89 m y del escálamo a la proa 3,51 m.
 const BARCA_REAL = { largo: 5.4, proa: 3.51 };
 export const srcRemero = (vista, clase) => `assets/carrera/remero${vista}_${clase}.webp`;
+// En 3D la barca y el remero van en atlas separados: la barca se inclina hacia el punto de fuga y el remero, recto encima
+export const srcRemeroSolo = (clase) => `assets/carrera/remero3d_${clase}_remero.webp`;
 function celdaRemero(vista, b) {
   if (!BOTES[b.clase]) return null;
   const im = imagen(srcRemero(vista, b.clase));
@@ -537,7 +541,12 @@ function celdaRemero(vista, b) {
   const A = REMEROS_ATLAS[vista];
   // Parado, el remero espera con las palas planas (justo después del final de la palada)
   const f = Math.floor((b.spm ? b.fase : EMPUJE + 0.06) * A.n) % A.n;
-  return { im, A, f, sx: (f % A.cols) * A.w, sy: Math.floor(f / A.cols) * A.h };
+  let solo = null;
+  if (vista === '3d') {
+    solo = imagen(srcRemeroSolo(b.clase));
+    if (!solo) return null;
+  }
+  return { im, A, f, sx: (f % A.cols) * A.w, sy: Math.floor(f / A.cols) * A.h, solo };
 }
 
 // Punta de cada pala en cada fotograma del atlas (las mismas para las cinco clases): [x, y, ángulo] en píxeles de la
@@ -2395,7 +2404,7 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   }
 }
 
-function remero3d(ctx, P, b, { im, A, f, sx, sy }, t) {
+function remero3d(ctx, P, b, { im, A, f, sx, sy, solo }, t) {
   const q = P(b.x, b.dist - 0.4, 0);
   const q1 = P(b.x + 1, b.dist - 0.4, 0);
   if (!q || !q1) return;
@@ -2412,14 +2421,19 @@ function remero3d(ctx, P, b, { im, A, f, sx, sy }, t) {
   const pb = P(b.x, b.dist - 2.4, 0);
   const sesgo = INCLINA_CALLE * (pa && pb && Math.abs(pa.y - pb.y) > 0.5 ? (pa.x - pb.x) / (pa.y - pb.y) : 0);
   ctx.save();
-  // Se gira en lugar de sesgar: el sesgo aplastaba y estiraba al remero de las calles de los extremos
-  ctx.translate(q.x, q.y);
-  ctx.rotate(Math.atan(-sesgo));
-  ctx.translate(-q.x, -q.y);
-  ctx.drawImage(im, sx, sy, A.w, A.h, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, A.w * kx, A.h * ky);
+  ctx.transform(1, 0, sesgo, 1, -sesgo * q.y, 0);
+  const ox = q.x - A.ancla[0] * kx, oy = q.y - A.ancla[1] * ky;
+  ctx.drawImage(im, sx, sy, A.w, A.h, ox, oy, A.w * kx, A.h * ky);
   const palas = b.yo ? decoDe(b)?.palas : null;
-  if (palas) palasReal(ctx, '3d', f, palas, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, kx, ky);
+  if (palas) palasReal(ctx, '3d', f, palas, ox, oy, kx, ky);
   ctx.restore();
+  // El remero va recto encima, sin el sesgo, para que no se vea aplastado ni estirado en las calles de los extremos.
+  // El sesgo deja quieta la línea de los escálamos (q.y), así que el remero sigue sentado en su sitio.
+  if (solo) {
+    const R = REMEROS_ATLAS.remero3d;
+    const k = sesgo * (oy + (R.origen[1] + R.h * 0.75) * ky - q.y);
+    ctx.drawImage(solo, (f % R.cols) * R.w, Math.floor(f / R.cols) * R.h, R.w, R.h, ox + R.origen[0] * kx + k, oy + R.origen[1] * ky, R.w * kx, R.h * ky);
+  }
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 }

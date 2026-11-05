@@ -1,5 +1,5 @@
 // Héroe y tienda: personaje, nivel, atributos, árbol, tienda y paisajes.
-import { PAISAJES, VELAS, srcRemero, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarEquipo } from '../carrera.js';
+import { PAISAJES, VELAS, srcRemero, srcRemeroSolo, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarEquipo } from '../carrera.js';
 import * as CB from '../coleccion-bote.js';
 import * as H from '../historial.js';
 import { hablar } from '../voz.js';
@@ -666,7 +666,7 @@ export function precargarRecursos() {
   const archivos = archivosDePaisajes(per);
   // Tu remero realista en la carrera 2D y 3D (los de los rivales se descargan cuando salen)
   const clave = per.clase ? J.claseDe(per.clase)?.clave : null;
-  if (clave) archivos.push(srcRemero('3d', clave), srcRemero('2d', clave));
+  if (clave) archivos.push(srcRemero('3d', clave), srcRemeroSolo(clave), srcRemero('2d', clave));
   if ((!per.clase && !archivos.length) || !('serviceWorker' in navigator)) return;
   navigator.serviceWorker.ready.then((r) => r.active?.postMessage({ tipo: 'precargar', clase: per.clase || null, archivos })).catch(() => {});
 }

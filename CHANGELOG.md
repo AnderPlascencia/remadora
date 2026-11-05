@@ -2,10 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.58.1 · 2026-11-05
+
+- En 3D, los botes de las calles de los extremos vuelven a inclinarse hacia el punto de fuga, pero el remero va recto encima: la barca y el remero se pintan por separado, así el remero ya no se ve aplastado.
+
 ## 0.58.0 · 2026-11-05
 
 - En la carrera 3D y 2D, las palas de tu colección se ven en la barca realista: tus remos llevan la pintura de la pieza (los escudos vikingos, las calaveras piratas, la laca roja samurái, las olas talladas polinesias o los rayos de la legión) en cada momento de la palada.
-- En 3D, los botes de las calles de los extremos se giran hacia el punto de fuga en lugar de inclinarse, así los remeros ya no se ven aplastados ni estirados.
 
 ## 0.57.0 · 2026-11-05
 
