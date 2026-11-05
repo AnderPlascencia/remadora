@@ -8,6 +8,7 @@ import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { rangoZona2 } from '../pulso.js';
 import { hablar } from '../voz.js';
+import { CADENCIA_ALTA_FONDO } from '../guion-voz.js';
 import * as J from '../juego.js';
 import * as O from '../objetos.js';
 import * as V from '../ventajas.js';
@@ -517,7 +518,12 @@ export function vigilarTipoSesion(t) {
   if (tipo === 'fondo' && fcMaxima() && actual.fc) {
     // En un fondo el pulso no debería pasar de la zona 2 (con 3 lpm de margen) más de un minuto seguido.
     estado.sesion.fcAltaSeg = actual.fc > rangoZona2(fcRef()).max + 3 ? (estado.sesion.fcAltaSeg || 0) + 1 : 0;
-    if (estado.sesion.fcAltaSeg === 60) hablar('Pulso alto para un fondo. Baja un poco los watts', { clave: 'fc-fondo', cadaSeg: 180 });
+    if (estado.sesion.fcAltaSeg === 60) hablar('Pulso alto para un fondo, suelta un poco', { clave: 'fc-fondo', cadaSeg: 180, capa: 2 });
+  }
+  // En un fondo, más de 24 paladas por minuto durante un minuto: palada corta y apurada.
+  if ((tipo === 'fondo' || estado.sesion.guion === 'recuperacion') && actual.spm) {
+    estado.sesion.spmAltaSeg = actual.spm > 24 ? (estado.sesion.spmAltaSeg || 0) + 1 : 0;
+    if (estado.sesion.spmAltaSeg === 60) hablar(CADENCIA_ALTA_FONDO, { clave: 'spm-fondo', cadaSeg: 300, capa: 2 });
   }
   if (tipo === 'calorias') {
     const cien = Math.floor(estado.sesion.kcal / 100);

@@ -2,6 +2,19 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.59.0 · 2026-11-05
+
+La voz del entrenador habla según el tipo de sesión (etapa 1 de la voz).
+
+- Al empezar, la voz dice para qué es la sesión y cómo debe sentirse: «Fondo de 40 minutos. Debes poder hablar mientras remas. Hoy gana quien se contiene», «Umbral, 3 series. Incómodo pero sostenible», «VO2, 5 series. Duras de verdad»… Cada tipo tiene su guion: fondo, recuperación, umbral, VO2, sprints, técnica, gasto calórico, metas de distancia y pruebas.
+- Serie a serie: «Serie 3 de 5», con frase propia en la penúltima y la última («Última. Todo lo que queda»), «Mitad» en las series de 90 s o más y «Prepárate» a 10 s del final del descanso. Tras una serie de umbral o VO2 dice cómo fue («Buena serie, 2 05 de media. Suelta brazos, respira») y tras un sprint, su pico de watts.
+- Las correcciones van con el foco de cada tipo: en un fondo o una recuperación nunca pide apretar («Demasiado fuerte para recuperar. Suelta»); en umbral avisa si sales muy fuerte el primer minuto; en VO2 calla en las 2 primeras series si vas por encima y luego pide dosificar; en técnica dice tu cadencia y la meta; en el descanso de los sprints, que descanses de verdad. Los calentamientos y descansos ya no se corrigen, y la misma corrección se repite como mucho una vez por minuto. Si el pico de los sprints cae más de un 15 % dos veces seguidas, lo avisa.
+- Al terminar dice si se cumplió el propósito: «Fondo bien hecho: 88 por ciento en rango», «VO2 terminado: 4 de 5 series en rango», «Pico de 640 watts, 9 por ciento de caída al final».
+- Menos voz donde estorba: el parcial va cada 1000 m en fondo y técnica, y no se dice en series cortas, VO2, sprints ni recuperación. Los ánimos de cada 4 minutos son consejos del tipo de sesión («Relaja hombros y manos», «Vuelta lenta: el doble de tiempo que la palada») y no suenan en VO2, sprints ni pruebas.
+- La voz ordena lo que dice en tres capas: datos, correcciones y ánimos. Lo importante corta lo menos importante, una corrección suena como mucho cada 20 s y un ánimo cada 3 min, y en los últimos 10 s de un esfuerzo duro solo suena la cuenta atrás.
+- Nuevo en Ajustes › Durante el entrenamiento: «Cantidad de voz», con Completa (por defecto), Entrenador (datos y correcciones) o Solo datos.
+- A la mitad de una meta, la voz también dice cuánto te queda a tu ritmo, y en un fondo avisa si remas a más de 24 paladas por minuto.
+
 ## 0.58.1 · 2026-11-05
 
 - En 3D, los botes de las calles de los extremos vuelven a inclinarse hacia el punto de fuga, pero el remero va recto encima: la barca y el remero se pintan por separado, así el remero ya no se ve aplastado.
