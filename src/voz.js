@@ -7,6 +7,8 @@
 //  - capa 2: como mucho una cada 20 s; capa 3: como mucho una cada 3 min.
 //  - «Cantidad de voz» en Ajustes: 'datos' (solo capa 1), 'entrenador' (capas 1 y 2) o 'completa'.
 //  - silencio: mientras la sesión lo pida (últimos 10 s de un esfuerzo duro), las capas 2 y 3 callan.
+// Las frases de clase grabadas (voces-clase.js) suenan con su MP3; si el audio falla, con la voz del navegador.
+import { grabacionDe } from './voces-clase.js';
 
 let activa = true;
 let nivel = 'completa';
@@ -15,26 +17,32 @@ let ahoraFn = () => Date.now();
 const ultimos = new Map();
 const ultimaCapa = { 2: -Infinity, 3: -Infinity };
 let sonando = null; // capa de la frase que suena ahora, o null
+let audio = null; // grabación que suena ahora, o null
+const hablaAlgo = () => !!globalThis.speechSynthesis?.speaking || (audio != null && !audio.paused && !audio.ended);
+function callar() {
+  globalThis.speechSynthesis?.cancel();
+  if (audio) { audio.pause(); audio = null; }
+}
 
 export const CANTIDADES = { datos: 1, entrenador: 2, completa: 3 };
 export const ESPERA_CAPA = { 2: 20, 3: 180 };
 
 export function configurarVoz(encendida) {
   activa = encendida;
-  if (!encendida) window.speechSynthesis?.cancel();
+  if (!encendida) callar();
 }
 export function configurarCantidad(valor) { nivel = CANTIDADES[valor] ? valor : 'completa'; }
 // La sesión indica cuándo callar las capas 2 y 3. fn() → true para callar.
 export function fijarSilencio(fn) { silencio = typeof fn === 'function' ? fn : () => false; }
 // Solo para pruebas: reloj y estado iniciales.
 export function _reiniciar(reloj = () => Date.now()) {
-  ahoraFn = reloj; ultimos.clear(); ultimaCapa[2] = -Infinity; ultimaCapa[3] = -Infinity; sonando = null; silencio = () => false; nivel = 'completa'; activa = true;
+  ahoraFn = reloj; ultimos.clear(); ultimaCapa[2] = -Infinity; ultimaCapa[3] = -Infinity; sonando = null; audio = null; silencio = () => false; nivel = 'completa'; activa = true;
 }
 
 // ¿Debe sonar? Sin efectos: lo usan hablar() y las pruebas.
 export function dejaSonar(capa, { clave, cadaSeg = 0, ahora = ahoraFn() } = {}) {
   // Si el navegador ya no está hablando, nada suena (por si no llegó el aviso de fin, que en Android a veces falla).
-  if (sonando != null && !globalThis.speechSynthesis?.speaking) sonando = null;
+  if (sonando != null && !hablaAlgo()) sonando = null;
   if (capa > CANTIDADES[nivel]) return false;
   if (capa >= 2 && silencio()) return false;
   if (cadaSeg && clave != null && ultimos.has(clave) && ahora - ultimos.get(clave) < cadaSeg * 1000) return false;
@@ -52,16 +60,32 @@ export function hablar(texto, { clave = texto, cadaSeg = 0, urgente = false, cap
   if (capa >= 2) ultimaCapa[capa] = ahora;
   // Lo más importante corta lo que suena si es menos importante.
   const corta = urgente || (sonando != null && capa < sonando);
-  if (corta) speechSynthesis.cancel();
+  if (corta) callar();
+  sonando = corta || sonando == null ? capa : Math.min(sonando, capa);
+  const ruta = typeof Audio === 'function' ? grabacionDe(texto) : null;
+  // Una grabación solo suena si no hay nada sonando (no se pone en cola); si no, va la voz del navegador.
+  if (ruta && !hablaAlgo()) {
+    const a = new Audio(ruta);
+    audio = a;
+    const fin = () => { if (audio === a) audio = null; if (!hablaAlgo()) sonando = null; };
+    a.onended = fin;
+    a.onerror = () => { fin(); decir(texto); };
+    const p = a.play();
+    if (p?.catch) p.catch(() => { if (audio === a) { fin(); decir(texto); } });
+    return true;
+  }
+  decir(texto);
+  return true;
+}
+
+function decir(texto) {
   const u = new SpeechSynthesisUtterance(texto);
   u.lang = 'es-MX';
   u.rate = 1.05;
   const voz = speechSynthesis.getVoices().find((v) => v.lang.startsWith('es'));
   if (voz) u.voice = voz;
-  sonando = corta || sonando == null ? capa : Math.min(sonando, capa);
-  u.onend = u.onerror = () => { if (!speechSynthesis.speaking) sonando = null; };
+  u.onend = u.onerror = () => { if (!hablaAlgo()) sonando = null; };
   speechSynthesis.speak(u);
-  return true;
 }
 
 // Número de segundos en palabras cortas: 90 -> "1 minuto 30".
