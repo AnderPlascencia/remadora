@@ -24,7 +24,8 @@ console.log('emblemas: ok');
 
 // Palas de tu colección sobre la barca realista: una punta por remo en cada fotograma de cada atlas
 const { PALAS_ATLAS, REMEROS_ATLAS } = await import('../src/carrera.js');
-for (const [vista, A] of Object.entries(REMEROS_ATLAS)) {
+for (const vista of ['3d', '2d']) {
+  const A = REMEROS_ATLAS[vista];
   assert.equal(PALAS_ATLAS[vista].length, A.n, `${vista}: un fotograma por celda`);
   for (const fr of PALAS_ATLAS[vista]) {
     assert.equal(fr.length, 2);
