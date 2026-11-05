@@ -12,6 +12,13 @@ export const GRABADAS = {
     'El Valhalla se gana palada a palada': 'frase-5.mp3',
     'Respira, guerrero; el mar espera': 'frase-6.mp3',
   },
+  romano: {
+    'Un romano no se rinde. Nunca': 'frase-1.mp3',
+    'Paso de legión: firme y constante': 'frase-2.mp3',
+    'Roma no se hizo en un día': 'frase-3.mp3',
+    'Disciplina hoy, gloria mañana': 'frase-4.mp3',
+    'Marca el ritmo, legionario': 'frase-5.mp3',
+  },
 };
 
 const PORTEXTO = new Map(Object.entries(GRABADAS)

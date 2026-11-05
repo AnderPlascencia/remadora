@@ -1,14 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
+import { FRASES_CLASE } from '../src/voz-juego.js';
 import { GRABADAS, grabacionDe, RUTAS_GRABADAS } from '../src/voces-clase.js';
 import { _reiniciar } from '../src/voz.js';
 
 test('frases grabadas: cada ruta existe y se busca por el texto exacto', () => {
   assert.equal(Object.keys(GRABADAS.vikingo).length, 6);
+  assert.equal(Object.keys(GRABADAS.romano).length, 5);
   for (const r of RUTAS_GRABADAS) assert.ok(existsSync(new URL(`../${r}`, import.meta.url)), r);
   assert.equal(grabacionDe('Cada palada, un hachazo'), 'assets/voces/vikingo/frase-1.mp3');
   assert.equal(grabacionDe('Baja la potencia'), null);
+  // El texto grabado es el de las frases de clase, tal cual.
+  for (const [clase, frases] of Object.entries(GRABADAS)) {
+    const textos = FRASES_CLASE[clase].map(([t]) => t);
+    for (const t of Object.keys(frases)) assert.ok(textos.includes(t), `${clase}: ${t}`);
+  }
 });
 
 test('voz: una frase grabada suena con su MP3; si falla, con la voz del navegador', async () => {

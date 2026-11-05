@@ -22,7 +22,10 @@ const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'as
 const VIDEOS = { vikingo: ['assets/carrera/remo_vikingo.mp4', 'assets/carrera/remo_vikingo_v.mp4'] };
 
 // Frases de clase grabadas (~100 KB por clase, ver src/voces-clase.js): se guardan al instalar, sin bloquearlo.
-const VOCES = { vikingo: [1, 2, 3, 4, 5, 6].map((n) => `assets/voces/vikingo/frase-${n}.mp3`) };
+const VOCES = {
+  vikingo: [1, 2, 3, 4, 5, 6].map((n) => `assets/voces/vikingo/frase-${n}.mp3`),
+  romano: [1, 2, 3, 4, 5].map((n) => `assets/voces/romano/frase-${n}.mp3`),
+};
 
 // Solo se guardan respuestas completas: ni errores (404, 500), ni respuestas opacas, ni trozos de un vídeo (206).
 const sePuedeGuardar = (r) => !!r && r.ok && r.status !== 206;
