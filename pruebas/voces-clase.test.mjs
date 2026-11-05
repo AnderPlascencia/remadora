@@ -8,6 +8,7 @@ import { _reiniciar } from '../src/voz.js';
 test('frases grabadas: cada ruta existe y se busca por el texto exacto', () => {
   assert.equal(Object.keys(GRABADAS.vikingo).length, 6);
   assert.equal(Object.keys(GRABADAS.romano).length, 5);
+  assert.equal(Object.keys(GRABADAS.polinesio).length, 5);
   for (const r of RUTAS_GRABADAS) assert.ok(existsSync(new URL(`../${r}`, import.meta.url)), r);
   assert.equal(grabacionDe('Cada palada, un hachazo'), 'assets/voces/vikingo/frase-1.mp3');
   assert.equal(grabacionDe('Baja la potencia'), null);

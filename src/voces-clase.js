@@ -19,6 +19,13 @@ export const GRABADAS = {
     'Disciplina hoy, gloria mañana': 'frase-4.mp3',
     'Marca el ritmo, legionario': 'frase-5.mp3',
   },
+  polinesio: {
+    'El océano entero es tu camino': 'frase-1.mp3',
+    'Sigue las estrellas, navegante': 'frase-2.mp3',
+    'Una ola más, y otra': 'frase-3.mp3',
+    'Lejos se llega remando parejo': 'frase-4.mp3',
+    'La isla está detrás del horizonte': 'frase-5.mp3',
+  },
 };
 
 const PORTEXTO = new Map(Object.entries(GRABADAS)
