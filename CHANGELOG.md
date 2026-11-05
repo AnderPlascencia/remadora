@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.58.0 · 2026-11-05
+
+- En la carrera 3D y 2D, las palas de tu colección se ven en la barca realista: tus remos llevan la pintura de la pieza (los escudos vikingos, las calaveras piratas, la laca roja samurái, las olas talladas polinesias o los rayos de la legión) en cada momento de la palada.
+
 ## 0.57.0 · 2026-11-05
 
 Las velas de la colección se ven en la carrera.

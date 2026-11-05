@@ -537,7 +537,33 @@ function celdaRemero(vista, b) {
   const A = REMEROS_ATLAS[vista];
   // Parado, el remero espera con las palas planas (justo después del final de la palada)
   const f = Math.floor((b.spm ? b.fase : EMPUJE + 0.06) * A.n) % A.n;
-  return { im, A, sx: (f % A.cols) * A.w, sy: Math.floor(f / A.cols) * A.h };
+  return { im, A, f, sx: (f % A.cols) * A.w, sy: Math.floor(f / A.cols) * A.h };
+}
+
+// Punta de cada pala en cada fotograma del atlas (las mismas para las cinco clases): [x, y, ángulo] en píxeles de la
+// celda, con el ángulo del remo hacia la punta. Medido sobre los atlas con la madera más alejada del eje
+// (tools/blender/remo_agua/palas_atlas.py). Sirve para pintar encima las palas de tu colección.
+export const PALAS_ATLAS = {"3d":[[[30.0,63.0,3.09],[177.0,61.0,-0.24]],[[37.0,63.0,3.14],[172.0,62.0,-0.17]],[[41.0,64.0,3.14],[169.0,63.0,-0.05]],[[39.0,65.0,3.14],[170.0,65.0,0.03]],[[34.0,67.0,3.14],[175.0,66.0,-0.03]],[[30.0,69.0,3.01],[179.0,68.0,0.01]],[[25.0,70.0,3.09],[182.0,70.0,0.01]],[[21.0,72.0,3.1],[183.0,72.0,0.05]],[[14.0,76.0,2.99],[187.0,75.0,0.08]],[[12.0,82.0,2.85],[193.0,81.0,0.26]],[[24.0,85.0,2.61],[187.0,86.0,0.54]],[[22.0,83.0,2.81],[189.0,86.0,0.5]],[[11.0,82.0,2.92],[196.0,82.0,0.27]],[[10.0,80.0,2.86],[197.0,79.0,0.2]],[[9.0,78.0,2.94],[197.0,78.0,0.21]],[[9.0,76.0,2.98],[197.0,77.0,0.23]],[[9.0,74.0,3.0],[197.0,75.0,0.19]],[[9.0,74.0,2.88],[197.0,75.0,0.29]],[[10.0,73.0,2.86],[196.0,73.0,0.23]],[[11.0,71.0,2.94],[195.0,72.0,0.25]],[[13.0,70.0,2.92],[194.0,71.0,0.28]],[[16.0,68.0,3.0],[191.0,68.0,0.18]],[[19.0,66.0,3.05],[188.0,65.0,0.09]],[[24.0,63.0,-3.07],[183.0,62.0,-0.18]]],"2d":[[[117.0,26.0,-1.57],[120.0,135.0,0.79]],[[118.0,30.0,-1.57],[122.0,132.0,0.71]],[[114.0,34.0,-1.57],[117.0,127.0,0.68]],[[113.0,32.0,-1.57],[115.0,129.0,0.76]],[[97.0,45.0,-0.94],[110.0,130.0,0.91]],[[106.0,27.0,-1.06],[106.0,132.0,1.09]],[[102.0,25.0,-1.21],[102.0,133.0,1.24]],[[98.0,24.0,-1.36],[98.0,134.0,1.41]],[[93.0,23.0,-1.57],[94.0,135.0,1.49]],[[82.0,16.0,-1.89],[83.0,142.0,1.88]],[[74.0,22.0,-2.2],[72.0,139.0,2.26]],[[76.0,22.0,-2.08],[76.0,139.0,2.0]],[[80.0,13.0,-1.64],[78.0,145.0,1.91]],[[82.0,12.0,-1.72],[84.0,147.0,1.62]],[[82.0,12.0,-1.88],[84.0,147.0,1.79]],[[86.0,11.0,-1.74],[85.0,147.0,1.91]],[[87.0,11.0,-1.9],[94.0,148.0,1.34]],[[91.0,11.0,-1.81],[92.0,147.0,1.8]],[[94.0,11.0,-1.78],[95.0,147.0,1.75]],[[98.0,11.0,-1.61],[99.0,147.0,1.59]],[[101.0,12.0,-1.6],[102.0,146.0,1.54]],[[106.0,13.0,-1.47],[106.0,145.0,1.47]],[[111.0,16.0,-1.26],[111.0,143.0,1.16]],[[116.0,19.0,-0.98],[116.0,140.0,0.99]]]};
+// Largo y ancho de la pala (m): la del remo corto de remo_agua.py
+const PALA_REAL = { largo: 0.34, ancho: 0.15 };
+// Pinta las palas de tu colección sobre las del atlas: tela de la pala con el filo del color de su marca.
+// (ox, oy) es dónde cae la esquina de la celda y (kx, ky) los píxeles de pantalla por píxel del atlas.
+function palasReal(ctx, vista, f, palas, ox, oy, kx, ky) {
+  const A = REMEROS_ATLAS[vista];
+  const L = PALA_REAL.largo * A.ppm, W = PALA_REAL.ancho * A.ppm;
+  ctx.save();
+  ctx.fillStyle = palas.tela;
+  ctx.strokeStyle = palas.marca;
+  ctx.lineWidth = Math.max(1, 0.03 * A.ppm * Math.min(kx, ky));
+  for (const [x, y, a] of PALAS_ATLAS[vista][f] || []) {
+    const cx = ox + (x - Math.cos(a) * L * 0.45) * kx;
+    const cy = oy + (y - Math.sin(a) * L * 0.45) * ky;
+    const ang = Math.atan2(Math.sin(a) * ky, Math.cos(a) * kx);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, Math.max(2, L * 0.5 * Math.hypot(Math.cos(a) * kx, Math.sin(a) * ky)), Math.max(1, W * 0.5 * Math.min(kx, ky)), ang, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 // La vista realista es un vídeo de 720 px de alto escalado: más de 1,5 píxeles por punto no se nota y
@@ -1249,6 +1275,7 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
     const { im, A, sx, sy } = real;
     const ex = x - largo * (BARCA_REAL.proa / BARCA_REAL.largo);
     ctx.drawImage(im, sx, sy, A.w, A.h, ex - A.ancla[0] * kx, y - A.ancla[1] * ky, A.w * kx, A.h * ky);
+    if (deco?.palas) palasReal(ctx, '2d', real.f, deco.palas, ex - A.ancla[0] * kx, y - A.ancla[1] * ky, kx, ky);
     ctx.shadowBlur = 0;
     if (deco) velaReal2d(ctx, x, y, largo, ancho, b, deco, t, kx * A.ppm);
     ctx.globalAlpha = 1;
@@ -2368,7 +2395,7 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   }
 }
 
-function remero3d(ctx, P, b, { im, A, sx, sy }, t) {
+function remero3d(ctx, P, b, { im, A, f, sx, sy }, t) {
   const q = P(b.x, b.dist - 0.4, 0);
   const q1 = P(b.x + 1, b.dist - 0.4, 0);
   if (!q || !q1) return;
@@ -2387,6 +2414,8 @@ function remero3d(ctx, P, b, { im, A, sx, sy }, t) {
   ctx.save();
   ctx.transform(1, 0, sesgo, 1, -sesgo * q.y, 0);
   ctx.drawImage(im, sx, sy, A.w, A.h, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, A.w * kx, A.h * ky);
+  const palas = b.yo ? decoDe(b)?.palas : null;
+  if (palas) palasReal(ctx, '3d', f, palas, q.x - A.ancla[0] * kx, q.y - A.ancla[1] * ky, kx, ky);
   ctx.restore();
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
