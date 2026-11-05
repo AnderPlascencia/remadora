@@ -4,10 +4,10 @@ Lo que cambia en cada versión de Rower. La versión de la app vive en `src/vers
 
 ## 0.61.0 · 2026-11-05
 
-El vikingo, el romano, el polinesio y el samurái hablan con su propia voz.
+Cada clase habla con su propia voz.
 
-- Si tu clase es vikingo, romano, polinesio o samurái, sus frases de ánimo («Cada palada, un hachazo», «Un romano no se rinde. Nunca»…) suenan con la voz grabada del personaje: el vikingo grave, rasposo y con autoridad; el romano firme y resonante, como un comandante; el polinesio cálido y pausado, como un guía ancestral; el samurái sereno y controlado. Los datos (watts, ritmo, tiempo) siguen con la voz de siempre. Si el audio no se puede reproducir, la frase la dice la voz de siempre.
-- Las grabaciones se guardan al instalar la app, así que también suenan sin conexión. El pirata tendrá su voz más adelante.
+- Con clase elegida, sus frases de ánimo («Cada palada, un hachazo», «Un romano no se rinde. Nunca»…) suenan con la voz grabada del personaje: el vikingo grave, rasposo y con autoridad; el romano firme y resonante, como un comandante; el polinesio cálido y pausado, como un guía ancestral; el samurái sereno y controlado; el pirata, un capitán cavernoso y amenazante. Los datos (watts, ritmo, tiempo) siguen con la voz de siempre. Si el audio no se puede reproducir, la frase la dice la voz de siempre.
+- Las grabaciones se guardan al instalar la app, así que también suenan sin conexión.
 
 ## 0.60.0 · 2026-11-05
 

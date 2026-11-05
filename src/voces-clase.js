@@ -35,6 +35,13 @@ export const GRABADAS = {
     'Corta el agua. Ahora': 'frase-6.mp3',
     'Un solo corte, con todo': 'frase-7.mp3',
   },
+  pirata: {
+    'Al abordaje, que se escapan': 'frase-1.mp3',
+    'Viento en popa, marinero': 'frase-2.mp3',
+    'Ese botín es tuyo': 'frase-3.mp3',
+    'Rápido y sin aviso': 'frase-4.mp3',
+    'Nadie le roba el tesoro a un pirata': 'frase-5.mp3',
+  },
 };
 
 const PORTEXTO = new Map(Object.entries(GRABADAS)
