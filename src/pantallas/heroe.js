@@ -3,6 +3,7 @@ import { PAISAJES, VELAS, srcRemero, srcRemeroSolo, comprarPaisaje, comprarVelas
 import * as CB from '../coleccion-bote.js';
 import * as H from '../historial.js';
 import { hablar } from '../voz.js';
+import { fraseGrabadaAlAzar } from '../voces-clase.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
 import * as O from '../objetos.js';
@@ -43,6 +44,12 @@ export function arrancarHeroe() {
     if (!b) return;
     await prepararEntrenamiento(b.dataset.preparar, b.dataset.reto ? J.DIFICULTAD_RETO[b.dataset.reto] : null);
   });
+  // Toca a tu héroe para oír una de sus frases con su voz (sirve también para comprobar que los audios están).
+  for (const sel of ['#heroe-avatar', '#ficha-figura']) {
+    const el = $(sel);
+    el.addEventListener('click', oirHeroe);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); oirHeroe(); } });
+  }
   $('#linea-nivel').addEventListener('click', () => {
     if ($('#linea-nivel').dataset.talentos) seccionHeroe = 'talentos';
     irA('heroe');
@@ -202,6 +209,20 @@ export function guardarPersonaje(cambios) {
   ajustes.escribir('personaje', JSON.stringify({ ...leerPersonaje(), ...cambios }));
 }
 const emblema = (c) => `<svg viewBox="0 0 24 24" aria-hidden="true">${c.icono}</svg>`;
+// Frase de tu héroe con su voz grabada. Suena aunque la voz de la sesión esté apagada: la pediste tú.
+let audioHeroe = null;
+let ultimaFrase = null;
+export function oirHeroe() {
+  const per = leerPersonaje();
+  if (!per.clase) return;
+  const f = fraseGrabadaAlAzar(J.claseDe(per.clase).clave, ultimaFrase);
+  if (!f) { toast('Tu héroe todavía no tiene voz propia.'); return; }
+  ultimaFrase = f.texto;
+  audioHeroe?.pause();
+  audioHeroe = new Audio(f.ruta);
+  audioHeroe.play().catch(() => toast(`No se pudo reproducir «${f.texto}».`));
+}
+
 // Ilustración del personaje según su clase y el rango de su nivel (assets/heroes, generados por tools/build-app-assets.py).
 export const srcHeroe = (clave, nivel, retrato = false) => `assets/heroes/${clave}_${J.rangoDe(nivel).id}${retrato ? '_retrato' : ''}.webp`;
 function figuraHeroe(per, nivel, ancho) {

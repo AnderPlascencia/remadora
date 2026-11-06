@@ -582,6 +582,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .hoja-xp .subio { display: block; font-weight: 800; font-size: var(--t-m); margin-top: 4px; }
 .hoja-xp ul { margin: 8px 0 0; padding: 0; list-style: none; font-size: var(--t-s); color: var(--texto-suave); }
 .hoja-xp li { display: flex; justify-content: space-between; padding: 2px 0; }
+.heroe-avatar, #ficha-figura { cursor: pointer; }
 .heroe-avatar { position: relative; flex: none; width: 84px; height: 84px; border-radius: var(--r-medio); background: radial-gradient(circle at 50% 35%, #1D3442, #071015); overflow: hidden; }
 .heroe-avatar svg { display: block; }
 .heroe-avatar > img { display: block; width: 84px; height: 84px; object-fit: cover; }
