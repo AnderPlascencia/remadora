@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { FRASES_CLASE } from '../src/voz-juego.js';
-import { GRABADAS, grabacionDe, RUTAS_GRABADAS } from '../src/voces-clase.js';
+import { GRABADAS, grabacionDe, RUTAS_GRABADAS, fraseGrabadaAlAzar } from '../src/voces-clase.js';
 import { _reiniciar } from '../src/voz.js';
 
 test('frases grabadas: cada ruta existe y se busca por el texto exacto', () => {
@@ -50,4 +50,11 @@ test('voz: una frase grabada suena con su MP3; si falla, con la voz del navegado
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(dichas, ['Baja la potencia', 'Rema como quien abre el mar']);
   delete globalThis.window; delete globalThis.speechSynthesis; delete globalThis.SpeechSynthesisUtterance; delete globalThis.Audio;
+});
+
+test('frase al azar del héroe: de su clase, sin repetir la anterior', () => {
+  const f = fraseGrabadaAlAzar('vikingo', null, () => 0);
+  assert.deepEqual(f, { texto: 'Cada palada, un hachazo', ruta: 'assets/voces/vikingo/frase-1.mp3' });
+  assert.notEqual(fraseGrabadaAlAzar('vikingo', f.texto, () => 0).texto, f.texto);
+  assert.equal(fraseGrabadaAlAzar('nadie'), null);
 });

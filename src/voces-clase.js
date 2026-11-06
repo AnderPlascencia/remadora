@@ -51,3 +51,12 @@ const PORTEXTO = new Map(Object.entries(GRABADAS)
 export const grabacionDe = (texto) => PORTEXTO.get(texto) ?? null;
 // Todas las rutas (para guardarlas sin conexión).
 export const RUTAS_GRABADAS = [...PORTEXTO.values()];
+
+// Una frase grabada de la clase al azar, distinta de la anterior si hay más de una: { texto, ruta } o null.
+export function fraseGrabadaAlAzar(clase, anterior = null, rnd = Math.random) {
+  const frases = Object.entries(GRABADAS[clase] || {});
+  const libres = frases.length > 1 ? frases.filter(([t]) => t !== anterior) : frases;
+  if (!libres.length) return null;
+  const [texto, archivo] = libres[Math.floor(rnd() * libres.length) % libres.length];
+  return { texto, ruta: dir(clase) + archivo };
+}
