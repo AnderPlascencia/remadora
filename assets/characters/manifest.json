@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generadoPor": "tools/build-manifest.mjs",
-  "total": 90,
+  "total": 99,
   "assets": [
     {
       "id": "vikingo.novato.cuerpo",
@@ -16,7 +16,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 364178,
+      "bytes": 318580,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -27,23 +27,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            300,
-            75,
-            437,
-            233
-          ],
-          "escala": 5.187,
-          "cajaFigura": [
-            5,
-            9,
-            91,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7162
         }
       }
     },
@@ -60,7 +48,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 79908,
+      "bytes": 90818,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -68,23 +56,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            300,
-            75,
-            437,
-            233
-          ],
-          "escala": 5.187,
-          "cajaFigura": [
-            5,
-            9,
-            91,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7162
+        }
+      }
+    },
+    {
+      "id": "vikingo.novato.fuente",
+      "clase": "vikingo",
+      "rango": "novato",
+      "nombre": "vikingo_novato_source.jpg",
+      "ruta": "assets/characters/vikingo/novato/vikingo_novato_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 488930,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.7162
         }
       }
     },
@@ -101,7 +106,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 374942,
+      "bytes": 316218,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -112,23 +117,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            437,
-            75,
-            568,
-            233
-          ],
-          "escala": 5.187,
-          "cajaFigura": [
-            1,
-            9,
-            89,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7156
         }
       }
     },
@@ -145,7 +138,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 80749,
+      "bytes": 87676,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -153,23 +146,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            437,
-            75,
-            568,
-            233
-          ],
-          "escala": 5.187,
-          "cajaFigura": [
-            1,
-            9,
-            89,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7156
+        }
+      }
+    },
+    {
+      "id": "vikingo.aprendiz.fuente",
+      "clase": "vikingo",
+      "rango": "aprendiz",
+      "nombre": "vikingo_aprendiz_source.jpg",
+      "ruta": "assets/characters/vikingo/aprendiz/vikingo_aprendiz_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 487038,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.7156
         }
       }
     },
@@ -186,7 +196,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 391714,
+      "bytes": 308604,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -197,23 +207,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            568,
-            75,
-            700,
-            233
-          ],
-          "escala": 5.187,
-          "cajaFigura": [
-            3,
-            9,
-            88,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7116
         }
       }
     },
@@ -230,7 +228,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 81296,
+      "bytes": 79065,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -238,23 +236,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            568,
-            75,
-            700,
-            233
-          ],
-          "escala": 5.187,
-          "cajaFigura": [
-            3,
-            9,
-            88,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7116
+        }
+      }
+    },
+    {
+      "id": "vikingo.combatiente.fuente",
+      "clase": "vikingo",
+      "rango": "combatiente",
+      "nombre": "vikingo_combatiente_source.jpg",
+      "ruta": "assets/characters/vikingo/combatiente/vikingo_combatiente_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 483461,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.7116
         }
       }
     },
@@ -271,7 +286,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 418320,
+      "bytes": 316698,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -282,23 +297,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            700,
-            75,
-            837,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            3,
-            8,
-            95,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7116
         }
       }
     },
@@ -315,7 +318,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 83852,
+      "bytes": 82911,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -323,23 +326,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            700,
-            75,
-            837,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            3,
-            8,
-            95,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7116
+        }
+      }
+    },
+    {
+      "id": "vikingo.guerrero.fuente",
+      "clase": "vikingo",
+      "rango": "guerrero",
+      "nombre": "vikingo_guerrero_source.jpg",
+      "ruta": "assets/characters/vikingo/guerrero/vikingo_guerrero_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 482622,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.7116
         }
       }
     },
@@ -356,7 +376,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 457306,
+      "bytes": 367339,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -367,23 +387,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            837,
-            75,
-            977,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            1,
-            8,
-            100,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6975
         }
       }
     },
@@ -400,7 +408,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 82888,
+      "bytes": 88947,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -408,23 +416,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            837,
-            75,
-            977,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            1,
-            8,
-            100,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6975
+        }
+      }
+    },
+    {
+      "id": "vikingo.veterano.fuente",
+      "clase": "vikingo",
+      "rango": "veterano",
+      "nombre": "vikingo_veterano_source.jpg",
+      "ruta": "assets/characters/vikingo/veterano/vikingo_veterano_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 522409,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6975
         }
       }
     },
@@ -441,7 +466,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 510813,
+      "bytes": 360256,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -452,23 +477,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            977,
-            75,
-            1115,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            106,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6975
         }
       }
     },
@@ -485,7 +498,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 87474,
+      "bytes": 101802,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -493,23 +506,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            977,
-            75,
-            1115,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            106,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6975
+        }
+      }
+    },
+    {
+      "id": "vikingo.campeon.fuente",
+      "clase": "vikingo",
+      "rango": "campeon",
+      "nombre": "vikingo_campeon_source.jpg",
+      "ruta": "assets/characters/vikingo/campeon/vikingo_campeon_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 536037,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6975
         }
       }
     },
@@ -526,7 +556,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 485870,
+      "bytes": 363087,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -537,23 +567,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1115,
-            75,
-            1254,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            107,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6975
         }
       }
     },
@@ -570,7 +588,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 85720,
+      "bytes": 102201,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -578,23 +596,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1115,
-            75,
-            1254,
-            233
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            107,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6975
+        }
+      }
+    },
+    {
+      "id": "vikingo.elite.fuente",
+      "clase": "vikingo",
+      "rango": "elite",
+      "nombre": "vikingo_elite_source.jpg",
+      "ruta": "assets/characters/vikingo/elite/vikingo_elite_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 559719,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6975
         }
       }
     },
@@ -611,7 +646,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 508447,
+      "bytes": 391533,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -622,23 +657,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1254,
-            75,
-            1387,
-            233
-          ],
-          "escala": 5.118,
-          "cajaFigura": [
-            0,
-            7,
-            101,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.707
         }
       }
     },
@@ -655,7 +678,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 90512,
+      "bytes": 107533,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -663,23 +686,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1254,
-            75,
-            1387,
-            233
-          ],
-          "escala": 5.118,
-          "cajaFigura": [
-            0,
-            7,
-            101,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.707
+        }
+      }
+    },
+    {
+      "id": "vikingo.maestro.fuente",
+      "clase": "vikingo",
+      "rango": "maestro",
+      "nombre": "vikingo_maestro_source.jpg",
+      "ruta": "assets/characters/vikingo/maestro/vikingo_maestro_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 463230,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.707
         }
       }
     },
@@ -696,7 +736,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 579604,
+      "bytes": 380587,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -707,23 +747,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1387,
-            75,
-            1536,
-            233
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            0,
-            5,
-            116,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.707
         }
       }
     },
@@ -740,7 +768,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 93260,
+      "bytes": 96571,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -748,23 +776,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1387,
-            75,
-            1536,
-            233
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            0,
-            5,
-            116,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.707
+        }
+      }
+    },
+    {
+      "id": "vikingo.legendario.fuente",
+      "clase": "vikingo",
+      "rango": "legendario",
+      "nombre": "vikingo_legendario_source.jpg",
+      "ruta": "assets/characters/vikingo/legendario/vikingo_legendario_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 477070,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.707
         }
       }
     },

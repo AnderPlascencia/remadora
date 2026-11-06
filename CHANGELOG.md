@@ -2,6 +2,11 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.61.2 · 2026-11-06
+
+- El vikingo estrena ilustraciones nuevas para sus 9 rangos, de Novato a Legendario: pasa de joven con hacha a guerrero con casco, escudo y capa de piel. Se ven en la pantalla Héroe, en la lista de niveles y en el retrato de arriba.
+- La herramienta que importa personajes sobre fondo verde ajusta el recorte al tono del verde, para que un fondo verde apagado no deje velo alrededor de la figura.
+
 ## 0.61.1 · 2026-11-06
 
 - Toca a tu héroe en la pantalla Héroe (el retrato de arriba o la figura grande) y dice una de sus frases con su propia voz. Sirve para oír tu personaje cuando quieras y para comprobar que sus audios están instalados.

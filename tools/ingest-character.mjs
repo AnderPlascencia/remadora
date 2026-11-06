@@ -45,11 +45,14 @@ const res = await p.evaluate(async ({ datos, F, croma }) => {
     const muestras = [[2, 2], [w - 3, 2], [2, h - 3], [w - 3, h - 3]].map(([x, y]) => { const o = (y * w + x) * 4; return [px[o], px[o + 1], px[o + 2]]; });
     const fondo = [0, 1, 2].map((i) => muestras.reduce((s, m) => s + m[i], 0) / muestras.length);
     if (!(fondo[1] > fondo[0] + 40 && fondo[1] > fondo[2] + 40)) return { error: `el fondo no parece verde croma (rgb ${fondo.map(Math.round).join(',')})` };
+    // Umbrales relativos a la verdosidad del fondo: un croma apagado (verde oscuro de JPEG) dejaba un velo.
+    const vFondo = fondo[1] - Math.max(fondo[0], fondo[2]);
+    const vTransp = Math.min(70, vFondo * 0.6), vOpaco = Math.min(25, vFondo * 0.25);
     for (let i = 0; i < px.length; i += 4) {
       const r = px[i], g = px[i + 1], bl = px[i + 2];
       // "Verdosidad": cuánto supera el verde al mayor de rojo y azul.
       const v = g - Math.max(r, bl);
-      const a = v > 70 ? 0 : v < 25 ? 1 : 1 - (v - 25) / 45;
+      const a = v > vTransp ? 0 : v < vOpaco ? 1 : 1 - (v - vOpaco) / (vTransp - vOpaco);
       px[i + 3] = Math.round(px[i + 3] * a);
       if (a > 0 && v > 0) px[i + 1] = Math.max(r, bl) + Math.min(v, 6); // quita el halo verde
     }
