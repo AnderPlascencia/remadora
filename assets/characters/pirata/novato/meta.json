@@ -3,35 +3,29 @@
   "rango": "novato",
   "versionMaestro": "3.0.0",
   "herramienta": {
-    "nombre": "tools/extract-sheet.py",
-    "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+    "nombre": "tools/ingest-character.mjs",
+    "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
-      "celda": [
-        300,
-        245,
-        437,
-        403
-      ],
-      "escala": 5.257,
-      "cajaFigura": [
-        9,
-        11,
-        87,
-        158
-      ],
-      "retrato": true
+      "croma": true,
+      "escala": 0.6994
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
-    "archivo": null,
-    "lamina": "assets/characters/_source/lamina_clases_v1.png",
-    "generador": "sin indicar (lámina aportada por el usuario)",
-    "licencia": "según los términos del generador",
-    "resolucionOrigen": [
-      78,
-      147
-    ]
+    "archivo": "pirata_novato_source.jpg",
+    "generador": "Gemini (imagen aportada por Ander)",
+    "prompt": "sin indicar",
+    "origen": {
+      "ancho": 896,
+      "alto": 1200,
+      "caja": {
+        "x0": 144,
+        "y0": 40,
+        "x1": 835,
+        "y1": 1144
+      }
+    },
+    "licencia": "según los términos del generador"
   },
   "pivote": {
     "x": 0.5,

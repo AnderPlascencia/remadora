@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generadoPor": "tools/build-manifest.mjs",
-  "total": 99,
+  "total": 108,
   "assets": [
     {
       "id": "vikingo.novato.cuerpo",
@@ -826,7 +826,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 359147,
+      "bytes": 332148,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -837,23 +837,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            300,
-            245,
-            437,
-            403
-          ],
-          "escala": 5.257,
-          "cajaFigura": [
-            9,
-            11,
-            87,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6994
         }
       }
     },
@@ -870,7 +858,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 77998,
+      "bytes": 65265,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -878,23 +866,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            300,
-            245,
-            437,
-            403
-          ],
-          "escala": 5.257,
-          "cajaFigura": [
-            9,
-            11,
-            87,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6994
+        }
+      }
+    },
+    {
+      "id": "pirata.novato.fuente",
+      "clase": "pirata",
+      "rango": "novato",
+      "nombre": "pirata_novato_source.jpg",
+      "ruta": "assets/characters/pirata/novato/pirata_novato_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 500628,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6994
         }
       }
     },
@@ -911,7 +916,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 380191,
+      "bytes": 356751,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -922,23 +927,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            437,
-            245,
-            568,
-            403
-          ],
-          "escala": 5.293,
-          "cajaFigura": [
-            6,
-            12,
-            87,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6987
         }
       }
     },
@@ -955,7 +948,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 78657,
+      "bytes": 66953,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -963,23 +956,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            437,
-            245,
-            568,
-            403
-          ],
-          "escala": 5.293,
-          "cajaFigura": [
-            6,
-            12,
-            87,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6987
+        }
+      }
+    },
+    {
+      "id": "pirata.aprendiz.fuente",
+      "clase": "pirata",
+      "rango": "aprendiz",
+      "nombre": "pirata_aprendiz_source.jpg",
+      "ruta": "assets/characters/pirata/aprendiz/pirata_aprendiz_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 520856,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6987
         }
       }
     },
@@ -996,7 +1006,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 402905,
+      "bytes": 364929,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1007,23 +1017,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            568,
-            245,
-            700,
-            403
-          ],
-          "escala": 5.257,
-          "cajaFigura": [
-            1,
-            11,
-            87,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6987
         }
       }
     },
@@ -1040,7 +1038,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 83851,
+      "bytes": 69401,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1048,23 +1046,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            568,
-            245,
-            700,
-            403
-          ],
-          "escala": 5.257,
-          "cajaFigura": [
-            1,
-            11,
-            87,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6987
+        }
+      }
+    },
+    {
+      "id": "pirata.combatiente.fuente",
+      "clase": "pirata",
+      "rango": "combatiente",
+      "nombre": "pirata_combatiente_source.jpg",
+      "ruta": "assets/characters/pirata/combatiente/pirata_combatiente_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 535222,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6987
         }
       }
     },
@@ -1081,7 +1096,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 417603,
+      "bytes": 391422,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1092,23 +1107,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            700,
-            245,
-            837,
-            403
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            99,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6987
         }
       }
     },
@@ -1125,7 +1128,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 86096,
+      "bytes": 73770,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1133,23 +1136,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            700,
-            245,
-            837,
-            403
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            99,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6987
+        }
+      }
+    },
+    {
+      "id": "pirata.guerrero.fuente",
+      "clase": "pirata",
+      "rango": "guerrero",
+      "nombre": "pirata_guerrero_source.jpg",
+      "ruta": "assets/characters/pirata/guerrero/pirata_guerrero_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 502019,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6987
         }
       }
     },
@@ -1166,7 +1186,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 408038,
+      "bytes": 436475,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1177,23 +1197,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            837,
-            245,
-            977,
-            403
-          ],
-          "escala": 5.084,
-          "cajaFigura": [
-            5,
-            6,
-            97,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7019
         }
       }
     },
@@ -1210,7 +1218,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 88166,
+      "bytes": 92440,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1218,23 +1226,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            837,
-            245,
-            977,
-            403
-          ],
-          "escala": 5.084,
-          "cajaFigura": [
-            5,
-            6,
-            97,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7019
+        }
+      }
+    },
+    {
+      "id": "pirata.veterano.fuente",
+      "clase": "pirata",
+      "rango": "veterano",
+      "nombre": "pirata_veterano_source.jpg",
+      "ruta": "assets/characters/pirata/veterano/pirata_veterano_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 596591,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.7019
         }
       }
     },
@@ -1251,7 +1276,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 433062,
+      "bytes": 460745,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1262,23 +1287,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            977,
-            245,
-            1115,
-            403
-          ],
-          "escala": 5.084,
-          "cajaFigura": [
-            4,
-            6,
-            102,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7019
         }
       }
     },
@@ -1295,7 +1308,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 93028,
+      "bytes": 109210,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1303,23 +1316,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            977,
-            245,
-            1115,
-            403
-          ],
-          "escala": 5.084,
-          "cajaFigura": [
-            4,
-            6,
-            102,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7019
+        }
+      }
+    },
+    {
+      "id": "pirata.campeon.fuente",
+      "clase": "pirata",
+      "rango": "campeon",
+      "nombre": "pirata_campeon_source.jpg",
+      "ruta": "assets/characters/pirata/campeon/pirata_campeon_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 612204,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.7019
         }
       }
     },
@@ -1336,7 +1366,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 487370,
+      "bytes": 479264,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1347,23 +1377,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1115,
-            245,
-            1254,
-            403
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            3,
-            5,
-            108,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6994
         }
       }
     },
@@ -1380,7 +1398,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 100313,
+      "bytes": 103156,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1388,23 +1406,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1115,
-            245,
-            1254,
-            403
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            3,
-            5,
-            108,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6994
+        }
+      }
+    },
+    {
+      "id": "pirata.elite.fuente",
+      "clase": "pirata",
+      "rango": "elite",
+      "nombre": "pirata_elite_source.jpg",
+      "ruta": "assets/characters/pirata/elite/pirata_elite_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 640221,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6994
         }
       }
     },
@@ -1421,7 +1456,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 470909,
+      "bytes": 575695,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1432,23 +1467,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1254,
-            245,
-            1387,
-            403
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            95,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7013
         }
       }
     },
@@ -1465,7 +1488,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 101833,
+      "bytes": 108454,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1473,23 +1496,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1254,
-            245,
-            1387,
-            403
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            8,
-            95,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.7013
+        }
+      }
+    },
+    {
+      "id": "pirata.maestro.fuente",
+      "clase": "pirata",
+      "rango": "maestro",
+      "nombre": "pirata_maestro_source.jpg",
+      "ruta": "assets/characters/pirata/maestro/pirata_maestro_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 673921,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.7013
         }
       }
     },
@@ -1506,7 +1546,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 580656,
+      "bytes": 821366,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1517,23 +1557,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1387,
-            245,
-            1536,
-            403
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            0,
-            5,
-            116,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6888
         }
       }
     },
@@ -1550,7 +1578,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 100964,
+      "bytes": 119919,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1558,23 +1586,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1387,
-            245,
-            1536,
-            403
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            0,
-            5,
-            116,
-            158
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 0.6888
+        }
+      }
+    },
+    {
+      "id": "pirata.legendario.fuente",
+      "clase": "pirata",
+      "rango": "legendario",
+      "nombre": "pirata_legendario_source.jpg",
+      "ruta": "assets/characters/pirata/legendario/pirata_legendario_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 850188,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 0.6888
         }
       }
     },

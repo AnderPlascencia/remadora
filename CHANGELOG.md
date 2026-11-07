@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.61.3 · 2026-11-07
+
+- El pirata estrena ilustraciones nuevas para sus 9 rangos, de Novato a Legendario: de grumete descalzo con pañuelo a capitán con abrigo, loro, capa roja y, en Legendario, armadura con runas turquesa y bandera. Se ven en la pantalla Héroe, en la lista de niveles y en el retrato de arriba.
+
 ## 0.61.2 · 2026-11-06
 
 - El vikingo estrena ilustraciones nuevas para sus 9 rangos, de Novato a Legendario: pasa de joven con hacha a guerrero con casco, escudo y capa de piel. Se ven en la pantalla Héroe, en la lista de niveles y en el retrato de arriba.
