@@ -2,7 +2,7 @@
 // Cada cambio deja una frase en programa.avisos para explicarlo en la pantalla Hoy.
 // Sin dependencias de la interfaz: recibe el plan y devuelve el plan nuevo.
 import * as E from './estadisticas.js';
-import { estadoDias, sesionFondo, semanaDe, TIPOS_DUROS } from './programa.js';
+import { estadoDias, repartirSemana, semanaFlexible, sesionFondo, semanaDe, TIPOS_DUROS } from './programa.js';
 import { tipoPlan, tipoSesion } from './capacidades.js';
 
 const DIA = 864e5;
@@ -77,7 +77,8 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
   const recientes = orden.filter((s) => s.fecha > ultima);
   if (orden.length) p.ultimaSesion = orden.at(-1).fecha;
   const diaHoy = p.dias.find((d) => d.fecha === hoy);
-  const hechoHoy = diaHoy && orden.some((s) => E.claveDia(s.fecha) === hoy && s.entrenamiento === diaHoy.ent);
+  // Hecha hoy o ya otro día de su semana (los días del plan son una sugerencia).
+  const hechoHoy = diaHoy && estadoDias(p, orden, ahora)[p.dias.indexOf(diaHoy)].estado === 'hecho';
 
   // 1. Cansancio: frescura muy baja, carga disparada o mala recuperación de pulso → hoy fondo suave en vez de duro.
   if (diaHoy && !hechoHoy && DURO.has(tipoDe(diaHoy.ent))) {
@@ -130,22 +131,11 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
     }
   }
 
-  // 4. Sesión dura perdida en los últimos 3 días: pasa a hoy si hoy toca fondo o descanso y ayer no fue duro.
-  const estados = estadoDias(p, orden, ahora);
-  const perdida = p.dias.filter((d, i) => estados[i].estado === 'perdido' && d.fecha >= E.claveDia(ahora - 3 * DIA) && !d.movido && DURO.has(tipoDe(d.ent))).at(-1);
-  const ayerDuro = orden.some((s) => E.claveDia(s.fecha) === E.claveDia(ahora - DIA) && DURO.has(tipoSesion(s, ftp)));
-  const hoyLibre = !diaHoy || (!hechoHoy && !DURO.has(tipoDe(diaHoy.ent)) && !avisos.length);
-  if (perdida && hoyLibre && !ayerDuro && !orden.some((s) => E.claveDia(s.fecha) === hoy)) {
-    perdida.movido = true;
-    if (diaHoy) { diaHoy.original ??= diaHoy.ent; diaHoy.ent = perdida.ent; }
-    else p.dias.push({ fecha: hoy, ent: perdida.ent, original: null });
-    p.dias.sort((x, y) => (x.fecha < y.fecha ? -1 : 1));
-    avisos.push(`No remaste «${perdida.ent}» el ${new Date(`${perdida.fecha}T12:00`).toLocaleDateString('es-MX', { weekday: 'long' })}: la pasé a hoy${diaHoy ? ' en lugar del fondo' : ''}.`);
-  }
+  // 4. (Ya no se mueven sesiones perdidas a otro día: la semana es flexible y la sesión del día ofrece lo que
+  //    falte de la semana cuando encaja; ver sesionDelDia.)
 
   // 5. Semana floja (menos de la mitad de lo planeado): el resto del plan se corre una semana para repetirla.
   const lunes = E.inicioPeriodo(ahora, 'semana');
-  // Se recalcula: el paso 4 puede haber añadido o reordenado días.
   const semanaPasada = estadoDias(p, orden, ahora).map((d) => [d, d.estado]).filter(([d]) => { const t = new Date(`${d.fecha}T12:00`).getTime(); return t >= lunes - 7 * DIA && t < lunes; });
   const claveSemana = E.claveDia(lunes);
   if (semanaPasada.length >= 2 && p.repetida !== claveSemana && new Date(`${p.inicio}T12:00`).getTime() < lunes - 7 * DIA) {
@@ -165,8 +155,9 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
 }
 
 // ---------- Sesión del día ----------
-// Decide qué remar hoy. Con plan, manda el plan: la sesión de hoy, o en un día libre una sesión de esta semana
-// que se quedó sin hacer (si no junta dos duras). Sin plan, elige de los entrenamientos base con un esquema
+// Decide qué remar hoy. Con plan, manda la semana del plan, no el día: ofrece lo que falta de la semana en su orden
+// (lo atrasado primero) si encaja con los días que quedan, sin juntar dos duras en días seguidos ni proponer una dura
+// si vienes cargado. Si vas al día y hay margen, hoy se descansa y se puede adelantar la próxima (adelantar). Sin plan, elige de los entrenamientos base con un esquema
 // sencillo: como mucho 2 sesiones duras por semana, nunca dos duras seguidas, un fondo largo cada semana y
 // suave cuando vienes cargado.
 // Devuelve { fuente, ent (nombre, con plan) o id (base, sin plan), motivo, alternativa? } o null.
@@ -176,53 +167,60 @@ const DIA_SEM = (clave) => new Date(`${clave}T12:00`).toLocaleDateString('es-MX'
 export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp = 0, cuerpo = null, ahora = Date.now() }) {
   const hoy = E.claveDia(ahora);
   const ayer = E.claveDia(ahora - DIA);
-  const manana = E.claveDia(ahora + DIA);
   const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
   const duro = (n) => DURO.has(tipoPlan(buscar(n))) || /^Prueba/.test(n);
   const remadoHoy = sesiones.some((s) => E.claveDia(s.fecha) === hoy);
-  const ayerDuro = sesiones.some((s) => E.claveDia(s.fecha) === ayer && DURO.has(tipoSesion(s, ftp)));
+  // Dura por sus watts (con FTP) o porque era una sesión dura del plan (sin FTP no hay watts que medir).
+  const ayerDuro = sesiones.some((s) => E.claveDia(s.fecha) === ayer && (DURO.has(tipoSesion(s, ftp)) || (!!s.entrenamiento && duro(s.entrenamiento))));
   const cansado = cuerpo && (cuerpo.clave === 'cargado' || cuerpo.clave === 'agotado');
 
   if (programa?.dias?.length) {
-    const dias = estadoDias(programa, sesiones, ahora);
-    const diaHoy = dias.find((d) => d.fecha === hoy);
-    const prox = dias.find((d) => d.fecha > hoy);
-    const textoProx = prox ? `Próxima: ${prox.ent} (${DIA_SEM(prox.fecha)}).` : 'Era la última sesión del plan.';
+    // Los días del plan son una sugerencia: lo que cuenta es hacer las sesiones de la semana (ver estadoDias).
+    const { dias, semana, pendientes, futuras, diasQuedan } = semanaFlexible(programa, sesiones, ahora);
     const sem = semanaDe(programa, ahora);
     const enSemana = sem.n >= 1 && sem.n <= sem.total ? `Semana ${sem.n} de ${sem.total}${sem.descarga ? ', de descarga: menos volumen para asimilar' : ''}` : '';
-    if (diaHoy) {
-      if (diaHoy.estado === 'hecho') return { fuente: 'hecho', ent: diaHoy.ent, motivo: `Ya remaste lo de hoy. ${textoProx}` };
-      const rol = /^Prueba/.test(diaHoy.ent) ? 'Prueba: mide cuánto has mejorado'
-        : duro(diaHoy.ent) ? 'La sesión clave de la semana: aquí se gana capacidad'
-          : 'Suave: suma base aeróbica y te deja fresco para la próxima dura';
-      return { fuente: 'plan', ent: diaHoy.ent, motivo: [rol, enSemana].filter(Boolean).join(' · ') };
-    }
-    if (!prox) return { fuente: 'terminado', ent: null, motivo: '' };
+    const n = (k, uno, varios) => `${k} ${k === 1 ? uno : varios}`;
+    const textoProx = (lista) => (lista.length ? `Próxima: ${lista[0].ent}${lista.length > 1 ? ` (te quedan ${lista.length} esta semana)` : ''}.`
+      : futuras.length ? `Semana completa ✓. Próxima: ${futuras[0].ent}, desde el lunes.` : 'Era la última sesión del plan.');
+    const hechaHoy = semana.find((d) => d.hechaEl === hoy);
+    if (hechaHoy) return { fuente: 'hecho', ent: hechaHoy.ent, motivo: `Ya remaste lo de hoy. ${textoProx(pendientes)}` };
+    if (!pendientes.length && !futuras.length) return { fuente: 'terminado', ent: null, motivo: '' };
     // Plan recién creado que arranca otro día y sin ninguna sesión todavía (recién salido de la bienvenida):
     // no dice «Hoy descansas», adelanta la primera sesión del plan, o un fondo suave si la primera es dura.
-    if (!sesiones.length && dias.every((x) => x.fecha > hoy)) {
+    const prox = dias.find((d) => d.fecha > hoy);
+    if (!sesiones.length && prox && dias.every((x) => x.fecha > hoy)) {
       return duro(prox.ent)
         ? { fuente: 'sugerida', id: 'base:dis-suave', motivo: `Para empezar, un fondo suave y conoces la app. Tu plan arranca el ${DIA_SEM(prox.fecha)}.` }
         : { fuente: 'plan', ent: prox.ent, motivo: `Tu primera sesión: adelantas la del ${DIA_SEM(prox.fecha)} y el plan sigue igual.` };
     }
-    if (remadoHoy) return { fuente: 'descanso', ent: null, motivo: `Hoy ya remaste. ${textoProx}` };
-    // Sesiones de esta semana que no se hicieron (ni otro día): la más importante primero.
-    const lunes = E.claveDia(E.inicioPeriodo(ahora, 'semana'));
-    const hechas = new Set(sesiones.map((s) => s.entrenamiento));
-    const pendientes = dias.filter((d) => d.estado === 'perdido' && d.fecha >= lunes && !d.movido && !hechas.has(d.ent))
-      .sort((a, b) => Number(duro(b.ent)) - Number(duro(a.ent)) || (a.fecha < b.fecha ? 1 : -1));
-    const mananaDuro = prox.fecha === manana && duro(prox.ent);
-    for (const d of pendientes) {
-      if (duro(d.ent) && (ayerDuro || mananaDuro || cansado)) continue;
-      return { fuente: 'recuperar', ent: d.ent, motivo: `Se quedó sin hacer el ${DIA_SEM(d.fecha)}: hoy es buen día para recuperarla. ${textoProx}` };
+    if (remadoHoy) return { fuente: 'descanso', ent: null, motivo: `Hoy ya remaste. ${textoProx(pendientes)}` };
+    if (!pendientes.length) return { fuente: 'descanso', ent: null, alternativa: 'base:dis-suave', motivo: `Hoy descansas: el cuerpo mejora mientras se recupera. ${textoProx(pendientes)}` };
+
+    const r = repartirSemana(pendientes, diasQuedan, (d) => duro(d.ent), { ayerDura: ayerDuro, cansado });
+    const margen = `Te ${pendientes.length === 1 ? 'queda' : 'quedan'} ${n(pendientes.length, 'sesión', 'sesiones')} en ${n(diasQuedan, 'día', 'días')}`;
+    const fuera = r.fuera.length ? ` No caben todas sin juntar dos duras: ${r.fuera.map((d) => `«${d.ent}»`).join(' y ')} ${r.fuera.length === 1 ? 'se queda' : 'se quedan'} fuera esta semana.` : '';
+    const d = r.hoy;
+    // Vas al día y hay margen: hoy se descansa, pero puedes adelantar la próxima (los días son una sugerencia).
+    if (d && d.fecha > hoy && r.descansoOk) {
+      return {
+        fuente: 'descanso', ent: null, alternativa: 'base:dis-suave', adelantar: d.ent,
+        motivo: `Vas al día: hoy descansas. Si te apetece, adelanta «${d.ent}» (sugerida el ${DIA_SEM(d.fecha)}). ${margen}.${fuera}`,
+      };
     }
-    const saltada = pendientes[0];
-    const porque = saltada ? (mananaDuro ? 'mañana toca otra dura' : ayerDuro ? 'ayer fue dura' : 'vienes cargado') : '';
+    if (d) {
+      const rol = /^Prueba/.test(d.ent) ? 'Prueba: mide cuánto has mejorado'
+        : duro(d.ent) ? 'La sesión clave de la semana: aquí se gana capacidad'
+          : 'Suave: suma base aeróbica y te deja fresco para la próxima dura';
+      const cuando = d.atrasada ? `Se quedó pendiente del ${DIA_SEM(d.fecha)}: hoy es buen día para hacerla. `
+        : d.fecha > hoy ? `Adelantas la del ${DIA_SEM(d.fecha)}: así te cabe la semana. ` : '';
+      return { fuente: d.atrasada ? 'recuperar' : 'plan', ent: d.ent, motivo: `${[rol, enSemana].filter(Boolean).join(' · ')}. ${cuando}${margen}.${fuera}` };
+    }
+    // Nada encaja hoy: lo que queda es duro y ayer fue duro, o vienes cargado.
+    const saltada = r.quedan[0] || pendientes[0];
+    const porque = cansado ? 'vienes cargado' : ayerDuro ? 'ayer fue dura' : 'hoy no encaja';
     return {
       fuente: 'descanso', ent: null, alternativa: 'base:dis-suave',
-      motivo: saltada
-        ? `Te quedó «${saltada.ent}», pero ${porque}: mejor no juntar dos duras. Hoy descansa o rema suave. ${textoProx}`
-        : `Hoy descansas: el cuerpo mejora mientras se recupera. ${textoProx}`,
+      motivo: `Te queda «${saltada.ent}», pero ${porque}: mejor no juntar dos duras. Hoy descansa o rema suave. ${margen}.${fuera}`,
     };
   }
 

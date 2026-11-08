@@ -33,17 +33,93 @@ export function desdePlantilla(p, inicio) {
   return { nombre: p.nombre, inicio, dias };
 }
 
-// Estado de cada día: 'hecho' | 'perdido' | 'hoy' | 'pendiente'.
+// Lunes (AAAA-MM-DD) de la semana de una fecha AAAA-MM-DD.
+export const lunesDe = (clave) => { const d = aFecha(clave); return claveDia(d.getTime() - ((d.getDay() + 6) % 7) * DIA); };
+
+// Estado de cada sesión del plan: 'hecho' | 'perdido' | 'hoy' | 'pendiente'.
+// El día de cada sesión es una sugerencia: cuenta como hecha si la remaste cualquier día de su semana (de lunes
+// a domingo) y solo se pierde cuando la semana termina sin hacerla. Cada sesión remada cuenta una vez (dos fondos
+// iguales piden dos fondos) y primero cuenta para la del mismo día. Añade hechaEl (el día en que la remaste) y
+// atrasada (su día sugerido ya pasó y la semana sigue abierta).
 export function estadoDias(programa, sesiones, ahora = Date.now()) {
   const hoy = claveDia(ahora);
-  const hechos = new Set(sesiones.map((s) => `${claveDia(s.fecha)}|${s.entrenamiento || ''}`));
-  return programa.dias.map((d) => {
-    let estado = 'pendiente';
-    if (hechos.has(`${d.fecha}|${d.ent}`)) estado = 'hecho';
-    else if (d.fecha === hoy) estado = 'hoy';
-    else if (d.fecha < hoy) estado = 'perdido';
-    return { ...d, estado };
-  });
+  const lunesHoy = lunesDe(hoy);
+  const remadas = new Map(); // 'lunes|nombre' → [días en que se remó, en orden]
+  for (const s of [...sesiones].sort((a, b) => a.fecha - b.fecha)) {
+    if (!s.entrenamiento) continue;
+    const k = claveDia(s.fecha);
+    const c = `${lunesDe(k)}|${s.entrenamiento}`;
+    if (!remadas.has(c)) remadas.set(c, []);
+    remadas.get(c).push(k);
+  }
+  const out = programa.dias.map((d) => ({ ...d }));
+  const tomar = (d, exacto) => {
+    const lista = remadas.get(`${lunesDe(d.fecha)}|${d.ent}`);
+    const i = !lista?.length ? -1 : exacto ? lista.indexOf(d.fecha) : 0;
+    return i < 0 ? null : lista.splice(i, 1)[0];
+  };
+  // Una sesión que la adaptación de antes pasó a otro día (movido) solo cuenta si se remó ese mismo día.
+  for (const exacto of [true, false]) for (const d of out) if (!d.hechaEl && (exacto || !d.movido)) { const k = tomar(d, exacto); if (k) d.hechaEl = k; }
+  for (const d of out) {
+    if (d.hechaEl) d.estado = 'hecho';
+    else if (lunesDe(d.fecha) < lunesHoy) d.estado = 'perdido';
+    else d.estado = d.fecha === hoy ? 'hoy' : 'pendiente';
+    if (!d.hechaEl && d.estado !== 'perdido' && d.fecha < hoy) d.atrasada = true;
+  }
+  return out;
+}
+
+// Lo que queda de la semana de una fecha: las sesiones del plan de esa semana, las que faltan (en el orden del plan)
+// y los días que quedan contando hoy.
+export function semanaFlexible(programa, sesiones, ahora = Date.now()) {
+  const hoy = claveDia(ahora);
+  const lunes = lunesDe(hoy);
+  const dias = programa?.dias?.length ? estadoDias(programa, sesiones, ahora) : [];
+  const semana = dias.filter((d) => lunesDe(d.fecha) === lunes && !d.movido);
+  return {
+    dias, semana,
+    pendientes: semana.filter((d) => d.estado === 'hoy' || d.estado === 'pendiente'),
+    futuras: dias.filter((d) => lunesDe(d.fecha) > lunes),
+    diasQuedan: 7 - ((aFecha(hoy).getDay() + 6) % 7),
+  };
+}
+
+// ¿Caben estas sesiones en n días? Una por día y nunca dos duras en días seguidos (si ayer fue dura, hoy tampoco).
+export function caben(duras, suaves, n, ayerDura = false) {
+  return duras + suaves <= n && duras <= Math.max(0, Math.floor((n - (ayerDura ? 1 : 0) + 1) / 2));
+}
+
+// Reparte lo que falta de la semana en los días que quedan. pendientes en el orden del plan; dura(d) → bool.
+// Si no caben todas, se quedan fuera primero las duras de más (nunca la prueba si hay otra) y luego las suaves,
+// empezando por las últimas. Para hoy, la primera (en orden) que deja el resto posible; con ayer duro o cansado,
+// ninguna dura. Devuelve { hoy (o null), quedan, fuera, descansoOk: si descansar hoy también deja todo posible }.
+export function repartirSemana(pendientes, diasQuedan, dura, { ayerDura = false, cansado = false } = {}) {
+  const quedan = [...pendientes];
+  const fuera = [];
+  const cuenta = (lista) => { const h = lista.filter(dura).length; return [h, lista.length - h]; };
+  const cabe = (lista, n, ayer) => caben(...cuenta(lista), n, ayer);
+  const ultimo = (f) => quedan.findLastIndex(f);
+  while (quedan.length && !cabe(quedan, diasQuedan, ayerDura)) {
+    const [h] = cuenta(quedan);
+    const sobranDuras = !caben(h, 0, diasQuedan, ayerDura);
+    let i = sobranDuras ? ultimo((d) => dura(d) && !/^Prueba/.test(d.ent)) : ultimo((d) => !dura(d));
+    if (i < 0) i = ultimo(sobranDuras ? dura : () => true);
+    fuera.unshift(quedan.splice(i, 1)[0]);
+  }
+  let hoy = null;
+  for (const d of quedan) {
+    const h = dura(d);
+    if (h && (ayerDura || cansado)) continue;
+    if (cabe(quedan.filter((x) => x !== d), diasQuedan - 1, h)) { hoy = d; break; }
+  }
+  return { hoy, quedan, fuera, descansoOk: cabe(quedan, diasQuedan - 1, false) };
+}
+
+// ¿La sesión pertenece a la semana del plan en que se remó? (una sesión del plan, el día que sea de esa semana)
+export function delPlanEnSuSemana(programa, s) {
+  if (!programa?.dias?.length || !s?.entrenamiento) return false;
+  const lunes = lunesDe(claveDia(s.inicio ?? s.fecha));
+  return programa.dias.some((d) => d.ent === s.entrenamiento && lunesDe(d.fecha) === lunes);
 }
 
 export function cumplimiento(estados) {
