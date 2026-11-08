@@ -19,26 +19,28 @@ const SPRINT_M = 250;
 //   y alto en metros. elegir() decide qué pieza va en cada hueco; borde es la pieza pequeña junto al agua.
 // - costa: orilla vista desde arriba para la vista 2D (costa.py), tira que se repite con el agua abajo.
 // - colores: lo que se pinta mientras cargan las imágenes y las partes que no son imagen (agua, tierra).
+// El fiordo (v0.62.0) ya no sale de Blender: panorama, costa y piezas son imágenes realistas generadas aparte,
+// recortadas del fondo magenta y montadas con las mismas medidas (prompts en docs/PAISAJES_REALISTAS.md).
 export const PAISAJES = {
   fiordo: {
     nombre: 'Fiordo nórdico',
     texto: 'Montañas nevadas y bosque de pinos al atardecer.',
     precio: 0,
     miniatura: 'assets/carrera/fiordo_mini.webp',
-    panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 204 },
+    panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 379 },
     costa: 'assets/carrera/costa.webp',
     orilla: {
       src: 'assets/carrera/orilla.webp',
       piezas: {
-        pino_alto: { x: 0, y: 0, w: 381, h: 660, pie: [0.5, 0.996], m: 11.79 },
-        pino_medio: { x: 383, y: 0, w: 277, h: 481, pie: [0.5, 0.995], m: 8.59 },
-        abedul: { x: 662, y: 0, w: 114, h: 460, pie: [0.496, 0.994], m: 8.21 },
-        abedul_verde: { x: 778, y: 0, w: 120, h: 368, pie: [0.5, 0.993], m: 6.57 },
-        pino_bajo: { x: 0, y: 662, w: 225, h: 330, pie: [0.5, 0.993], m: 5.89 },
-        casa: { x: 227, y: 662, w: 272, h: 267, pie: [0.502, 0.929], m: 4.78 },
-        roca_grande: { x: 501, y: 662, w: 289, h: 126, pie: [0.5, 0.86], m: 2.25 },
-        juncos: { x: 792, y: 662, w: 81, h: 82, pie: [0.5, 0.958], m: 1.46 },
-        roca: { x: 0, y: 994, w: 180, h: 77, pie: [0.497, 0.778], m: 1.38 }
+        pino_alto: { x: 0, y: 0, w: 410, h: 825, pie: [0.5, 0.97], m: 11.79 },
+        pino_medio: { x: 412, y: 0, w: 332, h: 601, pie: [0.5, 0.97], m: 8.59 },
+        abedul: { x: 746, y: 0, w: 176, h: 575, pie: [0.5, 0.985], m: 8.21 },
+        abedul_verde: { x: 0, y: 827, w: 142, h: 460, pie: [0.5, 0.985], m: 6.57 },
+        pino_bajo: { x: 144, y: 827, w: 213, h: 412, pie: [0.5, 0.965], m: 5.89 },
+        casa: { x: 359, y: 827, w: 529, h: 334, pie: [0.5, 0.9], m: 4.78 },
+        roca_grande: { x: 0, y: 1289, w: 355, h: 158, pie: [0.5, 0.82], m: 2.25 },
+        juncos: { x: 357, y: 1289, w: 84, h: 102, pie: [0.5, 0.95], m: 1.46 },
+        roca: { x: 443, y: 1289, w: 211, h: 96, pie: [0.5, 0.86], m: 1.38 }
       },
       elegir: (r1, r2) => (r1 < 0.1 ? 'roca' : r1 < 0.16 ? 'roca_grande' : r1 < 0.19 && r2 < 0.5 ? 'casa'
         : r1 < 0.38 ? (r2 < 0.5 ? 'abedul' : 'abedul_verde') : r2 < 0.35 ? 'pino_alto' : r2 < 0.7 ? 'pino_medio' : 'pino_bajo'),
@@ -49,7 +51,7 @@ export const PAISAJES = {
       espejo: (s, r) => s > 0 && r > 0.5
     },
     colores: {
-      tierra2d: '#1F3A2A', agua2d: ['#0E4A70', '#0A3352'], cielo3d: ['#8FA6BC', '#C6D1DA'], agua3d: ['#1E2E3E', '#0A2236'],
+      tierra2d: '#1F3A2A', agua2d: ['#0E4A70', '#0A3352'], cielo3d: ['#98AFBC', '#C4CED2'], agua3d: ['#49708F', '#1A3346'],
       reflejo: '148,184,214', arena3d: '#6E6450', tierra3d: '#22362B', bruma: 230
     }
   },
