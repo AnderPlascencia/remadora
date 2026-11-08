@@ -52,8 +52,12 @@ export async function avanzar(page, ms, { reloj = true } = {}) {
   for (let t = 0; t < ms; t += 10_000) await page.clock.runFor(Math.min(10_000, ms - t));
 }
 
+// El reloj simulado arranca siempre un miércoles a mediodía: con la fecha real, en domingo el plan de la
+// bienvenida no tiene sesión y las pruebas que esperan «Hoy toca» fallaban según el día en que corrían.
+export const INICIO_RELOJ = new Date('2026-11-04T12:00:00');
+
 export async function abrirApp(page, { reloj = true } = {}) {
-  if (reloj) await page.clock.install();
+  if (reloj) await page.clock.install({ time: INICIO_RELOJ });
   await page.goto('./');
 }
 
