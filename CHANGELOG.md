@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.62.0 · 2026-11-08
+
+- El fiordo nórdico, el paisaje gratis de la carrera, se renueva con imágenes realistas: un valle en V con montañas nevadas iluminadas por el atardecer y un glaciar al fondo, pinos, abedules otoñales, rocas con musgo, juncos y una casa roja con tejado de hierba a los lados del canal, y una orilla de bosque y piedras en la vista 2D. Las variantes de invierno, tormenta y aurora lo heredan.
+
 ## 0.61.3 · 2026-11-07
 
 - El pirata estrena ilustraciones nuevas para sus 9 rangos, de Novato a Legendario: de grumete descalzo con pañuelo a capitán con abrigo, loro, capa roja y, en Legendario, armadura con runas turquesa y bandera. Se ven en la pantalla Héroe, en la lista de niveles y en el retrato de arriba.
