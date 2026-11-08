@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.63.1 · 2026-11-08
+
+- La racha del plan sigue la semana flexible: hacer una sesión otro día de su semana ya no la corta. Cada semana tiene tantos descansos como días sin sesión planeada; un día de más sin remar queda pendiente (no suma ni corta) mientras la semana sigue abierta, y solo corta si la semana termina sin hacer esa sesión. Remar fuerte algo que no es del plan en un día de descanso sigue cortándola.
+
 ## 0.63.0 · 2026-11-08
 
 Los planes ya no te atan a días concretos: lo que cuenta es hacer las sesiones de la semana.

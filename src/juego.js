@@ -805,14 +805,42 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   // Racha del plan: días con la sesión del plan terminada (se va llenando sesión a sesión) y día anterior a tu primera sesión.
   const planHecho = new Set();
   const primerDia = orden.length ? claveDia(orden[0].fecha) : null;
-  const diaCumplido = (k, conDias) => (!(k in cal) ? conDias.has(k) : cal[k] ? planHecho.has(k) : descansoRespetado(k) || planHecho.has(k));
+  // Semana flexible: los días del plan son una sugerencia. En cada semana del calendario hay tantos descansos
+  // como días sin sesión planeada; un día cuenta si remaste una sesión del plan (el día que sea) o si descansaste
+  // y aún quedaban descansos en la semana. Un día de más sin remar queda pendiente: no suma ni corta mientras la
+  // semana sigue abierta (aún puedes hacer esa sesión), y corta cuando la semana termina sin hacerla.
+  // Remar fuerte otra cosa (sin ser sesión del plan) corta, como antes. Devuelve 'C' (cumplido), 'N' (pendiente) o 'X'.
+  const estadoSemana = (lunes, refK) => {
+    const out = new Map();
+    const dias7 = Array.from({ length: 7 }, (_, i) => claveDia(diaMs(lunes) + i * 864e5)).filter((k) => k in cal);
+    let descansos = dias7.filter((k) => !cal[k]).length;
+    const cerrada = claveDia(diaMs(lunes) + 6 * 864e5) < refK;
+    for (const k of dias7) {
+      if (planHecho.has(k)) out.set(k, 'C');
+      else if (!descansoRespetado(k)) out.set(k, 'X');
+      else if (descansos > 0) { descansos--; out.set(k, 'C'); } else out.set(k, cerrada ? 'X' : 'N');
+    }
+    return out;
+  };
+  const estadoDiaRacha = (k, conDias, refK, cache) => {
+    if (!(k in cal)) return conDias.has(k) ? 'C' : 'X';
+    const lunes = lunesDe(diaMs(k));
+    if (!cache.has(lunes)) cache.set(lunes, estadoSemana(lunes, refK));
+    return cache.get(lunes).get(k);
+  };
   // Racha hasta el día k: k suma si está cumplido; un día de plan aún sin hacer no la corta (el día no ha terminado),
-  // pero remar fuerte en un descanso sí.
-  const rachaPlan = (k, conDias, abierto = true) => {
+  // pero remar fuerte en un descanso sí. refK: el día desde el que se mira (para saber qué semanas siguen abiertas).
+  const rachaPlan = (k, conDias, abierto = true, refK = k) => {
+    const cache = new Map();
     let r = 0;
-    if (diaCumplido(k, conDias)) r = 1;
-    else if (!abierto || !(k in cal) || !cal[k]) return 0;
-    for (let d = claveDia(diaMs(k) - 864e5), n = 0; primerDia && d >= primerDia && n < 400 && diaCumplido(d, conDias); d = claveDia(diaMs(d) - 864e5), n++) r++;
+    const hoyE = estadoDiaRacha(k, conDias, refK, cache);
+    if (hoyE === 'C') r = 1;
+    else if (!abierto || !(k in cal) || (!cal[k] && hoyE === 'X')) return 0;
+    for (let d = claveDia(diaMs(k) - 864e5), n = 0; primerDia && d >= primerDia && n < 400; d = claveDia(diaMs(d) - 864e5), n++) {
+      const e = estadoDiaRacha(d, conDias, refK, cache);
+      if (e === 'X') break;
+      if (e === 'C') r++;
+    }
     return r;
   };
   const diaMs = (k) => new Date(`${k}T12:00`).getTime();
@@ -1126,7 +1154,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     xpPorSesion,
     ritmo: ritmoReciente(orden, ahora),
     factorXp: fHoy,
-    contexto: contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio: mppN ? mppSuma / mppN : 0, sinPulso: !hayPulso, rachaAyer: rachaPlan(claveDia(ahora - 864e5), dias, false) }),
+    contexto: contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio: mppN ? mppSuma / mppN : 0, sinPulso: !hayPulso, rachaAyer: rachaPlan(claveDia(ahora - 864e5), dias, false, claveDia(ahora)) }),
   };
 }
 
