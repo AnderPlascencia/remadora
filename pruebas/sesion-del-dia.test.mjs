@@ -42,10 +42,17 @@ const hecha = { fecha: lunes + 3600e3, duracion: 2400, entrenamiento: 'VO₂ 5 �
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [hecha], ahora: lunes + 5 * 3600e3 });
 assert.equal(d.fuente, 'hecho');
 assert.match(d.motivo, /Próxima: Fondo/);
-// Martes (día libre) sin nada pendiente: descanso con alternativa suave.
+// Martes (día libre) yendo al día: descanso con alternativa suave, y se puede adelantar la próxima.
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [hecha], ahora: lunes + DIA });
 assert.equal(d.fuente, 'descanso');
 assert.equal(d.alternativa, 'base:dis-suave');
+assert.match(d.adelantar, /^Fondo/);
+assert.match(d.motivo, /Vas al día.*adelanta.*Te quedan 2 sesiones en 6 días/);
+// Adelantada el martes, cuenta para la semana: el miércoles ya no la pide y ofrece adelantar la del sábado.
+const fondoMar = { fecha: lunes + DIA + 3600e3, duracion: 2400, entrenamiento: d.adelantar, muestras: muestras(2400, 120) };
+d = A.sesionDelDia({ programa, entrenamientos, sesiones: [hecha, fondoMar], ahora: lunes + 2 * DIA });
+assert.equal(d.fuente, 'descanso');
+assert.ok(d.adelantar && !/^Fondo/.test(d.adelantar), d.motivo);
 // Martes sin haber remado el lunes: recupera la sesión clave (mañana toca fondo).
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [], ahora: lunes + DIA });
 assert.equal(d.fuente, 'recuperar');
@@ -55,8 +62,19 @@ const vie = lunes + 4 * DIA;
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [hecha], ahora: vie });
 assert.equal(d.fuente, 'recuperar', 'el fondo del miércoles se puede recuperar');
 assert.match(d.ent, /^Fondo/);
+// Viernes sin nada hecho: caben las tres en vie–sáb–dom (dura, fondo, dura), así que hoy la clave atrasada.
 const sinNada = A.sesionDelDia({ programa, entrenamientos, sesiones: [], ahora: vie });
-assert.match(sinNada.ent, /^Fondo/, 'con mañana dura, se recupera el fondo, no la dura');
+assert.equal(sinNada.fuente, 'recuperar');
+assert.equal(sinNada.ent, 'VO₂ 5 × 2 min');
+assert.match(sinNada.motivo, /Te quedan 3 sesiones en 3 días/);
+// Sábado sin nada hecho: en 2 días no caben dos duras y un fondo; la última dura se queda fuera.
+const sab = A.sesionDelDia({ programa, entrenamientos, sesiones: [], ahora: lunes + 5 * DIA });
+assert.equal(sab.ent, 'VO₂ 5 × 2 min');
+assert.match(sab.motivo, /No caben todas.*se queda fuera/);
+// Si ayer remaste la dura (aunque sin FTP), hoy no toca otra dura: el fondo.
+const vo2Vie = { ...hecha, fecha: vie + 3600e3 };
+d = A.sesionDelDia({ programa, entrenamientos, sesiones: [vo2Vie], ahora: lunes + 5 * DIA });
+assert.match(d.ent, /^Fondo/);
 // Cansado: una dura pendiente no se propone.
 d = A.sesionDelDia({ programa: { ...programa, dias: programa.dias.filter((x) => !/^Fondo/.test(x.ent)) }, entrenamientos, sesiones: [], cuerpo: { clave: 'cargado' }, ahora: lunes + 2 * DIA });
 assert.equal(d.fuente, 'descanso');

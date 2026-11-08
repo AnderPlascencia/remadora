@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.63.0 · 2026-11-08
+
+Los planes ya no te atan a días concretos: lo que cuenta es hacer las sesiones de la semana.
+
+- Cada sesión del plan tiene un día sugerido, pero cuenta como hecha si la remas cualquier día de su semana (de lunes a domingo), antes o después. Solo se da por perdida cuando acaba la semana sin hacerla. Dos sesiones iguales en la semana piden dos remadas.
+- La sesión del día ofrece lo que te falta de la semana, empezando por lo atrasado, siempre que quepa en los días que quedan: una por día, nunca dos duras en días seguidos (aunque no tengas FTP, una dura del plan ayer cuenta) y ninguna dura si vienes cargado.
+- Si vas al día y hay margen, hoy descansas, pero puedes adelantar la próxima con un botón. Si ya no hay margen, te dice que la hagas hoy.
+- Si quedan más sesiones que días, avisa de cuál se queda fuera esta semana: primero sobran las duras de más (la prueba se respeta) y luego las suaves.
+- El plan ya no cambia una sesión perdida de día: la semana flexible la ofrece sola. Y el cansancio ya no cambia por un fondo una sesión dura que adelantaste y ya remaste.
+- En Programa, la semana muestra el día en que hiciste cada sesión, «Pendiente, cuando puedas» para las atrasadas y cuántas llevas y cuántos días te quedan.
+
 ## 0.62.0 · 2026-11-08
 
 - El fiordo nórdico, el paisaje gratis de la carrera, se renueva con imágenes realistas: un valle en V con montañas nevadas iluminadas por el atardecer y un glaciar al fondo, pinos, abedules otoñales, rocas con musgo, juncos y una casa roja con tejado de hierba a los lados del canal, y una orilla de bosque y piedras en la vista 2D. Las variantes de invierno, tormenta y aurora lo heredan.

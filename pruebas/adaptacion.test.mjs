@@ -75,14 +75,21 @@ assert.ok(alargado && alargado.fecha > hoy);
 assert.equal(Number(alargado.ent.match(/\d+/)[0]), Number(alargado.original.match(/\d+/)[0]) + 10);
 assert.equal(r4.programa.extraFondo, 10);
 
-// 4. Sesión dura perdida ayer: pasa a hoy si hoy toca fondo.
+// 4. Sesión dura sin hacer ayer: el plan ya no se reescribe; la semana es flexible y la sesión del día la ofrece hoy.
 const conPerdida = { ...structuredClone(base), dias: [{ fecha: dia(-1), ent: 'Umbral 3 × 8 min' }, { fecha: hoy, ent: 'Fondo 40 min (zona 2)' }, { fecha: dia(2), ent: 'Sweet spot 2 × 12 min' }] };
 const r5 = A.revisarPlan({ programa: conPerdida, sesiones: [], entrenamientos, ftp: 200, ahora });
-assert.equal(r5.programa.dias.find((d) => d.fecha === hoy).ent, 'Umbral 3 × 8 min');
-assert.match(r5.avisos[0], /pasé a hoy/);
-// Si ayer ya remaste algo duro, no se juntan dos días duros.
-const r5b = A.revisarPlan({ programa: conPerdida, sesiones: [ses(-1, { entrenamiento: 'Otra', muestras: muestras(1800, 200) })], entrenamientos, ftp: 200, ahora });
-assert.equal(r5b.programa.dias.find((d) => d.fecha === hoy).ent, 'Fondo 40 min (zona 2)');
+assert.equal(r5.programa.dias.find((d) => d.fecha === hoy).ent, 'Fondo 40 min (zona 2)');
+assert.ok(!r5.programa.dias.some((d) => d.movido));
+const delDia = A.sesionDelDia({ programa: r5.programa, entrenamientos, sesiones: [], ftp: 200, ahora });
+assert.equal(delDia.fuente, 'recuperar');
+assert.equal(delDia.ent, 'Umbral 3 × 8 min');
+// Si ayer ya remaste algo duro, no se juntan dos días duros: hoy el fondo.
+const otraDura = ses(-1, { entrenamiento: 'Otra', muestras: muestras(1800, 200) });
+assert.equal(A.sesionDelDia({ programa: r5.programa, entrenamientos, sesiones: [otraDura], ftp: 200, ahora }).ent, 'Fondo 40 min (zona 2)');
+// 1c. La dura de hoy ya se remó el lunes (adelantada): el cansancio no la cambia por un fondo.
+const adelantada = ses(-2, { entrenamiento: 'Umbral 3 × 8 min', duracion: 7200, muestras: muestras(7200, 230) });
+const r1d = A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: [...reventado.filter((x) => Math.round((x.fecha - ahora) / DIA) !== -2), adelantada], entrenamientos, ftp: 200, ahora });
+assert.equal(r1d.programa.dias.find((d) => d.fecha === hoy).ent, 'Umbral 3 × 8 min');
 
 // 5. Semana floja: 0 de 3 la semana pasada → se repite y el resto se corre 7 días.
 const largo = P.planPorObjetivo({ objetivo: 'base', dias: 3, semanas: 4, inicio: '2026-10-26', ctx: {} }).programa;
@@ -90,11 +97,6 @@ const r6 = A.revisarPlan({ programa: largo, sesiones: [], entrenamientos, ftp: 2
 assert.equal(r6.programa.dias.length, largo.dias.length + 3);
 assert.equal(r6.programa.dias.at(-1).fecha, claveDia(Date.parse(`${largo.dias.at(-1).fecha}T12:00`) + 7 * DIA));
 assert.match(r6.avisos.at(-1), /0 de 3/);
-
-// Regresión: hoy sin sesión en el plan y una dura perdida ayer → se añade el día de hoy sin romper el paso 5.
-const sinHoy = { ...structuredClone(base), inicio: dia(-20), dias: [{ fecha: dia(-1), ent: 'Umbral 3 × 8 min' }, { fecha: dia(2), ent: 'Sweet spot 2 × 12 min' }] };
-const r7 = A.revisarPlan({ programa: sinHoy, sesiones: [], entrenamientos, ftp: 200, ahora });
-assert.equal(r7.programa.dias.find((d) => d.fecha === hoy).ent, 'Umbral 3 × 8 min');
 
 // Pulso de calentamiento: 8 lpm más que en tres sesiones anteriores a los mismos watts.
 const cal = (fc) => ({ muestras: Array.from({ length: 400 }, (_, t) => ({ t, w: 120, fc })) });

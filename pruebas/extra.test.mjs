@@ -31,8 +31,34 @@ assert.equal(E.elegirRival([s2, { ...s3, tiempoMeta: 500 }, { ...s3, tiempoMeta:
 const prog = P.generarSemanal('Mío', '2026-10-26', 2, { 0: 'A', 2: 'B' });
 assert.deepEqual(prog.dias.map((d) => d.fecha), ['2026-10-26', '2026-10-28', '2026-11-02', '2026-11-04']);
 const est = P.estadoDias(prog, [{ fecha: Date.parse('2026-10-26T09:00'), entrenamiento: 'A' }], Date.parse('2026-10-29T09:00'));
-assert.deepEqual(est.map((d) => d.estado), ['hecho', 'perdido', 'pendiente', 'pendiente']);
-assert.deepEqual(P.cumplimiento(est), { hechos: 1, pasados: 2, total: 4 });
+// El día es una sugerencia: «B» (miércoles) sigue pendiente el jueves, atrasada, hasta que acaba la semana.
+assert.deepEqual(est.map((d) => d.estado), ['hecho', 'pendiente', 'pendiente', 'pendiente']);
+assert.equal(est[1].atrasada, true);
+assert.deepEqual(P.cumplimiento(est), { hechos: 1, pasados: 1, total: 4 });
+{
+  // Remada otro día de la misma semana cuenta como hecha; la semana siguiente ya no.
+  const otroDia = P.estadoDias(prog, [{ fecha: Date.parse('2026-10-31T09:00'), entrenamiento: 'B' }, { fecha: Date.parse('2026-11-02T09:00'), entrenamiento: 'B' }], Date.parse('2026-11-03T09:00'));
+  assert.deepEqual(otroDia.map((d) => d.estado), ['perdido', 'hecho', 'pendiente', 'hecho']);
+  assert.equal(otroDia[1].hechaEl, '2026-10-31');
+  // Adelantada: «B» del miércoles remada el lunes cuenta, y el lunes «A» sigue pendiente.
+  const adelantada = P.estadoDias(prog, [{ fecha: Date.parse('2026-11-02T09:00'), entrenamiento: 'B' }], Date.parse('2026-11-02T20:00'));
+  assert.deepEqual(adelantada.slice(2).map((d) => d.estado), ['hoy', 'hecho']);
+  // Dos sesiones iguales en la semana piden dos remadas.
+  const doble = { nombre: 'D', inicio: '2026-11-02', dias: [{ fecha: '2026-11-02', ent: 'F' }, { fecha: '2026-11-05', ent: 'F' }] };
+  assert.deepEqual(P.estadoDias(doble, [{ fecha: Date.parse('2026-11-03T09:00'), entrenamiento: 'F' }], Date.parse('2026-11-09T09:00')).map((d) => d.estado), ['hecho', 'perdido']);
+}
+// Repartir lo que falta: una por día y nunca dos duras seguidas.
+assert.ok(P.caben(2, 1, 3) && !P.caben(2, 1, 3, true) && !P.caben(2, 0, 2) && P.caben(1, 1, 2, true));
+{
+  const dura = (d) => d.ent !== 'F';
+  const r = P.repartirSemana([{ ent: 'V' }, { ent: 'F' }, { ent: 'U' }], 2, dura);
+  assert.deepEqual(r.fuera.map((d) => d.ent), ['U'], 'en 2 días caben una dura y una suave');
+  assert.equal(r.hoy.ent, 'V');
+  const r2 = P.repartirSemana([{ ent: 'V' }, { ent: 'F' }, { ent: 'Prueba 2000 m' }], 2, dura);
+  assert.deepEqual(r2.fuera.map((d) => d.ent), ['V'], 'la prueba no se quita mientras haya otra dura');
+  assert.equal(P.repartirSemana([{ ent: 'V' }, { ent: 'F' }], 3, dura, { ayerDura: true }).hoy.ent, 'F', 'ayer duro: hoy la suave');
+  assert.equal(P.repartirSemana([{ ent: 'V' }], 3, dura, { cansado: true }).hoy, null);
+}
 assert.equal(P.deHoy(prog, Date.parse('2026-10-28T20:00')).ent, 'B');
 const p2k = P.desdePlantilla({ nombre: 'P', semanas: Array.from({ length: 6 }, (_, i) => ['A', 'B', i === 5 ? '2000 m' : 'C']), diasSemana: [0, 2, 5] }, '2026-10-26');
 assert.equal(p2k.dias.length, 18);

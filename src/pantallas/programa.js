@@ -62,8 +62,14 @@ export async function contextoXp(ent, sesiones, inicio = Date.now()) {
     if (dia && ent && ((dia.ent && dia.ent === ent.nombre) || (dia.id && String(dia.id) === String(ent.id)))) {
       if (['plan', 'recuperar', 'sugerida'].includes(dia.fuente)) out.delDia = dia.fuente;
     }
-    const hoy = P.deHoy(leerPrograma(), inicio);
-    const plan = hoy && (todos.find((x) => x.nombre === hoy.ent) || estado.baseActual.find((x) => x.nombre === hoy.ent));
+    // Adelantar la próxima sesión de la semana también es hacer lo del plan.
+    if (dia?.adelantar && ent?.nombre === dia.adelantar) out.delDia = 'plan';
+    // Una sesión del plan que aún faltaba esta semana (el día que sea): cuenta como del programa.
+    const prog = leerPrograma();
+    if (prog && ent) out.delPlanSemana = P.semanaFlexible(prog, sesiones, inicio).pendientes.some((d) => d.ent === ent.nombre);
+    // La sesión del plan de hoy: la que ofrece la semana flexible, o la sugerida para este día.
+    const nombreHoy = (dia && ['plan', 'recuperar'].includes(dia.fuente) && dia.ent) || dia?.adelantar || P.deHoy(prog, inicio)?.ent;
+    const plan = nombreHoy && (todos.find((x) => x.nombre === nombreHoy) || estado.baseActual.find((x) => x.nombre === nombreHoy));
     const f = ftp();
     if (plan && f) {
       const sim = F.simular(plan, { ftp: f }, f).muestras;
@@ -115,15 +121,22 @@ export async function pintarPrograma() {
   const semana = semanaDelPlan(prog, sesiones);
   const sem = P.semanaDe(prog);
   $('#semana-plan-titulo').textContent = sem.n >= 1 && sem.n <= sem.total ? `Semana ${sem.n} de ${sem.total}${sem.descarga ? ' · de descarga, más suave' : ''}` : 'Esta semana';
-  const ESTADO = { hecho: 'Hecha', perdido: 'No se hizo', hoy: 'Hoy', pendiente: 'Próxima' };
+  // Los días son una sugerencia: cuenta hacer las sesiones de la semana, el día que te venga bien.
+  const ESTADO = { hecho: 'Hecha', perdido: 'No se hizo', hoy: 'Sugerida hoy', pendiente: 'Pendiente' };
+  const diaCorto = (k) => new Date(`${k}T12:00`).toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '');
   const buscarEnt = (n) => todos.find((e) => e.nombre === n) || estado.baseActual.find((e) => e.nombre === n);
   $('#semana-plan').innerHTML = semana.length ? semana.map((d) => {
     const e = buscarEnt(d.ent);
     const v = valorDe(d.ent, todos);
     const tipo = /^Prueba/.test(d.ent) ? 'Prueba' : e && P.esDura(e) ? 'Dura' : 'Suave';
-    return `<li data-estado="${d.estado}"><span class="sp-dia">${d.diaCorto}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b><small>${tipo}${e ? ` · ${escaparHtml(B.resumenEnt(e).split(' · ')[0])}` : ''} · ${ESTADO[d.estado]}${d.estado === 'hecho' ? ' ✓' : ''}</small></span>${
+    return `<li data-estado="${d.estado}"><span class="sp-dia">${d.hechaEl ? diaCorto(d.hechaEl) : d.diaCorto}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b><small>${tipo}${e ? ` · ${escaparHtml(B.resumenEnt(e).split(' · ')[0])}` : ''} · ${d.atrasada ? 'Pendiente, cuando puedas' : ESTADO[d.estado]}${d.estado === 'hecho' ? ' ✓' : ''}</small></span>${
       v && d.estado !== 'hecho' ? `<button type="button" class="boton chico" data-entrenar="${v}">Entrenar</button>` : ''}</li>`;
   }).join('') : '<li class="vacio">Esta semana no hay sesiones en tu plan.</li>';
+  const quedan = P.semanaFlexible(prog, sesiones);
+  $('#semana-plan-nota').hidden = !semana.length;
+  $('#semana-plan-nota').textContent = quedan.pendientes.length
+    ? `Hechas ${semana.length - quedan.pendientes.length} de ${semana.length}. Los días son una sugerencia: haz las que faltan cuando te venga bien antes del domingo (te ${quedan.diasQuedan === 1 ? 'queda 1 día' : `quedan ${quedan.diasQuedan} días`}).`
+    : `Semana completa: ${semana.length} de ${semana.length} ✓`;
   pintarPlanHoy(prog, sesiones, todos);
   pintarPlanFuturo(prog, sesiones, buscarEnt);
   const porSemana = prog.porSemana || Math.round(prog.dias.length / Math.max(1, prog.semanas || 1));
@@ -186,22 +199,26 @@ async function pintarPlanHoy(prog, sesiones, todos) {
   const ETQ = { plan: 'Hoy toca', hecho: 'Hoy · ya lo hiciste ✓', recuperar: 'Hoy, para recuperar', descanso: 'Hoy descansas', terminado: 'Plan terminado' };
   caja.dataset.fuente = dia?.fuente || '';
   $('#plan-hoy-etq').textContent = ETQ[dia?.fuente] || 'Hoy';
-  const prox = P.proximo(prog);
+  // La próxima: la primera que falta de la semana (los días son una sugerencia) o la primera de la siguiente.
+  const fl = P.semanaFlexible(prog, sesiones);
+  const prox = fl.pendientes[0] || fl.futuras[0] || null;
   const ent = dia?.ent ? buscar(dia.ent) : null;
   const mostrado = ent || (dia?.fuente === 'descanso' && prox ? buscar(prox.ent) : null);
   $('#plan-hoy-nombre').textContent = dia?.ent || (dia?.fuente === 'terminado' ? prog.nombre : 'Descanso');
   $('#plan-hoy-resumen').textContent = ent ? B.resumenEnt(ent)
-    : dia?.fuente === 'descanso' && prox ? `Próxima: ${prox.ent} · ${diaPlan(prox.fecha)}` : '';
+    : dia?.fuente === 'descanso' && prox ? `Próxima: ${prox.ent} · ${fl.pendientes[0] ? 'esta semana, cuando quieras' : diaPlan(prox.fecha)}` : '';
   $('#plan-hoy-tira').innerHTML = tiraBloques(mostrado);
   $('#plan-hoy-tira').classList.toggle('apagada', !ent);
   $('#plan-hoy-porque').textContent = dia?.motivo || '';
   $('#plan-hoy-porque').hidden = !dia?.motivo;
   const v = ent && dia.fuente !== 'hecho' ? valorDe(dia.ent, todos) : null;
+  // Vas al día: se puede adelantar la próxima de la semana en vez de descansar.
+  const vAdelantar = !v && dia?.adelantar ? valorDe(dia.adelantar, todos) : null;
   const btn = $('#plan-hoy-btn');
   btn.hidden = !v && dia?.fuente !== 'descanso';
-  btn.textContent = v ? 'Entrenar' : 'Remar suave igual';
+  btn.textContent = v ? 'Entrenar' : vAdelantar ? 'Adelantarla' : 'Remar suave igual';
   btn.classList.toggle('primario', !!v);
-  btn.onclick = async () => { const e = await obtenerEnt(v || dia.alternativa || 'base:dis-suave'); if (e) usarEnt(e); };
+  btn.onclick = async () => { const e = await obtenerEnt(v || vAdelantar || dia.alternativa || 'base:dis-suave'); if (e) usarEnt(e); };
 }
 
 // Programa › Cómo sube tu plan y Lo que sigue: el esfuerzo de cada semana y las sesiones de las que vienen.
@@ -434,9 +451,11 @@ async function pintarRecomendacion() {
 }
 
 // ¿La sesión es el entrenamiento que tocaba hoy en el programa? (para los talentos del samurái)
+// Los días del plan son una sugerencia: cuenta una sesión del plan que aún faltaba en su semana (lo mira
+// contextoXp al empezar); sin ese dato, la sesión del plan de su semana.
 export function delProgramaHoy(s) {
-  const hoy = P.deHoy(leerPrograma(), s.inicio);
-  return !!(hoy && s.entrenamiento && hoy.ent === s.entrenamiento) || undefined;
+  if (s.xpCtx && 'delPlanSemana' in s.xpCtx) return s.xpCtx.delPlanSemana || undefined;
+  return P.delPlanEnSuSemana(leerPrograma(), s) || undefined;
 }
 
 // Tarjeta «Hoy»: lo que vas a remar al pulsar Empezar, y una sugerencia si hay algo mejor que hacer.
@@ -515,6 +534,8 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
     sug = { texto: `Tus últimas ${revFtp.bajar.cortas} sesiones fuertes se quedaron cortas. ¿Bajo tu FTP a ${revFtp.bajar.ftp} W? Tus zonas se ajustan solas.`, boton: 'Bajar', accion: () => { guardarFtp(revFtp.bajar.ftp, true); toast(`FTP: ${revFtp.bajar.ftp} W`); pintarHoy(); } };
   } else if (revFtp?.repetir && ent?.id !== 'base:prueba-ftp' && !['plan', 'recuperar'].includes(dia?.fuente)) {
     sug = { texto: `Tu última prueba FTP fue hace ${Math.round(revFtp.repetir / 7)} semanas: repítela para que tus zonas sigan siendo las tuyas.`, boton: 'Elegir', accion: () => elegirEnt('base:prueba-ftp') };
+  } else if (dia?.fuente === 'descanso' && dia.adelantar && valorDe(dia.adelantar, todos) && ent?.nombre !== dia.adelantar) {
+    sug = { texto: `Vas al día. Si te apetece, adelanta «${dia.adelantar}».`, boton: 'Adelantar', accion: () => elegirEnt(valorDe(dia.adelantar, todos)) };
   } else if (dia?.fuente === 'descanso' && dia.alternativa && !ent) {
     sug = { texto: '¿Quieres remar igual? Que sea suave.', boton: 'Fondo suave', accion: () => elegirEnt(dia.alternativa) };
   } else if (!prog && ajustes.si('ftpEstimado', false) && sesiones.length >= 3 && !sesiones.some((x) => x.pruebaWatts) && ent?.id !== 'base:prueba-ftp') {
