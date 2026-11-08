@@ -46,6 +46,22 @@ const cal = { '2026-11-09': 'A', '2026-11-10': '', '2026-11-11': 'B', '2026-11-1
   const lista = [plan('2026-11-09', 'A'), plan('2026-11-10', 'B', { delPrograma: false, delDia: 'recuperar', tipoPlan: 'umbral' }), plan('2026-11-11', 'B')];
   assert.equal(rachaDe(estado(lista, cal), lista[2]), 3);
 }
+// Semana flexible: hacer la sesión otro día de su semana no corta la racha.
+{
+  // B (miércoles) se rema el jueves: el miércoles cuenta como uno de los 3 descansos de la semana.
+  const lista = [plan('2026-11-09', 'A'), plan('2026-11-12', 'B'), plan('2026-11-13', 'C')];
+  const h = estado(lista, cal);
+  assert.deepEqual(lista.map((s) => rachaDe(h, s)), [0, 4, 5]);
+}
+{
+  // Cuatro días sin remar con solo 3 descansos: el cuarto queda pendiente (no suma ni corta) mientras la semana sigue.
+  const lista = [plan('2026-11-09', 'A'), plan('2026-11-14', 'B'), plan('2026-11-15', 'C')];
+  const h = estado(lista, cal);
+  assert.deepEqual(lista.map((s) => rachaDe(h, s)), [0, 5, 6]);
+  // Cerrada la semana sin la cuarta sesión, el día que faltó corta: el lunes siguiente cuenta sáb + dom + lun.
+  const con = [...lista, plan('2026-11-16', 'A')];
+  assert.equal(rachaDe(estado(con, { ...cal, '2026-11-16': 'A' }), con.at(-1)), 3);
+}
 // Fuera del calendario (sin plan) vale remar ese día, como antes.
 {
   const lista = [ses('2026-11-09', 30, 0.7), ses('2026-11-10', 30, 0.7), ses('2026-11-11', 30, 0.7)];
