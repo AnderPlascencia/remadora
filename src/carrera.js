@@ -19,8 +19,8 @@ const SPRINT_M = 250;
 //   y alto en metros. elegir() decide qué pieza va en cada hueco; borde es la pieza pequeña junto al agua.
 // - costa: orilla vista desde arriba para la vista 2D (costa.py), tira que se repite con el agua abajo.
 // - colores: lo que se pinta mientras cargan las imágenes y las partes que no son imagen (agua, tierra).
-// El fiordo (v0.62.0) ya no sale de Blender: panorama, costa y piezas son imágenes realistas generadas aparte,
-// recortadas del fondo magenta y montadas con las mismas medidas (prompts en docs/PAISAJES_REALISTAS.md).
+// El fiordo (v0.62.0) y la laguna (v0.64.0) ya no salen de Blender: panorama, costa y piezas son imágenes realistas
+// generadas aparte, recortadas del fondo magenta y montadas con las mismas medidas (prompts en docs/PAISAJES_REALISTAS.md).
 export const PAISAJES = {
   fiordo: {
     nombre: 'Fiordo nórdico',
@@ -60,21 +60,24 @@ export const PAISAJES = {
     texto: 'Agua turquesa, islas volcánicas, palmeras y faros.',
     precio: 400,
     miniatura: 'assets/carrera/laguna_mini.webp',
-    panorama: { src: 'assets/carrera/laguna.webp', horizonte: 204 },
+    panorama: { src: 'assets/carrera/laguna.webp', horizonte: 388 },
     costa: 'assets/carrera/laguna_costa.webp',
+    // Agua de la vista 2D: textura cenital que se repite (m = metros que cubre) y espuma junto a la orilla
+    agua: { src: 'assets/carrera/laguna_agua.webp', m: 9 },
+    espuma: 'assets/carrera/laguna_espuma.webp',
     orilla: {
       src: 'assets/carrera/laguna_orilla.webp',
       piezas: {
-        palmera_alta: { x: 0, y: 0, w: 551, h: 830, pie: [0.501, 0.995], m: 12.96 },
-        palmera_curva: { x: 0, y: 832, w: 618, h: 657, pie: [0.5, 0.995], m: 10.26 },
-        palmera_baja: { x: 620, y: 832, w: 266, h: 443, pie: [0.5, 0.992], m: 6.92 },
-        fare: { x: 0, y: 1491, w: 350, h: 330, pie: [0.501, 0.945], m: 5.16 },
-        arbusto: { x: 352, y: 1491, w: 192, h: 130, pie: [0.5, 0.904], m: 2.03 },
-        roca_grande: { x: 546, y: 1491, w: 340, h: 122, pie: [0.5, 0.835], m: 1.9 },
-        arbusto_rosa: { x: 0, y: 1823, w: 144, h: 92, pie: [0.5, 0.895], m: 1.44 },
-        roca: { x: 146, y: 1823, w: 184, h: 79, pie: [0.5, 0.75], m: 1.23 },
-        canoa: { x: 332, y: 1823, w: 411, h: 59, pie: [0.5, 0.84], m: 0.92 },
-        matas: { x: 745, y: 1823, w: 88, h: 54, pie: [0.5, 0.919], m: 0.84 }
+        palmera_alta: { x: 0, y: 0, w: 496, h: 830, pie: [0.399, 0.93], m: 12.96 },
+        palmera_curva: { x: 0, y: 832, w: 764, h: 640, pie: [0.158, 0.927], m: 10.26 },
+        palmera_baja: { x: 0, y: 1474, w: 281, h: 470, pie: [0.396, 0.93], m: 6.92 },
+        fare: { x: 283, y: 1474, w: 599, h: 380, pie: [0.466, 0.91], m: 5.16 },
+        arbusto: { x: 0, y: 1946, w: 271, h: 190, pie: [0.509, 0.86], m: 2.03 },
+        roca_grande: { x: 273, y: 1946, w: 345, h: 160, pie: [0.55, 0.84], m: 1.9 },
+        arbusto_rosa: { x: 620, y: 1946, w: 186, h: 150, pie: [0.52, 0.89], m: 1.44 },
+        roca: { x: 0, y: 2138, w: 237, h: 110, pie: [0.55, 0.78], m: 1.23 },
+        canoa: { x: 239, y: 2138, w: 428, h: 90, pie: [0.607, 0.8], m: 0.92 },
+        matas: { x: 669, y: 2138, w: 201, h: 100, pie: [0.467, 0.87], m: 0.84 }
       },
       elegir: (r1, r2) => (r1 < 0.07 ? 'roca' : r1 < 0.11 ? 'roca_grande' : r1 < 0.15 && r2 < 0.5 ? 'fare'
         : r1 < 0.19 && r2 < 0.5 ? 'canoa' : r1 < 0.36 ? (r2 < 0.5 ? 'arbusto' : 'arbusto_rosa')
@@ -86,8 +89,8 @@ export const PAISAJES = {
       espejo: (s) => s > 0
     },
     colores: {
-      tierra2d: '#C9A46C', agua2d: ['#1BA7B0', '#0E7C93'], cielo3d: ['#7FB2E0', '#CFE3F1'], agua3d: ['#4FA9BC', '#0E6F86'],
-      reflejo: '190,230,240', arena3d: '#D9C08E', tierra3d: '#3F6A2C', bruma: 230
+      tierra2d: '#E9E4D6', agua2d: ['#5CC8C8', '#2FA3B8'], cielo3d: ['#3A75AD', '#C9E1EE'], agua3d: ['#5DB4CA', '#1E8FA8'],
+      reflejo: '200,236,242', arena3d: '#EDE6D4', tierra3d: '#D3C6A2', bruma: 230
     }
   }
 };
@@ -986,6 +989,39 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
   grad.addColorStop(1, paisaje.colores.agua2d[1]);
   ctx.fillStyle = grad;
   ctx.fillRect(0, y0, ancho, pista);
+  // Agua con textura (laguna): fondo de arena y cáusticas que avanzan con el mundo, con el degradado encima para
+  // dar profundidad, y la espuma donde el agua toca la arena.
+  const texAgua = paisaje.agua && imagen(paisaje.agua.src);
+  if (texAgua) {
+    const k = (paisaje.agua.m * ppm) / texAgua.naturalWidth;
+    const lado = texAgua.naturalWidth * k;
+    const x0 = -((((yo.dist + c.centro) * ppm) % lado) + lado) % lado;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, y0, ancho, pista); ctx.clip();
+    conFiltro(ctx, () => {
+      for (let x = x0; x < ancho; x += lado) for (let y = y0; y < y0 + pista; y += lado) ctx.drawImage(texAgua, x, y, lado + 0.5, lado + 0.5);
+    });
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y0, ancho, pista);
+    ctx.restore();
+  }
+  const espuma = paisaje.espuma && imagen(paisaje.espuma);
+  if (espuma && costa) {
+    const h = Math.max(6, Math.min(16, pista * 0.06));
+    const w = espuma.naturalWidth * (h / espuma.naturalHeight);
+    const x0 = -(((c.costa.px % w) + w) % w);
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = sinMovimiento ? 0.8 : 0.65 + 0.2 * Math.sin(t * 1.3);
+    for (let x = x0; x < ancho; x += w) {
+      ctx.drawImage(espuma, x, y0 - h * 0.35, w + 0.5, h);
+      ctx.save(); ctx.translate(0, y0 + pista); ctx.scale(1, -1);
+      ctx.drawImage(espuma, x, -h * 0.35, w + 0.5, h);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
 
   // Olas ancladas al mundo, con un brillo que va y viene
   ctx.strokeStyle = 'rgba(255,255,255,0.10)';

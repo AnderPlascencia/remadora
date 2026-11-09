@@ -677,7 +677,7 @@ function pintarTienda(h, per) {
 // Imágenes de los paisajes de pago que tienes (panorama, orilla y costa). Las variantes usan las de su paisaje base.
 export function archivosDePaisajes(per) {
   const ids = Object.keys(PAISAJES).filter((id) => PAISAJES[id].precio > 0 && tienePaisaje(per, id));
-  return [...new Set(ids.flatMap((id) => [PAISAJES[id].panorama?.src, PAISAJES[id].costa, PAISAJES[id].orilla?.src]).filter(Boolean))];
+  return [...new Set(ids.flatMap((id) => [PAISAJES[id].panorama?.src, PAISAJES[id].costa, PAISAJES[id].orilla?.src, PAISAJES[id].agua?.src, PAISAJES[id].espuma]).filter(Boolean))];
 }
 
 // Pide al service worker que guarde para usarlos sin conexión los vídeos de tu clase (la vista realista) y los
