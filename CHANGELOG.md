@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.64.0 · 2026-11-09
+
+- La laguna tropical se renueva con imágenes realistas: islas volcánicas cubiertas de selva y motus con palmeras sobre una laguna turquesa, cocoteros, una cabaña con techo de pandano, uveros, buganvillas, rocas volcánicas y una canoa con balancín a los lados del canal. En la vista 2D, playa de arena blanca vista desde arriba, agua transparente con el fondo de arena y la luz moviéndose, y espuma donde el agua toca la orilla. Las variantes de atardecer, luna y dorada lo heredan.
+
 ## 0.63.1 · 2026-11-08
 
 - La racha del plan sigue la semana flexible: hacer una sesión otro día de su semana ya no la corta. Cada semana tiene tantos descansos como días sin sesión planeada; un día de más sin remar queda pendiente (no suma ni corta) mientras la semana sigue abierta, y solo corta si la semana termina sin hacer esa sesión. Remar fuerte algo que no es del plan en un día de descanso sigue cortándola.

@@ -80,3 +80,82 @@ A single isolated small clump of reeds and tall dry grass growing at a lake edge
 - Si un árbol sale cortado por arriba o por abajo, repítelo: necesito la pieza entera con la base.
 - Si el magenta tiñe los bordes de las hojas, no pasa nada: lo limpio al recortar.
 - El panorama es lo que más se nota. Si no te convence el primero, genera 3 o 4 y elegimos.
+
+
+# Laguna tropical realista
+
+Mismo método que el fiordo: piezas sobre magenta (el arbusto rosa sobre verde), recortadas y montadas a la altura en metros de la pieza anterior. El panorama es el original repetido en espejo y girado para que la costura quede a los lados; la textura de agua y la espuma solo se usan en la vista 2D.
+
+## Etapa 1 (v0.64.0): las 14 imágenes montadas
+
+#### 1. Panorama (21:9)
+```
+Photorealistic ultra-wide panorama of a tropical lagoon in French Polynesia at mid-morning, seen from water level in the middle of the lagoon. A perfectly straight, level horizon line at 80% of the image height. Several volcanic islands spread across the whole width: jagged green peaks covered in dense rainforest, steep ridges, thin white sand beaches and coconut palms at their base; the farthest islands pale blue in atmospheric haze, the nearest ones vivid green and sharp. A few low motu islets with palm trees and a white line of waves breaking on the outer reef. Islands never taller than 35% of the image. Deep blue sky fading to pale whitish blue at the horizon, scattered white fair-weather cumulus clouds with flat bases, a few high cirrus, no sun disk in frame. Below the horizon a thin strip of calm turquoise water with soft reflections of the islands. Seamless horizontally tileable: the left edge continues the right edge. Even lighting across the width, no vignette, no lens flare. No boats, no buildings, no people, no animals, no text, no watermark.
+```
+
+#### 2. Costa 2D (16:9)
+```
+Photorealistic top-down orthographic aerial drone photo of a tropical lagoon shoreline strip, seamless horizontally tileable (the left edge continues the right edge). Top half: dense tropical vegetation seen from directly above, coconut palm crowns as green stars, bushes with pink bougainvillea, one small thatched-roof hut and one outrigger canoe on the sand. Middle: a band of bright white coral sand with a few dark volcanic rocks, scattered coconuts and palm fronds. Bottom edge: a straight clean shoreline where the sand meets very clear shallow turquoise water with a thin line of white foam; the water is cut off flat at the very bottom. Tropical mid-morning light from the upper left, short soft shadows, no perspective, no horizon. No people, no text, no watermark.
+```
+
+#### 3. Palmera alta (9:16)
+```
+A single isolated tall coconut palm tree, about 13 meters tall, slender ringed grey-brown trunk with a gentle curve, full crown of long green fronds with a few dry yellow-brown tips, a cluster of green and brown coconuts under the crown, whole tree in frame from crown to base, base visible standing on a small patch of white sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+
+#### 4. Palmera curva (1:1)
+```
+A single isolated coconut palm tree strongly leaning to the right, trunk curving sideways like it grows over the water, about 10 meters long, ringed grey-brown trunk, full crown of green fronds with coconuts, whole tree in frame from crown to base, base visible on a small patch of white sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+
+#### 5. Palmera baja (3:4)
+```
+A single isolated young coconut palm, about 7 meters tall, short thick ringed trunk, dense full crown of fresh green fronds, whole tree in frame from crown to base, base visible on a small patch of white sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+
+#### 6. Fare (1:1)
+```
+A single isolated small traditional Polynesian fare hut, about 5 meters tall, weathered wooden walls, steep roof thatched with dried pandanus leaves, standing on short wooden stilts, gable facing the viewer, whole building in frame, base visible on a small patch of white sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects, no people. No text, no watermark.
+```
+
+#### 7. Arbusto verde (4:3)
+```
+A single isolated tropical beach shrub, sea grape or green hibiscus, about 2 meters tall, large round glossy green leaves, rounded shape, whole shrub in frame, base visible on a small patch of white sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+
+#### 8. Arbusto rosa (4:3)
+```
+A single isolated bougainvillea bush covered in bright fuchsia flowers with some green leaves, about 1.4 meters tall, rounded shape, whole bush in frame, base visible on a small patch of white sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat bright green background (#00FF00), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+(Fondo verde en vez de magenta porque las flores son fucsia y se borrarían al recortar.)
+
+#### 9. Roca grande (16:9)
+```
+A single isolated large low volcanic basalt boulder, about 2 meters tall and 5 meters wide, dark grey-black, eroded and porous surface, a few patches of pale lichen, resting on white coral sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+
+#### 10. Roca pequeña (16:9)
+```
+A single isolated small dark volcanic rock, about 1.2 meters tall and 2.5 meters wide, porous black-grey basalt, wet and darker at the base, resting on white coral sand. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+
+#### 11. Canoa (21:9)
+```
+A single isolated traditional Polynesian outrigger canoe (va'a), about 6 meters long, dark varnished wooden hull, white outrigger float attached with two wooden booms, resting on white sand, seen from the side, whole canoe in frame. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects, no people, no paddles. No text, no watermark.
+```
+
+#### 12. Matas del borde (16:9)
+```
+A single isolated low clump of beach grass and beach morning glory vine with a few small purple flowers, about 0.8 meters tall, growing on wet white sand at the water's edge, whole clump in frame. Photorealistic, side view at eye level from slightly above, tropical mid-morning light from the upper left, short soft shadows, clear saturated colors. Plain solid flat magenta background (#FF00FF), no shadow on the background, no horizon, no other objects. No text, no watermark.
+```
+
+#### 13. Textura de agua cenital (1:1)
+```
+Photorealistic top-down orthographic photo of very clear shallow tropical lagoon water seen from directly above, bright turquoise, white sand bottom visible through the water, soft small ripples and gentle sunlight caustic patterns on the sand, uniform color and brightness across the whole image, no shore, no objects, no fish, no perspective. Seamless tileable texture in both directions (left continues right, top continues bottom). No text, no watermark.
+```
+
+#### 14. Espuma de orilla (21:9)
+```
+Photorealistic top-down orthographic photo of a thin irregular line of white sea foam where gentle waves wash onto white sand, the foam line running horizontally across the whole image, lacy bubbles and thin wet sand film, isolated on a plain solid flat black background (#000000) above and below the foam, no sand texture outside the foam. Seamless horizontally tileable. No text, no watermark.
+```
+(Genera 3 versiones con la misma frase para la animación.)
