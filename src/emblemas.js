@@ -131,6 +131,62 @@ function emblema24(ctx, nombre, tela, marca, t) {
       for (let i = 0; i < 5; i++) circulo(ctx, 4 + ((i * 37) % 17), 20 - ((s * 10 + i * 4.3) % 18), 0.9);
       break;
     }
+    case 'san-telmo': {
+      // Fuego de San Telmo: el resplandor azul que los marineros veían en el tope del palo y en los penoles de la
+      // verga con tormenta, y que tomaban por la protección de San Erasmo (Telmo), su patrón. Palo, verga, obenques
+      // y tres llamas que tiemblan.
+      const tt = t || 0;
+      ctx.save();
+      ctx.globalAlpha *= 0.55;
+      r(ctx, 11.3, 6, 1.4, 17); r(ctx, 2.5, 9.2, 19, 1.2);
+      ctx.lineWidth = 0.5; ctx.beginPath();
+      ctx.moveTo(12, 6.5); ctx.lineTo(2.5, 22.5); ctx.moveTo(12, 6.5); ctx.lineTo(21.5, 22.5);
+      ctx.moveTo(3, 10.4); ctx.lineTo(6, 22.5); ctx.moveTo(21, 10.4); ctx.lineTo(18, 22.5); ctx.stroke();
+      ctx.restore();
+      [[12, 5.8, 1.15], [3, 9, 1], [21, 9, 1]].forEach(([x, y, k], i) => {
+        const f = k * (0.85 + 0.15 * Math.sin(tt * 5 + i * 2.1) + 0.08 * Math.sin(tt * 7.3 + i));
+        const ladeo = 0.6 * Math.sin(tt * 3.1 + i * 1.3);
+        const llama = (e) => {
+          const h = 5.2 * f * e, a = 1.7 * f * e;
+          ctx.beginPath(); ctx.moveTo(x - a, y);
+          ctx.quadraticCurveTo(x - a, y - h * 0.55, x + ladeo * e, y - h);
+          ctx.quadraticCurveTo(x + a, y - h * 0.55, x + a, y);
+          ctx.arc(x, y, a, 0, Math.PI); ctx.fill();
+        };
+        ctx.save(); ctx.globalAlpha *= 0.22; circulo(ctx, x, y - 1.8, 4.4 * f); circulo(ctx, x, y - 1.8, 2.8 * f); ctx.restore();
+        llama(1);
+        ctx.fillStyle = '#EEF2FF'; llama(0.5); ctx.fillStyle = marca;
+        // Chispas sueltas que suben de la punta
+        for (let j = 0; j < 2; j++) {
+          const ch = (tt * 1.7 + i * 0.37 + j * 0.5) % 1;
+          ctx.save(); ctx.globalAlpha *= 1 - ch; circulo(ctx, x + (j ? 1.6 : -1.6) * (0.5 + ch), y - 3.5 - ch * 3, 0.45); ctx.restore();
+        }
+      });
+      break;
+    }
+    case 'mechas': {
+      // Barbanegra (1718): mechas lentas encendidas bajo el sombrero, a los lados de la cara (Johnson, 1724).
+      // Tricornio de frente, barba trenzada y cuatro mechas con la punta encendida y humo.
+      const tt = t || 0;
+      ctx.beginPath(); ctx.moveTo(7.5, 6); ctx.quadraticCurveTo(12, 0.5, 16.5, 6); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(1.5, 3.5); ctx.quadraticCurveTo(6, 8, 12, 10); ctx.quadraticCurveTo(18, 8, 22.5, 3.5);
+      ctx.quadraticCurveTo(17, 6, 12, 6); ctx.quadraticCurveTo(7, 6, 1.5, 3.5); ctx.fill();
+      circulo(ctx, 10, 11.6, 0.8); circulo(ctx, 14, 11.6, 0.8);
+      ctx.beginPath(); ctx.moveTo(7.5, 12.5); ctx.quadraticCurveTo(12, 15, 16.5, 12.5); ctx.quadraticCurveTo(16.5, 17, 13.5, 18.5);
+      ctx.lineTo(13.8, 21.5); ctx.lineTo(12.6, 21.5); ctx.lineTo(12, 19); ctx.lineTo(11.4, 21.5); ctx.lineTo(10.2, 21.5); ctx.lineTo(10.5, 18.5);
+      ctx.quadraticCurveTo(7.5, 17, 7.5, 12.5); ctx.fill();
+      ctx.fillStyle = tela; r(ctx, 10.5, 20, 1.3, 0.6); r(ctx, 12.4, 20, 1.3, 0.6); ctx.fillStyle = marca;
+      ctx.lineWidth = 0.7; ctx.lineCap = 'round'; ctx.strokeStyle = marca;
+      [[4.5, 6, 3.2, 14], [6.5, 7.5, 5.6, 17], [19.5, 6, 20.8, 14], [17.5, 7.5, 18.4, 17]].forEach(([x0, y0, x1, y1], i) => {
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x1 + (i % 2 ? 0 : (i < 2 ? -1 : 1)), (y0 + y1) / 2, x1, y1); ctx.stroke();
+        const brillo = 0.75 + 0.25 * Math.sin(tt * 6 + i * 1.9);
+        ctx.save(); ctx.fillStyle = '#F97316'; ctx.globalAlpha *= 0.4; circulo(ctx, x1, y1, 1.9 * brillo); ctx.restore();
+        ctx.fillStyle = '#FDBA74'; circulo(ctx, x1, y1, 0.8 * brillo); ctx.fillStyle = marca;
+        const hum = (tt * 0.8 + i * 0.27) % 1;
+        ctx.save(); ctx.globalAlpha *= 0.45 * (1 - hum); circulo(ctx, x1 + Math.sin(hum * 6 + i) * 0.8, y1 - 1.5 - hum * 5, 0.6 + hum * 0.9); ctx.restore();
+      });
+      break;
+    }
     case 'mon': circulo(ctx, 12, 12, 7); ctx.fillStyle = tela; circulo(ctx, 12, 12, 3); break;
     // Hinomaru: el disco rojo solo, sin rayos (la bandera con rayos es de 1870).
     case 'sol-naciente': circulo(ctx, 12, 12, 6.5); break;
@@ -246,4 +302,4 @@ export function pintarIcono(ctx, nombre, x, y, lado, tela, marca, t = 0) {
   ctx.restore();
 }
 
-export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'seigaiha', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos', 'cuervos', 'tortuga', 'manta', 'aguila', 'dragon-tormenta'];
+export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'seigaiha', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos', 'cuervos', 'tortuga', 'manta', 'aguila', 'dragon-tormenta', 'san-telmo', 'mechas'];
