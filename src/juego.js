@@ -8,6 +8,7 @@ import * as XC from './xp-carga.js';
 import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
 import { objeto } from './objetos.js';
 import { hazanaDeClase } from './coleccion-bote.js';
+import { capituloDeClase, aJefe } from './sagas.js';
 import { tiendaVentajas, XP_ESTANDARTE, XP_ESTANDARTE_ANTES, MONEDAS_ESTANDARTE, XP_BITACORA, MONEDAS_BOTIN } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
 
@@ -490,6 +491,9 @@ export const CONSTANCIA = {
 // xp: la nominal (se paga a la mitad desde el 29 de octubre, como todo); xpAntes: la de un jefe vencido con las reglas viejas.
 // El requisito de racha de «Mar abierto»: días seguidos cumpliendo el plan (también los descansos respetados).
 export const REQ_MAR_ABIERTO = ['racha', 4];
+export { SAGAS } from './sagas.js';
+export const capituloDe = (i, clase) => capituloDeClase(CAPITULOS, i, clase);
+// La historia y el jefe de cada clase salen de sagas.js (etapa 6): ver capituloDe.
 export const CAPITULOS = [
   { nombre: 'El despertar', historia: 'Tu bote despierta en un muelle olvidado. Para zarpar, demuestra que puedes remar.', nivel: 10,
     req: [['sesiones', 2], ['km', 3]], jefe: { nombre: 'El Guardián del muelle', tipo: 'p500', texto: 'Completa la «Prueba 500 m»' }, monedas: 100, objeto: 'casco-cuernos-oro', xp: 1200, xpAntes: 150 },
@@ -1107,7 +1111,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     }
     g.nivel = nivelAhora(xp);
     if (cap < CAPITULOS.length) {
-      const c = CAPITULOS[cap];
+      const c = capituloDeClase(CAPITULOS, cap, claveClase);
       const r9 = XC.usaReglas9(s);
       capAgg.sesiones++; capAgg.km += m.metros / 1000; capAgg.z2min += m.z2min; capAgg.z4min += m.z4min;
       capAgg.fantasmas += m.ganados; capAgg.racha = Math.max(capAgg.racha, racha);
@@ -1127,7 +1131,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       if (r9 && vence && !listo) capPendiente = true;
       if (listo && (vence || capPendiente)) {
         const xpJefe = r9 ? c.xp : c.xpAntes ?? c.xp;
-        lograr(s.fecha, 'jefe', `Venciste ${c.jefe.nombre.replace(/^El /, 'al ').replace(/^La /, 'a la ')} y terminaste «${c.nombre}»`, c.monedas, c.objeto, xpJefe);
+        lograr(s.fecha, 'jefe', `Venciste ${aJefe(c.jefe.nombre)} y terminaste «${c.nombre}»`, c.monedas, c.objeto, xpJefe);
         jefeSesion = { capitulo: cap + 1, nombre: c.jefe.nombre, objeto: c.objeto };
         cap++;
         capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
@@ -1175,7 +1179,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const gastados = puntosGastados(arbol) + canjeados;
   monedas += canjeados * MONEDAS_POR_PUNTO;
   const capitulo = cap < CAPITULOS.length ? {
-    n: cap + 1, ...CAPITULOS[cap], xp: Math.round(CAPITULOS[cap].xp * fHoy),
+    n: cap + 1, ...capituloDeClase(CAPITULOS, cap, claveClase), xp: Math.round(CAPITULOS[cap].xp * fHoy),
     progreso: CAPITULOS[cap].req.map(([k, v]) => ({ clave: k, texto: REQ_TEXTO[k], meta: v, valor: Math.min(v, Math.round(capAgg[k] * 10) / 10) })),
     listo: CAPITULOS[cap].req.every(([k, v]) => capAgg[k] >= v) || nivel >= CAPITULOS[cap].nivel,
     porNivel: nivel >= CAPITULOS[cap].nivel,
