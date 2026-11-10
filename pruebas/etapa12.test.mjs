@@ -4,7 +4,7 @@ import * as T from '../src/talentos.js';
 import * as Tec from '../src/tecnica.js';
 import { PAISAJES, VELAS, comprarVelas, tieneVelas, velasElegidas } from '../src/carrera.js';
 import { registrada } from '../src/ajustes-guardados.js';
-import { PERFILES } from './etapa12.perfiles.mjs';
+import { PERFILES, PERFILES_SENDA_B } from './etapa12.perfiles.mjs';
 
 // Etapa 12: misiones con peso, clases igualadas, monedas y colección, atributos de 6 semanas y Técnica nueva.
 const FTP = 200;
@@ -67,6 +67,11 @@ const muestras = (seg, { w = 150, ruido = 0.03, spm = 24, dspm = 0.5, desde = 0 
     const clase = perfil.replace('Palada', '');
     const media = lista.reduce((a, d) => a + T.xpTalentos(clase, lleno, d).reduce((x, [, v]) => x + v, 0), 0) / lista.length;
     assert.ok(media * J.FACTOR_XP_LENTA >= 45 && media * J.FACTOR_XP_LENTA <= 55, `${clase}: ${media * J.FACTOR_XP_LENTA} XP reales`);
+  }
+  // La senda B (etapa 4 del rediseño) también queda en 45–55.
+  for (const [clase, lista] of Object.entries(PERFILES_SENDA_B)) {
+    const media = lista.reduce((a, d) => a + T.xpTalentos(clase, lleno, d).reduce((x, [, v]) => x + v, 0), 0) / lista.length;
+    assert.ok(media * J.FACTOR_XP_LENTA >= 45 && media * J.FACTOR_XP_LENTA <= 55, `${clase} senda B: ${media * J.FACTOR_XP_LENTA} XP reales`);
   }
   // Las sesiones anteriores a la etapa 12 siguen con los valores de antes.
   assert.equal(T.valorDe('vikingo', 'm2', 3, true), 3);

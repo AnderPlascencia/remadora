@@ -1,7 +1,7 @@
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
-import { VIKINGO_PALADA_DESDE, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
+import { VIKINGO_PALADA_DESDE, sendaEn, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
@@ -248,7 +248,7 @@ export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0,
 }
 
 // ---------- Talentos: por clase, en talentos.js ----------
-export { talentosDe, gradosEn, motivoBloqueo, puntosDeNivel, puntosGastados, grado, cualidadDe, lemaTalentos, tieneArbolAntiguo, valorDe, MONEDAS_POR_PUNTO } from './talentos.js';
+export { talentosDe, gradosEn, motivoBloqueo, puntosDeNivel, puntosGastados, grado, cualidadDe, lemaTalentos, tieneArbolAntiguo, valorDe, MONEDAS_POR_PUNTO, SENDAS, NIVEL_SENDA, sendaEn } from './talentos.js';
 
 // ---------- Misiones ----------
 // La distancia es la fuente principal de XP; las misiones dan variedad con recompensas moderadas:
@@ -707,6 +707,9 @@ function datosTalento(s, m, ctx) {
     sinPausas: sinPausas(s), delPrograma: !!s.delPrograma && s.tiempoMeta != null, racha: ctx.racha, sesSemana: ctx.sesSemana || 0,
     antes: !esEtapa12(s.fecha), kmSemana: ctx.kmSemana ?? m.metros / 1000, metaSemanaKm: ctx.metaSemanaKm || 0,
     palada: claveDia(s.fecha) >= VIKINGO_PALADA_DESDE, mppMedia: ctx.mppPromedio || 0,
+    // Senda B (etapa 4): sesión clave del plan, victorias reñidas, Alta mar, % en rango y minutos de técnica.
+    senda: ctx.senda || 'a', clave: esSesionClave(s), renidas: m.renidas || 0, altamar: m.altamar || 0,
+    pctEnRango: s.pctEnRango ?? null, tecMin: m.tec?.minutos || 0,
   };
 }
 
@@ -1010,7 +1013,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const nueva = XC.usaCarga(s);
     const creditos = nueva ? creditosAntesDe(hoy) : null;
     const gan = gananciaSesion(s, m, {
-      grados, clase: claveClase, sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0,
+      grados, clase: claveClase, senda: claveClase ? sendaEn(per, claveClase, s.fecha) : 'a', sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0,
       cargaAntes: cargaDia.get(hoy) || 0, creditos, planPagado: planPagado.has(hoy), tipo: nueva ? tipoSesion(s, ftp) : null,
     });
     if (gan.pagaPlan) planPagado.add(hoy);
@@ -1282,10 +1285,11 @@ export function estimarXp(sesiones, hipotetica, opts = {}) {
 }
 
 // XP por sesión que sumaría subir un talento de XP a `gradoNuevo`, con tus últimas 8 sesiones (ya con la XP de hoy).
-export function xpTalentoEstimada(h, clase, slot, gradoNuevo) {
+// senda: la que tienes ahora (las sesiones pasadas se recalculan como si ya la tuvieras).
+export function xpTalentoEstimada(h, clase, slot, gradoNuevo, senda) {
   const ult = [...h.porSesion.values()].slice(-8);
   if (!ult.length) return null;
-  const suma = (gr, d) => xpTalentos(clase, gr, d).reduce((a, [, v]) => a + v, 0);
+  const suma = (gr, d) => xpTalentos(clase, gr, senda ? { ...d, senda } : d).reduce((a, [, v]) => a + v, 0);
   const extra = ult.reduce((a, p) => a + suma({ ...(p.grados || {}), [slot]: gradoNuevo }, p.datosTal) - suma(p.grados || {}, p.datosTal), 0);
   return Math.round((extra / ult.length) * (h.factorXp ?? 1));
 }

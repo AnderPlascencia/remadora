@@ -18,7 +18,7 @@ import * as Cap from '../capacidades.js';
 import * as Pf from '../perfil.js';
 import { crearReloj } from '../reloj.js';
 import { VERSION } from '../version.js';
-import { $, ajustes, escaparHtml, fcMaxima, fcRef, formatoMeta, ftp, ico, miles, perfil, pitido, toast, vibrar } from '../ui.js';
+import { $, ajustes, escaparHtml, fcMaxima, fcRef, formatoMeta, ftp, ico, miles, perfil, pitido, previoHoy, toast, vibrar } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { actualizarFcMax, repararSesiones, ritmoObjetivo, selVariante } from './ajustes.js';
@@ -36,6 +36,7 @@ import { contextoXp, delProgramaHoy, ftpDelPlan, pintarHoy, revisarPlanAuto } fr
 import * as XC from '../xp-carga.js';
 import { bonoEquipo } from '../coleccion-bote.js';
 import { equipoEnUso } from '../carrera.js';
+import { permisoIntensidad, FRASE_SIN_INTENSIDAD } from '../intensidad.js';
 
 // ---------- Conexión y estado en vivo ----------
 export const remadora = new Remadora();
@@ -264,7 +265,7 @@ export function medidas() {
 }
 
 // Talentos de carrera de tu clase y la ventaja elegida de la bolsa para esta carrera.
-function crearVentaja(ent, racha) {
+function crearVentaja(ent, racha, recientes = []) {
   const per = leerPersonaje();
   const clave = per.clase ? J.claseDe(per.clase).clave : null;
   const grados = clave ? J.gradosEn(per.arbol?.[clave] || {}, clave, Date.now()) : {};
@@ -277,7 +278,12 @@ function crearVentaja(ent, racha) {
   if (objeto === 'talisman' && !clave) { toast('El Talismán necesita una clase: no se gastará'); objeto = null; }
   // Las piezas del bote solo dan ventaja en las carreras normales, nunca en las pruebas.
   const equipo = V.esPrueba(ent) ? null : bonoEquipo(equipoEnUso());
-  return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha, equipo });
+  // Senda del héroe (etapa 4) y permiso del entrenador para los talentos de intensidad.
+  const senda = clave ? J.sendaEn(per, clave) : 'a';
+  const f = ftp();
+  const cuerpo = f ? Cap.estadoCuerpo(recientes, f, Date.now(), { previo: previoHoy() }) : null;
+  const intensidad = permisoIntensidad({ sesiones: recientes, ftp: f, cuerpo, prueba: V.esPrueba(ent) });
+  return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha, equipo, senda, intensidad });
 }
 
 // Días seguidos contando hoy (la sesión que empieza ya cuenta).
@@ -379,12 +385,18 @@ async function iniciarSesion(reanudar = null) {
   // Si era la sesión del día y lo que tocaba en el plan: se anota al empezar (luego ya habría cambiado).
   if (!estado.sesion.xpCtx) {
     const actualSes = estado.sesion;
-    contextoXp(estado.entrenamientoActivo, recientes, actualSes.inicio).then((c) => { actualSes.xpCtx ??= c; });
+    contextoXp(estado.entrenamientoActivo, recientes, actualSes.inicio).then((c) => {
+      actualSes.xpCtx ??= c;
+      // Ni en las sesiones del plan (suaves o duras) ni en un día de descanso: ahí no hay talentos de intensidad.
+      if (c.delDia || c.delPlanSemana || c.descanso) V.apagarIntensidad(actualSes.ventaja, c.descanso ? 'descanso' : 'plan');
+    });
   }
   if (plan) estado.sesion.info = Ent.avanzar(estado.sesion.estadoAv, plan, medidas());
   prepararSalida();
   await prepararAtrVivo();
-  if (rival) estado.sesion.ventaja = crearVentaja(estado.entrenamientoActivo, await rachaConHoy());
+  if (rival) estado.sesion.ventaja = crearVentaja(estado.entrenamientoActivo, await rachaConHoy(), recientes);
+  const cx = estado.sesion.xpCtx;
+  if (cx && (cx.delDia || cx.delPlanSemana || cx.descanso)) V.apagarIntensidad(estado.sesion.ventaja, cx.descanso ? 'descanso' : 'plan');
   actualizarBotones();
   $('#bloque-actual').hidden = !estado.entrenamientoActivo;
   // Paladas y calorías solo se ven con «Datos avanzados» o si el entrenamiento las pide como meta.
@@ -597,6 +609,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
       registro.ventaja = { metros: Math.round(V.metrosVentaja(s.ventaja)), talentos: Math.round(s.ventaja.talentos), objeto: s.ventaja.objeto };
     }
     if (s.ventaja?.objeto) registro.ventajaUsada = s.ventaja.objeto;
+    // Para el límite semanal de intensidad (2 sesiones duras o con intensidad por semana).
+    if (s.ventaja?.usoIntensidad) registro.intensidad = true;
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
     // Terminar antes de completar el entrenamiento no gana la carrera: se guarda la diferencia, pero no cuenta como victoria.
@@ -828,6 +842,11 @@ function mostrarPopAtr(titulo, detalle) {
 function avisarTalentos() {
   const v = estado.sesion.ventaja;
   if (!v) return;
+  // Senda B con un talento de intensidad apagado por el cuerpo, la recuperación o la semana: se dice una vez.
+  if (!v.avisoIntensidad && v.senda === 'b' && ['cuerpo', 'recuperacion', 'semana'].includes(v.intensidad.motivo) && (v.grados.m3 || 0) > 0 && ['vikingo', 'polinesio', 'romano'].includes(v.clase)) {
+    v.avisoIntensidad = true;
+    hablar(FRASE_SIN_INTENSIDAD, { clave: 'talento', cadaSeg: 15 });
+  }
   for (const ev of v.eventos.slice(v.vistos)) {
     const m = ev.m >= 1 ? Math.round(ev.m) : ev.m.toFixed(1).replace('.', ',');
     eventoCarrera('ventaja', `+${m} m`, ev.nombre);

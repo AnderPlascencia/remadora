@@ -803,6 +803,12 @@ details.seccion[open] { padding-bottom: 8px; }
 .etq-tal { font-size: var(--t-xs); font-weight: 700; border: 1px solid currentColor; border-radius: var(--r-pildora); padding: 0 7px; }
 .etq-tal.xp { color: var(--xp); }
 .etq-tal.carrera { color: var(--spm); }
+.etq-tal.intensidad { color: #E8743B; }
+.sendas { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 6px; }
+.senda { border: 2px solid var(--borde); border-radius: var(--r-medio); background: var(--fondo); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.senda.activa { border-color: var(--acento); }
+.senda p { margin: 0; font-size: var(--t-s, .9rem); }
+.senda .boton { align-self: flex-start; }
 .pips { display: inline-flex; gap: 4px; margin-left: auto; }
 .pips i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #F2A33A; }
 .pips i.lleno { background: #F2A33A; }
