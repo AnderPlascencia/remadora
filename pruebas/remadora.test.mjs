@@ -277,14 +277,32 @@ test('al desconectar a mano se olvida el cambio pendiente', async () => {
   assert.equal(r.nivelPendiente, null);
 });
 
-test('esperarResistencia confirma cuando la consola informa el nivel pedido y falla si no llega', async () => {
+test('esperarResistencia confirma cuando la consola informa el nivel pedido', async () => {
   const r = await conectada();
-  const ok = r.esperarResistencia(12, 4000);
+  const espera = r.esperarResistencia(12, 4000);
   disp.notificacion.emitir(paqueteMetricas(150, 100, 11));
   disp.notificacion.emitir(paqueteMetricas(150, 110, 12));
-  assert.equal(await ok, true);
-  const no = r.esperarResistencia(20, 4000);
+  const res = await espera;
+  assert.equal(res.ok, true);
+  assert.equal(res.metricas, 2);
+  assert.equal(res.visto, 12);
+});
+
+test('esperarResistencia sin confirmar dice el último nivel leído y su byte', async () => {
+  const r = await conectada();
+  const espera = r.esperarResistencia(20, 4000);
   disp.notificacion.emitir(paqueteMetricas(150, 120, 12));
   await avanzar(4100);
-  assert.equal(await no, false);
+  assert.deepEqual(await espera, { ok: false, metricas: 1, visto: 12, byte: paqueteMetricas(0, 0, 12)[11] });
+});
+
+test('esperarResistencia sin datos de potencia (remadora quieta) cuenta 0 paquetes', async () => {
+  const r = await conectada();
+  const espera = r.esperarResistencia(20, 4000);
+  const quieta = paqueteMetricas(0, 0, 5);
+  quieta.fill(0xff, 12);
+  disp.notificacion.emitir(quieta);
+  disp.notificacion.emitir(paqueteRemada(0, 0));
+  await avanzar(4100);
+  assert.deepEqual(await espera, { ok: false, metricas: 0, visto: null, byte: null });
 });

@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.64.2 · 2026-11-10
+
+- Probar resistencia explica por qué no se confirmó: si la consola no mandó datos de potencia (por ejemplo, porque no estás remando) o qué nivel sigue informando. El registro de diagnóstico guarda cada prueba con el byte crudo que manda la consola, para ajustar la lectura del nivel en cada modelo.
+
 ## 0.64.1 · 2026-11-10
 
 - Probar resistencia (Ajustes > Diagnóstico) ahora espera la respuesta de la consola: avisa «La consola está en resistencia N» cuando el nivel llega, o que no lo confirmó (y que revises la variante) si en 4 s no lo ve.
