@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.64.1 · 2026-11-10
+
+- Probar resistencia (Ajustes > Diagnóstico) ahora espera la respuesta de la consola: avisa «La consola está en resistencia N» cuando el nivel llega, o que no lo confirmó (y que revises la variante) si en 4 s no lo ve.
+- La resistencia automática ya no se pierde si la señal se corta justo al cambiar de intervalo: el nivel se guarda y se manda al reconectar. Al desconectar a mano se olvida el cambio pendiente, para no aplicarlo en la próxima conexión.
+- El registro de diagnóstico dice cuándo un nivel de resistencia no se pudo pedir.
+
 ## 0.64.0 · 2026-11-09
 
 - La laguna tropical se renueva con imágenes realistas: islas volcánicas cubiertas de selva y motus con palmeras sobre una laguna turquesa, cocoteros, una cabaña con techo de pandano, uveros, buganvillas, rocas volcánicas y una canoa con balancín a los lados del canal. En la vista 2D, playa de arena blanca vista desde arriba, agua transparente con el fondo de arena y la luz moviéndose, y espuma donde el agua toca la orilla. Las variantes de atardecer, luna y dorada lo heredan.

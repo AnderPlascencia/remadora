@@ -4,7 +4,7 @@ import { test, mock, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { Remadora } from '../src/remadora.js';
 import { VARIANTES } from '../src/variantes.js';
-import { SERVICIO_IFIT, CARACT_ESCRITURA, CARACT_NOTIFICACION, SERVICIO_1400, bytesAHex, paqueteMetricas, paqueteRemada } from '../src/protocolo.js';
+import { SERVICIO_IFIT, CARACT_ESCRITURA, CARACT_NOTIFICACION, SERVICIO_1400, bytesAHex, hexABytes, nivelDesdeByte, paqueteMetricas, paqueteRemada } from '../src/protocolo.js';
 
 const V = VARIANTES.generica;
 const CABECERA_RESISTENCIA = 'fe 02 0d 02';
@@ -200,4 +200,91 @@ test('el modo demo manda datos cada medio segundo con el mismo formato y se deti
   await avanzar(2000);
   assert.equal(datos.length, n);
   assert.equal(r.demoTimer, null);
+});
+
+// Cambio de resistencia: tablas de comandos, reconexión, desconexión manual y confirmación de la consola.
+test('cada variante tiene 24 comandos de resistencia bien formados y en orden creciente', () => {
+  for (const [clave, v] of Object.entries(VARIANTES)) {
+    assert.equal(v.resistencia.length, 24, `${clave}: niveles`);
+    let anterior = 0;
+    v.resistencia.forEach((hex, i) => {
+      const b = hexABytes(hex);
+      assert.equal(b.length, 20, `${clave} nivel ${i + 1}: largo`);
+      assert.deepEqual([...b.slice(0, 9)], [0xff, 0x0d, 0x02, 0x04, 0x02, 0x09, 0x14, 0x09, 0x02], `${clave} nivel ${i + 1}: cabecera`);
+      let suma = 0;
+      for (let j = 6; j <= 13; j++) suma += b[j];
+      assert.equal(suma & 0xff, b[14], `${clave} nivel ${i + 1}: suma de control`);
+      const valor = b[11] | (b[12] << 8);
+      assert.ok(valor > anterior, `${clave} nivel ${i + 1}: el valor sube con el nivel`);
+      anterior = valor;
+      // La consola informa el byte alto de ese valor: debe leerse como el mismo nivel.
+      assert.equal(nivelDesdeByte(b[12]), i + 1, `${clave} nivel ${i + 1}: lectura de vuelta`);
+    });
+  }
+});
+
+test('manda el comando de su variante para los 24 niveles', async () => {
+  const r = await conectada();
+  for (let n = 1; n <= 24; n++) {
+    assert.equal(r.fijarResistencia(n), true);
+    const antes = disp.escritura.escritos.length;
+    await avanzar(200 * 3);
+    const escritos = disp.escritura.escritos.slice(antes);
+    const i = escritos.indexOf(CABECERA_RESISTENCIA);
+    assert.ok(i >= 0, `nivel ${n}: sin cabecera`);
+    assert.equal(escritos[i + 1], V.resistencia[n - 1], `nivel ${n}: comando`);
+  }
+});
+
+test('si se pide otro nivel antes de mandarlo, solo va el último', async () => {
+  const r = await conectada();
+  await avanzar(200);
+  r.fijarResistencia(5);
+  r.fijarResistencia(14);
+  const antes = disp.escritura.escritos.length;
+  await avanzar(200 * 6);
+  const escritos = disp.escritura.escritos.slice(antes);
+  assert.equal(escritos.filter((h) => h === CABECERA_RESISTENCIA).length, 1);
+  assert.ok(escritos.includes(V.resistencia[13]));
+  assert.ok(!escritos.includes(V.resistencia[4]));
+});
+
+test('sin conexión no acepta la resistencia', () => {
+  const r = nuevaRemadora();
+  assert.equal(r.fijarResistencia(10), false);
+  assert.equal(r.nivelPendiente, null);
+});
+
+test('un cambio pedido durante la reconexión se manda al volver', async () => {
+  const r = await conectada();
+  disp.fallos = 1;
+  disp.perderSenal();
+  await avanzar(500);
+  assert.equal(r.conectada, false);
+  assert.equal(r.fijarResistencia(16), true);
+  const antes = disp.escritura.escritos.length;
+  await avanzar(1000 + 2000 + 400 * V.init.length + 200 * 6);
+  const escritos = disp.escritura.escritos.slice(antes);
+  const i = escritos.indexOf(CABECERA_RESISTENCIA);
+  assert.ok(i >= V.init.length, 'se manda después del saludo, no en medio');
+  assert.equal(escritos[i + 1], V.resistencia[15]);
+});
+
+test('al desconectar a mano se olvida el cambio pendiente', async () => {
+  const r = await conectada();
+  r.fijarResistencia(9);
+  r.desconectar();
+  assert.equal(r.nivelPendiente, null);
+});
+
+test('esperarResistencia confirma cuando la consola informa el nivel pedido y falla si no llega', async () => {
+  const r = await conectada();
+  const ok = r.esperarResistencia(12, 4000);
+  disp.notificacion.emitir(paqueteMetricas(150, 100, 11));
+  disp.notificacion.emitir(paqueteMetricas(150, 110, 12));
+  assert.equal(await ok, true);
+  const no = r.esperarResistencia(20, 4000);
+  disp.notificacion.emitir(paqueteMetricas(150, 120, 12));
+  await avanzar(4100);
+  assert.equal(await no, false);
 });

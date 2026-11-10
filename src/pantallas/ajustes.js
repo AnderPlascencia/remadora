@@ -269,10 +269,14 @@ export function arrancarAjustes2() {
   H.sesiones().then(actualizarFcMax);
   for (let n = 1; n <= 24; n++) selNivel.add(new Option(`Resistencia ${n}`, n));
   selNivel.value = 8;
-  $('#btn-nivel-prueba').addEventListener('click', () => {
+  $('#btn-nivel-prueba').addEventListener('click', async () => {
     if (!remadora.conectada) { toast('Conecta la remadora primero'); return; }
-    remadora.fijarResistencia(Number(selNivel.value));
-    toast(`Resistencia ${selNivel.value} enviada. Revisa la consola.`);
+    const nivel = Number(selNivel.value);
+    if (!remadora.fijarResistencia(nivel)) { toast('No se pudo enviar la resistencia'); return; }
+    toast(`Resistencia ${nivel} enviada…`);
+    // La consola informa su nivel en cada paquete de métricas: así se sabe si aceptó el cambio.
+    const confirmada = await remadora.esperarResistencia(nivel);
+    toast(confirmada ? `La consola está en resistencia ${nivel}` : `La consola no confirmó la resistencia ${nivel}. Revisa la variante en Ajustes.`, confirmada ? 3000 : 5000);
   });
   $('#version-ajustes').textContent = VERSION;
 }
