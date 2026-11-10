@@ -662,8 +662,8 @@ function pintarMisiones(h) {
     + (hechos.length ? `<li class="hechos-grupo"><details><summary>${ico('i-check')}Completados <span class="seccion-resumen">${hechos.length}</span></summary><ul class="lista misiones">${hechos.map(logro).join('')}</ul></details></li>` : '');
 }
 
-// Lo que la colección necesita del estado del juego: tu nivel y las hazañas cumplidas.
-const ctxColeccion = (h) => ({ nivel: h.nivel, hazanas: new Set(h.hazanas.filter((x) => x.hecha).map((x) => x.id)) });
+// Lo que la colección necesita del estado del juego: tu nivel, las hazañas cumplidas y las piezas ganadas a los jefes.
+const ctxColeccion = (h) => ({ nivel: h.nivel, hazanas: new Set(h.hazanas.filter((x) => x.hecha).map((x) => x.id)), jefes: new Set(h.piezasJefe || []) });
 const equipoActual = (per, h) => {
   const clase = J.claseDe(per.clase)?.clave;
   return clase ? CB.equipoDe(per, clase, ctxColeccion(h), { velaDeColor: (id) => tieneVelas(per, id) }) : null;
@@ -788,7 +788,7 @@ export function pintarXpSesion(s, previas, resumen) {
   const puntos = subio ? J.puntosDeNivel(g.nivelDespues) - J.puntosDeNivel(g.nivelAntes) : 0;
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
   // Vencer a un jefe es un hito: tarjeta propia con su insignia, antes que todo lo demás.
-  const jefe = g.jefe ? `<div class="jefe-vencido" role="status">${ico('i-trofeo')}<div><b>¡Jefe vencido!</b><span>${escaparHtml(g.jefe.nombre)} cae y terminas el capítulo ${g.jefe.capitulo} de ${J.CAPITULOS.length}.</span><small>Insignia ${escaparHtml(O.objeto(g.jefe.objeto)?.nombre || '')}</small></div></div>` : '';
+  const jefe = g.jefe ? `<div class="jefe-vencido" role="status">${ico('i-trofeo')}<div><b>¡Jefe vencido!</b><span>${escaparHtml(g.jefe.nombre)} cae y terminas el capítulo ${g.jefe.capitulo} de ${J.CAPITULOS.length}.</span><small>Insignia ${escaparHtml(O.objeto(g.jefe.objeto)?.nombre || '')}${g.jefe.pieza ? ` y ${escaparHtml(CB.PIEZAS[g.jefe.pieza].nombre)} para tu bote` : ''}</small></div></div>` : '';
   caja.innerHTML = `${jefe}<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
     ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.nombreRango(g.nivelDespues, per.clase)}.` : ''}</span>` : ''}
     ${puntos > 0 && clase && h.talentosPorRepartir > 0 ? `<span class="subio-talento">+${puntos} ${puntos === 1 ? 'punto' : 'puntos'} de talento <button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></span>` : ''}

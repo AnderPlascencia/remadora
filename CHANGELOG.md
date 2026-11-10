@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.73.0 · 2026-11-11
+
+Premios de jefe: ya se ganan.
+
+- Al vencer al jefe de los capítulos 1, 2 o 3 ganas, además de la insignia de siempre, la pieza del bote de la clase con la que remabas: la bandera de popa, las palas o el mascarón, y la vela. Aparece en la colección de tu bote y en el aviso de «¡Jefe vencido!».
+- Si ya habías vencido a esos jefes, las piezas son tuyas desde ahora, de la clase que llevabas entonces.
+- Si cambias de clase, cada pieza es de la clase con la que venciste a su jefe. El polinesio sigue con la insignia sola hasta la revisión cultural de su saga.
+
 ## 0.72.0 · 2026-11-11
 
 Premios de jefe, primera tanda: las piezas ilustradas de los capítulos 1 a 3.
