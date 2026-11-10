@@ -9,6 +9,7 @@ import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
 import { objeto } from './objetos.js';
 import { hazanaDeClase } from './coleccion-bote.js';
 import { capituloDeClase, aJefe } from './sagas.js';
+import { MAESTRIA_DESDE, MIN_SEG_MAESTRIA, claseEn, nivelMaestria, monedasMaestria, nombreMaestria, maestriaDe } from './maestria.js';
 import { tiendaVentajas, XP_ESTANDARTE, XP_ESTANDARTE_ANTES, MONEDAS_ESTANDARTE, XP_BITACORA, MONEDAS_BOTIN } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
 
@@ -492,6 +493,7 @@ export const CONSTANCIA = {
 // El requisito de racha de «Mar abierto»: días seguidos cumpliendo el plan (también los descansos respetados).
 export const REQ_MAR_ABIERTO = ['racha', 4];
 export { SAGAS } from './sagas.js';
+export { MAESTRIA_MAX, SESIONES_MAESTRIA, conClaseNueva, claseEn } from './maestria.js';
 export const capituloDe = (i, clase) => capituloDeClase(CAPITULOS, i, clase);
 // La historia y el jefe de cada clase salen de sagas.js (etapa 6): ver capituloDe.
 export const CAPITULOS = [
@@ -983,9 +985,18 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     }
   };
 
+  // Maestría de clase (etapa 7): sesiones de 10 min o más con cada clase.
+  const sesClase = {};
   for (const s of orden) {
     const hoy = claveDia(s.fecha);
     if (!curvaNueva && hoy >= CURVA_DESDE) pasarACurvaNueva();
+    const claseS = (s.duracion || 0) >= MIN_SEG_MAESTRIA ? claseDe(claseEn(per, s.fecha))?.clave : null;
+    if (claseS) {
+      const antes = nivelMaestria(sesClase[claseS] || 0);
+      sesClase[claseS] = (sesClase[claseS] || 0) + 1;
+      const ahora = nivelMaestria(sesClase[claseS]);
+      if (ahora > antes && hoy >= MAESTRIA_DESDE) lograr(s.fecha, 'maestria', `Maestría ${ahora} de ${claseDe(claseS).nombre}: ${nombreMaestria(ahora)}`, monedasMaestria(ahora), null);
+    }
     const ayer = claveDia(s.fecha - 864e5);
     const anteayer = claveDia(s.fecha - 2 * 864e5);
     const nuevoDia = !dias.has(hoy);
@@ -1190,6 +1201,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     xp,
     nivel,
     titulo: tituloDe(nivel, per.clase),
+    maestria: Object.fromEntries(CLASES.map((c) => [c.clave, maestriaDe(sesClase[c.clave] || 0)])),
     rango: { numero: numeroRango(nivel), nombre: nombreRango(nivel, per.clase), comun: rangoDe(nivel).nombre },
     desde: tablaXp[nivel],
     hasta: nivel >= NIVEL_MAX ? null : tablaXp[nivel + 1],
