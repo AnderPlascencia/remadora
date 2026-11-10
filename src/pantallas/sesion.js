@@ -1166,8 +1166,7 @@ function avanceBloque(t) {
     estado.sesion.inicioBloque = { t: info.desde, dist: estado.sesion.dist, con: estado.sesion.segConMeta, dentro: estado.sesion.segEnRango, picoW: 0 };
     anunciarBloque(i, b, anterior);
     if (b.nivel && ajustes.si('resAuto', false)) {
-      remadora.fijarResistencia(b.nivel);
-      agregarLog(`resistencia automática: nivel ${b.nivel}`);
+      agregarLog(remadora.fijarResistencia(b.nivel) ? `resistencia automática: nivel ${b.nivel}` : `resistencia automática: nivel ${b.nivel} no válido o sin conexión`);
     }
   }
   if (estado.sesion.inicioBloque) estado.sesion.inicioBloque.picoW = Math.max(estado.sesion.inicioBloque.picoW, actual.watts);

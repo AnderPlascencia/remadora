@@ -122,11 +122,33 @@ export class Remadora extends EventTarget {
     }, 200);
   }
 
+  // Devuelve true si el nivel queda en cola para la consola (o para el modo demo).
+  // Durante una reconexión se guarda y se manda en cuanto vuelve la consulta periódica.
   fijarResistencia(nivel) {
     nivel = Math.round(nivel);
-    if (!(nivel >= 1 && nivel <= 24)) return;
-    if (this.demoTimer) { this.demoNivel = nivel; return; }
-    if (this.conectada) this.nivelPendiente = nivel;
+    if (!(nivel >= 1 && nivel <= 24)) return false;
+    if (this.demoTimer) { this.demoNivel = nivel; return true; }
+    if (!this.conectada && !this.reconectando) return false;
+    this.nivelPendiente = nivel;
+    return true;
+  }
+
+  // Espera a que la consola informe el nivel pedido (byte de resistencia de los paquetes de métricas).
+  // Resuelve true en cuanto llega, o false si pasan `ms` sin verlo.
+  esperarResistencia(nivel, ms = 4000) {
+    return new Promise((resolver) => {
+      const alDato = (e) => {
+        if (e.detail.tipo !== 'metricas' || e.detail.resistencia !== nivel) return;
+        terminar(true);
+      };
+      const terminar = (ok) => {
+        clearTimeout(limite);
+        this.removeEventListener('datos', alDato);
+        resolver(ok);
+      };
+      const limite = setTimeout(() => terminar(false), ms);
+      this.addEventListener('datos', alDato);
+    });
   }
 
   alRecibir(dataView, origen) {
@@ -142,6 +164,7 @@ export class Remadora extends EventTarget {
     this.conectada = false;
     this.log('desconectada');
     if (this.cierreManual || !this.dispositivo) {
+      this.nivelPendiente = null;
       this.estado('Desconectada');
       return;
     }
@@ -159,11 +182,14 @@ export class Remadora extends EventTarget {
       }
     }
     this.reconectando = false;
+    this.nivelPendiente = null;
     this.estado('Desconectada');
   }
 
   desconectar() {
     this.cierreManual = true;
+    // Un cambio de resistencia sin mandar no debe aplicarse en la próxima conexión.
+    this.nivelPendiente = null;
     clearInterval(this.pollTimer);
     clearInterval(this.demoTimer);
     this.demoTimer = null;
