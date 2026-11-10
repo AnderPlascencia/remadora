@@ -25,9 +25,13 @@ test('las dos sendas del vikingo: se ven antes del nivel 20 y la B cambia los ta
   await expect(sendas.nth(1)).toContainText('Se elige en el nivel 20');
   await expect(page.locator('#arbol [data-senda]')).toHaveCount(0);
   await expect(page.locator('#arbol .talento').filter({ hasText: 'Salida del drakkar' })).toHaveCount(1);
+  // Habilidad de clase (etapa 5): el Timonel en la senda A, la Furia del berserker en la B.
+  await expect(page.locator('#arbol .habilidad-clase')).toContainText('Timonel');
 
   await abrirTalentos(page, { senda: { vikingo: [[Date.now() - 1000, 'b']] } });
   await expect(page.locator('#arbol .senda.activa')).toContainText('Berserker');
+  await expect(page.locator('#arbol .habilidad-clase')).toContainText('Furia del berserker');
+  await expect(page.locator('#arbol .habilidad-clase')).toContainText('«Timonel»');
   for (const n of ['Furia de salida', 'Grito de guerra', 'Hambre de batalla', 'Golpe de hacha', 'Brazos de hacha']) {
     await expect(page.locator('#arbol .talento').filter({ hasText: n })).toHaveCount(1);
   }

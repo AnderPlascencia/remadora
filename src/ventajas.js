@@ -2,6 +2,7 @@
 // Solo cambian el resultado de la carrera (metros de ventaja); nunca tus metros, tiempos, paladas ni récords.
 import { TOPE_TALENTOS_M, valorDe, talentoDe, SLOTS_SENDA } from './talentos.js';
 import { SUBTOPE_INTENSIDAD_M } from './intensidad.js';
+import { nuevaHabilidad, avanzarHabilidad, apagarHabilidad, usoIntensidad as habilidadIntensa, HABILIDADES } from './habilidades.js';
 
 // Objetos de un solo uso (etapa 15: 12 en vez de 6, y algo más fuertes). Ninguno vale más de 30 m o un 3 % de ritmo.
 // Paga XP_ESTANDARTE con el factor de XP de hoy (la mitad desde el 29 de octubre): el texto dice lo que llega.
@@ -39,16 +40,18 @@ export const esPrueba = (ent) => !!ent && (ent.pruebaFtp || /^Prueba|^2000 m$/.t
 // equipo = lo que dan las piezas de tu bote: { salida, inicio, porPaladas, legendaria } (ver bonoEquipo).
 // senda = 'a' | 'b' (etapa 4). intensidad = { activa, maxActivaciones, calentado } de permisoIntensidad(): los talentos
 // de intensidad de la senda B solo cuentan con permiso, con su sub-tope de 15 m y su número de activaciones.
-export function nuevaVentaja({ clase = null, grados = {}, objeto = null, final = null, racha = 0, equipo = null, senda = 'a', intensidad = null } = {}) {
+// habilidad = { ftp, ftpFiable, mppMedia } para la habilidad de clase (etapa 5); null = sin habilidad (pruebas).
+export function nuevaVentaja({ clase = null, grados = {}, objeto = null, final = null, racha = 0, equipo = null, senda = 'a', intensidad = null, habilidad = null } = {}) {
   const e = {
     clase, grados, objeto, final, equipo,
     talentos: 0, objetoM: objeto === 'salida' ? 20 : 0, equipoM: 0, cuernos: 0,
     tope: objeto === 'talisman' ? 50 : TOPE_TALENTOS_M, factor: objeto === 'talisman' ? 1.25 : 1,
     distAnt: 0, paladasAnt: 0, hist: [], cuenta: 0, salida: 0, activoSeg: 0, quieto: 0, equipoPal: 0, equipoLeg: 0,
     eventos: [], vistos: 0,
-    senda: senda === 'b' ? 'b' : 'a', intensidad: { activa: true, maxActivaciones: null, calentado: false, ...(intensidad || {}) },
-    intM: 0, activaciones: 0, usoIntensidad: false, furia: null, harpax: [], remontada: 0,
+    senda: senda === 'b' ? 'b' : 'a', intensidad: { activa: true, maxActivaciones: null, calentado: true, ...(intensidad || {}) },
+    intM: 0, activaciones: 0, usoIntensidad: false, furia: null, harpax: [], remontada: 0, manoRapida: [],
   };
+  e.habilidad = clase && habilidad ? nuevaHabilidad({ clase, senda: e.senda, final, ...habilidad, intensidadActiva: e.intensidad.activa }) : null;
   if (equipo?.salida) sumarEquipo(e, equipo.salida, 'Velas', 0);
   // Sol Indiges (vela legendaria romana): metros por día de racha del plan.
   if (equipo?.legendaria === 'romano') sumarEquipo(e, 2 * Math.min(7, racha), 'Sol Indiges', 0);
@@ -67,7 +70,8 @@ function puedeIntensidad(e, t) {
   const p = e.intensidad;
   if (!p.activa) return false;
   if (!p.calentado && t < 300) return false;
-  return p.maxActivaciones == null || e.activaciones < p.maxActivaciones;
+  const hab = e.habilidad && HABILIDADES[e.habilidad.id].intensidad ? e.habilidad.activaciones.length : 0;
+  return p.maxActivaciones == null || e.activaciones + hab < p.maxActivaciones;
 }
 // Metros de un talento de intensidad: una activación más y su sub-tope de 15 m dentro de los 40 m.
 function sumarIntensidad(e, m, slot, t, discreto = false) {
@@ -79,14 +83,19 @@ function sumarIntensidad(e, m, slot, t, discreto = false) {
 }
 // Apaga la intensidad a mitad de camino (cuando se sabe que es una sesión del plan o un día de descanso).
 export function apagarIntensidad(e, motivo) {
-  if (e) e.intensidad = { ...e.intensidad, activa: false, motivo };
+  if (!e) return;
+  e.intensidad = { ...e.intensidad, activa: false, motivo };
+  // En las sesiones del plan y los días de descanso tampoco hay habilidad de clase (ni la de reserva).
+  if (motivo === 'plan' || motivo === 'descanso') apagarHabilidad(e.habilidad);
 }
+// ¿Esta carrera usó intensidad (talentos o habilidad)? Cuenta para el límite de 2 sesiones por semana.
+export const usoIntensidad = (e) => !!e && (e.usoIntensidad || habilidadIntensa(e.habilidad));
 // Suma metros de talento con el tope por carrera. discreto: solo un aviso corto en la pista (sin voz).
-function sumar(e, m, slot, t, discreto = false) {
+function sumar(e, m, slot, t, discreto = false, nombre = null) {
   const antes = e.talentos;
   e.talentos = Math.min(e.tope ?? TOPE_TALENTOS_M, e.talentos + m * (e.factor || 1));
   const ganado = Math.round((e.talentos - antes) * 10) / 10;
-  if (ganado > 0) e.eventos.push({ t, slot, nombre: nombreDe(e, slot), m: ganado, discreto });
+  if (ganado > 0) e.eventos.push({ t, slot, nombre: nombre || nombreDe(e, slot), m: ganado, discreto });
 }
 // Metros de las piezas de tu bote, con su propio tope por carrera.
 function sumarEquipo(e, m, nombre, t, discreto = true) {
@@ -107,7 +116,8 @@ const cruces = (antes, ahora, cada) => Math.max(0, Math.floor(ahora / cada) - Ma
 
 // Un segundo de carrera: muestra = { t, dist, paladas, spm, detras } (detras: algún fantasma va por delante).
 // Devuelve los metros de ventaja totales.
-export function avanzarVentaja(e, { t, dist, paladas = 0, spm = 0, detras = false }) {
+// w: vatios de este segundo; brecha: metros hasta el fantasma más cercano por delante (null si no hay).
+export function avanzarVentaja(e, { t, dist, paladas = 0, spm = 0, detras = false, w = 0, brecha = null }) {
   const v = Math.max(0, dist - e.distAnt);
   const nuevas = Math.max(0, Math.floor(paladas) - Math.floor(e.paladasAnt));
   // «Sin detenerte»: se perdonan hasta 2 s sin palada (la consola a veces manda un 0 suelto).
@@ -203,6 +213,18 @@ export function avanzarVentaja(e, { t, dist, paladas = 0, spm = 0, detras = fals
     }
     if (q.legendaria === 'polinesio') { const n = cruces(e.distAnt, dist, 500); if (n) sumarEquipo(e, 3 * n, 'Estrellas del navegante', t); }
   }
+  // Habilidad de clase: metros planos, con su sub-tope de 15 m, dentro del tope de los talentos. Con el Talismán
+  // no rinde más (solo afecta a los talentos).
+  if (e.habilidad) {
+    const usadas = { talentos: e.activaciones, compartidas: e.clase === 'pirata' ? e.manoRapida.length : 0 };
+    const mh = avanzarHabilidad(e.habilidad, { t, dist, paladas, spm, w, brecha }, e.intensidad, usadas);
+    if (mh > 0) {
+      const factor = e.factor;
+      e.factor = 1;
+      sumar(e, mh, 'habilidad', t, false, HABILIDADES[e.habilidad.id].nombre);
+      e.factor = factor;
+    }
+  }
   e.hist.push({ dist, paladas });
   if (e.hist.length > 10) e.hist.shift();
   e.distAnt = dist;
@@ -235,8 +257,15 @@ export function alAdelantar(e, t) {
     sumarIntensidad(e, h, 'm3', t);
   }
   if (e.clase !== 'pirata') return;
+  // Mano rápida (senda A) es de intensidad: comparte el contador de 3 con ¡Al abordaje!, con 90 s entre una y otra.
   const m = gradoA(e, 'm3');
-  if (m) sumar(e, m, 'm3', t);
+  const abordajes = e.habilidad?.id === 'abordaje' ? e.habilidad.activaciones.length : 0;
+  const ultima = Math.max(e.manoRapida.at(-1) ?? -Infinity, e.habilidad?.activaciones.at(-1) ?? -Infinity);
+  if (!m || e.manoRapida.length + abordajes >= 3 || t - ultima < 90 || !puedeIntensidad(e, t)) return;
+  e.manoRapida.push(t);
+  e.activaciones++;
+  e.usoIntensidad = true;
+  sumar(e, m, 'm3', t);
 }
 export const metrosVentaja = (e) => (e ? e.talentos + e.objetoM + (e.equipoM || 0) : 0);
 

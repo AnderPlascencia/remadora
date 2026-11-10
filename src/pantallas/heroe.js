@@ -20,6 +20,7 @@ import { estimarFtp, pintarChips, srcRetratoRango } from './preparar.js';
 import { pintarModoEnt, retratoPropio, vistaPrevia } from './vivo.js';
 import { corto } from './sesion.js';
 import { cerrarHoja, llenarSelectorEntrenamientos, obtenerEnt } from './planes.js';
+import { HABILIDADES, habilidadDe, RESERVA } from '../habilidades.js';
 
 // ---------- Héroe ----------
 export function leerPersonaje() {
@@ -481,6 +482,18 @@ function gradoResaltado(texto, g, max) {
   return texto.replace(/[+−-]?\d+(?:,\d+)?(?: \/ \d+(?:,\d+)?)+/g, (serie) => serie.split(' / ')
     .map((v, k) => (k === i ? `<b class="grado-actual" title="${g ? 'Tu grado' : 'Al aprenderlo'}">${v}</b>` : `<span class="grado-otro">${v}</span>`)).join(' / '));
 }
+// Habilidad de clase (etapa 5): se activa sola en carreras y Remo libre, nunca en pruebas ni en sesiones del plan.
+function habilidadHtml(clave, senda) {
+  const id = habilidadDe(clave, senda);
+  if (!id) return '';
+  const hab = HABILIDADES[id];
+  const res = RESERVA[id] ? HABILIDADES[RESERVA[id]] : null;
+  const nota = hab.intensidad
+    ? `De intensidad: descansa con el cuerpo cargado y tras 2 sesiones duras en la semana; ese día usas ${res ? `«${res.nombre}»` : 'la constancia'}.`
+    : 'De constancia: siempre activa.';
+  return `<div class="habilidad-clase"><div class="talento-cab"><b>${hab.nombre}</b><span class="etq-tal carrera">Habilidad</span>${hab.intensidad ? '<span class="etq-tal intensidad">Intensidad</span>' : ''}</div>
+      <p>${hab.texto} Se activa sola en carreras y Remo libre (no en pruebas ni en sesiones del plan) y da hasta 15 m por carrera.</p><p class="suave">${nota}</p></div>`;
+}
 function pintarTalentos(h, per, clase) {
   const arbol = per.arbol?.[clase.clave] || {};
   const senda = J.sendaEn(per, clase.clave);
@@ -535,6 +548,7 @@ function pintarTalentos(h, per, clase) {
   const deSenda = ts.filter((t) => !t.maestria && t.senda);
   $('#arbol').innerHTML = `<div class="rama"><div class="rama-titulo"><b>${J.cualidadDe(clase.clave)}</b><span>${clase.nombre}</span></div>
       <p class="suave lema-tal">${J.lemaTalentos(clase.clave)} Solo cuentan en la XP y en las carreras contra fantasmas: tus métricas no cambian.</p>
+      ${habilidadHtml(clase.clave, senda)}
       <h4 class="sub-tal">Mejoras de nivel</h4>${comun.map(fila).join('')}${sendas}${deSenda.map(fila).join('')}
       <h4 class="sub-tal">Maestría</h4>${ts.filter((t) => t.maestria).map(fila).join('')}</div>`;
 }

@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.69.0 · 2026-11-11
+
+Quinta etapa del rediseño del héroe: cada clase tiene una habilidad en carrera que se activa sola cuando remas como lo haría su cultura, sin tocar la pantalla.
+
+- Vikingo: Timonel (2 min de palada un 5 % más larga que tu media, con cadencia de 24 o menos). Con la senda Berserker, Furia del berserker (20 s por encima del 110 % de tu FTP con cadencia de 30 o menos, hasta 2 por carrera con 3 min entre ellas).
+- Pirata: ¡Al abordaje! (a menos de 15 m detrás de un fantasma, 15 s un 10 % más fuerte que tu media). Hasta 3 por carrera, compartidas con Mano rápida, con 90 s entre ellas, y no cuenta si te dejaste caer a propósito.
+- Samurái: Zanshin (los últimos 250 m con la cadencia estable y sin aflojar). Polinesio: Estrella guía (4 min con el ritmo parejo). Romano: Ritmo del pausarius (3 min con la cadencia de tus 2 primeros minutos).
+- Límites del entrenador: vale en carreras y Remo libre, nunca en pruebas ni en sesiones del plan. Paga plano, como mucho 15 m por carrera y dentro de los 40 m de los talentos. La Furia y el Abordaje son de intensidad: con el cuerpo cargado, tras 2 sesiones duras en la semana o sin calentar en los primeros 5 min, descansan y usas la de constancia (Timonel o Estrella guía). Mano rápida pasa a seguir esas mismas reglas.
+- La habilidad de tu clase se ve en Héroe › Talentos.
+
 ## 0.68.0 · 2026-11-11
 
 Cuarta etapa del rediseño del héroe: dos sendas por clase desde el nivel 20.
