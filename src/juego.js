@@ -7,7 +7,7 @@ import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
 import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
 import { objeto } from './objetos.js';
-import { hazanaDeClase } from './coleccion-bote.js';
+import { hazanaDeClase, PIEZAS as PIEZAS_BOTE } from './coleccion-bote.js';
 import { capituloDeClase, aJefe } from './sagas.js';
 import { MAESTRIA_DESDE, MIN_SEG_MAESTRIA, claseEn, nivelMaestria, monedasMaestria, nombreMaestria, maestriaDe } from './maestria.js';
 import { tiendaVentajas, XP_ESTANDARTE, XP_ESTANDARTE_ANTES, MONEDAS_ESTANDARTE, XP_BITACORA, MONEDAS_BOTIN } from './ventajas.js';
@@ -962,6 +962,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   let capMejores = {};
   let capPendiente = false; // forma de vencer al jefe ya hecha, a la espera de abrir el capítulo
   let jefeSesion = null;
+  // Piezas de bote ganadas a los jefes (etapa 6.2): la de la clase con la que remabas al vencerlo.
+  const piezasJefe = new Set();
   const hazanas = new Set();
 
   // Los premios que antes eran ropa dan ahora una insignia y 50 monedas más.
@@ -1143,7 +1145,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       if (listo && (vence || capPendiente)) {
         const xpJefe = r9 ? c.xp : c.xpAntes ?? c.xp;
         lograr(s.fecha, 'jefe', `Venciste ${aJefe(c.jefe.nombre)} y terminaste «${c.nombre}»`, c.monedas, c.objeto, xpJefe);
-        jefeSesion = { capitulo: cap + 1, nombre: c.jefe.nombre, objeto: c.objeto };
+        const pieza = PIEZAS_BOTE[`${claseDe(claseEn(per, s.fecha))?.clave}-jefe${cap + 1}`];
+        if (pieza) piezasJefe.add(pieza.id);
+        jefeSesion = { capitulo: cap + 1, nombre: c.jefe.nombre, objeto: c.objeto, ...(pieza ? { pieza: pieza.id } : {}) };
         cap++;
         capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
         capMejores = { t500: mejores.t500, t2000: mejores.t2000 };
@@ -1222,6 +1226,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     semanales: vista(semanaHoy),
     capitulo,
     capitulosHechos: cap,
+    piezasJefe: [...piezasJefe],
     hazanas: HAZANAS.filter((h) => !h.oculto || hazanas.has(h.id)).map((h) => ({ ...h, xp: Math.round((h.xp || 0) * fHoy), hecha: hazanas.has(h.id), valor: Math.min(h.meta, Math.floor(h.valor(g))) })),
     xpPorSesion,
     ritmo: ritmoReciente(orden, ahora),
