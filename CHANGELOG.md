@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.68.0 · 2026-11-11
+
+Cuarta etapa del rediseño del héroe: dos sendas por clase desde el nivel 20.
+
+- Al llegar al nivel 20 eliges senda, gratis y con cambio libre cuando quieras. Las mejoras 1 y 2 son de toda la clase; la senda cambia las mejoras 3, 4 y la maestría. Tus grados se quedan donde están y valen para la senda que sigas. La senda A son los talentos de siempre, así que si no eliges nada no cambia nada.
+- Las sendas B: el vikingo Berserker (una salida furiosa por carrera, XP por las sesiones clave del plan y por fantasmas en carreras cortas), el pirata Intendente (victorias reñidas, botín y Alta mar), el samurái de la Senda de la espada (precisión en tu rango de vatios y remo parejo), el polinesio Remero de carrera (remontada final y regatas ganadas) y el romano Harpax (el arpón de Agripa: metros al adelantar y la Corona naval en Alta mar). Todas quedan igualadas con las demás (unos 50 XP por sesión con el árbol completo) y dentro de los topes de 150 XP y 40 m.
+- Los talentos de intensidad (Furia de salida, Remontada y Harpax) siguen los límites del entrenador: descansan con el cuerpo cargado o agotado, con 12 h o más de recuperación pendiente, en las pruebas, en las sesiones del plan, en los días de descanso y cuando ya llevas 2 sesiones duras en la semana. Sin calentar, nada de intensidad en los primeros 5 min; las primeras 4 semanas, una sola activación por carrera; y como mucho 15 m por carrera entre todos ellos.
+
 ## 0.67.0 · 2026-11-11
 
 Tercera etapa del rediseño del héroe: cada clase tiene la identidad de su cultura.

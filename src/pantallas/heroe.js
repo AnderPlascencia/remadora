@@ -94,6 +94,19 @@ export function arrancarHeroe() {
     pintarHeroe();
   });
   $('#arbol').addEventListener('click', async (e) => {
+    // Senda (etapa 4): desde el nivel 20, gratis y cuando quieras. Los grados se quedan en su casilla.
+    const se = e.target.closest('[data-senda]');
+    if (se) {
+      const { per, h } = await estadoHeroe();
+      const clave = J.claseDe(per.clase).clave;
+      const nueva = se.dataset.senda === 'b' ? 'b' : 'a';
+      if (h.nivel < J.NIVEL_SENDA || J.sendaEn(per, clave) === nueva) return;
+      guardarPersonaje({ senda: { ...(per.senda || {}), [clave]: [...(per.senda?.[clave] || []), [Date.now(), nueva]] } });
+      toast(`Ahora sigues la senda ${J.SENDAS[clave][nueva].nombre}`);
+      vibrar(80);
+      pintarHeroe();
+      return;
+    }
     const ap = e.target.closest('[data-aprender]');
     if (ap) {
       const { per, h } = await estadoHeroe();
@@ -102,7 +115,7 @@ export function arrancarHeroe() {
       const arbolClase = per.arbol?.[clave] || {};
       if (J.motivoBloqueo(slot, { nivel: h.nivel, libres: h.talentosLibres }, arbolClase, clave)) return;
       guardarPersonaje({ arbol: { ...(per.arbol || {}), [clave]: { ...arbolClase, [slot]: [...(arbolClase[slot] || []), Date.now()] } } });
-      const t = J.talentosDe(clave).find((x) => x.slot === slot);
+      const t = J.talentosDe(clave, J.sendaEn(per, clave)).find((x) => x.slot === slot);
       toast(`${t.nombre}: grado ${J.grado({ ...arbolClase, [slot]: [...(arbolClase[slot] || []), 0] }, clave, slot)}`);
       vibrar(80);
       pintarHeroe();
@@ -383,7 +396,7 @@ function pintarFicha(h, per, clase, sesiones) {
   $('#ficha-figura').innerHTML = figuraHeroe(per, h.nivel, 140);
   // Lo que te dan ahora los talentos aprendidos, en una línea cada uno.
   const arbol = per.arbol?.[clase.clave] || {};
-  const tal = J.talentosDe(clase.clave).map((t) => ({ t, g: J.grado(arbol, clase.clave, t.slot) })).filter((x) => x.g > 0);
+  const tal = J.talentosDe(clase.clave, J.sendaEn(per, clase.clave)).map((t) => ({ t, g: J.grado(arbol, clase.clave, t.slot) })).filter((x) => x.g > 0);
   $('#ficha-talentos-caja').hidden = !tal.length;
   $('#ficha-talentos').innerHTML = tal.map(({ t, g }) => `<li><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span><span>${t.textoGrado(g)}</span></li>`).join('');
   $('#heroe-radar').innerHTML = radarAtributos(h.atributos, clase.favorito);
@@ -470,6 +483,7 @@ function gradoResaltado(texto, g, max) {
 }
 function pintarTalentos(h, per, clase) {
   const arbol = per.arbol?.[clase.clave] || {};
+  const senda = J.sendaEn(per, clase.clave);
   const est = { nivel: h.nivel, libres: h.talentosLibres };
   const antiguo = J.tieneArbolAntiguo(arbol) && J.puntosGastados(arbol) === 0;
   const pts = (n) => `${n} ${n === 1 ? 'punto' : 'puntos'}`;
@@ -496,18 +510,32 @@ function pintarTalentos(h, per, clase) {
       ? `<span class="${g >= t.max ? 'ok-texto' : 'suave'}">${motivo}</span>`
       : `<button type="button" class="boton" data-aprender="${t.slot}">${g ? 'Subir de grado' : 'Aprender'} · ${t.coste} ${t.coste === 1 ? 'punto' : 'puntos'}</button>`;
     // Cuánto te daría el siguiente grado con lo que remas de verdad (solo los de XP).
-    const xpEst = t.tipo === 'xp' && g < t.max ? J.xpTalentoEstimada(h, clase.clave, t.slot, g + 1) : null;
+    const xpEst = t.tipo === 'xp' && g < t.max ? J.xpTalentoEstimada(h, clase.clave, t.slot, g + 1, senda) : null;
     const valor = xpEst == null ? '' : xpEst > 0
       ? `<p class="talento-valor">Con tus últimas sesiones: <b>≈ +${miles(xpEst)} XP por sesión</b>${g ? ' más' : ''}</p>`
       : '<p class="talento-valor nada">Con tus últimas sesiones no sumaría XP: no cumplen lo que pide.</p>';
     return `<div class="talento ${g ? 'aprendido' : motivo && g < t.max ? 'bloqueado' : 'disponible'}">
-      <div class="talento-cab"><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span><span class="pips" aria-label="Grado ${g} de ${t.max}">${pips}</span></div>
+      <div class="talento-cab"><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span>${t.intensidad ? '<span class="etq-tal intensidad" title="Talento de intensidad: descansa con el cuerpo cargado, en las sesiones del plan y tras 2 sesiones duras en la semana">Intensidad</span>' : ''}<span class="pips" aria-label="Grado ${g} de ${t.max}">${pips}</span></div>
       <p>${gradoResaltado(t.texto, g, t.max)}</p>${valor}<div class="talento-pie"><small class="suave">Desde el nivel ${t.nivel}${g && g < t.max ? ` · Ahora: ${t.textoGrado(g).replace(/\.$/, '')}` : ''}</small>${accion}</div></div>`;
   };
-  const ts = J.talentosDe(clase.clave);
+  const ts = J.talentosDe(clase.clave, senda);
+  // Dos sendas desde el nivel 20: cambian las mejoras 3, 4 y la maestría. Cambiar es gratis.
+  const S = J.SENDAS[clase.clave];
+  const abierta = h.nivel >= J.NIVEL_SENDA;
+  const tarjetaSenda = (k) => {
+    const s = S[k];
+    const activa = senda === k;
+    const pie = activa ? '<span class="ok-texto">Tu senda</span>'
+      : abierta ? `<button type="button" class="boton chico" data-senda="${k}">Seguir esta senda</button>` : `<span class="suave">Se elige en el nivel ${J.NIVEL_SENDA}</span>`;
+    return `<div class="senda${activa ? ' activa' : ''}"><b>${s.nombre}</b><p class="suave">${s.lema}</p>${pie}</div>`;
+  };
+  const sendas = S ? `<h4 class="sub-tal">Tu senda</h4><div class="sendas">${tarjetaSenda('a')}${tarjetaSenda('b')}</div>
+      <p class="suave lema-tal">Las mejoras 1 y 2 son de toda la clase. La senda cambia las mejoras 3, 4 y la maestría; tus grados se quedan donde están y valen para la senda que sigas.</p>` : '';
+  const comun = ts.filter((t) => !t.maestria && !t.senda);
+  const deSenda = ts.filter((t) => !t.maestria && t.senda);
   $('#arbol').innerHTML = `<div class="rama"><div class="rama-titulo"><b>${J.cualidadDe(clase.clave)}</b><span>${clase.nombre}</span></div>
       <p class="suave lema-tal">${J.lemaTalentos(clase.clave)} Solo cuentan en la XP y en las carreras contra fantasmas: tus métricas no cambian.</p>
-      <h4 class="sub-tal">Mejoras de nivel</h4>${ts.filter((t) => !t.maestria).map(fila).join('')}
+      <h4 class="sub-tal">Mejoras de nivel</h4>${comun.map(fila).join('')}${sendas}${deSenda.map(fila).join('')}
       <h4 class="sub-tal">Maestría</h4>${ts.filter((t) => t.maestria).map(fila).join('')}</div>`;
 }
 

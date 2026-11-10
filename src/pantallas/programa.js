@@ -64,6 +64,8 @@ export async function contextoXp(ent, sesiones, inicio = Date.now()) {
     }
     // Adelantar la próxima sesión de la semana también es hacer lo del plan.
     if (dia?.adelantar && ent?.nombre === dia.adelantar) out.delDia = 'plan';
+    // Día de descanso del plan: los talentos de intensidad descansan también.
+    if (dia?.fuente === 'descanso' && !out.delDia) out.descanso = true;
     // Una sesión del plan que aún faltaba esta semana (el día que sea): cuenta como del programa.
     const prog = leerPrograma();
     if (prog && ent) out.delPlanSemana = P.semanaFlexible(prog, sesiones, inicio).pendientes.some((d) => d.ent === ent.nombre);
