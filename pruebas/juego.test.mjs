@@ -2,9 +2,8 @@ import assert from 'node:assert/strict';
 import * as J from '../src/juego.js';
 
 assert.equal(J.xpParaNivel(1), 0);
-assert.equal(J.xpParaNivel(2), 200);
-assert.equal(J.xpParaNivel(3), 410);
-assert.equal(J.xpDelNivel(10), Math.round(200 * 1.05 ** 9));
+assert.equal(J.xpParaNivel(2), J.XP_SESION_REF);
+assert.equal(J.xpDelNivelAntes(10), Math.round(200 * 1.05 ** 9));
 assert.equal(J.nivelDe(0), 1);
 assert.equal(J.nivelDe(J.xpParaNivel(10)), 10);
 assert.equal(J.nivelDe(J.xpParaNivel(10) - 1), 9);

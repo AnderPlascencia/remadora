@@ -65,19 +65,40 @@ export const claseDe = (clave) => CLASES.find((c) => c.clave === (CLASES_ANTIGUA
 
 // 9 rangos de personaje, uno cada 10 niveles: Legendario en el 80 y 10 niveles más de recorrido.
 export const NIVEL_MAX = 90;
-// Del nivel 1 al 2 cuestan 200 XP y cada nivel siguiente cuesta un 5 % más que el anterior.
-export const XP_PRIMER_NIVEL = 200;
-export const XP_INCREMENTO = 1.05;
 export const XP_POR_METROS = 10;
-export const xpDelNivel = (n) => Math.round(XP_PRIMER_NIVEL * XP_INCREMENTO ** (n - 1)); // coste de n → n + 1
-const XP_ACUMULADA = [0, 0];
-for (let n = 2; n <= NIVEL_MAX; n++) XP_ACUMULADA[n] = XP_ACUMULADA[n - 1] + xpDelNivel(n - 1);
+// Curva de niveles (etapa 2 del rediseño del héroe, decisión de Ander): se mide en sesiones por nivel, no en un
+// porcentaje. Con una sesión típica de 4 por semana con plan (unos 750 XP) va de 1 sesión por nivel al empezar a
+// unas 8 cerca del 80: unas 310 sesiones, 18 meses, hasta Legendario (nivel 80); el 90 queda unos 5 meses después.
+export const CURVA_DESDE = '2026-11-11';
+export const XP_SESION_REF = 750;
+export const MESES_LEGENDARIO = 18;
+export const sesionesPorNivel = (n) => 1 + 7.6 * ((Math.max(1, n) - 1) / (NIVEL_MAX - 2)) ** 1.25;
+export const xpDelNivel = (n) => Math.round((XP_SESION_REF * sesionesPorNivel(n)) / 10) * 10; // coste de n → n + 1
+// La curva de antes (200 XP el primer nivel y un 5 % más cada nivel): rige las sesiones anteriores a CURVA_DESDE.
+export const xpDelNivelAntes = (n) => Math.round(200 * 1.05 ** (n - 1));
+const acumulada = (coste) => {
+  const a = [0, 0];
+  for (let n = 2; n <= NIVEL_MAX; n++) a[n] = a[n - 1] + coste(n - 1);
+  return a;
+};
+const XP_ACUMULADA = acumulada(xpDelNivel);
+const XP_ACUMULADA_ANTES = acumulada(xpDelNivelAntes);
+const nivelCon = (tabla) => (xp) => {
+  let n = 1;
+  while (n < NIVEL_MAX && xp >= tabla[n + 1]) n++;
+  return n;
+};
 // XP total para llegar a un nivel.
 export const xpParaNivel = (n) => XP_ACUMULADA[Math.min(Math.max(1, n), NIVEL_MAX)];
-export function nivelDe(xp) {
-  let n = 1;
-  while (n < NIVEL_MAX && xp >= xpParaNivel(n + 1)) n++;
-  return n;
+export const nivelDe = nivelCon(XP_ACUMULADA);
+export const nivelCurvaAntes = nivelCon(XP_ACUMULADA_ANTES);
+// Paso a la curva nueva: conservas tu nivel y lo que llevabas del siguiente. Si la curva nueva te da más XP para
+// ese punto, se suma la diferencia; nunca se quita XP (quien ya valía un nivel mayor con la curva nueva, lo sube).
+export function ajusteDeCurva(xp) {
+  const n = nivelCurvaAntes(xp);
+  const frac = n >= NIVEL_MAX ? 0 : (xp - XP_ACUMULADA_ANTES[n]) / xpDelNivelAntes(n);
+  const objetivo = Math.round(xpParaNivel(n) + (n >= NIVEL_MAX ? 0 : frac * xpDelNivel(n)));
+  return Math.max(0, objetivo - xp);
 }
 
 // Rangos del personaje: uno cada 10 niveles. El título del héroe es el nombre del rango.
@@ -474,7 +495,7 @@ export const CAPITULOS = [
     req: [['km', 200], ['sesiones', 20]], jefe: { nombre: 'El Rey de los mares', tipo: 'pftp', texto: 'Completa la «Prueba FTP 20 min»' }, monedas: 500, objeto: 'corona-mares', xp: 2000 },
 ];
 // Las otras dos formas de vencer a un jefe (reglas de la etapa 9).
-export const OTRAS_FORMAS_JEFE = 'o cumple la sesión clave de tu plan (umbral, VO₂, sprint o prueba), o gana una carrera en Alta mar';
+export const OTRAS_FORMAS_JEFE = 'o cumple la sesión clave de tu plan (umbral, VO₂, sprint o prueba), o gana una carrera en Alta mar, o cumple una semana entera de tu plan';
 const TIPOS_CLAVE = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
 // Sesión clave del plan: la del día, de un tipo duro, cumplida (no solo terminada).
 export const esSesionClave = (s) => !!s.delPrograma && TIPOS_CLAVE.has(s.tipoPlan) && XC.cumplimientoPlan(s) === 'cumplida';
@@ -886,6 +907,15 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const premios = new Set();
   let xp = 0;
   let monedas = 0;
+  // Curva de niveles: la de antes hasta CURVA_DESDE; ese día se pasa a la nueva conservando el nivel.
+  let curvaNueva = false;
+  let ajusteCurva = 0;
+  const nivelAhora = (x) => (curvaNueva ? nivelDe(x) : nivelCurvaAntes(x));
+  const pasarACurvaNueva = () => {
+    ajusteCurva = ajusteDeCurva(xp);
+    xp += ajusteCurva;
+    curvaNueva = true;
+  };
   let mppSuma = 0;
   let mppN = 0;
   const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0 };
@@ -931,6 +961,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
 
   for (const s of orden) {
     const hoy = claveDia(s.fecha);
+    if (!curvaNueva && hoy >= CURVA_DESDE) pasarACurvaNueva();
     const ayer = claveDia(s.fecha - 864e5);
     const anteayer = claveDia(s.fecha - 2 * 864e5);
     const nuevoDia = !dias.has(hoy);
@@ -970,7 +1001,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const avisoDescanso = nueva && cal[hoy] === '' && !XC.esDelDia(s) && (gan.carga > XC.DESCANSO_CARGA_MAX || (porDia.get(hoy)?.ifMax || 0) >= XC.DESCANSO_IF_MAX);
     cargaDia.set(hoy, (cargaDia.get(hoy) || 0) + gan.carga);
     if (s.paladas) { mppSuma += s.distancia / s.paladas; mppN++; }
-    const nivelAntes = nivelDe(xp);
+    const nivelAntes = nivelAhora(xp);
     xpSesion = 0;
     jefeSesion = null;
     xp += gan.xp;
@@ -1054,7 +1085,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       g.ftpInicial ??= s.ftp;
       g.ftpMejora = Math.max(g.ftpMejora, s.ftp - g.ftpInicial);
     }
-    g.nivel = nivelDe(xp);
+    g.nivel = nivelAhora(xp);
     if (cap < CAPITULOS.length) {
       const c = CAPITULOS[cap];
       const r9 = XC.usaReglas9(s);
@@ -1070,7 +1101,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
         mejor500: m.t500 != null && (capMejores.t500 == null || m.t500 < capMejores.t500),
         mejor2000: m.t2000 != null && (capMejores.t2000 == null || m.t2000 < capMejores.t2000),
       }[c.jefe.tipo];
-      const vence = prueba || (r9 && (esSesionClave(s) || ganaAltaMar(s)));
+      // Desde la curva nueva, una semana del plan cumplida también vence al jefe (decisión de Ander).
+      const vence = prueba || (r9 && (esSesionClave(s) || ganaAltaMar(s) || (hoy >= CURVA_DESDE && (creditos?.semanas || 0) > 0)));
       // Una forma de vencerlo hecha antes de abrir el capítulo se guarda para cuando se abra.
       if (r9 && vence && !listo) capPendiente = true;
       if (listo && (vence || capPendiente)) {
@@ -1086,7 +1118,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     // Logros: se revisan hasta que no salga ninguno nuevo (uno puede subir el nivel y desbloquear otro).
     for (let nuevo = true; nuevo;) {
       nuevo = false;
-      g.nivel = nivelDe(xp);
+      g.nivel = nivelAhora(xp);
       if (!XC.usaReglas9(s)) g.nivelAntiguo = g.nivel;
       for (const h of HAZANAS) {
         if (!hazanas.has(h.id) && h.valor(g) >= h.meta && !(h.desde && hoy < h.desde)) {
@@ -1096,7 +1128,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
         }
       }
     }
-    porSesion.set(s.fecha, { xp: gan.xp, xpExtra: xpSesion, detalle: gan.detalle, ganancias, nivelAntes, nivelDespues: nivelDe(xp), monedas: monedasSesion, datosTal: gan.datosTal, grados, avisoDescanso, jefe: jefeSesion });
+    porSesion.set(s.fecha, { xp: gan.xp, xpExtra: xpSesion, detalle: gan.detalle, ganancias, nivelAntes, nivelDespues: nivelAhora(xp), monedas: monedasSesion, datosTal: gan.datosTal, grados, avisoDescanso, jefe: jefeSesion });
   }
 
   // Misiones de hoy y de esta semana aunque todavía no hayas remado.
@@ -1115,7 +1147,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const ultimas = [...porSesion.values()].slice(-5);
   const xpPorSesion = ultimas.length ? ultimas.reduce((a, x) => a + x.xp + x.xpExtra, 0) / ultimas.length : 0;
 
-  const nivel = nivelDe(xp);
+  if (!curvaNueva && claveDia(ahora) >= CURVA_DESDE) pasarACurvaNueva();
+  const nivel = nivelAhora(xp);
+  const tablaXp = curvaNueva ? XP_ACUMULADA : XP_ACUMULADA_ANTES;
   // Puntos canjeados por monedas (etapa 12): salen de los libres de todas las clases.
   const canjeados = per.puntosCanjeados || 0;
   const gastados = puntosGastados(arbol) + canjeados;
@@ -1132,8 +1166,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     xp,
     nivel,
     titulo: tituloDe(nivel),
-    desde: xpParaNivel(nivel),
-    hasta: nivel >= NIVEL_MAX ? null : xpParaNivel(nivel + 1),
+    desde: tablaXp[nivel],
+    hasta: nivel >= NIVEL_MAX ? null : tablaXp[nivel + 1],
+    ajusteCurva,
     talentos: puntosDeNivel(nivel),
     talentosLibres: puntosDeNivel(nivel) - gastados,
     talentosPorRepartir: claveClase ? talentosPorRepartir(arbol, claveClase, nivel, puntosDeNivel(nivel) - gastados) : 0,
