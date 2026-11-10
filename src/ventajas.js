@@ -14,7 +14,7 @@ export const OBJETOS_VENTAJA = [
   { id: 'corriente', nombre: 'Corriente favorable', texto: 'Toda la carrera cuentas un 1,5 % más de distancia (hasta 30 m).', precio: 110 },
   { id: 'aire', nombre: 'Segundo aire', texto: 'Si vas por detrás en el último minuto o los últimos 250 m, cuentas un 3 % más. Solo en carreras con final.', precio: 90, necesitaFinal: true },
   { id: 'cuerno', nombre: 'Cuerno de guerra', texto: 'Cada vez que adelantas a un fantasma, +5 m (hasta 3 veces).', precio: 70 },
-  { id: 'botin', nombre: 'Botín del corsario', texto: '+20 monedas por cada fantasma que venzas.', precio: 60 },
+  { id: 'botin', nombre: 'Botín del bucanero', texto: '+20 monedas por cada fantasma que venzas.', precio: 60 },
   { id: 'bitacora', nombre: 'Bitácora del capitán', texto: '+20 XP si terminas la carrera sin pausas.', precio: 50 },
   { id: 'talisman', nombre: 'Talismán de la clase', texto: 'Los talentos de carrera de tu clase rinden un 25 % más y su tope sube de 40 a 50 m.', precio: 130, necesitaClase: true },
 ];
@@ -45,10 +45,10 @@ export function nuevaVentaja({ clase = null, grados = {}, objeto = null, final =
     eventos: [], vistos: 0,
   };
   if (equipo?.salida) sumarEquipo(e, equipo.salida, 'Velas', 0);
-  // Sol invicto (vela legendaria romana): metros por día de racha del plan.
-  if (equipo?.legendaria === 'romano') sumarEquipo(e, 2 * Math.min(7, racha), 'Sol invicto', 0);
+  // Sol Indiges (vela legendaria romana): metros por día de racha del plan.
+  if (equipo?.legendaria === 'romano') sumarEquipo(e, 2 * Math.min(7, racha), 'Sol Indiges', 0);
   const g = (slot) => (clase ? valorDe(clase, slot, grados[slot] || 0) : 0);
-  // Marcha de la legión: con 2 días de racha o más, sales por delante.
+  // Boga de la liburna: con 2 días de racha o más, sales por delante.
   if (clase === 'romano' && racha >= 2 && g('m4')) sumar(e, g('m4'), 'm4', 0);
   return e;
 }

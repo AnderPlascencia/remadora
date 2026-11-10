@@ -35,11 +35,11 @@ export const CLASES_TALENTO = {
       m2: { nombre: 'Robar el viento', tipo: 'carrera', g: [30, 25, 20], texto: (g) => `Mientras vas detrás de un fantasma, cada ${g} paladas recibes 1 palada extra.` },
       m3: { nombre: 'Mano rápida', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Cada vez que adelantas a un fantasma le robas ${g} m.` },
       m4: { nombre: 'Botín escondido', tipo: 'xp', g: [20, 40, 60], g0: [15, 30, 45], texto: (g) => `+${g} XP en cada sesión con carrera contra fantasmas.` },
-      maestria: { nombre: 'Tesoro del capitán', tipo: 'xp', g: [40, 80, 120], texto: (g) => `Si les ganas a todos los fantasmas de la carrera, +${g} XP.` },
+      maestria: { nombre: 'Reparto del botín', tipo: 'xp', g: [40, 80, 120], texto: (g) => `Si les ganas a todos los fantasmas de la carrera, +${g} XP.` },
     },
   },
   samurai: {
-    cualidad: 'Técnica', bote: 'barca', lema: 'La forma perfecta: remar sin interrupciones y rematar con precisión.',
+    cualidad: 'Técnica', bote: 'kobaya', lema: 'La forma perfecta: remar sin interrupciones y rematar con precisión.',
     talentos: {
       m1: { nombre: 'Corte limpio', tipo: 'carrera', g: [40, 35, 30], texto: (g) => `Cada ${g} paladas seguidas sin detenerte recibes 1 palada extra.` },
       m2: { nombre: 'Kata', tipo: 'xp', g: [25, 50, 75], g0: [15, 30, 45], texto: (g) => `+${g} XP si remas toda la sesión sin pausas (10 min o más).` },
@@ -53,18 +53,18 @@ export const CLASES_TALENTO = {
     talentos: {
       m1: { nombre: 'Estrella guía', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP en sesiones de 30 min o más.` },
       m2: { nombre: 'Lectura del oleaje', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `Cada 250 m avanzas ${g} m más.` },
-      m3: { nombre: 'Travesía', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada kilómetro después del quinto.` },
+      m3: { nombre: 'Más allá del horizonte', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada kilómetro después del quinto.` },
       m4: { nombre: 'Corriente de marea', tipo: 'carrera', g: [2, 4, 6], texto: (g) => `Pasados los 2000 m, cada 500 m avanzas ${g} m más.` },
-      maestria: { nombre: 'Gran travesía', tipo: 'xp', g: [30, 60, 90], texto: (g) => `+${g} XP en sesiones de 60 min o más.` },
+      maestria: { nombre: 'Viaje de altura', tipo: 'xp', g: [30, 60, 90], texto: (g) => `+${g} XP en sesiones de 60 min o más.` },
     },
   },
   romano: {
     cualidad: 'Constancia', bote: 'trirreme', lema: 'No se rinde nunca: sus mejoras premian volver cada día y remar sin parar.',
     talentos: {
-      m1: { nombre: 'Pax romana', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP desde tu tercera sesión de la semana.` },
+      m1: { nombre: 'Semana de la flota', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP desde tu tercera sesión de la semana.` },
       m2: { nombre: 'Hortator', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `Cada minuto remado sin detenerte avanzas ${g} m más.` },
-      m3: { nombre: 'Ley de la legión', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada día de racha del plan (hasta 7 días).` },
-      m4: { nombre: 'Marcha de la legión', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Con 2 días de racha o más, empiezas la carrera ${g} m por delante.` },
+      m3: { nombre: 'Ley de la flota', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada día de racha del plan (hasta 7 días).` },
+      m4: { nombre: 'Boga de la liburna', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Con 2 días de racha o más, empiezas la carrera ${g} m por delante.` },
       maestria: { nombre: 'Triunfo romano', tipo: 'xp', g: [75, 150, 225], texto: (g) => `Al completar 4 sesiones en una semana o llegar a tu meta semanal de km, +${g} XP (una vez por semana).` },
     },
   },

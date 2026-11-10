@@ -132,7 +132,16 @@ function emblema24(ctx, nombre, tela, marca, t) {
       break;
     }
     case 'mon': circulo(ctx, 12, 12, 7); ctx.fillStyle = tela; circulo(ctx, 12, 12, 3); break;
-    case 'sol-naciente': circulo(ctx, 12, 12, 5); rayos(ctx, 12, 12, 5, 12, 12); break;
+    // Hinomaru: el disco rojo solo, sin rayos (la bandera con rayos es de 1870).
+    case 'sol-naciente': circulo(ctx, 12, 12, 6.5); break;
+    case 'seigaiha':
+      // Olas en escamas: filas de arcos concéntricos
+      ctx.lineWidth = 0.9;
+      for (let fila = 0; fila < 4; fila++) for (let i = 0; i < 4; i++) {
+        const x = 3 + i * 6 + (fila % 2) * 3, y = 7 + fila * 4.5;
+        for (const k of [4.2, 2.8, 1.4]) { ctx.beginPath(); ctx.arc(x, y, k, Math.PI, 0); ctx.stroke(); }
+      }
+      break;
     case 'sol': circulo(ctx, 12, 12, 5); rayos(ctx, 12, 12, 6, 10, 10); break;
     case 'sol-invicto': circulo(ctx, 12, 12, 4.5); rayos(ctx, 12, 12, 5.5, 11, 14, (t || 0) * 0.3); break;
     case 'estrellas': {
@@ -237,4 +246,4 @@ export function pintarIcono(ctx, nombre, x, y, lado, tela, marca, t = 0) {
   ctx.restore();
 }
 
-export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos', 'cuervos', 'tortuga', 'manta', 'aguila', 'dragon-tormenta'];
+export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'seigaiha', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos', 'cuervos', 'tortuga', 'manta', 'aguila', 'dragon-tormenta'];

@@ -98,7 +98,7 @@ const NOMBRES_RIVAL = {
   vikingo: ['Björn', 'Eirik', 'Halvar', 'Sigrun'],
   pirata: ['Tess Marlow', 'Silas Crane', 'Rojo Calloway', 'Nell Duarte'],
   samurai: ['Kenji', 'Haruto', 'Takeshi', 'Ren'],
-  polinesio: ['Kalani', 'Makoa', 'Keoni', 'Nalu'],
+  polinesio: ['Kalani', 'Makoa', 'Kekoa', 'Nalu'],
   romano: ['Marco Varo', 'Tito Galo', 'Lucio Brenno', 'Cayo Severo'],
 };
 // Clasificación de tripulación por FTP (de Grumete a Capitán): W/kg si hay peso, vatios si no. Decide cómo de constante rema tu rival.
@@ -502,7 +502,7 @@ export function clasesEnCarrerasDistintas(carreras) {
 
 // Logros permanentes: una sola vez. Los hitos excepcionales dan entre 300 y 600 XP.
 export const COLECCION_DESDE = '2026-11-04';
-// Monedas de las ventajas de la tienda (desde la revisión de la etapa 15): Estandarte y Botín del corsario.
+// Monedas de las ventajas de la tienda (desde la revisión de la etapa 15): Estandarte y Botín del bucanero.
 export function monedasDeVentaja(s, m) {
   if (claveDia(s.fecha) < COLECCION_DESDE || !m.ganados) return 0;
   if (s.ventajaUsada === 'estandarte') return MONEDAS_ESTANDARTE;

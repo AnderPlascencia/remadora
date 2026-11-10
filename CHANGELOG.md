@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.65.0 · 2026-11-10
+
+Primera etapa del rediseño del héroe: cada clase usa nombres fieles a su cultura y a su época. Solo cambian nombres, textos y dos dibujos; nadie pierde piezas, talentos ni XP.
+
+- Samurái: la vela de rango pasa a ser el Hinomaru, el disco rojo sin rayos (la bandera con rayos es de 1870). La Gran ola de Hokusai, dos siglos posterior, pasa a ser el Seigaiha, el patrón tradicional de olas en escamas, con dibujo nuevo. Su bote es la kobaya de las flotas de clan.
+- Polinesio: el mascarón se llama Kiʻi, como en hawaiano, y su versión dorada pasa a ser de madera de koa y nácar (en la Polinesia no había jade ni oro). La vela Tapa se llama Kapa. El rival Keoni, nombre de la época misionera, pasa a ser Kekoa. Los talentos Travesía y Gran travesía se llaman Más allá del horizonte y Viaje de altura, para no repetir nombres de logros.
+- Romano: lo que era de la legión pasa a ser de la flota (Ley de la flota, Boga de la liburna, Escudo y Águila de la flota). La vela legendaria Sol invicto, culto del año 274, pasa a ser Sol Indiges. El talento Pax romana se llama Semana de la flota, para no repetir el nombre de la hazaña. Las insignias de gladiador pasan a ser el Casco de infante de marina y la Corona naval.
+- Pirata: el talento Tesoro del capitán se llama Reparto del botín, como en los artículos de los barcos piratas. Lo de corsario pasa a ser de bucanero (Botín del bucanero, Chaleco de bucanero).
+- Vikingo: el casco de cuernos, un invento de ópera del siglo XIX, pasa a ser el Yelmo de Gjermundbu dorado.
+
 ## 0.64.2 · 2026-11-10
 
 - Probar resistencia explica por qué no se confirmó: si la consola no mandó datos de potencia (por ejemplo, porque no estás remando) o qué nivel sigue informando. El registro de diagnóstico guarda cada prueba con el byte crudo que manda la consola, para ajustar la lectura del nivel en cada modelo.
