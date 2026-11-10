@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.70.0 · 2026-11-11
+
+Sexta etapa del rediseño del héroe, primera parte: cada cultura vive su propia saga.
+
+- Los 9 capítulos mantienen sus requisitos, niveles, pruebas y premios, pero la historia y el jefe salen de la mitología o la historia naval de tu clase. El vikingo cruza la red de Rán y le gana la carrera a Naglfar, el pirata se enfrenta a Woodes Rogers, el cazapiratas de 1718, el samurái vence a Yamata no Orochi y el romano llega a Accio.
+- Los dioses de culturas vivas no son enemigos: el samurái cruza la tormenta de Raijin y visita el palacio de Ryūjin, no los vence.
+- El polinesio sigue con la historia común hasta que su saga la revise alguien de esa cultura, igual que sus títulos.
+- Los premios propios de cada cultura llegarán con su dibujo en la segunda parte.
+
 ## 0.69.0 · 2026-11-11
 
 Quinta etapa del rediseño del héroe: cada clase tiene una habilidad en carrera que se activa sola cuando remas como lo haría su cultura, sin tocar la pantalla.
