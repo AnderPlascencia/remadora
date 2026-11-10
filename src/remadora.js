@@ -134,17 +134,24 @@ export class Remadora extends EventTarget {
   }
 
   // Espera a que la consola informe el nivel pedido (byte de resistencia de los paquetes de métricas).
-  // Resuelve true en cuanto llega, o false si pasan `ms` sin verlo.
+  // Resuelve { ok, metricas, visto, byte }: ok en cuanto llega el nivel; si pasan `ms` sin verlo, ok es false,
+  // metricas cuenta los paquetes de métricas que llegaron y visto/byte son el último nivel informado y su byte crudo.
   esperarResistencia(nivel, ms = 4000) {
     return new Promise((resolver) => {
+      let metricas = 0;
+      let visto = null;
+      let byte = null;
       const alDato = (e) => {
-        if (e.detail.tipo !== 'metricas' || e.detail.resistencia !== nivel) return;
-        terminar(true);
+        if (e.detail.tipo !== 'metricas') return;
+        metricas += 1;
+        visto = e.detail.resistencia;
+        byte = e.detail.byteResistencia ?? null;
+        if (visto === nivel) terminar(true);
       };
       const terminar = (ok) => {
         clearTimeout(limite);
         this.removeEventListener('datos', alDato);
-        resolver(ok);
+        resolver({ ok, metricas, visto, byte });
       };
       const limite = setTimeout(() => terminar(false), ms);
       this.addEventListener('datos', alDato);

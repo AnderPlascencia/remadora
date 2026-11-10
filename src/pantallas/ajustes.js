@@ -275,8 +275,11 @@ export function arrancarAjustes2() {
     if (!remadora.fijarResistencia(nivel)) { toast('No se pudo enviar la resistencia'); return; }
     toast(`Resistencia ${nivel} enviada…`);
     // La consola informa su nivel en cada paquete de métricas: así se sabe si aceptó el cambio.
-    const confirmada = await remadora.esperarResistencia(nivel);
-    toast(confirmada ? `La consola está en resistencia ${nivel}` : `La consola no confirmó la resistencia ${nivel}. Revisa la variante en Ajustes.`, confirmada ? 3000 : 5000);
+    const r = await remadora.esperarResistencia(nivel);
+    agregarLog(`prueba de resistencia ${nivel}: ${r.ok ? 'confirmada' : 'sin confirmar'}; ${r.metricas} paquetes de métricas, último nivel leído ${r.visto ?? '-'} (byte ${r.byte ?? '-'})`);
+    if (r.ok) toast(`La consola está en resistencia ${nivel}`);
+    else if (!r.metricas) toast('La consola no mandó datos de potencia en 4 s. Rema unas paladas y vuelve a probar.', 6000);
+    else toast(`La consola sigue informando resistencia ${r.visto}, no ${nivel}. Si su pantalla sí cambió, avísanos: la app lee mal el nivel.`, 7000);
   });
   $('#version-ajustes').textContent = VERSION;
 }

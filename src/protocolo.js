@@ -45,6 +45,7 @@ export function parsePaquete(b) {
       watts: b[12] | (b[13] << 8),
       distancia: b[14] | (b[15] << 8),
       resistencia: nivelDesdeByte(b[11]),
+      byteResistencia: b[11],
     };
   }
 
