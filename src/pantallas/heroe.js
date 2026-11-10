@@ -77,15 +77,19 @@ export function arrancarHeroe() {
   });
   $('#btn-crear-heroe').addEventListener('click', () => {
     if (!claseElegida) return;
-    guardarPersonaje({ clase: claseElegida, nombre: $('#heroe-nombre').value.trim() });
+    // Maestría (etapa 7): cada cambio de clase queda con su fecha, para que cada una guarde sus sesiones.
+    guardarPersonaje({ clase: claseElegida, nombre: $('#heroe-nombre').value.trim(), claseHist: J.conClaseNueva(leerPersonaje(), claseElegida) });
     aplicarEquipo();
     precargarRecursos();
     confeti();
     pintarHeroe();
   });
   $('#btn-cambiar-clase').addEventListener('click', () => {
-    claseElegida = leerPersonaje().clase || null;
-    guardarPersonaje({ clase: null });
+    const per = leerPersonaje();
+    claseElegida = per.clase || null;
+    // Sin historial, la clase de ahora cuenta desde siempre: se apunta antes de quitarla.
+    const claseHist = per.claseHist?.length || !per.clase ? per.claseHist || [] : [[0, per.clase]];
+    guardarPersonaje({ clase: null, claseHist });
     pintarHeroe();
   });
   document.querySelector('.heroe-tabs').addEventListener('click', (e) => {
@@ -344,6 +348,17 @@ export async function estadoHeroe() {
   return { per, h: H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per }) };
 }
 
+// Maestría de la clase (etapa 7): nivel del 1 al 10 y cuántas sesiones faltan para el siguiente.
+function pintarMaestria(m, clase) {
+  const el = $('#heroe-maestria');
+  if (!el || !m) return;
+  const pct = m.hasta == null ? 100 : Math.round(((m.sesiones - m.desde) / (m.hasta - m.desde)) * 100);
+  const sig = m.hasta == null ? 'Dominas tu cultura.' : `${m.siguiente} ${m.siguiente === 1 ? 'sesión' : 'sesiones'} más para el nivel ${m.nivel + 1}.`;
+  el.innerHTML = `<div class="maestria-cab"><b>Maestría de ${clase.nombre}: ${m.nivel ? `${m.nivel} de ${J.MAESTRIA_MAX} · ${m.nombre}` : 'sin empezar'}</b></div>
+    <div class="progreso" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Avance de la maestría"><div style="width:${pct}%"></div></div>
+    <small class="suave">${sig} Cuentan las sesiones de 10 min o más con esta clase; si cambias, cada clase guarda la suya.</small>`;
+}
+
 export async function pintarHeroe() {
   pintarLineaNivel();
   const per = leerPersonaje();
@@ -356,6 +371,14 @@ export async function pintarHeroe() {
       <img src="${srcHeroe(c.clave, 1, true)}" width="56" height="56" alt=""><b>${c.nombre}</b><small>+15 % ${nombreAtributo(c.favorito)}</small><span class="lema">${c.para}</span></button>`).join('');
     $('#btn-crear-heroe').disabled = !claseElegida;
     if (per.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
+    // La maestría de cada clase: cambiar no borra lo ganado con las otras.
+    if (per.claseHist?.length) {
+      const hm = H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per }).maestria;
+      for (const b of document.querySelectorAll('#clases [data-clase]')) {
+        const m = hm[b.dataset.clase];
+        if (m?.nivel) b.insertAdjacentHTML('beforeend', `<small class="maestria-mini">Maestría ${m.nivel} · ${m.nombre}</small>`);
+      }
+    }
     return;
   }
   const sesiones = await H.sesiones();
@@ -365,6 +388,7 @@ export async function pintarHeroe() {
   $('#heroe-titulo').textContent = per.nombre || clase.nombre;
   $('#heroe-clase').textContent = J.TITULOS_CLASE[clase.clave] ? `${clase.nombre} · ${h.titulo}` : per.nombre ? `${clase.nombre} · Rango ${h.titulo}` : `Rango ${h.titulo}`;
   pintarClasificacion(sesiones);
+  pintarMaestria(h.maestria[clase.clave], clase);
   $('#heroe-monedas').innerHTML = `${icoMoneda}${miles(h.monedas)}`;
   $('#heroe-nivel').textContent = h.nivel;
   const pct = h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100;

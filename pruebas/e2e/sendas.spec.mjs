@@ -48,3 +48,20 @@ test('la saga del vikingo: el primer capítulo tiene su propio jefe', async ({ p
   await expect(page.locator('#mis-capitulo')).toContainText('El despertar');
   await expect(page.locator('#mis-capitulo')).toContainText('draugr');
 });
+
+test('la maestría de tu clase se ve en la ficha y cada clase guarda la suya', async ({ page }) => {
+  await page.goto('./');
+  await completarBienvenida(page, { reloj: false });
+  await abrirTalentos(page, {});
+  await page.locator('[data-hp="ficha"]').click();
+  await expect(page.locator('#heroe-maestria')).toContainText('Maestría de Vikingo');
+  await expect(page.locator('#heroe-maestria [role="progressbar"]')).toBeVisible();
+  // Cambiar de clase apunta la de antes en el historial.
+  await page.locator('#btn-cambiar-clase').click();
+  const per = await page.evaluate(() => JSON.parse(localStorage.getItem('personaje')));
+  expect(per.claseHist).toEqual([[0, 'vikingo']]);
+  await page.locator('#clases [data-clase="romano"]').click();
+  await page.locator('#btn-crear-heroe').click();
+  const despues = await page.evaluate(() => JSON.parse(localStorage.getItem('personaje')));
+  expect(despues.claseHist.map(([, c]) => c)).toEqual(['vikingo', 'romano']);
+});

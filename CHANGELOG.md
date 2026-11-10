@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.71.0 · 2026-11-11
+
+Séptima etapa del rediseño del héroe: maestría de clase, para quien rema años.
+
+- Cada clase tiene su propia maestría, del 1 al 10, que sube con las sesiones de 10 min o más remadas con ella: de Aprendiz a Gran maestro. Con 4 sesiones por semana, la maestría 10 llega en unos 15 meses.
+- Cambiar de clase no borra nada: cada una guarda la suya, así que probar otra cultura no cuesta lo ganado. Al elegir clase ves la maestría de las que ya remaste.
+- Cada nivel de maestría da monedas (50 por nivel: el 10 da 500). Las sesiones de antes cuentan para el nivel, pero las monedas solo se pagan por los niveles alcanzados desde hoy.
+- La maestría se ve en la ficha del héroe, con lo que falta para el siguiente nivel.
+
 ## 0.70.0 · 2026-11-11
 
 Sexta etapa del rediseño del héroe, primera parte: cada cultura vive su propia saga.

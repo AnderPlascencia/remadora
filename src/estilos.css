@@ -811,6 +811,8 @@ details.seccion[open] { padding-bottom: 8px; }
 .senda .boton { align-self: flex-start; }
 .habilidad-clase { border: 2px solid var(--acento); border-radius: var(--r-medio); background: var(--fondo); padding: 10px 12px; margin-bottom: 10px; }
 .habilidad-clase p { margin: 6px 0 0; }
+.heroe-maestria { display: grid; gap: 6px; margin: 8px 0 12px; }
+.maestria-mini { color: var(--acento); font-weight: 700; }
 .pips { display: inline-flex; gap: 4px; margin-left: auto; }
 .pips i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #F2A33A; }
 .pips i.lleno { background: #F2A33A; }
