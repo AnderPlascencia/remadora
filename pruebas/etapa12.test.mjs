@@ -63,13 +63,15 @@ const muestras = (seg, { w = 150, ruido = 0.03, spm = 24, dspm = 0.5, desde = 0 
 // ---------- Clases igualadas: unos 50 XP reales (100 nominales) por sesión con el perfil típico ----------
 {
   const lleno = { m1: 3, m2: 3, m3: 3, m4: 3, maestria: 3 };
-  for (const [clase, lista] of Object.entries(PERFILES)) {
+  for (const [perfil, lista] of Object.entries(PERFILES)) {
+    const clase = perfil.replace('Palada', '');
     const media = lista.reduce((a, d) => a + T.xpTalentos(clase, lleno, d).reduce((x, [, v]) => x + v, 0), 0) / lista.length;
     assert.ok(media * J.FACTOR_XP_LENTA >= 45 && media * J.FACTOR_XP_LENTA <= 55, `${clase}: ${media * J.FACTOR_XP_LENTA} XP reales`);
   }
   // Las sesiones anteriores a la etapa 12 siguen con los valores de antes.
   assert.equal(T.valorDe('vikingo', 'm2', 3, true), 3);
-  assert.equal(T.valorDe('vikingo', 'm2', 3), 7);
+  assert.equal(T.valorDe('vikingo', 'm2', 3, false, true), 7, 'el vikingo que contaba paladas');
+  assert.equal(T.valorDe('vikingo', 'm2', 3), 9, 'el de palada larga (etapa 3 del rediseño)');
 }
 
 // ---------- Misiones ----------

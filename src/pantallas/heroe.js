@@ -349,7 +349,7 @@ export async function pintarHeroe() {
   $('#heroe-avatar').innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="84" height="84" alt="${clase.nombre} ${h.titulo}"><span class="emblema mini">${emblema(clase)}</span>`;
   // Sin nombre, el título es la clase y la línea de abajo no la repite.
   $('#heroe-titulo').textContent = per.nombre || clase.nombre;
-  $('#heroe-clase').textContent = per.nombre ? `${clase.nombre} · Rango ${h.titulo}` : `Rango ${h.titulo}`;
+  $('#heroe-clase').textContent = J.TITULOS_CLASE[clase.clave] ? `${clase.nombre} · ${h.titulo}` : per.nombre ? `${clase.nombre} · Rango ${h.titulo}` : `Rango ${h.titulo}`;
   pintarClasificacion(sesiones);
   $('#heroe-monedas').innerHTML = `${icoMoneda}${miles(h.monedas)}`;
   $('#heroe-nivel').textContent = h.nivel;
@@ -532,12 +532,13 @@ function pintarNiveles(h, per, clase) {
     const falta = J.xpParaNivel(r.nivel) - h.xp;
     const cuando = [enSesiones(falta, h), enSemanas(falta, h)].filter(Boolean).join(' · ');
     const estado = i < actual ? 'Alcanzado' : i === actual ? `Tu rango · nivel ${h.nivel}` : `Te faltan ${miles(falta)} XP${cuando ? `<br><small>${cuando}</small>` : ''}`;
-    return `<section class="nivel-panel${i > actual ? ' futuro' : ''}${i === actual ? ' actual' : ''}" aria-label="${r.nombre}">
-      <div class="nivel-figura"><img src="assets/heroes/${clase.clave}_${r.id}.webp" width="216" height="252" alt="${clase.nombre} ${r.nombre}" loading="lazy"></div>
-      <h3>${r.nombre}</h3><p class="nivel-rango">Niveles ${r.nivel}–${hasta}</p><p class="nivel-estado">${i > actual ? '🔒 ' : ''}${estado}</p>
+    const nombre = J.nombreRango(r.nivel, clase.clave);
+    return `<section class="nivel-panel${i > actual ? ' futuro' : ''}${i === actual ? ' actual' : ''}" aria-label="${nombre}">
+      <div class="nivel-figura"><img src="assets/heroes/${clase.clave}_${r.id}.webp" width="216" height="252" alt="${clase.nombre} ${nombre}" loading="lazy"></div>
+      <h3>${nombre}</h3><p class="nivel-rango">Rango ${i + 1} · niveles ${r.nivel}–${hasta}</p><p class="nivel-estado">${i > actual ? '🔒 ' : ''}${estado}</p>
       <ul class="nivel-lista">${filas(r.nivel, hasta)}</ul></section>`;
   }).join('');
-  $('#niveles-puntos').innerHTML = R.map((r, i) => `<button type="button" data-rango="${i}" aria-label="Ver ${r.nombre}"${i === actual ? ' class="tuyo"' : ''}></button>`).join('');
+  $('#niveles-puntos').innerHTML = R.map((r, i) => `<button type="button" data-rango="${i}" aria-label="Ver ${J.nombreRango(r.nivel, clase.clave)}"${i === actual ? ' class="tuyo"' : ''}></button>`).join('');
   const car = $('#niveles-carrusel');
   requestAnimationFrame(() => { car.scrollLeft = actual * car.clientWidth; marcarNivel(); });
 }
@@ -720,7 +721,7 @@ export function pintarXpSesion(s, previas, resumen) {
   // Vencer a un jefe es un hito: tarjeta propia con su insignia, antes que todo lo demás.
   const jefe = g.jefe ? `<div class="jefe-vencido" role="status">${ico('i-trofeo')}<div><b>¡Jefe vencido!</b><span>${escaparHtml(g.jefe.nombre)} cae y terminas el capítulo ${g.jefe.capitulo} de ${J.CAPITULOS.length}.</span><small>Insignia ${escaparHtml(O.objeto(g.jefe.objeto)?.nombre || '')}</small></div></div>` : '';
   caja.innerHTML = `${jefe}<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
-    ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.rangoDe(g.nivelDespues).nombre}.` : ''}</span>` : ''}
+    ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.nombreRango(g.nivelDespues, per.clase)}.` : ''}</span>` : ''}
     ${puntos > 0 && clase && h.talentosPorRepartir > 0 ? `<span class="subio-talento">+${puntos} ${puntos === 1 ? 'punto' : 'puntos'} de talento <button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></span>` : ''}
     <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div style="width:${h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100}%"></div></div>
     ${g.avisoDescanso ? '<p class="aviso-descanso suave">Hoy tocaba descanso: mañana tu sesión dura puede costarte más.</p>' : ''}
@@ -739,7 +740,7 @@ export function pintarXpSesion(s, previas, resumen) {
     const antes = subio || !h.hasta ? 0 : Math.max(0, (100 * (h.xp - total - h.desde)) / (h.hasta - h.desde));
     if (!sinMovimiento()) { barra.style.transition = 'none'; barra.style.width = `${antes}%`; void barra.offsetWidth; barra.style.transition = 'width 1.1s cubic-bezier(.2, .8, .2, 1)'; requestAnimationFrame(() => { barra.style.width = final; }); }
   }
-  if (subio) hablar(ascenso ? `Subiste a nivel ${g.nivelDespues}. Ahora eres ${J.rangoDe(g.nivelDespues).nombre}` : `Subiste a nivel ${g.nivelDespues}`);
+  if (subio) hablar(ascenso ? `Subiste a nivel ${g.nivelDespues}. Ahora eres ${J.nombreRango(g.nivelDespues, per.clase)}` : `Subiste a nivel ${g.nivelDespues}`);
   if (resumen && logros.some((l) => l.tipo === 'jefe')) hablar('¡Jefe vencido!');
   return subio || logros.some((l) => l.tipo === 'jefe' || l.tipo === 'hazana');
 }

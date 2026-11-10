@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.67.0 · 2026-11-11
+
+Tercera etapa del rediseño del héroe: cada clase tiene la identidad de su cultura.
+
+- Títulos propios por rango, cargos reales de su flota o su sociedad, junto al número de rango: el vikingo va de Dreng a Einherjar (Jarl es el rango 7), el pirata de Polizón a Leyenda del Caribe, el samurái de Komono a Kensei y el romano de Tiro a Praefectus classis. El polinesio sigue con el rango común hasta que sus títulos hawaianos los revise alguien de esa cultura.
+- El vikingo premia la palada larga y potente, que es lo que mide su atributo Fuerza, en vez de contar paladas: Brazos de hacha da XP por kilómetro si tu palada media es al menos tan larga como la habitual, Saga de fuerza si es un 3 % más larga, y Botín de la saga si remas 5 km o más con ella. Remar corto y rápido para sumar paladas ya no da más. Las sesiones anteriores siguen contando como antes, y el vikingo sigue igualado con las demás clases (unos 50 XP por sesión con el árbol completo).
+
 ## 0.66.0 · 2026-11-11
 
 Segunda etapa del rediseño del héroe: una curva de niveles pensada para durar 18 meses hasta Legendario.
