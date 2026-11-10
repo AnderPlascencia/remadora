@@ -4,6 +4,9 @@ const s = (x) => ({ ...base, ...x });
 export const PERFILES = {
   // 3 o 4 sesiones de 30 min a 24 golpes/min y una larga de 45 a la semana.
   vikingo: [720, 720, 720, 1080].map((paladas) => s({ paladas, min: paladas / 24, metros: paladas * 10 })),
+  // Desde la etapa 3 del rediseño, el vikingo de palada larga: 3 o 4 sesiones de 7,2 km y una de 10,8; la palada
+  // igual que la habitual, un 4 % más larga, un 3 % más corta y un 1 % más larga.
+  vikingoPalada: [[7200, 1], [7200, 1.04], [7200, 0.97], [10800, 1.01]].map(([metros, rel]) => s({ palada: true, mppMedia: 10, metros, paladas: Math.round(metros / (10 * rel)), min: metros / 240 })),
   // Siempre con 3 fantasmas; gana de 0 a 3 (la media, 1,5).
   pirata: [0, 0, 1, 1, 1, 2, 2, 2, 3, 3].map((ganados) => s({ rivales: 3, ganados, min: 30, metros: 7000 })),
   // Sin pausas 7 de cada 10, sesión del plan 6 de cada 10 (las dos juntas, 4).

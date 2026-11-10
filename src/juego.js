@@ -1,7 +1,7 @@
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
-import { gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
+import { VIKINGO_PALADA_DESDE, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
@@ -53,7 +53,7 @@ export function comoSubir(clave, f = 0) {
 
 // Cada clase tiene un atributo favorito que crece un 15 % más rápido.
 export const CLASES = [
-  { clave: 'vikingo', nombre: 'Vikingo', favorito: 'fuerza', lema: 'Cada palada es un hachazo.', para: 'Para sesiones largas: sus talentos cuentan paladas.', icono: '<path d="M5 14a7 7 0 0 1 14 0v3H5z"/><path d="M5 13 2.5 6M19 13l2.5-7M9 17v3M15 17v3M12 7v4"/>' },
+  { clave: 'vikingo', nombre: 'Vikingo', favorito: 'fuerza', lema: 'Cada palada es un hachazo.', para: 'Para quien rema con palada larga y potente.', icono: '<path d="M5 14a7 7 0 0 1 14 0v3H5z"/><path d="M5 13 2.5 6M19 13l2.5-7M9 17v3M15 17v3M12 7v4"/>' },
   { clave: 'pirata', nombre: 'Pirata', favorito: 'agilidad', lema: 'Rápido, impredecible y al abordaje.', para: 'Para quien rema contra fantasmas.', icono: '<path d="M12 3a7 7 0 0 0-7 7c0 2.4 1.3 4 3 5v3h8v-3c1.7-1 3-2.6 3-5a7 7 0 0 0-7-7z"/><path d="M9 10h.01M15 10h.01M10 18v3M14 18v3"/>' },
   { clave: 'samurai', nombre: 'Samurái', favorito: 'tecnica', lema: 'La forma perfecta vence a la fuerza.', para: 'Para quien sigue un plan y rema sin pausas.', icono: '<path d="M5 19 19 5l1.5-1.5M15 5l4 4M7 15l2 2M3.5 20.5 5 19"/>' },
   { clave: 'polinesio', nombre: 'Polinesio', favorito: 'resistencia', lema: 'El océano entero es tu camino.', para: 'Para sesiones de 30 min o más de 5 km.', icono: '<path d="M12 2v12"/><path d="M9.5 14h5l-1 6.5a1.5 1.5 0 0 1-3 0z"/><path d="M3 9c2 1.5 4 1.5 6 0M15 9c2 1.5 4 1.5 6 0"/>' },
@@ -112,7 +112,23 @@ export const RANGOS = [
   { id: 'legendario', nombre: 'Legendario', nivel: 80 },
 ];
 export const rangoDe = (nivel) => RANGOS.filter((r) => nivel >= r.nivel).at(-1);
-export const tituloDe = (nivel) => rangoDe(nivel).nombre;
+// Títulos de cada cultura (etapa 3 del rediseño, decisión de Ander): cargos reales de su flota o su sociedad, uno por
+// rango. Se muestran junto al número de rango («Jarl · rango 7»); el rango común sigue eligiendo el retrato.
+// El polinesio usa el rango común hasta que alguien de la cultura hawaiana revise sus títulos (decisión D0.3).
+export const TITULOS_CLASE = {
+  vikingo: ['Dreng', 'Remero de banco', 'Karl', 'Hirdman', 'Huscarl', 'Hersir', 'Jarl', 'Rey del mar', 'Einherjar'],
+  pirata: ['Polizón', 'Gaviero', 'Artillero', 'Bucanero', 'Jefe de abordaje', 'Intendente', 'Comodoro pirata', 'Rey pirata', 'Leyenda del Caribe'],
+  samurai: ['Komono', 'Ashigaru', 'Kumigashira', 'Bushi', 'Hatamoto', 'Funa-bugyō', 'Karō', 'Daimyō', 'Kensei'],
+  romano: ['Tiro', 'Remex', 'Miles classiarius', 'Optio', 'Gubernator', 'Centurio classicus', 'Trierarchus', 'Navarchus', 'Praefectus classis'],
+};
+export const numeroRango = (nivel) => RANGOS.indexOf(rangoDe(nivel)) + 1;
+// Nombre del rango para tu clase (el común si la clase no tiene títulos propios o no hay clase).
+export const nombreRango = (nivel, clase = null) => TITULOS_CLASE[claseDe(clase)?.clave]?.at(numeroRango(nivel) - 1) || rangoDe(nivel).nombre;
+// Título que se ve: el de tu cultura con el número de rango, o el rango común sin clase.
+export const tituloDe = (nivel, clase = null) => {
+  const propio = TITULOS_CLASE[claseDe(clase)?.clave];
+  return propio ? `${nombreRango(nivel, clase)} · rango ${numeroRango(nivel)}` : rangoDe(nivel).nombre;
+};
 
 // ---------- Rivales: héroes de las otras clases, con el rango que te toca ----------
 const NOMBRES_RIVAL = {
@@ -690,6 +706,7 @@ function datosTalento(s, m, ctx) {
     paladas: s.paladas || 0, metros: m.metros, min: m.min, ganados: m.ganados, rivales,
     sinPausas: sinPausas(s), delPrograma: !!s.delPrograma && s.tiempoMeta != null, racha: ctx.racha, sesSemana: ctx.sesSemana || 0,
     antes: !esEtapa12(s.fecha), kmSemana: ctx.kmSemana ?? m.metros / 1000, metaSemanaKm: ctx.metaSemanaKm || 0,
+    palada: claveDia(s.fecha) >= VIKINGO_PALADA_DESDE, mppMedia: ctx.mppPromedio || 0,
   };
 }
 
@@ -1165,7 +1182,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   return {
     xp,
     nivel,
-    titulo: tituloDe(nivel),
+    titulo: tituloDe(nivel, per.clase),
+    rango: { numero: numeroRango(nivel), nombre: nombreRango(nivel, per.clase), comun: rangoDe(nivel).nombre },
     desde: tablaXp[nivel],
     hasta: nivel >= NIVEL_MAX ? null : tablaXp[nivel + 1],
     ajusteCurva,
