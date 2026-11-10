@@ -283,7 +283,12 @@ function crearVentaja(ent, racha, recientes = []) {
   const f = ftp();
   const cuerpo = f ? Cap.estadoCuerpo(recientes, f, Date.now(), { previo: previoHoy() }) : null;
   const intensidad = permisoIntensidad({ sesiones: recientes, ftp: f, cuerpo, prueba: V.esPrueba(ent) });
-  return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha, equipo, senda, intensidad });
+  // Habilidad de clase (etapa 5): nunca en pruebas. FTP fiable = de una prueba de las últimas 8 semanas.
+  const ftpFiable = recientes.some((x) => (x.pruebaWatts || x.pruebaFtp) && x.fecha > Date.now() - 56 * 864e5);
+  const conPaladas = recientes.filter((x) => x.paladas > 0 && x.distancia > 0).slice(-20);
+  const mppMedia = conPaladas.length ? conPaladas.reduce((a, x) => a + x.distancia / x.paladas, 0) / conPaladas.length : 0;
+  const habilidad = clave && !V.esPrueba(ent) ? { ftp: f, ftpFiable, mppMedia } : null;
+  return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha, equipo, senda, intensidad, habilidad });
 }
 
 // Días seguidos contando hoy (la sesión que empieza ya cuenta).
@@ -610,7 +615,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     }
     if (s.ventaja?.objeto) registro.ventajaUsada = s.ventaja.objeto;
     // Para el límite semanal de intensidad (2 sesiones duras o con intensidad por semana).
-    if (s.ventaja?.usoIntensidad) registro.intensidad = true;
+    if (V.usoIntensidad(s.ventaja)) registro.intensidad = true;
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
     // Terminar antes de completar el entrenamiento no gana la carrera: se guarda la diferencia, pero no cuenta como victoria.
@@ -761,8 +766,10 @@ function avanzarSesion() {
   if (t % 10 === 0) copiaPendiente = true;
   if (estado.sesion.ventaja && !calentando) {
     const miDist = estado.sesion.dist + V.metrosVentaja(estado.sesion.ventaja);
-    const detras = estado.sesion.rivales.some((r) => E.distanciaEn(r.muestras, t) > miDist);
-    V.avanzarVentaja(estado.sesion.ventaja, { t, dist: estado.sesion.dist, paladas: estado.sesion.paladas, spm: actual.spm, detras });
+    const delante = estado.sesion.rivales.map((r) => E.distanciaEn(r.muestras, t) - miDist).filter((d) => d > 0);
+    const detras = delante.length > 0;
+    const brecha = detras ? Math.min(...delante) : null;
+    V.avanzarVentaja(estado.sesion.ventaja, { t, dist: estado.sesion.dist, paladas: estado.sesion.paladas, spm: actual.spm, detras, w: actual.watts, brecha });
   }
   if (estado.sesion.rivales.length && !calentando) { vigilarAdelantos(t); tamborSprint(); }
   avisarTalentos();
@@ -843,7 +850,8 @@ function avisarTalentos() {
   const v = estado.sesion.ventaja;
   if (!v) return;
   // Senda B con un talento de intensidad apagado por el cuerpo, la recuperación o la semana: se dice una vez.
-  if (!v.avisoIntensidad && v.senda === 'b' && ['cuerpo', 'recuperacion', 'semana'].includes(v.intensidad.motivo) && (v.grados.m3 || 0) > 0 && ['vikingo', 'polinesio', 'romano'].includes(v.clase)) {
+  const conReserva = v.habilidad && v.habilidad.id !== v.habilidad.base;
+  if (!v.avisoIntensidad && ['cuerpo', 'recuperacion', 'semana'].includes(v.intensidad.motivo) && (conReserva || (v.senda === 'b' && (v.grados.m3 || 0) > 0 && ['vikingo', 'polinesio', 'romano'].includes(v.clase)))) {
     v.avisoIntensidad = true;
     hablar(FRASE_SIN_INTENSIDAD, { clave: 'talento', cadaSeg: 15 });
   }

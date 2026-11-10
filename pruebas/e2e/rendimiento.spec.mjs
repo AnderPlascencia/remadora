@@ -5,7 +5,8 @@ import { test, expect, completarBienvenida, avanzar, enCurso } from './ayuda.mjs
 import { FPS_MAX } from '../../src/carrera.js';
 
 // Medido el 2026-11-04 (0.52.0): 1,10 MB en 56 archivos.
-const BYTES_MAX = 1_250_000;
+// 2026-11-11 (0.69.0): 1,26 MB con las habilidades de clase; Ander subió el tope a 1,30 MB.
+const BYTES_MAX = 1_300_000;
 const ARCHIVOS_MAX = 70;
 // Cuadros pintados por segundo, con CPU ×4. En local, solo: 2D 36, 3D 21, realista 13, modo remo 20; con otra prueba
 // en paralelo (como en CI) cae a la mitad o menos y salta mucho. El mínimo atrapa lo que se vuelve varias veces más
@@ -40,7 +41,7 @@ async function pintadasPorSegundo(page, id, ms = 4_000) {
   return page.evaluate(([i, s]) => (window.__pintadas[i] || 0) / s, [id, ms / 1000]);
 }
 
-test('la primera carga pesa menos de 1,25 MB y no baja videos', async ({ page, context }) => {
+test('la primera carga pesa menos de 1,30 MB y no baja videos', async ({ page, context }) => {
   const archivos = [];
   context.on('requestfinished', async (r) => archivos.push({ url: r.url(), bytes: (await r.sizes()).responseBodySize }));
   await page.goto('./');
