@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.66.0 · 2026-11-11
+
+Segunda etapa del rediseño del héroe: una curva de niveles pensada para durar 18 meses hasta Legendario.
+
+- Los niveles se miden en sesiones: al empezar sube 1 nivel por sesión, hacia el 40 hacen falta unas 3 y cerca del 80 unas 8. Remando 4 veces por semana con tu plan, Legendario (nivel 80) llega en unos 18 meses y el 90 unos meses después. Antes, el primer mes daba 30 niveles y al final hacían falta 20 sesiones por nivel.
+- Nadie pierde nada: el día del cambio conservas tu nivel y lo que llevabas hacia el siguiente. Como la curva nueva pide más XP por nivel, se te suma la diferencia; nunca se quita XP. Las sesiones anteriores siguen contando con la curva de antes.
+- Los jefes de la historia también se vencen cumpliendo una semana entera de tu plan, así avanza quien no compite ni hace pruebas.
+
 ## 0.65.0 · 2026-11-10
 
 Primera etapa del rediseño del héroe: cada clase usa nombres fieles a su cultura y a su época. Solo cambian nombres, textos y dos dibujos; nadie pierde piezas, talentos ni XP.
