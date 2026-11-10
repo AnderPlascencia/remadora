@@ -53,7 +53,7 @@ assert.equal(remar(V.nuevaVentaja(), 1200), 0);
   const e = V.nuevaVentaja({ clase: 'polinesio', grados: { m2: 1, m4: 1 } });
   cerca(remar(e, 750), 12 + 4, '3000 m: 12 tramos de 250 m × 1 m y 2 de 500 m × 2 m');
 }
-// Romano: Hortator cada minuto sin parar; Marcha de la legión con 2 días de racha
+// Romano: Hortator cada minuto sin parar; Boga de la liburna con 2 días de racha
 {
   const e = V.nuevaVentaja({ clase: 'romano', grados: { m2: 2, m4: 1 }, racha: 2 });
   cerca(V.metrosVentaja(e), 3, 'sale 3 m por delante');
@@ -97,7 +97,7 @@ cerca(remar(V.nuevaVentaja({ objeto: 'aire', final: { duracion: 600 } }), 600, {
   cerca(remar(e, 600), 8 + 0.01 * 4 * 120 + 3, 'mascarón y palas (300 paladas)');
   assert.equal(e.eventos.filter((x) => x.nombre === 'Mascarón').length, 1, 'un solo aviso del mascarón');
   assert.equal(remar(V.nuevaVentaja({ equipo: { salida: 15, porPaladas: 1, legendaria: 'vikingo' } }), 3600), V.TOPE_EQUIPO_M);
-  cerca(V.metrosVentaja(V.nuevaVentaja({ equipo: { salida: 15, legendaria: 'romano' }, racha: 4 })), 23, 'Sol invicto: 2 m por día');
+  cerca(V.metrosVentaja(V.nuevaVentaja({ equipo: { salida: 15, legendaria: 'romano' }, racha: 4 })), 23, 'Sol Indiges: 2 m por día');
   const k = V.nuevaVentaja({ equipo: { salida: 15, legendaria: 'pirata' } });
   V.alAdelantar(k, 5);
   cerca(V.metrosVentaja(k), 19, 'Kraken');

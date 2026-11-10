@@ -11,14 +11,14 @@ const xp12 = (clase, grados, d) => T.xpTalentos(clase, grados, { ...base, ...d }
 assert.deepEqual(xp('vikingo', { m2: 2, m4: 1, maestria: 1 }, { paladas: 1030 }), [['Brazos de hacha', 150]], 'tope de 150 XP');
 assert.deepEqual(xp('vikingo', { m2: 1, m4: 1, maestria: 1 }, { paladas: 520 }), [['Brazos de hacha', 52], ['Saga de fuerza', 15]]);
 // Pirata: fantasmas vencidos (hasta 3), sesión con carrera y ganarles a todos
-assert.deepEqual(xp('pirata', { m1: 1, m4: 1, maestria: 1 }, { ganados: 2, rivales: 2 }), [['Bolsa ligera', 20], ['Botín escondido', 15], ['Tesoro del capitán', 40]]);
+assert.deepEqual(xp('pirata', { m1: 1, m4: 1, maestria: 1 }, { ganados: 2, rivales: 2 }), [['Bolsa ligera', 20], ['Botín escondido', 15], ['Reparto del botín', 40]]);
 assert.deepEqual(xp('pirata', { maestria: 1 }, { ganados: 1, rivales: 2 }), []);
 // Samurái: sin pausas y entrenamiento del programa
 assert.deepEqual(xp('samurai', { m2: 1, m4: 2, maestria: 1 }, { sinPausas: true, delPrograma: true }), [['Kata', 15], ['Maestro del dojo', 30], ['Senda del maestro', 30]]);
 // Polinesio: 30 min, km después del quinto y 60 min
-assert.deepEqual(xp('polinesio', { m1: 1, m3: 1, maestria: 1 }, { min: 61, metros: 8200 }), [['Estrella guía', 15], ['Travesía', 15], ['Gran travesía', 30]]);
+assert.deepEqual(xp('polinesio', { m1: 1, m3: 1, maestria: 1 }, { min: 61, metros: 8200 }), [['Estrella guía', 15], ['Más allá del horizonte', 15], ['Viaje de altura', 30]]);
 // Romano: tercera sesión de la semana, racha (hasta 7) y Triunfo semanal aparte del tope
-assert.deepEqual(xp('romano', { m1: 3, m3: 3, maestria: 3 }, { sesSemana: 5, racha: 9 }), [['Pax romana', 45], ['Ley de la legión', 105], ['Triunfo romano', 225]]);
+assert.deepEqual(xp('romano', { m1: 3, m3: 3, maestria: 3 }, { sesSemana: 5, racha: 9 }), [['Semana de la flota', 45], ['Ley de la flota', 105], ['Triunfo romano', 225]]);
 assert.deepEqual(xp('romano', { maestria: 1 }, { sesSemana: 6 }), [], 'el Triunfo se paga una vez por semana');
 // Etapa 12: vikingo cada 100 paladas, pirata menos por fantasma; el Triunfo romano con 4 sesiones o la meta de km.
 assert.deepEqual(xp12('vikingo', { m2: 3, m4: 3, maestria: 3 }, { paladas: 1030 }), [['Brazos de hacha', 70], ['Saga de fuerza', 30], ['Botín de la saga', 50]], 'tope de 150 XP');
