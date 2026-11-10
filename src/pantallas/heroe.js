@@ -674,7 +674,10 @@ export async function aplicarEquipo() {
   usarEquipo(equipoActual(per, h));
 }
 
-const muestraDe = (x) => `<span class="velas-muestra" aria-hidden="true" style="background:linear-gradient(90deg, ${x.tela} 0 70%, ${x.marca} 70%)"></span>`;
+// Muestra de la pieza: su ilustración (piezas de jefe) o sus dos colores
+const muestraDe = (x) => (x.imagen
+  ? `<img class="velas-muestra ilustrada" src="${x.imagen}" alt="" loading="lazy" width="56" height="36">`
+  : `<span class="velas-muestra" aria-hidden="true" style="background:linear-gradient(90deg, ${x.tela} 0 70%, ${x.marca} 70%)"></span>`);
 function pintarColeccion(h, per) {
   const clase = J.claseDe(per.clase);
   const caja = $('#tienda-velas');
@@ -704,8 +707,8 @@ function pintarColeccion(h, per) {
     return `<div class="objeto velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}">${muestraDe(x)}<b>${x.nombre}</b><small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}
       <span class="monedas">${x.como?.gratis ? 'Gratis' : etiqueta}</span>${boton}</div>`;
   };
-  const faltaDe = (x) => (x.como.nivel ? `Llega al nivel ${x.como.nivel}` : x.como.hazana ? `Cumple «${hz?.nombre || 'la hazaña de clase'}»` : '');
-  const propias = CB.piezasDe(clase.clave).map((x) => {
+  const faltaDe = (x) => (x.como.nivel ? `Llega al nivel ${x.como.nivel}` : x.como.hazana ? `Cumple «${hz?.nombre || 'la hazaña de clase'}»` : x.como.jefe ? `Vence al jefe del capítulo ${x.como.jefe}` : '');
+  const propias = CB.piezasDe(clase.clave, ctx).map((x) => {
     const tiene = CB.tienePieza(per, x.id, ctx);
     return ficha(x, x.tipo, tiene, equipo[x.tipo] === x.id, tiene || x.como.precio ? '' : faltaDe(x));
   });

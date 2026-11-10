@@ -330,11 +330,15 @@ function decoDe(b) {
   const vela = b.yo ? (equipoYo ? PIEZAS[equipoYo.vela] || VELAS[equipoYo.vela] : null) : b.vela;
   const proa = b.yo && equipoYo?.proa ? PIEZAS[equipoYo.proa] : null;
   const palas = b.yo && equipoYo?.palas ? PIEZAS[equipoYo.palas] : null;
-  if (!vela && !proa && !palas) return base;
-  const k = `${b.clase}|${vela?.nombre || ''}|${proa?.id || ''}|${palas?.id || ''}`;
+  const bandera = b.yo && equipoYo?.bandera ? PIEZAS[equipoYo.bandera] : null;
+  if (!vela && !proa && !palas && !bandera) return base;
+  const k = `${b.clase}|${vela?.nombre || ''}|${proa?.id || ''}|${palas?.id || ''}|${bandera?.id || ''}`;
   let d = decoCache.get(k);
   if (!d) {
-    d = { ...base, ...(vela ? { tela: vela.tela, marca: vela.marca, emblema: vela.emblema || PIEZAS[`${b.clase}-clasica`]?.emblema, animado: !!vela.animado } : {}), proa, palas };
+    // Las piezas de jefe son ilustraciones (imagen) en lugar de un emblema dibujado
+    const tela = vela && (vela.imagen ? { tela: vela.tela, marca: vela.marca, emblema: null, imagen: vela.imagen, animado: false }
+      : { tela: vela.tela, marca: vela.marca, emblema: vela.emblema || PIEZAS[`${b.clase}-clasica`]?.emblema, animado: !!vela.animado });
+    d = { ...base, ...(tela || {}), proa, palas, bandera };
     decoCache.set(k, d);
   }
   return d;
@@ -2320,15 +2324,19 @@ const telas = new Map();
 function telaDe(deco, t, clase) {
   if (typeof document === 'undefined') return null;
   // Sin vela de la colección, la clásica de su clase
-  if (!deco.emblema) deco = PIEZAS[`${clase}-clasica`] || deco;
-  const paso = deco.animado && !sinMovimiento ? Math.floor(t * 8) : 0;
-  const k = `${deco.tela}|${deco.marca}|${deco.emblema || ''}`;
+  if (!deco.emblema && !deco.imagen) deco = PIEZAS[`${clase}-clasica`] || deco;
+  // Vela ilustrada: la imagen cuando ya llegó; mientras tanto, la tela lisa de su color
+  const im = deco.imagen ? imagen(deco.imagen) : null;
+  const paso = deco.imagen ? (im ? 1 : 0) : deco.animado && !sinMovimiento ? Math.floor(t * 8) : 0;
+  const k = `${deco.tela}|${deco.marca}|${deco.emblema || ''}|${deco.imagen || ''}`;
   let e = telas.get(k);
   if (!e) { const c = document.createElement('canvas'); c.width = TELA_W; c.height = TELA_H; e = { c, paso: -1 }; telas.set(k, e); }
   if (e.paso !== paso) {
     const g = e.c.getContext('2d');
     g.clearRect(0, 0, TELA_W, TELA_H);
-    pintarTela(g, deco, TELA_W, TELA_H, paso / 8);
+    if (im) g.drawImage(im, 0, 0, TELA_W, TELA_H);
+    else if (deco.imagen) { g.fillStyle = deco.tela; g.fillRect(0, 0, TELA_W, TELA_H); }
+    else pintarTela(g, deco, TELA_W, TELA_H, paso / 8);
     e.paso = paso;
   }
   return e.c;
@@ -2413,9 +2421,37 @@ function velaReal3d(ctx, P, b, largo, t) {
       const lado = Math.max(10, q.s * 0.55);
       ctx.fillStyle = 'rgba(2,6,23,0.55)';
       ctx.beginPath(); ctx.arc(q.x, q.y, lado * 0.62, 0, Math.PI * 2); ctx.fill();
-      pintarIcono(ctx, deco.proa.emblema, q.x, q.y, lado, deco.proa.tela, deco.proa.marca, t);
+      iconoPieza(ctx, deco.proa, q.x, q.y, lado, t);
     }
   }
+  // Bandera de popa (premio de jefe), en un asta a la izquierda de la popa, ondeando hacia fuera
+  if (b.yo && deco.bandera) {
+    const im = imagen(deco.bandera.imagen);
+    const zB = b.dist - largo * 0.5 + 0.4;
+    const pie = P(b.x - 0.9, zB, 0.2);
+    const tope = P(b.x - 0.9, zB, 1.6);
+    if (im && pie && tope) {
+      const alto = (pie.y - tope.y) * 0.38;
+      const ancho = Math.min(alto * im.naturalWidth / im.naturalHeight, alto * 1.6);
+      ctx.save();
+      ctx.strokeStyle = '#6B4423'; ctx.lineWidth = Math.max(1, pie.s * 0.035);
+      ctx.beginPath(); ctx.moveTo(pie.x, pie.y); ctx.lineTo(tope.x, tope.y); ctx.stroke();
+      // Espejada: la imagen se sujeta por la izquierda y aquí el asta queda a la derecha de la tela
+      ctx.translate(tope.x, tope.y); ctx.scale(-1, 1);
+      ctx.rotate(sinMovimiento ? 0 : Math.sin(t * 3) * 0.03);
+      ctx.drawImage(im, 0, 0, ancho, ancho * im.naturalHeight / im.naturalWidth);
+      ctx.restore();
+    }
+  }
+}
+
+// Mascarón: la ilustración (piezas de jefe) o el emblema dibujado, en la caja de `lado` centrada en (x, y)
+function iconoPieza(ctx, x, cx, cy, lado, t) {
+  if (!x.imagen) { pintarIcono(ctx, x.emblema, cx, cy, lado, x.tela, x.marca, t); return; }
+  const im = imagen(x.imagen);
+  if (!im) return;
+  const k = lado / Math.max(im.naturalWidth, im.naturalHeight);
+  ctx.drawImage(im, cx - im.naturalWidth * k / 2, cy - im.naturalHeight * k / 2, im.naturalWidth * k, im.naturalHeight * k);
 }
 
 // En 2D (vista cenital) la vela se ve tumbada, ondeando por detrás de la popa, con el emblema a la vista.
@@ -2438,7 +2474,18 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
     ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
     ctx.beginPath(); ctx.ellipse(x - largo * 0.5, y, largo * 0.6, Math.max(ancho * 1.6, pxm * 0.7), 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
-    if (deco.proa) pintarIcono(ctx, deco.proa.emblema, x - pxm * 0.15, y, Math.max(10, pxm * 0.55), deco.proa.tela, deco.proa.marca, t);
+    if (deco.proa) iconoPieza(ctx, deco.proa, x - pxm * 0.15, y, Math.max(10, pxm * 0.55), t);
+    // Bandera de popa, por fuera del aro y ondeando hacia atrás
+    const im = deco.bandera ? imagen(deco.bandera.imagen) : null;
+    if (im) {
+      const hB = pxm * 0.55, wB = Math.min(hB * im.naturalWidth / im.naturalHeight, hB * 1.6);
+      const ax = x - largo * 0.95, ay = y - Math.max(ancho * 1.6, pxm * 0.7) - hB * 0.2;
+      ctx.save();
+      ctx.translate(ax, ay - hB); ctx.scale(-1, 1);
+      ctx.drawImage(im, 0, 0, wB, wB * im.naturalHeight / im.naturalWidth);
+      ctx.restore();
+      ctx.fillStyle = '#6B4423'; ctx.fillRect(ax - 1, ay - hB, 2, hB);
+    }
   }
 }
 

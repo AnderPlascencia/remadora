@@ -46,7 +46,7 @@ for (const clase of CB.CLASES_COLECCION) {
 {
   const ctx = { nivel: 10, hazanas: new Set() };
   const color = (id) => !!VELAS[id];
-  assert.deepEqual(CB.equipoDe({}, 'samurai', ctx), { vela: 'samurai-clasica', proa: null, palas: null });
+  assert.deepEqual(CB.equipoDe({}, 'samurai', ctx), { vela: 'samurai-clasica', proa: null, palas: null, bandera: null });
   assert.equal(CB.equipoDe({ equipoBote: { samurai: { vela: 'samurai-rango' } } }, 'samurai', ctx).vela, 'samurai-clasica', 'nivel 10 < 20');
   assert.equal(CB.equipoDe({ equipoBote: { samurai: { vela: 'samurai-rango' } } }, 'samurai', { nivel: 20 }).vela, 'samurai-rango');
   assert.equal(CB.equipoDe({ equipoBote: { samurai: { vela: 'vikingo-rango' } } }, 'samurai', { nivel: 90 }).vela, 'samurai-clasica', 'una vela de otra clase no');
@@ -55,6 +55,29 @@ for (const clase of CB.CLASES_COLECCION) {
   assert.equal(CB.equipoDe({ vela: 'oro', velas: ['oro'], equipoBote: { romano: { vela: null } } }, 'romano', ctx, { velaDeColor: color }).vela, 'romano-clasica');
   const pr = CB.equipoDe({ equipoBote: { romano: { proa: 'romano-proa', palas: 'romano-palas' } }, piezas: ['romano-palas'] }, 'romano', { nivel: 40 });
   assert.deepEqual([pr.proa, pr.palas], ['romano-proa', 'romano-palas']);
+}
+
+// Premios de jefe (etapa 6.2): una bandera, unas palas o un mascarón y una vela por clase, ilustrados, que se ganan
+// venciendo jefes (ctx.jefes) y no se compran. Solo se listan cuando el juego pasa los jefes vencidos.
+{
+  for (const clase of ['vikingo', 'pirata', 'samurai', 'romano']) {
+    const j = [1, 2, 3].map((n) => CB.PIEZAS[`${clase}-jefe${n}`]);
+    assert.deepEqual(j.map((x) => x.tipo === 'bandera' || x.tipo === 'vela' ? x.tipo : 'palas/proa'), ['bandera', 'palas/proa', 'vela'], clase);
+    for (const x of j) assert.ok(x.imagen && x.nombre && x.texto && /^#[0-9A-F]{6}$/i.test(x.tela), x.id);
+    assert.equal(CB.piezasDe(clase).length, 8, 'sin jefes, la colección de siempre');
+    assert.equal(CB.piezasDe(clase, { jefes: new Set() }).length, 11);
+  }
+  assert.equal(CB.PIEZAS['polinesio-jefe1'], undefined, 'el polinesio espera la revisión cultural');
+  const ctx = { nivel: 1, hazanas: new Set(), jefes: new Set(['vikingo-jefe1', 'vikingo-jefe3']) };
+  assert.ok(CB.tienePieza({}, 'vikingo-jefe1', ctx));
+  assert.ok(!CB.tienePieza({}, 'vikingo-jefe2', ctx));
+  assert.ok(!CB.tienePieza({}, 'vikingo-jefe1', { nivel: 90 }), 'sin jefes vencidos no se tiene');
+  assert.equal(CB.comprarPieza({}, 'vikingo-jefe2', 99999), null, 'no se compra');
+  const eq = CB.equipoDe({ equipoBote: { vikingo: { bandera: 'vikingo-jefe1', vela: 'vikingo-jefe3', palas: 'vikingo-jefe2' } } }, 'vikingo', ctx);
+  assert.deepEqual([eq.bandera, eq.vela, eq.palas], ['vikingo-jefe1', 'vikingo-jefe3', null]);
+  assert.deepEqual(CB.bonoEquipo({ vela: 'romano-jefe3', proa: 'romano-jefe2', bandera: 'romano-jefe1' }), { salida: 8, inicio: 0.01, porPaladas: 0, legendaria: null });
+  assert.equal(CB.ventajaTexto(CB.PIEZAS['samurai-jefe1']), 'Sin ventaja: es tu trofeo');
+  assert.equal(CB.comoSeConsigue(CB.PIEZAS['pirata-jefe3']), 'Se gana al vencer al jefe del capítulo 3');
 }
 
 // Rivales: Alta mar lleva la épica de su clase; los legendarios, la legendaria.

@@ -672,6 +672,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .objeto.velas b { font-size: var(--t-s); }
 .velas-muestra { width: 56px; height: 36px; border-radius: 4px 18px 4px 4px; border: 1px solid var(--borde); }
 .objeto.velas.sin-tener .velas-muestra { opacity: .55; }
+.velas-muestra.ilustrada { object-fit: contain; background: var(--rejilla); padding: 2px; }
 .objeto.velas .bloqueada { font-size: var(--t-xs); font-weight: 700; color: var(--texto-tenue); padding: 6px 0; text-align: center; }
 .objeto.velas .ventaja-pieza { color: var(--acento); font-weight: 600; }
 .objeto.ventaja .boton.lote { margin-top: 4px; }
