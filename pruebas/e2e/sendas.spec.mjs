@@ -39,3 +39,12 @@ test('las dos sendas del vikingo: se ven antes del nivel 20 y la B cambia los ta
   await expect(page.locator('#arbol .talento').filter({ hasText: 'Furia de salida' }).locator('.etq-tal.intensidad')).toHaveText('Intensidad');
   await page.locator('#arbol').screenshot({ path: test.info().outputPath('sendas.png') });
 });
+
+test('la saga del vikingo: el primer capítulo tiene su propio jefe', async ({ page }) => {
+  await page.goto('./');
+  await completarBienvenida(page, { reloj: false });
+  await abrirTalentos(page, {});
+  await page.locator('[data-hp="misiones"]').click();
+  await expect(page.locator('#mis-capitulo')).toContainText('El despertar');
+  await expect(page.locator('#mis-capitulo')).toContainText('draugr');
+});

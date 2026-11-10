@@ -8,6 +8,7 @@
 //    de la sesión, «tu rival está a tiro» en el último 20 % de una carrera y el resumen de juego al terminar.
 //  - La XP solo se dice en el resumen final; las piezas del bote nunca.
 import { SIN_ANIMO, esTrabajo } from './guion-voz.js';
+import { aJefe } from './sagas.js';
 
 // ---------- Frases de clase ----------
 
@@ -77,7 +78,7 @@ export function juegoPuede(tipo, { bloque = null, t = 0, ultimo = null } = {}) {
 
 // ---------- Al empezar ----------
 
-const conArticulo = (nombre) => nombre.replace(/^El /, 'al ').replace(/^La /, 'a la ');
+const conArticulo = aJefe;
 
 // Una sola frase al empezar: el jefe si lo enfrentas hoy y, si no, la racha (desde 2 días).
 // jefe: nombre del jefe si esta sesión puede vencerlo; racha: días seguidos contando hoy.
