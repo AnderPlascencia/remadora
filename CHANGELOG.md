@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.72.0 · 2026-11-11
+
+Premios de jefe, primera tanda: las piezas ilustradas de los capítulos 1 a 3.
+
+- Cada jefe de los capítulos 1 a 3 tendrá su pieza propia para el bote del vikingo, el pirata, el samurái y el romano: una bandera de popa (capítulo 1), unas palas o un mascarón (capítulo 2) y una vela (capítulo 3). Son ilustraciones nuevas, como la Vela de la hafgufa, el Gallardete de la fragata, el Sashimono del rōnin o el Vexillum de Pompeyo.
+- La bandera de popa es un tipo de pieza nuevo: ondea en un asta a un lado de la popa, sin tapar a tu remero. No da ventaja, es tu trofeo. La vela y el mascarón dan la misma ventaja que los de su tipo.
+- Las piezas aún no se pueden ganar: se conectan a los jefes en la siguiente versión. El polinesio espera la revisión cultural de su saga.
+
 ## 0.71.0 · 2026-11-11
 
 Séptima etapa del rediseño del héroe: maestría de clase, para quien rema años.

@@ -4,13 +4,14 @@
 // clásica (gratis), de rango (nivel 20), palas (600), de taller (1200), mascarón (nivel 40), épica (2200) y la
 // legendaria con el mascarón dorado (hazaña de clase). El dibujo de cada emblema vive en carrera.js (campo emblema);
 // sin dibujo propio, la pieza se pinta con sus colores.
-// per (personaje guardado): piezas = ids comprados; equipoBote = { clase: { vela, proa, palas } }.
-// ctx = { nivel, hazanas: Set de ids de hazaña } para lo que se gana remando.
+// Además, cada jefe de la saga da una pieza ilustrada de tu clase (JEFES, más abajo).
+// per (personaje guardado): piezas = ids comprados; equipoBote = { clase: { vela, proa, palas, bandera } }.
+// ctx = { nivel, hazanas: Set de ids de hazaña, jefes: Set de ids de pieza de jefe } para lo que se gana remando.
 
 export const NIVEL_RANGO = 20;
 export const NIVEL_PROA = 40;
 export const PRECIOS = { palas: 600, taller: 1200, epica: 2200 };
-export const TIPOS = { vela: 'Vela', proa: 'Mascarón', palas: 'Palas' };
+export const TIPOS = { vela: 'Vela', proa: 'Mascarón', palas: 'Palas', bandera: 'Bandera de popa' };
 // Escalón de cada pieza en su clase, en el orden en que se suele conseguir.
 export const ESCALONES = ['clasica', 'rango', 'palas', 'taller', 'proa', 'epica', 'legendaria', 'proa-oro'];
 export const hazanaDeClase = (clase) => `clase-${clase}`;
@@ -88,15 +89,54 @@ for (const [clase, lista] of Object.entries(DATOS)) {
     PIEZAS[id] = { id, clase, escalon, tipo: tipoDe(escalon), nombre, texto, tela, marca, emblema, animado: escalon === 'legendaria', como: como(escalon, clase) };
   }
 }
+// Premios de jefe (etapa 6.2 del héroe): cada jefe vencido de la saga da una pieza de tu clase. Son ilustraciones
+// (assets/premios/<id>.webp) en lugar de dibujos por código; tela y marca dan la muestra de color y el color de las
+// palas en la carrera. El capítulo 1 da una bandera de popa (sin ventaja: solo adorno), el 2 palas o mascarón y el 3
+// una vela. El polinesio espera la revisión cultural de su saga.
+// [capítulo, tipo, nombre, texto, tela, marca]
+const JEFES = {
+  vikingo: [
+    [1, 'bandera', 'Runa contra el draugr', 'Banderín gris con una runa grabada y remaches de hierro.', '#64748B', '#F1F5F9'],
+    [2, 'palas', 'Palas del nøkk', 'Palas verde río con ondas plateadas.', '#166534', '#CBD5E1'],
+    [3, 'vela', 'Vela de la hafgufa', 'Gris tormenta con el lomo de una bestia marina que asoma como una isla.', '#475569', '#E2E8F0'],
+  ],
+  pirata: [
+    [1, 'bandera', 'Gallardete de la fragata', 'El gallardete largo de la fragata cazapiratas, ahora en tu popa.', '#991B1B', '#F8FAFC'],
+    [2, 'proa', 'Piña de Potosí', 'Una piña de plata del botín del fuerte del río, en la proa.', '#A8A29E', '#F5F5F4'],
+    [3, 'vela', 'Vela del huracán', 'Lona remendada con la espiral del huracán.', '#C8A97E', '#334155'],
+  ],
+  samurai: [
+    [1, 'bandera', 'Sashimono del rōnin', 'Banderín estrecho con el mon del rōnin, que ahora te sigue.', '#F8FAFC', '#111827'],
+    [2, 'palas', 'Palas del pepino', 'Palas verde claro con un pepino pintado, la ofrenda al kappa.', '#86EFAC', '#15803D'],
+    [3, 'vela', 'Vela de los tambores', 'Gris con el anillo de tambores de Raijin y un rayo.', '#6B7280', '#FACC15'],
+  ],
+  romano: [
+    [1, 'bandera', 'Vexillum de Pompeyo', 'Vexillum rojo de la campaña contra los piratas, año 67 a. C.', '#B91C1C', '#FACC15'],
+    [2, 'proa', 'Proa de la flota del Rin', 'El espolón de bronce de la Classis Germanica, recuperado.', '#3F6B5A', '#B45309'],
+    [3, 'vela', 'Vela de Neptuno', 'Azul profundo con el tridente de Neptuno.', '#1E3A8A', '#F8FAFC'],
+  ],
+};
+for (const [clase, lista] of Object.entries(JEFES)) {
+  for (const [cap, tipo, nombre, texto, tela, marca] of lista) {
+    const id = `${clase}-jefe${cap}`;
+    PIEZAS[id] = { id, clase, escalon: `jefe${cap}`, tipo, nombre, texto, tela, marca, imagen: `assets/premios/${id}.webp`, como: { jefe: cap } };
+  }
+}
 export const CLASES_COLECCION = Object.keys(DATOS);
-export const piezasDe = (clase) => ESCALONES.map((e) => PIEZAS[`${clase}-${e}`]).filter(Boolean);
+// Las piezas de jefe solo se listan cuando el juego dice qué jefes venciste (ctx.jefes); sin eso, la colección de siempre.
+export const piezasDe = (clase, { jefes } = {}) => [
+  ...ESCALONES.map((e) => PIEZAS[`${clase}-${e}`]),
+  ...(jefes ? [1, 2, 3].map((n) => PIEZAS[`${clase}-jefe${n}`]) : []),
+].filter(Boolean);
 
 // ¿Tienes la pieza? Lo gratis siempre, lo de nivel o hazaña cuando llegas y lo de tienda si lo compraste.
-export function tienePieza(per = {}, id, { nivel = 1, hazanas = new Set() } = {}) {
+// Las de jefe, cuando ctx.jefes (Set de ids de pieza ganados venciendo jefes) la incluye.
+export function tienePieza(per = {}, id, { nivel = 1, hazanas = new Set(), jefes = new Set() } = {}) {
   const x = PIEZAS[id];
   if (!x) return false;
   const c = x.como;
   if (c.gratis) return true;
+  if (c.jefe) return jefes.has(id);
   if (c.nivel) return nivel >= c.nivel;
   if (c.hazana) return hazanas.has(c.hazana);
   return (per.piezas || []).includes(id);
@@ -108,6 +148,7 @@ export function comoSeConsigue(x) {
   if (c.gratis) return 'Gratis con la clase';
   if (c.nivel) return `Se gana al llegar al nivel ${c.nivel}`;
   if (c.hazana) return 'Se gana con la hazaña de clase';
+  if (c.jefe) return `Se gana al vencer al jefe del capítulo ${c.jefe}`;
   return `${c.precio} monedas`;
 }
 
@@ -125,11 +166,11 @@ export function equipar(per = {}, clase, tipo, id) {
   return { equipoBote: { ...(per.equipoBote || {}), [clase]: { ...actual, [tipo]: id } } };
 }
 
-// Lo que lleva el bote de una clase: { vela, proa, palas }, cada uno un id de pieza (la vela puede ser una vela de
+// Lo que lleva el bote de una clase: { vela, proa, palas, bandera }, cada uno un id de pieza (la vela puede ser una vela de
 // color) o null. Lo que ya no tienes no se equipa. Sin elegir nada: la vela clásica, y la vela de color que tenías
 // elegida antes de la colección (per.vela).
 export function equipoDe(per = {}, clase, ctx = {}, { velaDeColor = () => false } = {}) {
-  if (!DATOS[clase]) return { vela: null, proa: null, palas: null };
+  if (!DATOS[clase]) return { vela: null, proa: null, palas: null, bandera: null };
   const guardado = per.equipoBote?.[clase] || {};
   const vale = (id, tipo) => !!id && ((PIEZAS[id]?.clase === clase && PIEZAS[id].tipo === tipo && tienePieza(per, id, ctx)) || (tipo === 'vela' && velaDeColor(id)));
   const elegida = 'vela' in guardado ? guardado.vela : per.vela;
@@ -137,6 +178,7 @@ export function equipoDe(per = {}, clase, ctx = {}, { velaDeColor = () => false 
     vela: vale(elegida, 'vela') ? elegida : `${clase}-clasica`,
     proa: vale(guardado.proa, 'proa') ? guardado.proa : null,
     palas: vale(guardado.palas, 'palas') ? guardado.palas : null,
+    bandera: vale(guardado.bandera, 'bandera') ? guardado.bandera : null,
   };
 }
 
@@ -150,9 +192,10 @@ export function velaDeRival(clase, { dificultad = null, rango = null } = {}) {
 
 // Ventaja de cada pieza en la carrera. Velas: metros de salida por escalón (la legendaria suma su efecto de clase);
 // mascarón: un % más de distancia en los primeros 2 min; palas: 1 m cada 100 paladas.
-export const SALIDA_VELA = { clasica: 0, rango: 5, taller: 8, epica: 12, legendaria: 15 };
+// Las piezas de jefe dan la ventaja de su tipo: la vela del capítulo 3 como la de taller y el mascarón como el de nivel 40.
+export const SALIDA_VELA = { clasica: 0, rango: 5, taller: 8, epica: 12, legendaria: 15, jefe3: 8 };
 export const SALIDA_VELA_COLOR = { carmesi: 4, esmeralda: 6, medianoche: 8, hielo: 10, oro: 12 };
-export const INICIO_PROA = { proa: 0.01, 'proa-oro': 0.02 };
+export const INICIO_PROA = { proa: 0.01, 'proa-oro': 0.02, jefe2: 0.01 };
 export const PALAS_M = 1;
 export const EFECTO_LEGENDARIO = {
   vikingo: '+1 m cada 50 paladas',
@@ -164,6 +207,7 @@ export const EFECTO_LEGENDARIO = {
 export function ventajaTexto(x, id = x?.id) {
   if (!x) return '';
   if (!x.escalon) return SALIDA_VELA_COLOR[id] ? `Ventaja: empiezas ${SALIDA_VELA_COLOR[id]} m por delante` : '';
+  if (x.tipo === 'bandera') return 'Sin ventaja: es tu trofeo';
   if (x.tipo === 'palas') return `Ventaja: +${PALAS_M} m cada 100 paladas`;
   if (x.tipo === 'proa') return `Ventaja: +${INICIO_PROA[x.escalon] * 100} % de distancia en los primeros 2 min`;
   const m = SALIDA_VELA[x.escalon];
