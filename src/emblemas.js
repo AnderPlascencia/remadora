@@ -187,6 +187,95 @@ function emblema24(ctx, nombre, tela, marca, t) {
       });
       break;
     }
+    // ---------- Premios de jefe, capítulos 1–3 ----------
+    case 'runa': {
+      // Runa ᛉ grabada dentro de un anillo de remaches de hierro
+      ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.moveTo(12, 19); ctx.lineTo(12, 5); ctx.moveTo(12, 11); ctx.lineTo(7, 5.5); ctx.moveTo(12, 11); ctx.lineTo(17, 5.5); ctx.stroke();
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; circulo(ctx, 12 + Math.cos(a) * 10, 12 + Math.sin(a) * 10, 0.9); }
+      break;
+    }
+    case 'hafgufa': {
+      // Lomo enorme y rocoso que asoma como una isla, con el ojo a ras de agua, entre olas
+      ctx.beginPath(); ctx.moveTo(1, 16.5);
+      ctx.bezierCurveTo(2, 11, 5, 9.5, 7, 10); ctx.bezierCurveTo(8, 7.5, 11, 6.5, 13, 8); ctx.bezierCurveTo(15, 6.8, 18, 8, 19, 10.5);
+      ctx.bezierCurveTo(21.5, 11.5, 23, 14, 23, 16.5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = tela; circulo(ctx, 20, 14.4, 0.8);
+      ctx.save(); ctx.globalAlpha *= 0.35; circulo(ctx, 8, 13, 0.9); circulo(ctx, 12.5, 11, 1.1); circulo(ctx, 15.5, 13.5, 0.8); ctx.restore();
+      ctx.fillStyle = marca;
+      ctx.lineWidth = 1.1; for (let k = 0; k < 2; k++) { ctx.beginPath(); for (let i = 0; i <= 22; i++) ctx.lineTo(1 + i, 18.5 + k * 2.6 + Math.sin(i * 0.9 + k) * 0.7); ctx.stroke(); }
+      break;
+    }
+    case 'pina': {
+      // Piña de plata: el cono poroso de plata de amalgama de Potosí, con su textura de celdas
+      ctx.beginPath(); ctx.moveTo(5, 20); ctx.quadraticCurveTo(5, 6, 12, 3.5); ctx.quadraticCurveTo(19, 6, 19, 20); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = tela;
+      for (let f = 0; f < 5; f++) for (let i = 0; i < 4; i++) { const y = 8 + f * 2.6, x = 7.2 + i * 3.2 + (f % 2) * 1.6; if (x < 17.5 && x > 6.5 && y < 19) circulo(ctx, x, y, 0.6); }
+      ctx.fillStyle = marca; r(ctx, 3.5, 20, 17, 1.6);
+      break;
+    }
+    case 'huracan': {
+      // Espiral del huracán: dos brazos que giran despacio y el ojo en calma
+      const g = (t || 0) * 0.5;
+      ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      for (let b = 0; b < 2; b++) {
+        ctx.beginPath();
+        for (let i = 0; i <= 40; i++) { const a = g + b * Math.PI + i * 0.16, k = 2.2 + i * 0.22; ctx.lineTo(12 + Math.cos(a) * k, 12 + Math.sin(a) * k * 0.9); }
+        ctx.stroke();
+      }
+      ctx.fillStyle = tela; circulo(ctx, 12, 12, 1.6);
+      break;
+    }
+    case 'tomoe': {
+      // Mitsudomoe: tres comas que giran dentro de un anillo, mon muy usado por los guerreros
+      ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(12, 12, 10.2, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 3; i++) {
+        ctx.save(); ctx.translate(12, 12); ctx.rotate((i / 3) * Math.PI * 2);
+        // Cabeza redonda y cola que se afila siguiendo el giro
+        circulo(ctx, 0, -4.6, 3);
+        ctx.beginPath();
+        for (let j = 0; j <= 12; j++) { const a = -Math.PI / 2 - (j / 12) * 1.9, k = 4.6 + 3 * (1 - j / 12); ctx.lineTo(Math.cos(a) * k, Math.sin(a) * k); }
+        for (let j = 12; j >= 0; j--) { const a = -Math.PI / 2 - (j / 12) * 1.9, k = 4.6 + 0.3 * (1 - j / 12) + 2.2 * (j / 12); ctx.lineTo(Math.cos(a) * k, Math.sin(a) * k); }
+        ctx.fill();
+        ctx.restore();
+      }
+      break;
+    }
+    case 'pepino': {
+      ctx.save(); ctx.translate(12, 12); ctx.rotate(-0.6);
+      ctx.beginPath(); ctx.ellipse(0, 0, 10, 3.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = tela; for (let i = -3; i <= 3; i++) circulo(ctx, i * 2.6, (i % 2) * 1.3, 0.45);
+      ctx.fillStyle = marca; r(ctx, 9.5, -0.6, 2, 1.2);
+      ctx.restore();
+      break;
+    }
+    case 'tambores': {
+      // Raijin: anillo de tambores (taiko) unidos por un aro, y el rayo en medio
+      ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(12, 12, 8.3, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+        circulo(ctx, 12 + Math.cos(a) * 8.3, 12 + Math.sin(a) * 8.3, 2.2);
+        ctx.fillStyle = tela; circulo(ctx, 12 + Math.cos(a) * 8.3, 12 + Math.sin(a) * 8.3, 0.9); ctx.fillStyle = marca;
+      }
+      const brillo = 0.7 + 0.3 * Math.abs(Math.sin((t || 0) * 2.3));
+      ctx.save(); ctx.globalAlpha *= brillo;
+      ctx.beginPath(); ctx.moveTo(13.5, 5.5); ctx.lineTo(9.5, 12.5); ctx.lineTo(12, 12.5); ctx.lineTo(10, 18.5); ctx.lineTo(14.8, 10.8); ctx.lineTo(12.2, 10.8); ctx.lineTo(14.2, 5.5); ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'rostrum': {
+      // Espolón de bronce visto de lado: tres aletas horizontales y la punta, como el de Atlit
+      ctx.beginPath(); ctx.moveTo(3, 6); ctx.lineTo(14, 6); ctx.lineTo(21.5, 12); ctx.lineTo(14, 18); ctx.lineTo(3, 18); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = tela; r(ctx, 5, 8.5, 12, 1.2); r(ctx, 5, 11.4, 14.5, 1.2); r(ctx, 5, 14.3, 12, 1.2);
+      break;
+    }
+    case 'tridente': {
+      ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.moveTo(12, 22); ctx.lineTo(12, 4); ctx.moveTo(6.5, 6); ctx.quadraticCurveTo(6.5, 11, 12, 11); ctx.quadraticCurveTo(17.5, 11, 17.5, 6); ctx.stroke();
+      for (const x of [6.5, 12, 17.5]) { ctx.beginPath(); ctx.moveTo(x - 1.4, x === 12 ? 4.5 : 6.5); ctx.lineTo(x, x === 12 ? 1.5 : 3.5); ctx.lineTo(x + 1.4, x === 12 ? 4.5 : 6.5); ctx.fill(); }
+      ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(9.5, 14); ctx.lineTo(14.5, 14); ctx.stroke();
+      break;
+    }
     case 'mon': circulo(ctx, 12, 12, 7); ctx.fillStyle = tela; circulo(ctx, 12, 12, 3); break;
     // Hinomaru: el disco rojo solo, sin rayos (la bandera con rayos es de 1870).
     case 'sol-naciente': circulo(ctx, 12, 12, 6.5); break;
@@ -261,6 +350,9 @@ function fondo(ctx, nombre, w, h, tela, marca) {
     case 'parches':
       ctx.globalAlpha = 0.5; r(ctx, w * 0.1, h * 0.15, w * 0.3, h * 0.18); r(ctx, w * 0.55, h * 0.55, w * 0.32, h * 0.2); r(ctx, w * 0.2, h * 0.72, w * 0.22, h * 0.14);
       ctx.globalAlpha = 1; return true;
+    case 'huracan':
+      ctx.globalAlpha = 0.18; r(ctx, w * 0.06, h * 0.1, w * 0.22, h * 0.16); r(ctx, w * 0.7, h * 0.62, w * 0.22, h * 0.2); r(ctx, w * 0.12, h * 0.74, w * 0.18, h * 0.14);
+      ctx.globalAlpha = 1; return false;
     case 'lobo': ctx.globalAlpha = 0.55; r(ctx, 0, h * 0.04, w, h * 0.06); r(ctx, 0, h * 0.9, w, h * 0.06); ctx.globalAlpha = 1; return false;
     default: return false;
   }
@@ -302,4 +394,56 @@ export function pintarIcono(ctx, nombre, x, y, lado, tela, marca, t = 0) {
   ctx.restore();
 }
 
-export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'seigaiha', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos', 'cuervos', 'tortuga', 'manta', 'aguila', 'dragon-tormenta', 'san-telmo', 'mechas'];
+// Estandarte (premio de jefe): banderín pequeño en un asta de popa. La forma sale de la cultura:
+// 'triangulo' (estandarte vikingo de borde curvo), 'gallardete' (gallardete largo de la Marina Real, con la cruz de San
+// Jorge junto al asta), 'sashimono' (banderín estrecho vertical) y 'vexillum' (paño cuadrado colgado de un travesaño,
+// con flecos). Se pinta con el asta a la izquierda, en (0,0,w,h).
+export function pintarEstandarte(ctx, { tela, marca, emblema, forma }, w, h, t = 0) {
+  ctx.save();
+  const asta = Math.max(1.5, w * 0.035);
+  ctx.fillStyle = '#6B4423'; r(ctx, 0, 0, asta, h);
+  const ola = (x) => Math.sin(t * 4 - x * 0.08) * h * 0.02;
+  ctx.beginPath();
+  let caja;
+  if (forma === 'triangulo') {
+    const W = w - asta, H = h * 0.55;
+    ctx.moveTo(asta, h * 0.04); ctx.lineTo(asta + W * 0.92, h * 0.04 + H * 0.35 + ola(W)); ctx.quadraticCurveTo(asta + W * 0.45, h * 0.04 + H * 0.75, asta, h * 0.04 + H);
+    caja = [asta, h * 0.04, W * 0.5, H * 0.8];
+  } else if (forma === 'gallardete') {
+    const W = w - asta, H = h * 0.22;
+    ctx.moveTo(asta, h * 0.04); ctx.lineTo(asta + W, h * 0.04 + H * 0.4 + ola(W)); ctx.lineTo(asta + W * 0.93, h * 0.04 + H * 0.5 + ola(W)); ctx.lineTo(asta + W, h * 0.04 + H * 0.6 + ola(W)); ctx.lineTo(asta, h * 0.04 + H);
+    caja = null;
+  } else if (forma === 'vexillum') {
+    const W = (w - asta) * 0.8, x0 = asta + (w - asta) * 0.1, y0 = h * 0.12;
+    ctx.fillStyle = '#6B4423'; r(ctx, asta - w * 0.0, y0 - h * 0.025, (w - asta) * 0.98, h * 0.025);
+    ctx.rect(x0, y0, W, W * 0.9);
+    caja = [x0, y0, W, W * 0.9];
+  } else {
+    const W = Math.min(w - asta, h * 0.32), H = h * 0.62;
+    ctx.rect(asta, h * 0.04, W, H);
+    caja = [asta, h * 0.04, W, H];
+  }
+  ctx.closePath(); ctx.save(); ctx.clip();
+  ctx.fillStyle = tela; r(ctx, 0, 0, w, h);
+  if (forma === 'gallardete') {
+    // Cruz de San Jorge en el trozo blanco junto al asta y la cola roja
+    const H = h * 0.22, y0 = h * 0.04, L = H * 1.6;
+    ctx.fillStyle = '#F8FAFC'; r(ctx, asta, y0, L, H);
+    ctx.fillStyle = '#B91C1C'; r(ctx, asta + L * 0.42, y0, L * 0.16, H); r(ctx, asta, y0 + H * 0.4, L, H * 0.2);
+  } else if (caja && emblema) {
+    const [x, y, W, H] = caja, k = Math.min(W, H) * 0.85 / 24;
+    ctx.save(); ctx.translate(x + W / 2 - 12 * k, y + H / 2 - 12 * k); ctx.scale(k, k); emblema24(ctx, emblema, tela, marca, t); ctx.restore();
+  }
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, 'rgba(0,0,0,0.18)'); g.addColorStop(0.5, 'rgba(255,255,255,0.06)'); g.addColorStop(1, 'rgba(0,0,0,0.2)');
+  ctx.fillStyle = g; r(ctx, 0, 0, w, h);
+  ctx.restore();
+  if (forma === 'vexillum') {
+    // Flecos dorados
+    const [x, y, W, H] = caja; ctx.fillStyle = marca;
+    for (let i = 0; i < 9; i++) r(ctx, x + (i + 0.3) * W / 9, y + H, W / 9 * 0.4, h * 0.06);
+  }
+  ctx.restore();
+}
+
+export const EMBLEMAS_CON_DIBUJO = [...Object.keys(SILUETAS), 'runas', 'brasas', 'mon', 'sol-naciente', 'seigaiha', 'sol', 'sol-invicto', 'estrellas', 'spqr', 'laurel', 'tapa', 'franjas', 'ribete', 'franja', 'parches', 'ojo', 'escudo', 'filo', 'olas', 'rayos', 'cuervos', 'tortuga', 'manta', 'aguila', 'dragon-tormenta', 'san-telmo', 'mechas', 'runa', 'hafgufa', 'pina', 'huracan', 'tomoe', 'pepino', 'tambores', 'rostrum', 'tridente'];
