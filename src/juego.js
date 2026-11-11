@@ -1299,7 +1299,9 @@ export function estimarXp(sesiones, hipotetica, opts = {}) {
   const despues = estadoJuego([...sesiones, hipotetica], opts);
   const ps = despues.porSesion.get(hipotetica.fecha);
   return {
-    total: despues.xp - antes.xp, sesion: ps.xp, extra: ps.xpExtra, detalle: ps.detalle,
+    // Sin el ajuste del paso a la curva nueva: con una sesión anterior a CURVA_DESDE, el ajuste sale distinto en
+    // las dos cuentas y no es XP que dé la sesión.
+    total: (despues.xp - despues.ajusteCurva) - (antes.xp - antes.ajusteCurva), sesion: ps.xp, extra: ps.xpExtra, detalle: ps.detalle,
     monedas: despues.monedasGanadas - antes.monedasGanadas, subeNivel: despues.nivel > antes.nivel ? despues.nivel : null,
     ganancias: ps.ganancias, contexto: antes.contexto, atributos: antes.atributos,
   };
