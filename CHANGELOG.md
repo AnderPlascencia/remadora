@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.73.2 · 2026-11-11
+
+La bandera de popa, bien puesta.
+
+- En la carrera realista 3D, la bandera va en un asta en la popa, dentro de tu calle y por encima de los remos. Guarda su proporción (el sashimono alto, el gallardete largo) y ondea más rápido cuanto más rápido remas.
+- En la vista desde arriba sale de la borda, junto a la popa, ondeando hacia atrás por encima de la vela, en lugar de flotar suelta fuera del bote.
+- En la vista desde arriba, la vela de tu bote es más grande, para que se lea su dibujo, y el aro discontinuo pasa por debajo de ella en lugar de tacharla.
+- Los mascarones ilustrados (la Piña de Potosí y el espolón de la flota del Rin) se ven más grandes en la proa, porque al ser alargados se perdían.
+
 ## 0.73.1 · 2026-11-11
 
 - La XP que se calcula antes de remar ya no suma por error el ajuste del cambio de curva de niveles (salía de más al estimar con sesiones anteriores al 11 de noviembre).

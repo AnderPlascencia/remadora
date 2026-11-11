@@ -2424,24 +2424,61 @@ function velaReal3d(ctx, P, b, largo, t) {
       iconoPieza(ctx, deco.proa, q.x, q.y, lado, t);
     }
   }
-  // Bandera de popa (premio de jefe), en un asta a la izquierda de la popa, ondeando hacia fuera
+  // Bandera de popa (premio de jefe): asta en la popa, a la izquierda de tu remero y dentro de tu calle, con la tela
+  // ondeando hacia fuera. Medidas en metros para que guarde su proporción a cualquier distancia.
   if (b.yo && deco.bandera) {
-    const im = imagen(deco.bandera.imagen);
-    const zB = b.dist - largo * 0.5 + 0.4;
-    const pie = P(b.x - 0.9, zB, 0.2);
-    const tope = P(b.x - 0.9, zB, 1.6);
-    if (im && pie && tope) {
-      const alto = (pie.y - tope.y) * 0.38;
-      const ancho = Math.min(alto * im.naturalWidth / im.naturalHeight, alto * 1.6);
-      ctx.save();
-      ctx.strokeStyle = '#6B4423'; ctx.lineWidth = Math.max(1, pie.s * 0.035);
-      ctx.beginPath(); ctx.moveTo(pie.x, pie.y); ctx.lineTo(tope.x, tope.y); ctx.stroke();
-      // Espejada: la imagen se sujeta por la izquierda y aquí el asta queda a la derecha de la tela
-      ctx.translate(tope.x, tope.y); ctx.scale(-1, 1);
-      ctx.rotate(sinMovimiento ? 0 : Math.sin(t * 3) * 0.03);
-      ctx.drawImage(im, 0, 0, ancho, ancho * im.naturalHeight / im.naturalWidth);
-      ctx.restore();
+    const src = banderaDe(deco.bandera.imagen);
+    if (src) {
+      const { wM, hM } = medidasBandera(src);
+      const zB = b.dist - largo * 0.5 + 0.35;
+      const xA = b.x - 0.45;
+      const hTope = 1.15 + hM;
+      const pie = P(xA, zB, 0.2);
+      const tope = P(xA, zB, hTope);
+      const punta = P(xA - wM, zB, hTope);
+      if (pie && tope && punta) {
+        ctx.save();
+        ctx.strokeStyle = '#6B4423'; ctx.lineWidth = Math.max(1, pie.s * 0.03); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(pie.x, pie.y); ctx.lineTo(tope.x, tope.y - 2); ctx.stroke();
+        const w = tope.x - punta.x;
+        banderaOndeante(ctx, src, tope.x, tope.y, w, w * hM / wM, t + b.dist * 0.3, b.v);
+        ctx.restore();
+      }
     }
+  }
+}
+
+// Bandera de popa: la ilustración espejada (el asta queda a su derecha y la tela vuela hacia la izquierda), en un
+// canvas aparte para cortarla en tiras. Mide como mucho 1 m de largo y 1,2 m de alto.
+const banderas = new Map();
+function banderaDe(srcImagen) {
+  const im = imagen(srcImagen);
+  if (!im || typeof document === 'undefined') return null;
+  let c = banderas.get(srcImagen);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const g = c.getContext('2d');
+    g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(im, 0, 0);
+    banderas.set(srcImagen, c);
+  }
+  return c;
+}
+function medidasBandera(c) {
+  const wM = Math.min(1, 1.2 * c.width / c.height);
+  return { wM, hM: wM * c.height / c.width };
+}
+// Dibuja la bandera con el asta en (x, y), arriba a la derecha, y la tela hacia la izquierda en tiras que ondean:
+// quieta junto al asta y con más vaivén en la punta, más rápido cuanto más rápido vas.
+function banderaOndeante(ctx, c, x, y, w, h, t, v) {
+  const N = 10;
+  const f = 4 + Math.min(6, (v || 0) * 1.4);
+  const amp = sinMovimiento ? 0 : h * 0.06;
+  for (let i = 0; i < N; i++) {
+    const lejos = (i + 1) / N;
+    const o = Math.sin(t * f - i * 0.8) * amp * lejos;
+    const sx = c.width - (i + 1) * c.width / N;
+    ctx.drawImage(c, sx, 0, c.width / N + 0.5, c.height, x - (i + 1) * w / N - 0.3, y + o, w / N + 0.6, h);
   }
 }
 
@@ -2450,7 +2487,8 @@ function iconoPieza(ctx, x, cx, cy, lado, t) {
   if (!x.imagen) { pintarIcono(ctx, x.emblema, cx, cy, lado, x.tela, x.marca, t); return; }
   const im = imagen(x.imagen);
   if (!im) return;
-  const k = lado / Math.max(im.naturalWidth, im.naturalHeight);
+  // Las ilustraciones son alargadas (la piña alta, el espolón ancho): algo más grandes que el emblema para leerse
+  const k = lado * 1.4 / Math.max(im.naturalWidth, im.naturalHeight);
   ctx.drawImage(im, cx - im.naturalWidth * k / 2, cy - im.naturalHeight * k / 2, im.naturalWidth * k, im.naturalHeight * k);
 }
 
@@ -2458,8 +2496,15 @@ function iconoPieza(ctx, x, cx, cy, lado, t) {
 function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   const src = telaDe(deco, t, b.clase);
   const mastil = x - largo * 0.93;
-  const w = (b.yo ? 1.25 : 1.0) * pxm;
+  const w = (b.yo ? 2 : 1.0) * pxm;
   const h = w * TELA_H / TELA_W;
+  if (b.yo) {
+    // Aro discontinuo alrededor de tu bote (debajo de la vela, para que no la tache)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.ellipse(x - largo * 0.5, y, largo * 0.6, Math.max(ancho * 1.6, pxm * 0.7), 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   if (src) {
     ctx.save();
     ctx.globalAlpha = 0.95;
@@ -2469,22 +2514,20 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   ctx.fillStyle = '#6B4423';
   ctx.beginPath(); ctx.arc(mastil, y, Math.max(1.5, pxm * 0.06), 0, Math.PI * 2); ctx.fill();
   if (b.yo) {
-    // Aro discontinuo alrededor de tu bote
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
-    ctx.beginPath(); ctx.ellipse(x - largo * 0.5, y, largo * 0.6, Math.max(ancho * 1.6, pxm * 0.7), 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore();
     if (deco.proa) iconoPieza(ctx, deco.proa, x - pxm * 0.15, y, Math.max(10, pxm * 0.55), t);
-    // Bandera de popa, por fuera del aro y ondeando hacia atrás
-    const im = deco.bandera ? imagen(deco.bandera.imagen) : null;
-    if (im) {
-      const hB = pxm * 0.55, wB = Math.min(hB * im.naturalWidth / im.naturalHeight, hB * 1.6);
-      const ax = x - largo * 0.95, ay = y - Math.max(ancho * 1.6, pxm * 0.7) - hB * 0.2;
+    // Bandera de popa, tumbada como la vela (vista desde arriba): asta en la borda, junto a la popa, y la tela
+    // ondeando hacia atrás por encima de la vela
+    const src = deco.bandera ? banderaDe(deco.bandera.imagen) : null;
+    if (src) {
+      const { wM, hM } = medidasBandera(src);
+      const k = pxm * 1.4;
+      const ax = x - largo * 0.82;
+      const ay = y - ancho * 0.6;
       ctx.save();
-      ctx.translate(ax, ay - hB); ctx.scale(-1, 1);
-      ctx.drawImage(im, 0, 0, wB, wB * im.naturalHeight / im.naturalWidth);
+      banderaOndeante(ctx, src, ax, ay - hM * k, wM * k, hM * k, t + x * 0.01, b.v);
       ctx.restore();
-      ctx.fillStyle = '#6B4423'; ctx.fillRect(ax - 1, ay - hB, 2, hB);
+      ctx.fillStyle = '#6B4423';
+      ctx.beginPath(); ctx.arc(ax, ay, Math.max(1.5, pxm * 0.06), 0, Math.PI * 2); ctx.fill();
     }
   }
 }
