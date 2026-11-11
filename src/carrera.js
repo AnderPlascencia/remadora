@@ -2487,7 +2487,8 @@ function iconoPieza(ctx, x, cx, cy, lado, t) {
   if (!x.imagen) { pintarIcono(ctx, x.emblema, cx, cy, lado, x.tela, x.marca, t); return; }
   const im = imagen(x.imagen);
   if (!im) return;
-  const k = lado / Math.max(im.naturalWidth, im.naturalHeight);
+  // Las ilustraciones son alargadas (la piña alta, el espolón ancho): algo más grandes que el emblema para leerse
+  const k = lado * 1.4 / Math.max(im.naturalWidth, im.naturalHeight);
   ctx.drawImage(im, cx - im.naturalWidth * k / 2, cy - im.naturalHeight * k / 2, im.naturalWidth * k, im.naturalHeight * k);
 }
 
@@ -2495,8 +2496,15 @@ function iconoPieza(ctx, x, cx, cy, lado, t) {
 function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   const src = telaDe(deco, t, b.clase);
   const mastil = x - largo * 0.93;
-  const w = (b.yo ? 1.25 : 1.0) * pxm;
+  const w = (b.yo ? 2 : 1.0) * pxm;
   const h = w * TELA_H / TELA_W;
+  if (b.yo) {
+    // Aro discontinuo alrededor de tu bote (debajo de la vela, para que no la tache)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.ellipse(x - largo * 0.5, y, largo * 0.6, Math.max(ancho * 1.6, pxm * 0.7), 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   if (src) {
     ctx.save();
     ctx.globalAlpha = 0.95;
@@ -2506,11 +2514,6 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   ctx.fillStyle = '#6B4423';
   ctx.beginPath(); ctx.arc(mastil, y, Math.max(1.5, pxm * 0.06), 0, Math.PI * 2); ctx.fill();
   if (b.yo) {
-    // Aro discontinuo alrededor de tu bote
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
-    ctx.beginPath(); ctx.ellipse(x - largo * 0.5, y, largo * 0.6, Math.max(ancho * 1.6, pxm * 0.7), 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore();
     if (deco.proa) iconoPieza(ctx, deco.proa, x - pxm * 0.15, y, Math.max(10, pxm * 0.55), t);
     // Bandera de popa, tumbada como la vela (vista desde arriba): asta en la borda, junto a la popa, y la tela
     // ondeando hacia atrás por encima de la vela
@@ -2524,7 +2527,7 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
       banderaOndeante(ctx, src, ax, ay - hM * k, wM * k, hM * k, t + x * 0.01, b.v);
       ctx.restore();
       ctx.fillStyle = '#6B4423';
-      ctx.beginPath(); ctx.arc(ax, ay - hM * k, Math.max(1.5, pxm * 0.05), 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ax, ay, Math.max(1.5, pxm * 0.06), 0, Math.PI * 2); ctx.fill();
     }
   }
 }
