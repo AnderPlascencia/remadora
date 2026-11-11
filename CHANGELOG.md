@@ -2,6 +2,10 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.73.1 · 2026-11-11
+
+- La XP que se calcula antes de remar ya no suma por error el ajuste del cambio de curva de niveles (salía de más al estimar con sesiones anteriores al 11 de noviembre).
+
 ## 0.73.0 · 2026-11-11
 
 Premios de jefe: ya se ganan.
