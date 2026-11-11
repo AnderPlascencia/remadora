@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.73.1 · 2026-11-11
+
+La bandera de popa, bien puesta.
+
+- En la carrera realista 3D, la bandera va en un asta en la popa, dentro de tu calle y por encima de los remos. Guarda su proporción (el sashimono alto, el gallardete largo) y ondea más rápido cuanto más rápido remas.
+- En la vista desde arriba sale de la borda, junto a la popa, ondeando hacia atrás por encima de la vela, en lugar de flotar suelta fuera del bote.
+
 ## 0.73.0 · 2026-11-11
 
 Premios de jefe: ya se ganan.
