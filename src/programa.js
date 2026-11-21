@@ -139,62 +139,17 @@ export function proximo(programa, ahora = Date.now()) {
   return programa.dias.find((d) => d.fecha > hoy) || null;
 }
 
-// Plan automático hacia una meta: distancia en un tiempo, en N semanas, 3 días por semana.
-// Crea sus propios entrenamientos a partir del split meta y los va endureciendo semana a semana.
-// Zonas de remo desde el split de la meta: fondo (UT2) a +20–30 s, umbral (AT) a +8–12 s y el calentamiento
-// más suave que el fondo (+32–45 s). Una descarga cada 4 semanas y la última semana un 40 % más corta.
+// Plan automático hacia una meta: distancia en un tiempo, en N semanas (0.81: sobre el mismo motor que los planes por
+// objetivo, con sus topes de carga, de VO₂ y de minutos). Una sola sesión dura por semana, que alterna umbral y
+// series a ritmo de la meta; el resto son fondos (uno de ellos firme). Con 4 o 5 días se añaden fondos, nunca más
+// intensidad. Zonas desde el split de la meta: fondo (UT2) a +20–30 s, firme a +13–17 s, umbral (AT) a +8–12 s y el
+// calentamiento más suave que el fondo (+32–45 s). Prueba a mitad y al final, con afinamiento la semana de la prueba.
 export const META_FONDO = [20, 30];
+export const META_FIRME = [13, 17];
 export const META_UMBRAL = [8, 12];
 export const META_CAL = SPLIT_CAL_META;
-export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana = [0, 2, 5] }) {
-  const split = Math.round((segundos * 500) / distancia);
-  const entrenamientos = [];
-  // Cada sesión guarda el split de la meta: con él se sabe cuáles son duras (umbral y series) y cuáles fondo.
-  const crear = (e) => { if (!entrenamientos.some((x) => x.nombre === e.nombre)) entrenamientos.push({ ...e, splitMeta: split }); return e.nombre; };
-  const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + META_CAL[0], max: split + META_CAL[1] };
-  const enf = { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 };
-  const prueba = crear({ tipo: 'objetivo', nombre: `Prueba ${distancia} m`, prueba: true, objetivo: { metrica: 'distancia', valor: distancia } });
-  const fondo = (min) => crear({
-    tipo: 'intervalos', nombre: `Fondo a ${mm(split + 25)} × ${min} min`,
-    bloques: [cal, { nombre: 'Fondo', duracion: min * 60, metrica: 'split', min: split + META_FONDO[0], max: split + META_FONDO[1] }, enf],
-  });
-  const umbral = (n) => crear({
-    tipo: 'intervalos', nombre: `Umbral a ${mm(split + 10)} ${n} × 8 min`,
-    bloques: [cal, ...Array.from({ length: n }, (_, i) => i + 1).flatMap((i) => [
-      { nombre: `Umbral ${i}/${n}`, duracion: 480, metrica: 'split', min: split + META_UMBRAL[0], max: split + META_UMBRAL[1] },
-      ...(i < n ? [{ nombre: 'Descanso', duracion: 180, metrica: '', min: 0, max: 0 }] : []),
-    ]), enf],
-  });
-  const tramo = Math.max(100, Math.min(1000, Math.round(distancia / 4 / 100) * 100));
-  const repsBase = Math.max(3, Math.min(8, Math.round((distancia * 1.25) / tramo)));
-  const series = (sem, reps) => {
-    const extra = semanas > 1 ? Math.round(3 * (1 - sem / (semanas - 1))) : 0;
-    const sp = split + extra;
-    return crear({
-      tipo: 'intervalos', nombre: `Ritmo ${mm(sp)} · ${reps} × ${tramo} m`,
-      bloques: [cal, ...ACTIVACION, ...Array.from({ length: reps }, (_, i) => [
-        { nombre: `${tramo} m ${i + 1}/${reps}`, fin: 'distancia', cantidad: tramo, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 1 },
-        ...(i < reps - 1 ? [{ nombre: 'Descanso', duracion: Math.round(tramo / 5) + 30, metrica: '', min: 0, max: 0 }] : []),
-      ]).flat(), enf],
-    });
-  };
-  // El fondo crece 5 min cada dos semanas, de 20 a 35 min.
-  const minFondo = (s) => Math.min(35, 20 + 5 * Math.floor(s / 2));
-  const menos = (x, f, min) => Math.max(min, Math.round(x * f));
-  const descarga = (s) => (s + 1) % 4 === 0 && s < semanas - 1;
-  const mitad = semanas >= 6 ? Math.floor(semanas / 2) - 1 : -1;
-  const semanasPlan = Array.from({ length: semanas }, (_, s) => {
-    // Última semana: un 40 % menos de volumen para llegar fresco a la prueba.
-    if (s === semanas - 1) return [series(s, menos(repsBase, 0.6, 2)), fondo(Math.max(15, Math.round((minFondo(s) * 0.6) / 5) * 5)), prueba];
-    // Descarga: un 30 % menos (y si coincide con la prueba de mitad, se hace descansado).
-    if (descarga(s)) return s === mitad ? [umbral(2), series(s, menos(repsBase, 0.7, 2)), prueba]
-      : [umbral(2), series(s, menos(repsBase, 0.7, 2)), fondo(Math.max(15, Math.round((minFondo(s) * 0.7) / 5) * 5))];
-    if (s === mitad) return [umbral(3), series(s, repsBase), prueba];
-    return [umbral(3), series(s, repsBase), fondo(minFondo(s))];
-  });
-  const programa = desdePlantilla({ nombre: `Meta: ${distancia} m en ${mm(segundos)}`, semanas: semanasPlan, diasSemana }, inicio);
-  programa.conDescarga = true;
-  return { programa, entrenamientos, split };
+export function planPorMeta({ distancia, segundos, semanas, inicio, dias = 3, nivel = 'medio', ctx = {} }) {
+  return planPorObjetivo({ objetivo: 'meta', nivel, dias, semanas, inicio, ctx, meta: { distancia, segundos } });
 }
 
 // ---------- Asistente de metas: de dónde partes y cuánto puedes mejorar ----------
@@ -270,6 +225,78 @@ const reps = (n, k) => Math.max(2, Math.round(n * k));
 // Nivel de resistencia de la consola (1–24) en fuerza y sprints, según la experiencia del plan.
 export const NIVEL_FUERZA = { inicio: 10, medio: 12, alto: 14 };
 export const NIVEL_SPRINT = { inicio: 12, medio: 14, alto: 16 };
+
+// ---------- Cadencia guía (0.81) ----------
+// Golpes por minuto que pide cada bloque de trabajo según su intensidad: fondo suave 18–22, fondo firme 20–24,
+// umbral 24–28 y ritmo de 2 km 28–34; los sprints y arranques van libres. Es una guía (spmGuia): se muestra, se
+// dice al empezar el bloque y avisa con suavidad si te pasas en un fondo, pero no cambia la XP de técnica (eso solo
+// lo hace spmMeta, la cadencia obligatoria de los bloques de fuerza).
+export const CADENCIA_GUIA = { suave: [18, 22], firme: [20, 24], umbral: [24, 28], ritmo: [28, 34] };
+// Equivalencia del split con el % del FTP en un plan de meta: el umbral (+10 s del split meta) cae en el 100 %.
+export const PCT_RITMO_META = 127;
+const medio = (b) => (b.min + Math.min(b.max, b.min + 30)) / 2;
+// % del FTP equivalente de un bloque (null si no tiene meta de potencia o de split).
+export function pctBloque(b, splitMeta = null) {
+  if (b.metrica === 'ftp') return medio(b);
+  if (b.metrica === 'fcpct') return ((b.min + b.max) / 2) * 0.95;
+  if (b.metrica === 'split' && splitMeta > 0 && b.min > 0) return PCT_RITMO_META * (splitMeta / ((b.min + b.max) / 2)) ** 3;
+  return null;
+}
+// Segundos de un bloque; los que acaban por distancia se estiman con su split.
+export const segBloque = (b) => b.duracion || (b.fin === 'distancia' && b.cantidad > 0 && b.metrica === 'split' && b.min > 0 ? Math.round((b.cantidad / 500) * ((b.min + b.max) / 2)) : 0);
+export function cadenciaGuia(b, splitMeta = null) {
+  if (!esBloqueTrabajo(b) || b.spmMeta || b.spmGuia) return null;
+  const pct = pctBloque(b, splitMeta);
+  if (pct == null || pct >= 130 || (b.duracion > 0 && b.duracion < 60)) return null;
+  return pct < 76 ? CADENCIA_GUIA.suave : pct < 92 ? CADENCIA_GUIA.firme : pct < 106 ? CADENCIA_GUIA.umbral : CADENCIA_GUIA.ritmo;
+}
+export const conCadencia = (e) => (e.bloques ? { ...e, bloques: e.bloques.map((b) => { const g = cadenciaGuia(b, e.splitMeta); return g ? { ...b, spmGuia: g } : b; }) } : e);
+
+// Sesiones del plan hacia una meta, en split. Mismo formato que SESIONES: (p, k, ctx, semana) → entrenamiento.
+function semanaMeta(split, distancia) {
+  const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + META_CAL[0], max: split + META_CAL[1] };
+  const descanso = (seg) => ({ nombre: 'Descanso', duracion: seg, metrica: '', min: 0, max: 0 });
+  const fondoB = (seg) => ({ nombre: 'Fondo', duracion: seg, metrica: 'split', min: split + META_FONDO[0], max: split + META_FONDO[1] });
+  const minutos = (min, p, k) => ronda((min[0] + (min[1] - min[0]) * p) * k, 5);
+  const fondo = (min) => (p, k) => {
+    const m = minutos(min, p, k);
+    return { nombre: `Fondo ${m} min a ${mm(split + 25)}`, enfoque: 'distancia', bloques: [cal, fondoB(m * 60), ENF] };
+  };
+  // Un fondo firme: tramos a +13–17 s dentro del fondo (el «tempo» del remo).
+  const firme = (min) => (p, k) => {
+    const m = minutos(min, p, k);
+    const n = p < 0.5 ? 3 : 2;
+    const t = p < 0.5 ? 6 : 10;
+    const resto = Math.max(10, m - n * t);
+    const tramos = Array.from({ length: n }, (_, i) => [
+      { nombre: `Firme ${i + 1}/${n}`, duracion: t * 60, metrica: 'split', min: split + META_FIRME[0], max: split + META_FIRME[1] },
+      ...(i < n - 1 ? [fondoB(120)] : []),
+    ]).flat();
+    return { nombre: `Fondo ${m} min con ${n} × ${t} min firme`, enfoque: 'distancia', bloques: [cal, fondoB(Math.round((resto / 2) * 60)), ...tramos, fondoB(Math.round((resto / 2) * 60)), ENF] };
+  };
+  const umbral = (p, k) => {
+    const [n, min] = paso([[3, 8], [3, 10], [3, 12], [2, 15]], p);
+    const r = reps(n, k);
+    const bloques = Array.from({ length: r }, (_, i) => [
+      { nombre: `Umbral ${i + 1}/${r}`, duracion: min * 60, metrica: 'split', min: split + META_UMBRAL[0], max: split + META_UMBRAL[1] },
+      ...(i < r - 1 ? [descanso(180)] : []),
+    ]).flat();
+    return { nombre: `Umbral a ${mm(split + 10)} ${r} × ${min} min`, enfoque: 'potencia', bloques: [cal, ...bloques, ENF] };
+  };
+  // Series a ritmo de la meta (6 × 500 m → 5 × 600 m → 4 × 750 m en un 2000 m): el split baja hasta el de la meta.
+  const ritmo = (p, k) => {
+    const [n, f] = paso([[6, 0.25], [5, 0.3], [4, 0.375]], p);
+    const tramo = Math.max(100, Math.min(1000, Math.round((distancia * f) / 50) * 50));
+    const r = reps(n, k);
+    const sp = split + Math.round(3 * (1 - p));
+    const bloques = Array.from({ length: r }, (_, i) => [
+      { nombre: `${tramo} m ${i + 1}/${r}`, fin: 'distancia', cantidad: tramo, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 1 },
+      ...(i < r - 1 ? [descanso(Math.round(tramo / 5) + 30)] : []),
+    ]).flat();
+    return { nombre: `Ritmo ${mm(sp)} · ${r} × ${tramo} m`, enfoque: 'potencia', bloques: [cal, ...ACTIVACION, ...bloques, ENF] };
+  };
+  return [(p, k, c, s) => (s % 2 === 0 ? umbral : ritmo)(p, k), fondo([40, 60]), firme([40, 55]), fondo([30, 45]), fondo([30, 40])];
+}
 
 // Cada sesión recibe el avance del plan (p: 0 la primera semana, 1 la última), k (volumen del nivel,
 // un 30 % menos en semana de descarga), el contexto (kcalHabitual) y el número de semana.
@@ -367,7 +394,7 @@ export function ordenarSemana(nombres, diasSemana, buscar, domingoDuro = false) 
 }
 
 // Duración de una sesión del plan en segundos (las de meta de calorías van a tu ritmo: no cuentan).
-export const duracionPlan = (e) => (e.bloques || []).reduce((a, b) => a + (b.duracion || 0), 0);
+export const duracionPlan = (e) => (e.bloques || []).reduce((a, b) => a + segBloque(b), 0);
 
 // ---------- Topes de carga ----------
 // Trabajo por encima del 106 % del FTP (VO₂ y más): hasta 25 min por sesión y unos 40 min por semana.
@@ -377,35 +404,46 @@ export const VO2_MAX_SEMANA = 40 * 60;
 // respecto a la última semana normal; la semana que vuelve de una descarga, como mucho un 5 %.
 export const SUBIDA_MAX = 1.15;
 export const VUELTA_DESCARGA = 1.05;
+// Volumen de las otras sesiones en la semana de una prueba (afinamiento): un 45 % menos antes de la final y un 20 %
+// antes de la de mitad del plan.
+export const AFINAMIENTO = 0.55;
+export const AFINAMIENTO_MITAD = 0.8;
 // Planes intensos: quien está empezando hace primero unas semanas de base aeróbica.
 export const OBJETIVOS_INTENSOS = new Set(['umbral', 'vo2', 'potencia']);
 export const semanasDeBase = (objetivo, nivel, semanas) => (nivel === 'inicio' && OBJETIVOS_INTENSOS.has(objetivo) ? Math.min(3, Math.floor(semanas / 2)) : 0);
 
 // Segundos de trabajo por encima del 106 % del FTP (el punto medio del rango; los sprints «a tope» cuentan entero).
+// En split (planes de meta) cuenta su equivalente (pctBloque).
 export const segVo2 = (e) => (e?.bloques || [])
-  .filter((b) => esBloqueTrabajo(b) && b.metrica === 'ftp' && (b.min + Math.min(b.max, b.min + 30)) / 2 >= 106)
-  .reduce((a, b) => a + (b.duracion || 0), 0);
+  .filter((b) => esBloqueTrabajo(b) && (b.metrica === 'ftp' || b.metrica === 'split') && pctBloque(b, e.splitMeta) >= 106)
+  .reduce((a, b) => a + segBloque(b), 0);
 // Segundos de trabajo intenso (desde el sweet spot, 88 % del FTP): lo que más cansa y lo que más debe subir despacio.
 export const segIntenso = (e) => (e?.bloques || [])
-  .filter((b) => esBloqueTrabajo(b) && b.metrica === 'ftp' && b.min >= 88)
-  .reduce((a, b) => a + (b.duracion || 0), 0);
+  .filter((b) => esBloqueTrabajo(b) && (b.metrica === 'ftp' ? b.min >= 88 : b.metrica === 'split' && pctBloque(b, e.splitMeta) >= 88))
+  .reduce((a, b) => a + segBloque(b), 0);
 // Segundos de trabajo de una sesión: sin calentamiento, descansos ni enfriamiento (una meta de calorías, estimada).
 export const segTrabajo = (e) => (e?.bloques?.length
-  ? e.bloques.filter(esBloqueTrabajo).reduce((a, b) => a + (b.duracion || 0), 0)
+  ? e.bloques.filter(esBloqueTrabajo).reduce((a, b) => a + segBloque(b), 0)
   : minutosSesion(e) * 60);
 
 // ctx = { kcalHabitual: kcal de una sesión normal, kcalSemana: kcal de una semana normal, sinHistorial,
 //         minutosMax: tope de minutos por sesión (de tu perfil) }
-export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx = {} }) {
-  const obj = objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
+// meta = { distancia, segundos }: plan hacia una marca (planPorMeta), con sus sesiones en split.
+export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx = {}, meta = null }) {
+  const split = meta ? Math.round((meta.segundos * 500) / meta.distancia) : null;
+  const obj = meta ? { clave: 'meta', prueba: 'meta' } : objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
+  const pruebaDe = () => (meta
+    ? { tipo: 'objetivo', nombre: `Prueba ${meta.distancia} m`, prueba: true, objetivo: { metrica: 'distancia', valor: meta.distancia } }
+    : { ...structuredClone(PRUEBAS[obj.prueba]), enfoque: 'pruebas' });
   const vol = NIVELES_PLAN.find((n) => n.clave === nivel)?.volumen ?? 1;
   const cx = { ...ctx, nivelPlan: nivel };
   const tiposBase = SEMANA_TIPO.base.slice(0, dias);
-  const tiposObj = SEMANA_TIPO[obj.clave].slice(0, dias);
-  const base = semanasDeBase(obj.clave, nivel, semanas);
+  const tiposObj = (meta ? semanaMeta(split, meta.distancia) : SEMANA_TIPO[obj.clave]).slice(0, dias);
+  const base = meta ? 0 : semanasDeBase(obj.clave, nivel, semanas);
   const entrenamientos = [];
+  // Cada sesión de un plan de meta guarda el split de la meta: con él se sabe cuáles son duras (umbral y series).
   const agregar = (ent) => {
-    if (!entrenamientos.some((x) => x.nombre === ent.nombre)) entrenamientos.push(ent);
+    if (!entrenamientos.some((x) => x.nombre === ent.nombre)) entrenamientos.push(meta ? { ...ent, splitMeta: split } : ent);
     return ent.nombre;
   };
   // Con tope de minutos (tu perfil), una sesión que se pasa se rehace con menos volumen hasta que quepa.
@@ -427,11 +465,12 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     let e = ajustar(fn, p, k, s);
     // Último recurso: una sesión más corta del mismo tipo (umbral largo → umbral corto, fondo con tempo → fondo).
     // Las pruebas no se recortan: miden siempre lo mismo.
-    const otra = /^(Umbral|Sweet spot)/.test(e.nombre) ? SESIONES.umbralCorto : /^Fondo .*tempo/.test(e.nombre) ? SESIONES.fondo([20, 30]) : null;
+    const otra = meta ? null : /^(Umbral|Sweet spot)/.test(e.nombre) ? SESIONES.umbralCorto : /^Fondo .*tempo/.test(e.nombre) ? SESIONES.fondo([20, 30]) : null;
     if (tope && duracionPlan(e) > tope && otra) e = ajustar(otra, p, k, s);
     // Tope de trabajo por encima del 106 % del FTP en una sesión.
-    for (let i = 0, kk = k; i < 6 && segVo2(e) > VO2_MAX_SESION; i++) { kk *= 0.85; e = ajustar(fn, p, kk, s); }
-    return { tipo: e.tipo || 'intervalos', ...e };
+    const conMeta = (x) => (meta ? { ...x, splitMeta: split } : x);
+    for (let i = 0, kk = k; i < 6 && segVo2(conMeta(e)) > VO2_MAX_SESION; i++) { kk *= 0.85; e = ajustar(fn, p, kk, s); }
+    return conCadencia(conMeta({ tipo: e.tipo || 'intervalos', ...e }));
   };
   // Una semana con sus sesiones en orden de prioridad, respetando el tope de VO₂ semanal.
   const armarSemana = (fns, p, k, s) => {
@@ -483,9 +522,14 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
       if (!conPrueba) return lista;
       const duras = lista.map((e, i) => (esDura(e) ? i : -1)).filter((i) => i >= 0);
       const quitar = duras.length ? duras.at(-1) : lista.length - 1;
-      return [...lista.filter((_, i) => i !== quitar), { ...structuredClone(PRUEBAS[obj.prueba]), enfoque: 'pruebas' }];
+      return [...lista.filter((_, i) => i !== quitar), pruebaDe()];
     };
-    const armar = (q, kk) => conLaPrueba(armarSemana(fns, q, kk, s));
+    // Afinamiento (0.81): la semana de una prueba el resto de sesiones lleva menos volumen, sin quitar su intensidad,
+    // para llegar fresco a medir: un 45 % menos antes de la prueba final y un 20 % antes de la de mitad (más no deja
+    // subir la carga después sin un salto). Si la semana ya es de descarga, la prueba de mitad no recorta más.
+    const af = s === semanas - 1 ? AFINAMIENTO : AFINAMIENTO_MITAD;
+    const kPrueba = (kk) => (descarga ? kk * Math.min(1, af / 0.7) : kk * af);
+    const armar = (q, kk) => conLaPrueba(armarSemana(fns, q, conPrueba ? kPrueba(kk) : kk, s));
     let semana = armar(p, k);
     subida = s > 0 && esDescarga(s - 1) ? VUELTA_DESCARGA : SUBIDA_MAX;
     // La carga sube poco a poco: si la semana (con su prueba, si la tiene) se pasa del tope sobre la última normal,
@@ -517,6 +561,11 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     domingoDuro = DIAS_PLAN[dias].at(-1) === 6 && esDura(buscar(orden.at(-1)));
     return orden;
   });
+  if (meta) {
+    const programa = desdePlantilla({ nombre: `Meta: ${meta.distancia} m en ${mm(meta.segundos)}`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
+    Object.assign(programa, { conDescarga: true, meta: { distancia: meta.distancia, segundos: meta.segundos }, porSemana: dias, nivel });
+    return { programa, entrenamientos, split };
+  }
   const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
   // Lo elegido queda en el plan: sirve para armar el siguiente y para ajustarlo cuando haya historial.
   Object.assign(programa, { objetivo: obj.clave, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial, ...(tope ? { minutosMax: ctx.minutosMax } : {}), ...(base ? { semanasBase: base } : {}) });
@@ -592,12 +641,12 @@ export function esfuerzoSesion(e) {
   const pts = bloques.reduce((a, b) => {
     let i = b.intensidad;
     if (i == null) {
-      if (b.metrica === 'ftp') i = Math.min(1.5, (b.min + Math.min(b.max, b.min + 30)) / 200); // los sprints «a tope» no se disparan
-      else if (b.metrica === 'fcpct') i = ((b.min + b.max) / 200) * 0.95;
+      const pct = pctBloque(b, e.splitMeta);
+      if (pct != null) i = Math.min(1.5, pct / 100); // los sprints «a tope» no se disparan
       else if (b.prueba) i = b.duracion <= 120 ? 1.3 : b.duracion <= 600 ? 1.1 : 1;
       else i = 0.5;
     }
-    return a + ((b.duracion || 0) / 3600) * i * i * 100;
+    return a + (segBloque(b) / 3600) * i * i * 100;
   }, 0);
   return Math.round(pts);
 }

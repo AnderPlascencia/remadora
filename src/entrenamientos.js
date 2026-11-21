@@ -60,7 +60,8 @@ const PRUEBA_FTP_BLOQUE = { nombre: 'Prueba: máximo sostenido', duracion: 1200,
 // Texto corto de la meta de un bloque, con la cadencia pedida si la hay (spmMeta: [min, max]).
 export function textoMeta(b, ftp, fcMax = 0) {
   const base = textoMetaSolo(b, ftp, fcMax);
-  return b.spmMeta ? `${base} a ${b.spmMeta[0]}–${b.spmMeta[1]} golpes/min` : base;
+  const spm = b.spmMeta || b.spmGuia;
+  return spm ? `${base} a ${spm[0]}–${spm[1]} golpes/min` : base;
 }
 function textoMetaSolo(b, ftp, fcMax) {
   if (b.metrica === 'split') return `${formatoMmss(b.min)}–${formatoMmss(b.max)} /500 m`;

@@ -71,7 +71,8 @@ for (const o of P.OBJETIVOS_PLAN) {
     const sem = porSemana(programa, dias);
     let previo = null;
     for (const [s, x] of sem.entries()) {
-      if (x.some((d) => buscar(d.ent).prueba)) { previo = null; continue; }
+      // Las semanas con prueba (de distancia o de FTP) afinan y no son referencia (como en el generador).
+      if (x.some((d) => buscar(d.ent).prueba || buscar(d.ent).pruebaFtp)) { previo = null; continue; }
       const t = x.reduce((a, d) => a + P.segTrabajo(buscar(d.ent)), 0);
       const descarga = (s + 1) % 4 === 0;
       if (previo && !descarga) assert.ok(t <= previo * P.SUBIDA_MAX + 1, `${o.clave} ${nivel} semana ${s + 1}: ${t} > ${previo} × 1.15`);

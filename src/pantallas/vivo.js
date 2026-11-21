@@ -537,8 +537,19 @@ export function vigilarTipoSesion(t) {
     estado.sesion.fcAltaSeg = actual.fc > rangoZona2(fcRef()).max + 3 ? (estado.sesion.fcAltaSeg || 0) + 1 : 0;
     if (estado.sesion.fcAltaSeg === 60) hablar('Pulso alto para un fondo, suelta un poco', { clave: 'fc-fondo', cadaSeg: 180, capa: 2 });
   }
-  // En un fondo, más de 24 paladas por minuto durante un minuto: palada corta y apurada.
-  if ((tipo === 'fondo' || estado.sesion.guion === 'recuperacion') && actual.spm) {
+  // Bloque suave con cadencia guía (plan por meta): más de 2 por encima del tope durante un minuto, aviso suave.
+  const info = estado.sesion.info;
+  const guia = info && !info.terminado ? info.bloque?.spmGuia : null;
+  if (guia && guia[1] <= 24) {
+    if (actual.spm) {
+      estado.sesion.spmAltaSeg = actual.spm > guia[1] + 2 ? (estado.sesion.spmAltaSeg || 0) + 1 : 0;
+      if (estado.sesion.spmAltaSeg === 60) {
+        hablar(`${CADENCIA_ALTA_FONDO}: aquí van ${guia[0]} a ${guia[1]} golpes por minuto`, { clave: 'spm-fondo', cadaSeg: 300, capa: 2 });
+        toast(`Cadencia alta: ${guia[0]}–${guia[1]} golpes/min en este bloque`, 4000, 'sesion');
+      }
+    }
+  } else if ((tipo === 'fondo' || estado.sesion.guion === 'recuperacion') && actual.spm && !guia) {
+    // En un fondo, más de 24 paladas por minuto durante un minuto: palada corta y apurada.
     estado.sesion.spmAltaSeg = actual.spm > 24 ? (estado.sesion.spmAltaSeg || 0) + 1 : 0;
     if (estado.sesion.spmAltaSeg === 60) hablar(CADENCIA_ALTA_FONDO, { clave: 'spm-fondo', cadaSeg: 300, capa: 2 });
   }
