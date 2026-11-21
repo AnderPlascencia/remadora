@@ -87,7 +87,10 @@ const muestras = (seg, { w = 150, ruido = 0.03, spm = 24, dspm = 0.5, desde = 0 
     const k = `2026-11-${String(d).padStart(2, '0')}`;
     const l = J.misionesDelDia(k, rit, { planHoy: d % 3 ? 'Umbral' : '' });
     assert.equal(l.length, 3, k);
-    assert.deepEqual(l.map((m) => grupo[m.clave]), ['plan', 'tec', 'juego'], `una de cada grupo, sin dos casi iguales: ${k}`);
+    // Desde la etapa de una sola racha, un día con sesión del plan no pide una carrera: dos de técnica distintas.
+    const conPlan = d % 3 && k >= J.UNA_RACHA_DESDE;
+    assert.deepEqual(l.map((m) => grupo[m.clave]), ['plan', 'tec', conPlan ? 'tec' : 'juego'], `una de cada grupo, sin dos casi iguales: ${k}`);
+    assert.equal(new Set(l.map((m) => m.clave)).size, 3, `sin repetir: ${k}`);
     // De ⅓ a ½ sesión de XP (una sesión típica da unos 300 reales; se pagan a la mitad).
     for (const m of l) assert.ok(m.xp * J.FACTOR_XP_LENTA >= 85 && m.xp * J.FACTOR_XP_LENTA <= 150, `${m.clave}: ${m.xp}`);
   }

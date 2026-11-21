@@ -61,3 +61,16 @@ test('el asistente de metas parte de tu predicción y la mejora cambia con las s
   await expect(info).toContainText('en 4 semanas');
   await expect(info).toContainText('un 4,2 % mejor');
 });
+
+test('una sola racha y un solo «qué toca»: el resumen dice la próxima del plan y Progreso, la racha del plan', async ({ page }) => {
+  await abrirApp(page);
+  await completarBienvenida(page);
+  await remar(page, 60_000);
+  await terminar(page);
+  await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
+  await expect(page.locator('#hoja-atr .proxima')).toContainText(/Próxima de tu plan: .+, (mañana|el \w+)/);
+  await page.reload();
+  await page.locator('#tab-historial').click();
+  await expect(page.locator('#racha-etq')).toHaveText(/cumpliendo tu plan/);
+  await expect(page.locator('#vista-historial')).not.toContainText('días seguidos remando');
+});

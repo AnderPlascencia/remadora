@@ -2,6 +2,7 @@
 import { PAISAJES, VELAS, srcRemero, srcRemeroSolo, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarEquipo } from '../carrera.js';
 import * as CB from '../coleccion-bote.js';
 import * as H from '../historial.js';
+import * as db from '../db.js';
 import { hablar } from '../voz.js';
 import { fraseGrabadaAlAzar } from '../voces-clase.js';
 import { confeti } from '../efectos.js';
@@ -21,6 +22,7 @@ import { pintarModoEnt, retratoPropio, vistaPrevia } from './vivo.js';
 import { corto } from './sesion.js';
 import { cerrarHoja, llenarSelectorEntrenamientos, obtenerEnt } from './planes.js';
 import { HABILIDADES, habilidadDe, RESERVA } from '../habilidades.js';
+import { proximo } from '../programa.js';
 
 // ---------- Héroe ----------
 export function leerPersonaje() {
@@ -430,14 +432,18 @@ function pintarFicha(h, per, clase, sesiones) {
   const rec = J.recomendarPorAtributos(h.atributos, { sinPulso });
   const semana = J.atributosEntre(h, Date.now() - 7 * 864e5);
   const maximo = Math.max(1, ...Object.values(h.atributos));
+  const hayAlguno = Object.values(h.atributos).some((v) => v > 0);
   const f = ftp() || estimarFtp(sesiones);
   $('#heroe-atributos').innerHTML = J.ATRIBUTOS.map((a) => {
     const r = J.RECOMENDACION_ATRIBUTO[a.clave];
     const sube = semana[a.clave];
     const nota = a.clave === 'recuperacion' && sinPulso ? '<p class="suave">Sin banda de pulso solo crece con descansos y sesiones suaves.</p>' : '';
-    return `<details class="atributo">
+    // Un atributo que aún no has entrenado no se muestra como un 0 eterno: dice «sin entrenar aún» y viene abierto,
+    // con el botón al entrenamiento que lo sube a la vista (en un héroe nuevo, con todo a 0, no: sería ruido).
+    const sinEntrenar = !h.atributos[a.clave] && hayAlguno;
+    return `<details class="atributo${sinEntrenar ? ' sin-entrenar' : ''}"${sinEntrenar ? ' open' : ''}>
       <summary><span class="atr-nombre">${a.nombre}${a.clave === clase.favorito ? ' <span class="fav" title="Favorito de tu clase: crece un 15 % más">★ +15 %</span>' : ''}</span>
-        <span class="atr-valor"><b>${miles(h.atributos[a.clave])}</b><small class="${sube ? 'sube' : ''}">${sube ? `+${miles(sube)} esta semana` : 'sin cambios esta semana'}</small></span>
+        <span class="atr-valor">${sinEntrenar ? '<b class="atr-sin">Sin entrenar aún</b>' : `<b>${miles(h.atributos[a.clave])}</b><small class="${sube ? 'sube' : ''}">${sube ? `+${miles(sube)} esta semana` : 'sin cambios esta semana'}</small>`}</span>
         <span class="atr-barra" aria-hidden="true"><i style="width:${(100 * h.atributos[a.clave]) / maximo}%"></i></span>
         <span class="atr-titulo">${tituloCorto(a.clave, h.atributosTotal[a.clave])}</span></summary>
       <ul>${J.comoSubir(a.clave, f).map((t) => `<li>${t}</li>`).join('')}</ul>${nota}
@@ -799,7 +805,7 @@ export function pintarXpSesion(s, previas, resumen) {
     ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(l.tipo === 'jefe' || l.tipo === 'hazana' ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · insignia <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="recompensa">${l.xp ? `<span class="xp">+${miles(l.xp)} XP</span>` : ''}<span class="monedas">${icoMoneda}${l.monedas}</span></span></div>`).join('')}
     <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
     <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul>
-    ${J.usaCarga(s) ? '<p class="suave xp-mitad">La XP sale de la carga del entrenamiento (con tope diario) y de cumplir tu plan. Fantasmas, racha y talentos siguen a la mitad.</p>' : J.factorXp(s.fecha) < 1 ? '<p class="suave xp-mitad">Desde el 29 de octubre todo da la mitad de XP: estas cifras ya lo incluyen.</p>' : ''}</details>
+    ${J.usaCarga(s) ? `<p class="suave xp-mitad">La XP sale de la carga del entrenamiento (con tope diario) y de cumplir tu plan. ${J.esUnaRacha(s.fecha) ? 'Fantasmas y talentos' : 'Fantasmas, racha y talentos'} siguen a la mitad.</p>` : J.factorXp(s.fecha) < 1 ? '<p class="suave xp-mitad">Desde el 29 de octubre todo da la mitad de XP: estas cifras ya lo incluyen.</p>' : ''}</details>
     ${clase ? '' : `<div class="xp-heroe"><p>Elige tu héroe y quédate con esta experiencia:</p><div class="clases-mini">${J.CLASES.map((c) => `<button type="button" data-clase-rapida="${c.clave}"><img src="${srcHeroe(c.clave, 1, true)}" width="48" height="48" alt=""><span>${c.nombre}</span></button>`).join('')}</div></div>`}`;
   if (resumen) {
     const total = g.xp + g.xpExtra;
@@ -815,7 +821,20 @@ export function pintarXpSesion(s, previas, resumen) {
 }
 
 // Al terminar: lo que lograste, lo que te quedó cerca (con sus puntos) y qué entrenar la próxima vez.
-export function pintarAtrSesion(s, previas, resumen) {
+// Próxima sesión del plan después de la de hoy: { ent, fecha, cuando: 'mañana' | 'el jueves' | 'el 3 de diciembre' }.
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+export function proximaDelPlan(programa, ahora = Date.now()) {
+  const d = programa && proximo(programa, ahora);
+  if (!d) return null;
+  const f = new Date(`${d.fecha}T12:00`);
+  const dias = Math.round((f.getTime() - new Date(`${claveDiaLocal(ahora)}T12:00`).getTime()) / 864e5);
+  const cuando = dias === 1 ? 'mañana' : dias < 7 ? `el ${DIAS_SEMANA[f.getDay()]}` : `el ${f.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}`;
+  return { ent: d.ent, fecha: d.fecha, cuando };
+}
+const claveDiaLocal = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const programaGuardado = () => { try { return JSON.parse(ajustes.leer('programa', 'null')); } catch { return null; } };
+
+export async function pintarAtrSesion(s, previas, resumen) {
   const caja = $('#hoja-atr');
   estado.atrAbierta = { s, previas, resumen };
   const per = leerPersonaje();
@@ -824,7 +843,17 @@ export function pintarAtrSesion(s, previas, resumen) {
   const f = ftp() || estimarFtp(previas) || 150;
   const r = C.analisis(s, { ftp: f, clase: per.clase || null, ctx: { mppPromedio: mpp } });
   let prox = '';
-  if (resumen) {
+  // Un solo «qué toca»: con plan, la próxima sesión del plan y su día (y qué atributo sube, como dato aparte);
+  // sin plan, el entrenamiento que sube tu atributo más bajo.
+  const sig = resumen ? proximaDelPlan(programaGuardado(), s.fecha) : null;
+  if (sig) {
+    const h = juegoConSesion(previas, s, per);
+    const ent = (await db.listar('entrenamientos').catch(() => [])).find((e) => e.nombre === sig.ent) || estado.baseActual.find((e) => e.nombre === sig.ent) || null;
+    const p = ent && previsionDe(ent, opcConsejos(h, previas));
+    const top = p && Object.entries(p.seguro).sort((a, b) => b[1] - a[1])[0];
+    prox = `<div class="proxima"><span class="etq">Para la próxima</span><p>Próxima de tu plan: <b>${escaparHtml(sig.ent)}</b>, ${sig.cuando}.${top ? ` Además sube tu ${nombreAtributo(top[0])}.` : ''}</p>
+      ${p ? chipsAtr(p.seguro, null, 3) : ''}</div>`;
+  } else if (resumen) {
     const h = juegoConSesion(previas, s, per);
     const rec = J.recomendarPorAtributos(h.atributos, { sinPulso: h.contexto.sinPulso });
     const bases = estado.baseActual.length ? estado.baseActual : B.basesPara(h.nivel, ftp(), previas);

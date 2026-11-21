@@ -15,7 +15,7 @@ import { fcMaxDeEdad } from '../pulso.js';
 import { avanzado } from './ajustes.js';
 import { guardarFtp } from './preparar.js';
 import { formatoRecord } from './progreso.js';
-import { pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
+import { leerPersonaje, pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
 
 // ---------- Resumen / detalle de sesión ----------
 const TEXTO_RPE = ['', 'Muy fácil', 'Muy fácil', 'Fácil', 'Fácil', 'Moderado', 'Moderado', 'Duro', 'Duro', 'Muy duro', 'Máximo'];
@@ -109,8 +109,11 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   const recs = E.nuevosRecords(s, previas);
   $('#hoja-records').innerHTML = recs.map((r) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}${resumen ? 'Nuevo récord' : 'Récord'}</div>
     <div class="valor">${formatoRecord(r, r.valor)}</div><div class="sub">${r.nombre}${r.anterior != null ? ` · antes ${formatoRecord(r, r.anterior)}` : ''}</div></div>`).join('');
-  const antes = new Set(E.insignias(previas).filter((x) => x.ganada).map((x) => x.clave));
-  const medallas = resumen ? E.insignias([...previas, s]).filter((x) => x.ganada && !antes.has(x.clave)) : [];
+  // «Semana perfecta» sale de las semanas del plan cumplidas (el juego las cobra con la primera sesión de la semana
+  // siguiente), así que se mira el estado del juego antes y después de esta sesión.
+  const semanaPlan = (lista) => ({ primeraSemanaPlan: H.estadoJuegoDe(lista, { ftp: ftp(), per: leerPersonaje() }).racha?.primeraSemanaPlan ?? null });
+  const antes = resumen ? new Set(E.insignias(previas, semanaPlan(previas)).filter((x) => x.ganada).map((x) => x.clave)) : new Set();
+  const medallas = resumen ? E.insignias([...previas, s], semanaPlan([...previas, s])).filter((x) => x.ganada && !antes.has(x.clave)) : [];
   $('#hoja-records').insertAdjacentHTML('beforeend', medallas.map((x) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}Nueva insignia</div>
     <div class="valor">${x.nombre}</div><div class="sub">${x.detalle}</div></div>`).join(''));
   const gano = !s.carreraSinTerminar && (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);

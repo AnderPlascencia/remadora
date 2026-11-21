@@ -11,7 +11,7 @@ import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, m
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { avanzado, guardarRespaldo } from './ajustes.js';
-import { horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
+import { estadoHeroe, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
 import { abrirSesion } from './detalle.js';
 import { leerPrograma } from './programa.js';
 
@@ -281,13 +281,23 @@ export async function pintarHistorial() {
   $('#progreso-vacio').hidden = lista.length > 0;
   $('#progreso-contenido').hidden = !lista.length;
 
-  // Racha por semanas (una sesión por semana basta); si además llevas varios días seguidos, se menciona.
-  const semanas = E.rachaSemanas(lista);
-  const dias = E.racha(lista);
-  $('#racha').textContent = semanas;
-  $('#racha-etq').textContent = semanas === 1 ? 'semana seguida' : 'semanas seguidas';
-  $('#racha-dias').textContent = dias >= 2 ? `y ${dias} días seguidos` : '';
-  $('#racha-dias').hidden = dias < 2;
+  // Una sola racha: con plan, la del plan (días seguidos cumpliéndolo, también los descansos) y sus semanas
+  // cumplidas; sin plan, semanas seguidas con al menos una sesión (descansar no la rompe). Nunca «días seguidos remando».
+  const { h } = await estadoHeroe();
+  const conPlan = !!leerPrograma();
+  if (conPlan) {
+    const r = h.racha || { dias: 0, semanasPlan: 0, mejor: 0 };
+    $('#racha').textContent = r.dias;
+    $('#racha-etq').textContent = r.dias === 1 ? 'día cumpliendo tu plan' : 'días cumpliendo tu plan';
+    const partes = [r.semanasPlan ? `${r.semanasPlan} ${r.semanasPlan === 1 ? 'semana del plan cumplida' : 'semanas del plan cumplidas'}` : '', r.mejor > r.dias ? `tu mejor: ${r.mejor}` : ''].filter(Boolean);
+    $('#racha-dias').textContent = partes.join(' · ');
+    $('#racha-dias').hidden = !partes.length;
+  } else {
+    const semanas = E.rachaSemanas(lista);
+    $('#racha').textContent = semanas;
+    $('#racha-etq').textContent = semanas === 1 ? 'semana seguida' : 'semanas seguidas';
+    $('#racha-dias').hidden = true;
+  }
   const semana = E.resumenPeriodos(lista, 'semana', 1)[0];
   const meta = ajustes.num('metaSemana', 10);
   const km = semana.metros / 1000;
@@ -314,7 +324,7 @@ export async function pintarHistorial() {
   sel.value = nombres.includes(previo) ? previo : '*';
   pintarTendencia();
 
-  const ins = E.insignias(lista);
+  const ins = E.insignias(lista, { primeraSemanaPlan: h.racha?.primeraSemanaPlan ?? null });
   $('#insignias-resumen').textContent = `${ins.filter((x) => x.ganada).length} de ${ins.length}`;
   $('#insignias').innerHTML = ins.map((x) => `<div class="insignia${x.ganada ? '' : ' bloqueada'}" title="${x.detalle}"><span class="medalla">${ico('i-trofeo')}</span>
     <b>${x.nombre}</b><small>${x.ganada ? fechaCorta(x.fecha) : x.detalle}</small></div>`).join('');
