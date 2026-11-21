@@ -191,7 +191,8 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
     assert.ok(d.every((m) => m.preparar === undefined), 'misiones crudas sin atajo');
   }
   assert.ok(sinRitmo.length === 5);
-  assert.equal(J.misionesDelDia('2026-12-07').length, 3, 'desde la etapa 12, 3 diarias');
+  assert.equal(J.misionesDelDia('2026-11-16').length, 3, 'desde la etapa 12, 3 diarias');
+  assert.equal(J.misionesDelDia('2026-12-07').length, 1, 'desde que el plan se paga una vez, una diaria');
   const sem = J.misionesDeSemana('2026-10-26', 'polinesio', rit);
   assert.equal(sem[0].meta, 3, 'la ruta pide tu semana normal');
   assert.ok(!(sem.some((m) => m.clave === 'fondo') && sem.some((m) => m.clave === 'oceano')), 'sin dos misiones de sesión larga');

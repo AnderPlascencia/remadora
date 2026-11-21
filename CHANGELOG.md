@@ -2,6 +2,19 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.85.0 · 2026-11-21
+
+El plan se paga una vez. Desde el lunes 23 de noviembre las misiones piden lo que no harías de todas formas, y la XP que repetían pasa a la carga del entrenamiento. Lo ganado antes de ese día no cambia.
+
+- **Una misión diaria por día de remo**, no tres. Sale la primera que toque de esta lista:
+  - La prueba que toca, si hoy el plan tiene una prueba.
+  - La cadencia del bloque, en un día con sesión del plan: minutos con la cadencia estable y la potencia pareja.
+  - Un descanso de verdad tras un día de 60 puntos o más: descansa o rema solo suave.
+  - Tu capacidad más floja, en un día sin sesión del plan (umbral y VO₂máx solo martes y jueves) o una carrera contra fantasmas, nunca en un día del plan.
+- Fuera «Fiel al plan», «La sesión del día», «Remo de recuperación» y «Semana fiel»: «Sesión del plan cumplida» y la semana cumplida ya pagan el plan. Con plan, tampoco sale «Semana pareja», porque la diaria ya pide la cadencia cada día. «Dominio de Roma» pide menos diarias, porque ahora hay una por día.
+- La carga del entrenamiento paga el doble: 10 XP por punto hasta 30 y 5 de 30 a 60, con el mismo tope de 60 puntos por día. Con un plan de 4 días, Legendario sigue llegando hacia los 18 meses, y las misiones pasan del 43 % al 16 % de la XP. Las monedas bajan entre un 2 y un 17 % según cómo remes, así la colección dura más.
+- Pruebas: el simulador de 2 años es ahora una prueba de la curva. Falla si con un plan de 4 días Legendario llega fuera de 16–20 meses, si con remo libre llega antes de 24 meses o si una diaria vale más que media sesión. Las pruebas por propiedades comprueban que la XP y el nivel nunca bajan y que las monedas nunca son negativas. Otra prueba comprueba que un historial anterior al corte da la misma XP que antes.
+
 ## 0.84.0 · 2026-11-21
 
 La carga se calcula aunque no tengas FTP, y el FTP se mantiene al día solo con tus sesiones.

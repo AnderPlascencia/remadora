@@ -9,12 +9,22 @@ export const REGLAS_XP_CARGA = 3;
 export const usaCarga = (s) => (s?.reglasXp || 0) >= 2;
 export const usaReglas9 = (s) => (s?.reglasXp || 0) >= 3;
 
-// XP base: 5 por punto de carga hasta 30, 2,5 de 30 a 60 y nada por encima. El tope es del día, no de cada sesión.
+// XP base: 5 por punto de carga hasta 30, 2,5 de 30 a 60 y nada por encima (el doble desde PLAN_UNA_VEZ_DESDE). El tope es del día, no de cada sesión.
 export const CARGA_TOPE_DIA = 60;
-const curva = (p) => 5 * Math.min(p, 30) + 2.5 * Math.max(0, Math.min(p, CARGA_TOPE_DIA) - 30);
+const curvaDe = (bajo, alto) => (p) => bajo * Math.min(p, 30) + alto * Math.max(0, Math.min(p, CARGA_TOPE_DIA) - 30);
+const curva = curvaDe(5, 2.5);
 export const XP_BASE_TOPE_DIA = curva(CARGA_TOPE_DIA); // 225
-// cargaAntes = carga de las sesiones anteriores del mismo día.
-export const xpBaseCarga = (cargaAntes, carga) => Math.round(curva(cargaAntes + Math.max(0, carga)) - curva(cargaAntes));
+// El plan se paga una vez (desde PLAN_UNA_VEZ_DESDE): las misiones dejan de repetir el pago del plan y la XP que
+// pagaban pasa al trabajo de verdad, la carga. BAJO por punto hasta 30 y ALTO de 30 a 60, mismo tope del día.
+export const PLAN_UNA_VEZ_DESDE = '2026-11-23';
+export const CARGA_PLENA = { bajo: 10, alto: 5 };
+const curvaPlena = curvaDe(CARGA_PLENA.bajo, CARGA_PLENA.alto);
+export const XP_BASE_TOPE_DIA_PLENA = curvaPlena(CARGA_TOPE_DIA);
+// cargaAntes = carga de las sesiones anteriores del mismo día; fecha = la de la sesión (ms).
+export function xpBaseCarga(cargaAntes, carga, fecha = 0) {
+  const c = fecha && claveDia(fecha) >= PLAN_UNA_VEZ_DESDE ? curvaPlena : curva;
+  return Math.round(c(cargaAntes + Math.max(0, carga)) - c(cargaAntes));
+}
 
 export const XP_PLAN = { cumplida: 150, terminada: 75, equivalente: 75, prueba: 60, pruebaRecord: 120, descanso: 60, semana: 200 };
 
