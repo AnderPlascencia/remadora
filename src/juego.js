@@ -42,6 +42,11 @@ export const RACHA_PLAN_DESDE = '2026-11-04';
 // de juego solo sale en días sin sesión del plan. Lo anterior no cambia: nadie pierde XP.
 export const UNA_RACHA_DESDE = '2026-11-22';
 export const esUnaRacha = (fecha) => claveDia(fecha) >= UNA_RACHA_DESDE;
+// No perder a quien falla (etapa 14): escudos de racha y sesión de regreso, desde este día (lo anterior no cambia).
+export const NO_PERDER_DESDE = '2026-11-23';
+export const ESCUDOS_MAX = 2;
+export const REGRESO_DIAS = 10; // días sin remar para que las 3 primeras sesiones sean «de regreso»
+export const REGRESO_SESIONES = 3;
 
 // Cómo sube cada atributo, con tus vatios: lo mismo que calcula gananciaSesion, dicho en claro.
 // f = tu FTP (0 si no lo tienes). Devuelve frases cortas, de la que más suma a la que menos.
@@ -873,6 +878,9 @@ function gananciaCarga(s, m, ctx, at, carga) {
   if (cumple === 'cumplida') detalle.push([s.delDia === 'sugerida' ? 'Sesión del día cumplida' : 'Sesión del plan cumplida', P.cumplida]);
   else if (cumple === 'terminada') detalle.push(['Sesión del plan terminada', P.terminada]);
   else if (!XC.esDelDia(s) && !ctx.planPagado && XC.equivalePlan(s, ctx.tipo, carga)) detalle.push(['Equivale a la sesión del plan', P.equivalente]);
+  // Regreso tras un parón (etapa 14): las 3 primeras sesiones cuentan como la del día aunque sean suaves. No es un
+  // multiplicador, para no premiar parar: es lo mismo que paga cualquier sesión del día.
+  else if (ctx.regreso && !ctx.planPagado) detalle.push(['Sesión de regreso', P.cumplida]);
   if (cumple && /^Prueba/.test(s.entrenamiento || '')) detalle.push(ctx.records ? ['Prueba del plan con marca nueva', P.pruebaRecord] : ['Prueba del plan', P.prueba]);
   // Etapa 9: cada récord paga 40 XP, hasta 120 por sesión (antes 50 por muchos que fueran).
   if (ctx.records) {
@@ -885,7 +893,7 @@ function gananciaCarga(s, m, ctx, at, carga) {
   const todo = [...detalle, ...bonosDeJuego(s, m, ctx)].filter(([, v]) => v > 0);
   const xp = todo.reduce((a, [, v]) => a + v, 0);
   // Monedas como antes: unas 1 por cada 25 XP que se ven.
-  return { xp, xpBase: xp * 2, detalle: todo, atributos: at, carga, datosTal: datosTalento(s, m, ctx), pagaPlan: !!cumple };
+  return { xp, xpBase: xp * 2, detalle: todo, atributos: at, carga, datosTal: datosTalento(s, m, ctx), pagaPlan: !!cumple || (!!ctx.regreso && !ctx.planPagado) };
 }
 
 // Calendario del plan que usa el juego (ver xp-carga.js). La app lo fija al arrancar y al cambiar de plan.
@@ -943,7 +951,24 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   };
   // Racha hasta el día k: k suma si está cumplido; un día de plan aún sin hacer no la corta (el día no ha terminado),
   // pero remar fuerte en un descanso sí. refK: el día desde el que se mira (para saber qué semanas siguen abiertas).
+  // Escudos (etapa 14): uno por cada semana del plan cumplida, hasta 2 guardados; cada uno salva un día perdido de
+  // una semana ya cerrada (o un día sin plan ya pasado), solo desde NO_PERDER_DESDE. Se recorren los días en orden
+  // una sola vez: un día cerrado ya no cambia.
+  const escudos = { hasta: null, quedan: 0, usados: new Set() };
+  const avanzarEscudos = (conDias, refK) => {
+    if (!primerDia || refK < NO_PERDER_DESDE) return;
+    const cache = new Map();
+    let d = escudos.hasta || (primerDia > NO_PERDER_DESDE ? primerDia : NO_PERDER_DESDE);
+    for (; d < refK; d = claveDia(diaMs(d) + 864e5)) {
+      const cerrado = d in cal ? claveDia(diaMs(lunesDe(diaMs(d))) + 6 * 864e5) < refK : true;
+      if (!cerrado) break;
+      if (escudos.quedan > 0 && estadoDiaRacha(d, conDias, refK, cache) === 'X') { escudos.quedan--; escudos.usados.add(d); }
+      if (new Date(diaMs(d)).getDay() === 0 && semanaCumplida(lunesDe(diaMs(d)))) escudos.quedan = Math.min(ESCUDOS_MAX, escudos.quedan + 1);
+    }
+    escudos.hasta = d;
+  };
   const rachaPlan = (k, conDias, abierto = true, refK = k) => {
+    avanzarEscudos(conDias, refK);
     const cache = new Map();
     let r = 0;
     const hoyE = estadoDiaRacha(k, conDias, refK, cache);
@@ -951,6 +976,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     else if (!abierto || !(k in cal) || (!cal[k] && hoyE === 'X')) return 0;
     for (let d = claveDia(diaMs(k) - 864e5), n = 0; primerDia && d >= primerDia && n < 400; d = claveDia(diaMs(d) - 864e5), n++) {
       const e = estadoDiaRacha(d, conDias, refK, cache);
+      if (e === 'X' && escudos.usados.has(d)) continue; // un escudo salvó este día: ni suma ni corta
       if (e === 'X') break;
       if (e === 'C') r++;
     }
@@ -1055,8 +1081,18 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
 
   // Maestría de clase (etapa 7): sesiones de 10 min o más con cada clase.
   const sesClase = {};
+  let ultimoDia = null;
+  let regresoQuedan = 0;
   for (const s of orden) {
     const hoy = claveDia(s.fecha);
+    // Regreso (etapa 14): tras 10 días o más sin remar, las 3 primeras sesiones (una por día) son «de regreso».
+    let regreso = false;
+    if (hoy !== ultimoDia) {
+      const fuera = ultimoDia ? Math.round((diaMs(hoy) - diaMs(ultimoDia)) / 864e5) - 1 : 0;
+      if (hoy >= NO_PERDER_DESDE && fuera >= REGRESO_DIAS) regresoQuedan = REGRESO_SESIONES;
+      if (regresoQuedan > 0) { regreso = true; regresoQuedan--; }
+      ultimoDia = hoy;
+    }
     if (!curvaNueva && hoy >= CURVA_DESDE) pasarACurvaNueva();
     const claseS = (s.duracion || 0) >= MIN_SEG_MAESTRIA ? claseDe(claseEn(per, s.fecha))?.clave : null;
     if (claseS) {
@@ -1097,7 +1133,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const creditos = nueva ? creditosAntesDe(hoy) : null;
     const gan = gananciaSesion(s, m, {
       grados, clase: claveClase, senda: claveClase ? sendaEn(per, claveClase, s.fecha) : 'a', sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0,
-      cargaAntes: cargaDia.get(hoy) || 0, creditos, planPagado: planPagado.has(hoy), tipo: nueva ? tipoSesion(s, ftp) : null,
+      cargaAntes: cargaDia.get(hoy) || 0, creditos, planPagado: planPagado.has(hoy), tipo: nueva ? tipoSesion(s, ftp) : null, regreso: regreso && nueva,
     });
     if (gan.pagaPlan) planPagado.add(hoy);
     // Remar fuerte en un descanso del plan: XP completa, pero el resumen avisa (y ese día no cuenta como descanso).
@@ -1293,7 +1329,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     monedasGanadas: monedas,
     insignias: premios,
     // La racha del plan (la única que se muestra): días seguidos cumpliéndolo, la mejor, y semanas del plan cumplidas.
-    racha: { dias: rachaPlan(claveDia(ahora), dias, true, claveDia(ahora)), mejor: g.rachaMax, semanasPlan: g.semanasPlan, primeraSemanaPlan: g.primeraSemanaPlan ?? null },
+    racha: { dias: rachaPlan(claveDia(ahora), dias, true, claveDia(ahora)), escudos: escudos.quedan, salvados: escudos.usados.size, mejor: g.rachaMax, semanasPlan: g.semanasPlan, primeraSemanaPlan: g.primeraSemanaPlan ?? null },
     diarias: vista(diaHoy),
     semanales: vista(semanaHoy),
     capitulo,

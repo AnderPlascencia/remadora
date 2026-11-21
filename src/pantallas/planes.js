@@ -35,7 +35,13 @@ async function actualizarBase() {
   return h;
 }
 // Entrenamiento por el valor del selector: «base:…» se genera, un número se lee de la base de datos.
+// Con «Solo tengo 15 / 20 min» elegido (estado.versionCorta = { valor, min }), la versión corta de ese entrenamiento.
 export async function obtenerEnt(valor) {
+  const ent = await obtenerEntCompleto(valor);
+  const vc = estado.versionCorta;
+  return ent && vc && String(vc.valor) === String(valor) ? P.versionCorta(ent, vc.min) || ent : ent;
+}
+async function obtenerEntCompleto(valor) {
   if (!valor) return null;
   if (B.esBase(valor)) {
     if (!estado.baseActual.length) await actualizarBase();

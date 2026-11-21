@@ -5,6 +5,7 @@ export const estado = {
   sesion: null,
   guardando: false, // la sesión que terminó se está guardando (pantallas/sesion.js)
   entrenamientoPrevio: null,
+  versionCorta: null, // «Solo tengo 15 / 20 min»: { valor (el del selector), min } para la próxima sesión
   entrenamientoActivo: null,
   baseActual: [],
   condicionBase: 0, // condición con la que se armaron los base

@@ -2,7 +2,7 @@
 // Cada cambio deja una frase en programa.avisos para explicarlo en la pantalla Hoy.
 // Sin dependencias de la interfaz: recibe el plan y devuelve el plan nuevo.
 import * as E from './estadisticas.js';
-import { estadoDias, repartirSemana, semanaFlexible, sesionFondo, semanaDe, TIPOS_DUROS } from './programa.js';
+import { estadoDias, repartirSemana, semanaFlexible, sesionDeVuelta, sesionFondo, semanaDe, TIPOS_DUROS } from './programa.js';
 import { tipoPlan, tipoSesion } from './capacidades.js';
 
 const DIA = 864e5;
@@ -48,6 +48,27 @@ export function recuperacionComparada(sesiones, ftp = 0) {
 export const corta = (s) => s.pctEnRango < 60 && !(s.pctAlto != null && s.pctAlto >= (s.pctBajo ?? 0));
 // Una sesión dura que sobró: en rango más del 95 %, o un 25 % o más por encima del rango casi sin quedarse por debajo.
 export const sobrada = (s) => s.pctEnRango > 95 || (s.pctAlto != null && s.pctAlto >= 25 && (s.pctBajo ?? 0) < 10);
+
+// ---------- Protocolo de regreso (etapa 14) ----------
+// Días sin remar hasta hoy (por día de calendario, sin contar hoy) y qué tramo de vuelta toca: 5 a 9 días, la
+// primera sesión al 80 %; 10 a 20, una semana de vuelta al 65 % con los rangos un 5 % más bajos; 21 o más, rehacer
+// el plan desde hoy. Sin reproches: se dice «bienvenido de vuelta» y nada de lo perdido.
+export const REGRESO = { corto: 5, medio: 10, largo: 21 };
+export const VUELTA = { corto: { k: 0.8, rangos: 1 }, medio: { k: 0.65, rangos: 0.95 } };
+export function diasFuera(sesiones, ahora = Date.now()) {
+  const hoy = E.claveDia(ahora);
+  const antes = sesiones.filter((s) => E.claveDia(s.fecha) < hoy);
+  if (!antes.length) return null;
+  const ultima = E.claveDia(Math.max(...antes.map((s) => s.fecha)));
+  return Math.round((new Date(`${hoy}T12:00`) - new Date(`${ultima}T12:00`)) / DIA) - 1;
+}
+export const tramoRegreso = (dias) => (dias == null ? null : dias >= REGRESO.largo ? 'largo' : dias >= REGRESO.medio ? 'medio' : dias >= REGRESO.corto ? 'corto' : null);
+export function textoRegreso(tramo, dias) {
+  if (tramo === 'corto') return `Bienvenido de vuelta. Tu primera sesión va al 80 % para retomar con buen pie.`;
+  if (tramo === 'medio') return `Bienvenido de vuelta tras ${dias} días. Esta semana va al 65 % y con los rangos un 5 % más bajos: así el cuerpo se pone al día sin lesiones.`;
+  if (tramo === 'largo') return `Bienvenido de vuelta tras ${dias} días. Lo mejor es rehacer el plan desde hoy, que empiece a tu nivel de ahora.`;
+  return '';
+}
 
 // Revisa el plan. Devuelve { programa, entrenamientos, avisos } con lo que cambió, o null si no cambió nada.
 // entrenamientos: los guardados (para saber qué toca cada día); los nuevos que haga falta crear vuelven en la respuesta.
@@ -151,6 +172,28 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
     }
   }
 
+  // 6. Regreso tras un parón (una vez por parón): sesiones más ligeras o, tras 3 semanas, rehacer el plan. Va después
+  //    de la semana floja, que ya alarga el plan repitiendo la semana: la que se repite es la que se aligera.
+  const fuera = diasFuera(orden, ahora);
+  const tramo = tramoRegreso(fuera);
+  const ultimaAntes = orden.filter((s) => E.claveDia(s.fecha) < hoy).at(-1);
+  if (tramo && ultimaAntes && p.regreso?.tras !== E.claveDia(ultimaAntes.fecha)) {
+    p.regreso = { tras: E.claveDia(ultimaAntes.fecha), dia: hoy, tramo, dias: fuera };
+    const hasta = E.claveDia(ahora + 6 * DIA);
+    const pendientes = estadoDias(p, orden, ahora).filter((d) => d.fecha >= hoy && d.estado !== 'hecho' && d.ent && !/^Prueba/.test(d.ent) && !/ · vuelta$/.test(d.ent));
+    const cuales = tramo === 'corto' ? pendientes.slice(0, 1) : tramo === 'medio' ? pendientes.filter((d) => d.fecha <= hasta) : [];
+    for (const d of cuales) {
+      const v = porNombre(d.ent) && sesionDeVuelta(porNombre(d.ent), VUELTA[tramo].k, VUELTA[tramo].rangos);
+      const dia = v && p.dias.find((x) => x.fecha === d.fecha && x.ent === d.ent);
+      if (!dia) continue;
+      if (!porNombre(v.nombre)) nuevos.push(v);
+      dia.original ??= dia.ent;
+      dia.ent = v.nombre;
+    }
+    // Tras 3 semanas o más lo dice la sugerencia de Hoy, con el botón para rehacer el plan.
+    if (tramo === 'largo') p.proponerRehacer = hoy; else avisos.push(textoRegreso(tramo, fuera));
+  }
+
   if (avisos.length) p.avisos = [...(p.avisos || []), ...avisos.map((texto) => ({ dia: hoy, texto }))].slice(-10);
   return { programa: p, entrenamientos: nuevos, avisos, cambio: avisos.length > 0 || p.ultimaSesion !== programa.ultimaSesion };
 }
@@ -229,6 +272,9 @@ export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp
   if (!sesiones.length) return null;
   const sugerir = (id, motivo) => ({ fuente: 'sugerida', id, motivo });
   if (remadoHoy) return sugerir('base:dis-suave', 'Ya remaste hoy: si quieres más, que sea suave.');
+  // De vuelta tras un parón: un fondo suave para retomar.
+  const fueraSin = diasFuera(sesiones, ahora);
+  if (tramoRegreso(fueraSin)) return sugerir('base:dis-suave', `Bienvenido de vuelta${fueraSin >= REGRESO.medio ? ` tras ${fueraSin} días` : ''}: hoy un fondo suave para retomar sin prisa.`);
   if (cuerpo?.clave === 'agotado') return sugerir('base:dis-suave', 'Vienes muy cargado: hoy descansa o rema 20 min muy suave.');
   if (ayerDuro) return sugerir('base:dis-suave', 'Ayer fue una sesión dura: hoy suave para asimilarla.');
   if (cansado) return sugerir('base:dis-suave', 'Vas cargado: hoy suave y la próxima dura te saldrá mejor.');

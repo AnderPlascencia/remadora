@@ -698,3 +698,47 @@ export function semanasPlan(programa, sesiones, buscar, ahora = Date.now()) {
   });
   return semanas;
 }
+
+// ---------- No perder a quien falla (etapa 14) ----------
+// «Solo tengo 15 / 20 min»: una versión corta que conserva el estímulo clave. El calentamiento baja a 5 min y el
+// enfriamiento a 3; del trabajo entra lo que quepa en su orden (2 de 4 series, por ejemplo), y un fondo se acorta.
+// Mismo nombre que la original (cuenta como la sesión del plan) y versionCorta = minutos. null si ya cabe o no tiene bloques.
+export const VERSION_CORTA_MIN = [15, 20];
+export function versionCorta(ent, minutos) {
+  const b = ent?.bloques || [];
+  if (!b.length || !(minutos > 0) || duracionPlan(ent) <= minutos * 60 + 60) return null;
+  const esCal = /^calentamiento/i.test(b[0].nombre || '');
+  const esEnf = b.length > 1 && /^enfriamiento/i.test(b.at(-1).nombre || '');
+  const cal = esCal ? { ...b[0], duracion: Math.min(b[0].duracion || 300, 300) } : null;
+  const enf = esEnf ? { ...b.at(-1), duracion: Math.min(b.at(-1).duracion || 180, 180) } : null;
+  const medio = b.slice(esCal ? 1 : 0, esEnf ? -1 : undefined);
+  let resto = minutos * 60 - (cal ? segBloque(cal) : 0) - (enf ? segBloque(enf) : 0);
+  const out = [];
+  for (const x of medio) {
+    const s = segBloque(x);
+    if (s && s <= resto) { out.push(x); resto -= s; continue; }
+    // No cabe entero: un bloque de tiempo largo (un fondo) se acorta; una serie, no (mejor 2 series enteras que 3 a medias).
+    if (x.duracion && resto >= 120 && (x.duracion >= 600 || !out.some(esBloqueTrabajo))) out.push({ ...x, duracion: Math.round(resto / 60) * 60 });
+    break;
+  }
+  while (out.length && !esBloqueTrabajo(out.at(-1))) out.pop(); // no termina en un descanso
+  if (!out.some(esBloqueTrabajo)) return null;
+  const n = medio.filter(esBloqueTrabajo).length;
+  const k = out.filter(esBloqueTrabajo).length;
+  return { ...ent, bloques: [...(cal ? [cal] : []), ...out, ...(enf ? [enf] : [])], versionCorta: minutos, resumenCorta: n > 1 ? `${k} de ${n} bloques de trabajo` : 'el trabajo acortado' };
+}
+// Una sesión con menos volumen para volver tras un parón: el trabajo dura `k` veces lo planeado (series de menos o
+// más cortas) y los rangos de vatios bajan a `rangos`. Nombre propio, para que la adaptación la guarde aparte.
+export function sesionDeVuelta(ent, k, rangos = 1, etiqueta = 'vuelta') {
+  if (!ent?.bloques?.length) return null;
+  const escala = (x) => {
+    if (!esBloqueTrabajo(x)) return x;
+    const y = { ...x };
+    if (y.duracion) y.duracion = Math.max(30, Math.round((y.duracion * k) / 15) * 15);
+    else if (y.cantidad) y.cantidad = Math.max(100, Math.round((y.cantidad * k) / 50) * 50);
+    if (y.metrica === 'ftp' && rangos !== 1) { y.min = Math.round(y.min * rangos); if (y.max) y.max = Math.round(y.max * rangos); }
+    return y;
+  };
+  const { id, ...resto } = ent;
+  return { ...resto, nombre: `${ent.nombre} · ${etiqueta}`, bloques: ent.bloques.map(escala), dePlan: true };
+}

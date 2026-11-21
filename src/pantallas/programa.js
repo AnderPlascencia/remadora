@@ -398,6 +398,14 @@ export function arrancarPrograma() {
     ajustes.escribir('hoyDetalle', ajustes.si('hoyDetalle', false) ? '0' : '1');
     pintarHoy();
   });
+  // «Solo tengo 15 / 20 min»: la versión corta vale para la próxima sesión con lo elegido; 0 vuelve a la completa.
+  $('#hoy-corta').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-corta]');
+    if (!b) return;
+    const min = Number(b.dataset.corta);
+    estado.versionCorta = min ? { valor: $('#sel-entrenamiento').value, min } : null;
+    vistaPrevia();
+  });
 }
 
 // Plan automático: sugiere la meta desde tu marca reciente (o tu predicción más fiable) y lo que puedes mejorar
@@ -504,6 +512,17 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const cita = Ci.proximaCita({ programa: prog, dias: Ci.diasDeCita(cg.dias, perfil().dias), hora: cg.hora, movida: cg.movida, hechoHoy: sesiones.some((x) => E.claveDia(x.fecha) === hoyK) });
   $('#hoy-cita').hidden = !cita;
   $('#hoy-cita').textContent = cita ? `Tu próxima cita: ${Ci.textoCita(cita)}${cita.ent && cita.fecha !== hoyK ? ` · ${cita.ent}` : ''}` : '';
+  // «Solo tengo 15 / 20 min» (etapa 14): con la sesión del día elegida, una versión corta que conserva el estímulo.
+  const corta = $('#hoy-corta');
+  const vc = estado.versionCorta && String(estado.versionCorta.valor) === String(valorDia) ? estado.versionCorta : null;
+  if (vc && ent?.versionCorta) {
+    corta.innerHTML = `<span>Versión de ${vc.min} min: ${escaparHtml(ent.resumenCorta)}. Cuenta como media sesión del plan.</span><button type="button" class="enlace-boton" data-corta="0">Sesión completa</button>`;
+  } else {
+    const base = esDelDia && ent && !ent.versionCorta ? ent : null;
+    const opciones = base ? P.VERSION_CORTA_MIN.filter((m) => P.versionCorta(base, m)) : [];
+    corta.innerHTML = opciones.length ? `<span>¿Poco tiempo?</span>${opciones.map((m) => `<button type="button" class="boton chico secundario" data-corta="${m}">Solo tengo ${m} min</button>`).join('')}` : '';
+  }
+  corta.hidden = !corta.innerHTML;
   $('#btn-hoy-detalle').hidden = !ent;
   const abierto = !!ent && ajustes.si('hoyDetalle', false);
   $('#btn-hoy-detalle').textContent = abierto ? 'Ocultar detalles' : 'Ver detalles';
@@ -526,7 +545,10 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const noFtp = () => { revisado(); pintarHoy(); };
   // Un plan armado sin historial se ajusta a lo que remas cuando ya hay 4 sesiones desde que empezó.
   const desdePlan = prog ? sesiones.filter((x) => E.claveDia(x.fecha) >= prog.inicio).length : 0;
-  if (prog?.sinHistorial && prog.objetivo && desdePlan >= 4 && dia?.fuente !== 'terminado') {
+  if (prog?.proponerRehacer === E.claveDia(Date.now()) && prog.objetivo) {
+    // Regreso tras 3 semanas o más (etapa 14): rehacer el plan desde hoy, a tu nivel de ahora.
+    sug = { texto: A.textoRegreso('largo', prog.regreso?.dias ?? 21), boton: 'Rehacer plan', accion: () => rehacerPlan(prog, { ajustar: true, aviso: 'Rehice tu plan desde hoy' }) };
+  } else if (prog?.sinHistorial && prog.objetivo && desdePlan >= 4 && dia?.fuente !== 'terminado') {
     sug = { texto: 'Tu plan se armó sin historial. ¿Lo ajusto a lo que remas ahora?', boton: 'Ajustar', accion: () => rehacerPlan(prog, { ajustar: true }) };
   } else if (valorDia && !esDelDia && dia.fuente !== 'hecho') {
     const que = { plan: 'Tu plan dice', recuperar: 'Puedes recuperar', sugerida: 'Te sugiero' }[dia.fuente] || 'Hoy';
