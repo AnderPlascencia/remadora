@@ -262,20 +262,59 @@ export function estres(sesion, ftp) {
   return Math.round(((sesion.duracion * np * intensidad) / (ftp * 3600)) * 100);
 }
 
+// ---------- Carga para todos: sRPE ----------
+// sRPE = tu esfuerzo (escala CR10, de 1 a 10) × minutos. Una hora a tu FTP se siente como un 7 y vale 100 de carga
+// (como el TSS), así que de serie 1 punto de sRPE ≈ 0,24 de carga. Con sesiones que tienen las dos (watts y esfuerzo)
+// se calibra a ti: la mediana de carga ÷ sRPE de al menos 3 sesiones.
+export const FACTOR_SRPE = 0.24;
+export const FACTOR_SRPE_MIN = 0.12;
+export const FACTOR_SRPE_MAX = 0.45;
+// Watts fiables: hay muestras y al menos la mitad tienen watts (una consola que no los manda deja todo en 0).
+export function wattsFiables(s) {
+  const m = s?.muestras;
+  if (!m?.length) return false;
+  return m.filter((x) => x.w > 0).length >= m.length / 2;
+}
+export const srpe = (s) => { const r = rpeDe(s); return r ? (r * (s.duracion || 0)) / 60 : null; };
+export function factorSrpe(sesiones, ftp) {
+  const r = (sesiones || []).map((s) => {
+    const e = rpeSentido(s) && wattsFiables(s) ? estres(s, s.ftp || ftp) : null;
+    return e > 0 ? e / srpe(s) : null;
+  }).filter((x) => x > 0).sort((a, b) => a - b);
+  if (r.length < 3) return FACTOR_SRPE;
+  return Math.min(FACTOR_SRPE_MAX, Math.max(FACTOR_SRPE_MIN, r[Math.floor(r.length / 2)]));
+}
+// Carga de una sesión y de dónde sale: 'potencia' (watts y FTP), 'esfuerzo' (sRPE) o null si no se sabe.
+// La guardada (s.estres) vale si es mayor que 0 o si no hay muestras para comprobar los watts.
+export function cargaDe(s, ftp, factor = FACTOR_SRPE) {
+  if (!s) return { valor: null, fuente: null };
+  if (s.estres > 0 || (s.estres === 0 && !s.muestras?.length && !rpeDe(s))) return { valor: s.estres, fuente: 'potencia' };
+  const f = s.ftp || ftp;
+  if (f && wattsFiables(s)) {
+    const v = estres(s, f);
+    if (v > 0) return { valor: v, fuente: 'potencia' };
+  }
+  const r = srpe(s);
+  if (r) return { valor: Math.round(r * factor), fuente: 'esfuerzo' };
+  return { valor: null, fuente: null };
+}
+
 export const claveDia = (ms) => {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 // Forma: condición (promedio de 42 días), fatiga (7 días) y frescura (condición − fatiga) de los últimos `dias`.
+// La carga de cada día sale de los watts y, si no hay FTP o watts fiables, del esfuerzo que marcaste (sRPE).
 export function forma(sesiones, ftp, dias = 60, ahora = Date.now()) {
   const porDia = new Map();
   let primero = ahora;
+  const k = factorSrpe(sesiones, ftp);
   for (const s of sesiones) {
-    const v = s.estres ?? estres(s, s.ftp || ftp);
+    const v = cargaDe(s, ftp, k).valor;
     if (v == null) continue;
-    const k = claveDia(s.fecha);
-    porDia.set(k, (porDia.get(k) || 0) + v);
+    const dia = claveDia(s.fecha);
+    porDia.set(dia, (porDia.get(dia) || 0) + v);
     primero = Math.min(primero, s.fecha);
   }
   const res = [];
@@ -635,8 +674,21 @@ export function ftpEstimadoDe(sesiones) {
 // ¿Toca revisar el FTP? Repetir la prueba cada 6–8 semanas, y bajarlo si varias sesiones duras se quedan cortas.
 // sesiones: con pruebaFtp/pruebaWatts para saber la última prueba, y pctEnRango/pctBajo/bloques para las duras.
 // Devuelve { repetir: días desde la última prueba (si pasan de 42), bajar: { ftp, cortas } } o null si nada.
+// Además, el FTP vivo (eFTP), que solo se propone y nunca se cambia solo:
+//   subir: { ftp }        tu FTP estimado de los últimos 90 días (mediana de las 3 mejores) pasa del actual;
+//   bajarCp: { ftp, caida } tu potencia crítica de las últimas 6 semanas, con alguna dura, cae más de un 5 %;
+//   bajarSinDuras: { ftp, dias } 21 días sin una sesión dura (ni prueba): un 5 % menos.
+// `revisado`: cuándo aceptaste o descartaste la última propuesta; durante 14 días no se propone otra.
 export const DIAS_REPETIR_FTP = 42;
-export function revisarFtp(sesiones, ftp, ahora = Date.now()) {
+export const DIAS_SIN_DURAS = 21;
+export const DIAS_PAUSA_PROPUESTA = 14;
+// Una sesión dura por potencia: 4 min a tu FTP o más, o 20 min al 88 % (sweet spot) o más.
+export function esDuraPorPotencia(s, ftp) {
+  const m = s?.muestras;
+  if (!(ftp > 0) || !m?.length) return false;
+  return (mejorPotencia(m, 240) || 0) >= ftp || (mejorPotencia(m, 1200) || 0) >= ftp * 0.88;
+}
+export function revisarFtp(sesiones, ftp, ahora = Date.now(), { revisado = 0 } = {}) {
   if (!(ftp > 0)) return null;
   const orden = [...(sesiones || [])].filter((s) => s.fecha <= ahora).sort((a, b) => a.fecha - b.fecha);
   const prueba = orden.filter((s) => s.pruebaFtp || s.pruebaWatts).at(-1);
@@ -664,7 +716,22 @@ export function revisarFtp(sesiones, ftp, ahora = Date.now()) {
     const nuevo = Math.round(ftp * Math.min(0.97, Math.max(0.85, ratio)));
     if (nuevo < ftp) res.bajar = { ftp: nuevo, cortas: cortas.length };
   }
-  return res.repetir || res.bajar ? res : null;
+  const DIA = 864e5;
+  if (!res.bajar && !(revisado && ahora - revisado < DIAS_PAUSA_PROPUESTA * DIA)) {
+    const eftp = ftpEstimadoDe(orden.filter((s) => s.fecha > ahora - 90 * DIA));
+    const recientes = orden.filter((s) => s.fecha > ahora - 42 * DIA);
+    const cpAhora = recientes.some((s) => esDuraPorPotencia(s, ftp)) ? potenciaCritica(curvaHistorial(recientes)) : null;
+    const cpAntes = cpAhora ? potenciaCritica(curvaHistorial(orden.filter((s) => s.fecha <= ahora - 42 * DIA && s.fecha > ahora - 132 * DIA))) : null;
+    const ultimaDura = orden.filter((s) => s.pruebaFtp || esDuraPorPotencia(s, ftp)).at(-1);
+    if (eftp >= ftp + 3 && eftp >= ftp * 1.02) res.subir = { ftp: eftp };
+    else if (cpAhora && cpAntes && cpAhora.cp < cpAntes.cp * 0.95) {
+      const r = cpAhora.cp / cpAntes.cp;
+      res.bajarCp = { ftp: Math.round(ftp * r), caida: Math.round(100 * (1 - r)) };
+    } else if (ultimaDura && ahora - ultimaDura.fecha > DIAS_SIN_DURAS * DIA && (!prueba || ahora - prueba.fecha > DIAS_SIN_DURAS * DIA)) {
+      res.bajarSinDuras = { ftp: Math.round(ftp * 0.95), dias: Math.floor((ahora - ultimaDura.fecha) / DIA) };
+    }
+  }
+  return res.repetir || res.bajar || res.subir || res.bajarCp || res.bajarSinDuras ? res : null;
 }
 
 // Curva de potencia: mejor media para cada duración (s) que quepa en la sesión.
@@ -860,7 +927,7 @@ export function rmssd(rr) {
 
 // Días desde la primera sesión con carga hasta `ahora` (0 sin historial).
 export function diasDeHistorial(sesiones, ahora = Date.now()) {
-  const fechas = (sesiones || []).filter((s) => s.fecha <= ahora && (s.estres > 0 || s.muestras?.length)).map((s) => s.fecha);
+  const fechas = (sesiones || []).filter((s) => s.fecha <= ahora && (s.estres > 0 || s.muestras?.length || rpeDe(s))).map((s) => s.fecha);
   return fechas.length ? Math.floor((ahora - Math.min(...fechas)) / 864e5) : 0;
 }
 // La condición (42 días) arranca en 0: en las primeras semanas cualquier carga parece «disparada» frente a ella

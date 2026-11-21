@@ -222,8 +222,9 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now(), { previo = null 
   // y las demás a la mitad), y como mínimo lo que tarda la fatiga acumulada en bajar, hasta 36 h. Tope: 4 días.
   let c = cond, f = fat, horasForma = 0;
   while (c - f < LISTO && horasForma < 36) { c -= c / 42 / 24; f -= f / 7 / 24; horasForma++; }
+  const k = E.factorSrpe(sesiones, ftp);
   const restos = sesiones.filter((s) => s.fecha <= ahora && s.fecha > ahora - 4 * DIA).map((s) => {
-    const carga = s.estres ?? E.estres(s, s.ftp || ftp) ?? 0;
+    const carga = E.cargaDe(s, ftp, k).valor ?? 0;
     return Math.max(0, horasPorCarga(carga) - (ahora - s.fecha - (s.duracion || 0) * 1000) / 36e5);
   }).sort((a, b) => b - a);
   const horasSesiones = restos.length ? restos[0] + restos.slice(1).reduce((a, x) => a + x / 2, 0) : 0;

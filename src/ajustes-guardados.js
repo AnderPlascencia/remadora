@@ -12,6 +12,7 @@ export const AJUSTES = {
   ftp: A('numero', 0, true),
   ftpEstimado: A('si', false, true),
   ftpDePerfil: A('si', false, true),
+  ftpRevisado: A('numero', 0, true), // cuándo aceptaste o descartaste la última propuesta de FTP (estadisticas.revisarFtp)
   edad: A('numero', 0, true),
   sexo: A('texto', '', true),
   altura: A('numero', 0, true),

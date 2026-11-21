@@ -512,7 +512,10 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const jefeHoy = jefe && ent?.id !== jefe.preparar && !['plan', 'recuperar'].includes(dia?.fuente)
     && !(cuerpo && ['cargado', 'agotado'].includes(cuerpo.clave)) && !(dia?.fuente === 'sugerida' && /suave|dis-mant/.test(dia.id));
   // El FTP también baja: repetir la prueba cada 6–8 semanas, y bajarlo si varias sesiones duras se quedan cortas.
-  const revFtp = ftp() ? E.revisarFtp(sesiones, ftp()) : null;
+  const revFtp = ftp() ? E.revisarFtp(sesiones, ftp(), Date.now(), { revisado: ajustes.num('ftpRevisado', 0) }) : null;
+  const revisado = () => ajustes.escribir('ftpRevisado', String(Date.now()));
+  const usarFtp = (v) => { guardarFtp(v, true); revisado(); toast(`FTP: ${v} W. Tus zonas se ajustan solas`); pintarHoy(); };
+  const noFtp = () => { revisado(); pintarHoy(); };
   // Un plan armado sin historial se ajusta a lo que remas cuando ya hay 4 sesiones desde que empezó.
   const desdePlan = prog ? sesiones.filter((x) => E.claveDia(x.fecha) >= prog.inicio).length : 0;
   if (prog?.sinHistorial && prog.objetivo && desdePlan >= 4 && dia?.fuente !== 'terminado') {
@@ -529,6 +532,12 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
     sug = { texto: `${jefe.jefe.nombre} te espera: ${jefe.jefe.texto.charAt(0).toLowerCase()}${jefe.jefe.texto.slice(1)} (+${miles(jefe.xp)} XP).`, boton: 'Enfrentar', accion: () => prepararEntrenamiento(jefe.preparar) };
   } else if (revFtp?.bajar) {
     sug = { texto: `Tus últimas ${revFtp.bajar.cortas} sesiones fuertes se quedaron cortas. ¿Bajo tu FTP a ${revFtp.bajar.ftp} W? Tus zonas se ajustan solas.`, boton: 'Bajar', accion: () => { guardarFtp(revFtp.bajar.ftp, true); toast(`FTP: ${revFtp.bajar.ftp} W`); pintarHoy(); } };
+  } else if (revFtp?.subir) {
+    sug = { texto: `Tus mejores sesiones recientes dan un FTP de ${revFtp.subir.ftp} W (ahora ${ftp()} W). ¿Lo subo?`, boton: `Subir a ${revFtp.subir.ftp} W`, accion: () => usarFtp(revFtp.subir.ftp), no: noFtp };
+  } else if (revFtp?.bajarCp) {
+    sug = { texto: `Tu potencia crítica bajó un ${revFtp.bajarCp.caida} % en las últimas 6 semanas. ¿Bajo tu FTP a ${revFtp.bajarCp.ftp} W para que las sesiones vuelvan a salir?`, boton: 'Bajar', accion: () => usarFtp(revFtp.bajarCp.ftp), no: noFtp };
+  } else if (revFtp?.bajarSinDuras && !(revFtp.repetir && ent?.id !== 'base:prueba-ftp')) {
+    sug = { texto: `Llevas ${revFtp.bajarSinDuras.dias} días sin una sesión dura: tu FTP real puede haber bajado. ¿Lo bajo a ${revFtp.bajarSinDuras.ftp} W, o prefieres hacer la prueba?`, boton: 'Bajar', accion: () => usarFtp(revFtp.bajarSinDuras.ftp), no: noFtp };
   } else if (revFtp?.repetir && ent?.id !== 'base:prueba-ftp' && !['plan', 'recuperar'].includes(dia?.fuente)) {
     sug = { texto: `Tu última prueba FTP fue hace ${Math.round(revFtp.repetir / 7)} semanas: repítela para que tus zonas sigan siendo las tuyas.`, boton: 'Elegir', accion: () => elegirEnt('base:prueba-ftp') };
   } else if (dia?.fuente === 'descanso' && dia.adelantar && valorDe(dia.adelantar, todos) && ent?.nombre !== dia.adelantar) {
@@ -541,6 +550,9 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
     sug = { texto: 'Con un plan, cada día sabrás qué remar y la carga subirá sola.', boton: 'Crear plan', accion: () => { ajustes.escribir('pestanaPlanes', 'programa'); irA('entrenamientos'); } };
   }
   caja.hidden = !sug;
+  const no = caja.querySelector('.sug-no');
+  no.hidden = !sug?.no;
+  no.onclick = sug?.no || null;
   if (sug) {
     texto.textContent = sug.texto;
     boton.hidden = !sug.boton;
