@@ -1,7 +1,7 @@
 // Accesibilidad con axe-core (WCAG 2.1 A y AA) en las pantallas principales y con los tres temas, más la letra
 // mínima de 14 px en el modo remo, que se lee de lejos mientras remas.
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, abrirApp, completarBienvenida, avanzar } from './ayuda.mjs';
+import { test, expect, abrirApp, completarBienvenida, avanzar, remar, terminar } from './ayuda.mjs';
 
 async function revisar(page, pantalla) {
   // Sin animaciones: el split se desvanece 0,16 s al cambiar y axe no debe medir el contraste a medio camino.
@@ -9,6 +9,21 @@ async function revisar(page, pantalla) {
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   const resumen = violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.slice(0, 3).map((n) => `${n.target.join(' ')} ${n.any[0]?.message || ''}`).join(' | ')}`);
   expect(resumen, `axe en ${pantalla}`).toEqual([]);
+}
+
+// Botones y controles visibles de menos de 44 × 44 px. Excepciones: el «?» de ayuda (24 px a la vista, con 44 px
+// de zona táctil por su ::before) y la escala de esfuerzo del 1 al 10, que en una fila no cabe a 44 px de ancho
+// (mide 44 de alto y cumple los 24 px del nivel AA de WCAG 2.2).
+const tactilesChicos = (page) => page.evaluate(() => [...document.querySelectorAll('button, a[href], input:not([type=hidden]), select, summary, [role=button], [role=radio], [role=tab]')]
+  .filter((e) => e.checkVisibility({ visibilityProperty: true }) && !e.closest('[aria-hidden="true"], [inert]') && !e.matches('.ayuda-q, #rpe button'))
+  .map((e) => { const r = e.getBoundingClientRect(); return { el: `${e.id ? `#${e.id}` : e.className} ${e.textContent.trim().slice(0, 24)}`, w: Math.round(r.width), h: Math.round(r.height) }; })
+  .filter((x) => x.w > 0 && x.h > 0 && (x.w < 44 || x.h < 44))
+  .filter((x) => !/^(checkbox|radio)$/.test(x.el)) // las casillas van dentro de su etiqueta, que es la zona táctil
+  .map((x) => `${x.el} ${x.w}×${x.h}`));
+
+async function revisarTodo(page, pantalla) {
+  await revisar(page, pantalla);
+  expect(await tactilesChicos(page), `objetivos táctiles de menos de 44 px en ${pantalla}`).toEqual([]);
 }
 
 // La letra más chica del texto que se ve dentro de `raiz` (lo decorativo con aria-hidden, como los puntos de vista, no cuenta).
@@ -57,3 +72,74 @@ for (const tema of ['oscuro', 'claro', 'contraste']) {
     await revisar(page, 'Ajustes');
   });
 }
+
+for (const tema of ['oscuro', 'claro', 'contraste']) {
+  test(`tema ${tema}: la bienvenida, el resumen, Progreso y Planes pasan axe y sus objetivos táctiles miden 44 px`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await abrirApp(page);
+    await page.evaluate((t) => localStorage.setItem('tema', t), tema);
+    await page.reload();
+    const inicio = page.locator('#inicio');
+    await expect(inicio).toBeVisible();
+    for (let paso = 1; paso <= 6; paso++) {
+      await revisarTodo(page, `bienvenida, paso ${paso}`);
+      for (const grupo of await page.locator('#inicio [role=radiogroup]:visible').all()) {
+        const opcion = grupo.locator('button, [role=radio]').first();
+        if (await opcion.count()) await opcion.click();
+      }
+      if (await page.locator('#inicio-demo').isVisible()) break;
+      await page.locator('#inicio-siguiente').click();
+      await avanzar(page, 500);
+    }
+    await page.locator('#inicio-demo').click();
+    await expect(inicio).toBeHidden();
+
+    await remar(page, 30_000);
+    await terminar(page);
+    await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
+    await avanzar(page, 1_000);
+    await revisarTodo(page, 'resumen de la sesión');
+    await page.keyboard.press('Escape');
+
+    // Con Datos avanzados se ven todas las secciones de Progreso; se abren todas.
+    await page.evaluate(() => localStorage.setItem('avanzado', '1'));
+    await page.reload();
+    await page.locator('#tab-historial').click();
+    for (const d of await page.locator('#vista-historial details.seccion:not([open])').all()) if (await d.isVisible()) await d.locator('summary').first().click();
+    await avanzar(page, 500);
+    await revisarTodo(page, 'Progreso');
+
+    await page.locator('#tab-entrenamientos').click();
+    for (const pt of ['entrenamientos', 'programa']) {
+      await page.locator(`.planes-pestanas [data-pt="${pt}"]`).click();
+      await avanzar(page, 500);
+      await revisarTodo(page, `Planes (${pt})`);
+    }
+  });
+}
+
+test('una hoja abierta deja lo de detrás inerte, se lleva el foco y lo devuelve al cerrarse', async ({ page }) => {
+  await abrirApp(page);
+  await completarBienvenida(page);
+  await expect(page.locator('main')).not.toHaveAttribute('inert', '');
+  await remar(page, 30_000);
+  await terminar(page);
+  await expect(page.locator('#hoja')).toBeVisible();
+  for (const sel of ['main', 'header.barra', 'nav.nav-inferior']) await expect(page.locator(sel)).toHaveAttribute('inert', '');
+  expect(await page.evaluate(() => !!document.activeElement?.closest('#hoja'))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#hoja')).toBeHidden();
+  for (const sel of ['main', 'header.barra', 'nav.nav-inferior']) await expect(page.locator(sel)).not.toHaveAttribute('inert', '');
+  // En Progreso, la sesión se abre desde su fila: al cerrar la hoja, el foco vuelve a esa fila.
+  await page.locator('#tab-historial').click();
+  const historial = page.locator('details[data-seccion="historial"]');
+  if (!(await historial.getAttribute('open'))) await historial.locator('summary').click();
+  const fila = page.locator('#lista-sesiones .fila-boton').first();
+  await fila.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#hoja')).toBeVisible();
+  expect(await page.evaluate(() => !!document.activeElement?.closest('#hoja'))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#hoja')).toBeHidden();
+  await expect(fila).toBeFocused();
+});

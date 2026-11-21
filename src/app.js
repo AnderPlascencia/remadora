@@ -1,5 +1,5 @@
 // Punto de entrada: carga cada pantalla y la arranca en el mismo orden de siempre.
-import { $, reajustarTextos } from './ui.js';
+import { $, reajustarTextos, vigilarCapas } from './ui.js';
 import { estado } from './estado.js';
 import { arrancarNavegacion, vistaActiva } from './navegacion.js';
 import { arrancarAjustes1, arrancarAjustes2, arrancarAjustes3, pintarPerfil } from './pantallas/ajustes.js';
@@ -37,6 +37,7 @@ arrancarInicio();
 arrancarAyuda();
 pintarPerfil();
 Hab.anotar('app');
+vigilarCapas();
 
 const horizontalTel = matchMedia('(orientation: landscape) and (max-height: 520px)');
 // Al girar a horizontal a mitad de una carrera, la pista se lleva a la vista igual que al empezar.

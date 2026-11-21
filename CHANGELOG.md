@@ -2,6 +2,20 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.83.0 · 2026-11-21
+
+Más fácil de usar con lector de pantalla y con el dedo, y un CI que vigila todas las pantallas.
+
+- La bienvenida, el resumen de la sesión, Progreso y Planes pasan axe (WCAG 2.1 AA) con los tres temas, como ya lo hacían Entrenar, el modo remo, Héroe y Ajustes. Lo corregido:
+  - Las opciones de la bienvenida y del asistente de plan se anuncian como elegidas.
+  - Mejor contraste en el escalón de plata del podio, los días sin sesión del calendario, las insignias por ganar, los nombres técnicos de las capacidades, el «Hecho» del plan y las dificultades en el tema claro.
+  - Las filas del historial y de tus entrenamientos son botones de verdad dentro de su lista.
+  - La curva del plan es un grupo de botones con nombre, y Programa tiene sus títulos en orden.
+  - El menú de abajo es una zona de navegación.
+- Todo lo que se toca mide al menos 44 px: chips, botones chicos, segmentos, pestañas de Planes, enlaces y nombres de las tarjetas. Las excepciones son el «?» de ayuda, que ya tenía 44 px de zona táctil, y la escala de esfuerzo del 1 al 10, que en una fila no cabe a 44 px de ancho.
+- Con una hoja, un diálogo, la bienvenida o el modo remo abiertos, lo de detrás queda inerte. El foco entra en la capa y, al cerrarla, vuelve a donde estaba, por ejemplo a la fila de la sesión que abriste.
+- CI: cada PR muestra la cobertura de las pruebas unitarias en el resumen del trabajo (y el lcov como artefacto). Las acciones de GitHub van fijadas por SHA.
+
 ## 0.82.0 · 2026-11-21
 
 La app mide tu constancia, solo en tu teléfono, para saber qué te ayuda a seguir remando.
