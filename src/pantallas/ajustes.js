@@ -19,6 +19,7 @@ import { irA, vistaActiva } from '../navegacion.js';
 import { asistente, estimarFtp, guardarFtp, leerMmss, pintarFtpEstado } from './preparar.js';
 import { dibujarVivo, vistaPrevia } from './vivo.js';
 import { agregarLog, anotarError } from '../registro.js';
+import * as Hab from '../habito.js';
 import { remadora } from './sesion.js';
 import { llenarSelectorEntrenamientos } from './planes.js';
 import { pintarAvisoRespaldo, pintarHistorial } from './progreso.js';
@@ -313,6 +314,7 @@ export async function guardarRespaldo() {
     entrenamientos: await db.listar('entrenamientos'),
     programa: leerPrograma(),
     leer: (k) => ajustes.leer(k, null),
+    eventos: await Hab.leerEventos(),
   });
   const nombre = `rower-respaldo-${E.claveDia(Date.now())}.json`;
   const texto = JSON.stringify(datos);
@@ -363,6 +365,7 @@ async function restaurarRespaldo(archivo) {
     H.invalidar();
   }
   if (invalidas) agregarLog(`respaldo: ${invalidas} sesiones dañadas no se trajeron`);
+  try { await Hab.restaurarEventos(datos.eventos); } catch (e) { anotarError('restaurar eventos', e); }
   const nS = sesionesNuevas.length;
   const nE = entNuevos.length;
   // Lo que falta se toma del respaldo; si el héroe, el plan o los ajustes ya existen y son otros, se pregunta.

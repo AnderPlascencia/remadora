@@ -22,6 +22,7 @@ import { formatoRecord, pintarHistorial } from './progreso.js';
 import { chipsAtr, estadoHeroe, opcConsejos, previsionDe } from './heroe.js';
 import { esDePlan, guardarPrograma, leerPrograma, pintarPrograma } from './programa.js';
 import { cerrarGuia } from './ayuda.js';
+import * as Hab from '../habito.js';
 
 // ---------- Editor de entrenamientos ----------
 // ---------- Planes: entrenamientos base (según tu nivel) y los tuyos ----------
@@ -649,6 +650,7 @@ export function arrancarPlanes2() {
       const archivo = new File([blob], nombre, { type: 'image/png' });
       if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Mi sesión en Rower' });
       else descargar(nombre, blob, 'image/png');
+      Hab.anotar('compartir', { sesion: s.fecha });
     } catch (err) {
       if (err.name !== 'AbortError') toast('No se pudo crear la imagen');
     } finally { boton.disabled = false; }

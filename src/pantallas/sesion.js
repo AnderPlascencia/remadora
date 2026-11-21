@@ -30,12 +30,13 @@ import {
 import { agregarLog, guardarRegistroSesion } from '../registro.js';
 import { datoRecibido, fijarFuenteBle, numerosPintados, reiniciarDiagnostico, resumenDiagnostico } from '../diagnostico.js';
 import { leyendaPerfil, obtenerEnt } from './planes.js';
-import { pintarCurva, pintarForma, pintarGasto, pintarMotor, pintarTendencia } from './progreso.js';
+import { pintarConstancia, pintarCurva, pintarForma, pintarGasto, pintarMotor, pintarTendencia } from './progreso.js';
 import { estadoHeroe, guardarPersonaje, inventario, leerPersonaje, nombreAtributo, pintarLineaNivel } from './heroe.js';
 import { abrirSesion, fcParaEsfuerzo } from './detalle.js';
 import { contextoXp, delProgramaHoy, ftpDelPlan, pintarHoy, revisarPlanAuto } from './programa.js';
 import * as XC from '../xp-carga.js';
 import { bonoEquipo } from '../coleccion-bote.js';
+import * as Hab from '../habito.js';
 import { equipoEnUso } from '../carrera.js';
 import { permisoIntensidad, FRASE_SIN_INTENSIDAD } from '../intensidad.js';
 
@@ -142,6 +143,7 @@ export function arrancarSesion1() {
       if (d.dataset.seccion === 'curva') pintarCurva();
       if (d.dataset.seccion === 'motor') pintarMotor();
       if (d.dataset.seccion === 'gasto') pintarGasto();
+      if (d.dataset.seccion === 'constancia') pintarConstancia();
     });
   }
   document.addEventListener('click', (e) => {
@@ -197,6 +199,7 @@ export function arrancarSesion1() {
     if (!confirm('¿Descartar la sesión sin guardar? No se puede deshacer.')) return;
     $('#recuperar-dialogo').hidden = true;
     await borrarSesionEnCurso();
+    Hab.anotar('sesionDescartada');
     toast('Sesión descartada');
   });
   setInterval(tic, 500);
@@ -329,6 +332,7 @@ async function iniciarSesion(reanudar = null) {
   const calentamientos = recientes.filter((x) => x.muestras?.some((m) => m.fc)).slice(-15).map((x) => ({ muestras: x.muestras.slice(240, 301) }));
   // El diagnóstico (latencia, cuadros por segundo, Bluetooth) se cuenta por sesión.
   if (!reanudar) { reiniciarDiagnostico(); remadora.reiniciarEstadisticas(); }
+  Hab.anotar('sesionInicio', { reanudada: !!reanudar, ent: estado.entrenamientoActivo?.nombre || null });
   estado.sesion = {
     inicio: Date.now(),
     tipoPlan: Cap.tipoPlan(estado.entrenamientoActivo),
@@ -468,11 +472,12 @@ async function detenerSesion() {
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
   activarVersionEnEspera();
-  if (!s || s.muestras.length < 10) { estado.guardando = false; await borrarSesionEnCurso(); toast('Sesión muy corta: no se guardó'); return; }
+  if (!s || s.muestras.length < 10) { estado.guardando = false; await borrarSesionEnCurso(); if (s) Hab.anotar('sesionCorta', { seg: s.t }); toast('Sesión muy corta: no se guardó'); return; }
   try {
     // Primero la copia con el final de la sesión; se borra solo cuando la sesión quedó guardada.
     await guardarSesionEnCurso(s, ent);
     await guardarSesionTerminada(s, ent);
+    Hab.anotar('sesionFin', { seg: s.t, completa: !s.plan || !!s.info?.terminado });
   } finally {
     estado.guardando = false;
   }

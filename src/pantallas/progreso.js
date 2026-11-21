@@ -7,6 +7,7 @@ import { rangoZona2 } from '../pulso.js';
 import * as P from '../programa.js';
 import * as J from '../juego.js';
 import * as Cap from '../capacidades.js';
+import * as Hab from '../habito.js';
 import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
@@ -239,6 +240,32 @@ export function pintarGasto() {
     : prom ? `Esta semana ${miles(esta)} kcal; tu promedio es ${miles(prom)}.` : 'Tus calorías de cada semana aparecerán aquí.';
 }
 
+// Tu constancia (con Datos avanzados): sesiones por semana, plan cumplido, pausas y qué pasa con la app.
+const dias = (n) => `${n} ${n === 1 ? 'día' : 'días'}`;
+export async function pintarConstancia() {
+  const r = Hab.resumenHabito({ sesiones: estado.cacheSesiones || [], eventos: await Hab.leerEventos(), programa: leerPrograma() });
+  const lunes = E.inicioPeriodo(Date.now(), 'semana');
+  dibujarBarras($('#grafica-constancia'), r.semanas.map((v, i) => ({
+    etiqueta: fechaCorta(lunes - (r.semanas.length - 1 - i) * 7 * 864e5), valor: v, resaltar: i === r.semanas.length - 1,
+  })), { color: color('--info'), formato: (v) => `${v}` });
+  const ev = r.eventos;
+  const filas = [
+    ['Sesiones por semana', r.media == null ? '—' : r.media.toLocaleString('es-MX')],
+    r.cumplimiento ? ['Plan cumplido', r.cumplimiento.pct == null ? 'aún sin días pasados' : `${r.cumplimiento.pct} % (${r.cumplimiento.hechos} de ${r.cumplimiento.pasados})`] : null,
+    ['Pausas de 4 días o más', r.pausas ? `${r.pausas}${r.huecos ? ` · ${r.huecos} de 8 o más` : ''}` : 'ninguna'],
+    r.vuelta != null ? ['Tras una pausa vuelves en', dias(r.vuelta)] : null,
+    r.masLarga ? ['Pausa más larga', dias(r.masLarga)] : null,
+    ['Días con la app abierta (28 días)', String(ev.diasConApp)],
+    ['Sesiones empezadas · dejadas (28 días)', `${ev.empezadas} · ${ev.dejadas}`],
+    ['Imágenes compartidas (28 días)', ev.compartidas ? `${ev.compartidas}${ev.tasaCompartir != null ? ` · ${ev.tasaCompartir} % de tus sesiones` : ''}` : '0'],
+  ].filter(Boolean);
+  $('#tabla-constancia').innerHTML = `<tbody>${filas.map(([k, v]) => `<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join('')}</tbody>`;
+  $('#constancia-resumen').textContent = r.media == null ? '' : `${r.media.toLocaleString('es-MX')} por semana`;
+  $('#constancia-texto').textContent = r.diasSinRemar == null ? 'Aún no hay sesiones.'
+    : r.diasSinRemar >= Hab.PAUSA_DIAS ? `Llevas ${dias(r.diasSinRemar)} sin remar${r.vuelta != null ? `; de normal vuelves a los ${dias(r.vuelta)}` : ''}. Una sesión corta cuenta.`
+      : r.diasSinRemar === 0 ? 'Remaste hoy.' : `Última sesión hace ${dias(r.diasSinRemar)}.`;
+}
+
 export function pintarAvisoRespaldo(total) {
   const ultimo = Number(ajustes.leer('ultimoRespaldo', 0));
   const dias = ultimo ? Math.floor((Date.now() - ultimo) / 864e5) : null;
@@ -311,7 +338,7 @@ export async function pintarHistorial() {
   pintarForma();
   pintarCuerpoHoy();
   pintarCapacidades();
-  for (const [sec, fn] of [['curva', pintarCurva], ['motor', pintarMotor], ['gasto', pintarGasto]]) {
+  for (const [sec, fn] of [['curva', pintarCurva], ['motor', pintarMotor], ['gasto', pintarGasto], ['constancia', pintarConstancia]]) {
     if (document.querySelector(`details[data-seccion="${sec}"]`).open) fn();
   }
 
