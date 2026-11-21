@@ -1625,6 +1625,12 @@ details.mas-detalle[hidden] { display: none; }
 .hoja-capacidad .ayuda { margin: 0; }
 .hoy-ajuste { margin: 6px 0 0; font-size: var(--t-s); color: var(--primario); font-weight: 600; }
 .hoy-ajuste.atencion { color: var(--aviso); }
+.hoy-cita { margin: 6px 0 0; font-size: var(--t-s); color: var(--texto-suave); }
+.cita-campo { border: 0; padding: 0; margin: 12px 0; }
+.cita-campo legend { font-weight: 600; margin-bottom: 6px; }
+.cita-campo .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.cita-resumen .acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.cita-mover { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 8px; }
 /* Antes de remar: dos preguntas opcionales, debajo de Empezar; se pliegan a una línea al responder. */
 .antes-remar { margin: 12px 0 0; }
 .antes-pregunta { margin: 8px 0 0; }

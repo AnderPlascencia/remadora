@@ -24,6 +24,10 @@ export const AJUSTES = {
   fcMaxFuente: A('texto', '', true), // 'manual', 'observada' o 'edad' (pulso.js)
   fcReposo: A('numero', 0, true),
   metaSemana: A('numero', 10, true),
+  // Tu cita (etapa 13, cita.js): días de remo (0 = lunes) y hora; la próxima cita movida a mano ({ fecha, hora }).
+  diasRemo: A('json', null, true),
+  horaRemo: A('texto', '19:00', true),
+  citaMovida: A('json', null, false),
   // Preferencias
   voz: A('si', true, true),
   cantidadVoz: A('texto', 'completa', true), // 'datos', 'entrenador' o 'completa' (voz.js)

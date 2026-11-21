@@ -12,7 +12,8 @@ import * as B from '../base.js';
 import * as Cap from '../capacidades.js';
 import * as A from '../adaptacion.js';
 import * as Pf from '../perfil.js';
-import { $, COLOR_ZONA, ajustes, escaparHtml, ftp, ico, miles, perfil, previoHoy, toast } from '../ui.js';
+import * as Ci from '../cita.js';
+import { $, COLOR_ZONA, ajustes, citaGuardada, escaparHtml, ftp, ico, miles, perfil, previoHoy, toast } from '../ui.js';
 import { PREGUNTAS_PREVIAS } from '../pulso.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
@@ -298,6 +299,7 @@ export async function contextoPlan() {
   // Tu perfil: la experiencia decide el volumen mientras no hay historial, y el tiempo por sesión pone un tope.
   const pf = Pf.ctxPlanDePerfil(perfil(), { sinHistorial: sesiones.length < 3 });
   return {
+    diasSemana: citaGuardada().dias,
     minutosMax: pf.minutosMax || 0,
     split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000,
     kcalHabitual: kcals[Math.floor(kcals.length / 2)] || 250, kcalSemana: Math.round(kcalMes / 4),
@@ -422,7 +424,7 @@ async function crearPlanMeta() {
   if (split < 80 || split > 200) { $('#pm-error').textContent = 'Ese tiempo da un ritmo fuera de lo posible: revisa la distancia y el tiempo.'; return; }
   $('#pm-error').textContent = '';
   const nivel = P.nivelRemero(await H.sesiones());
-  const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio, nivel });
+  const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio, nivel, dias: perfil().dias, ctx: { diasSemana: citaGuardada().dias } });
   await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
   estado.elegirLoDeHoy = true;
@@ -496,6 +498,12 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   // En ámbar si el cambio de hoy vino de cómo te encuentras (atención, no error).
   $('#hoy-ajuste').classList.toggle('atencion', !!cuerpo?.motivos?.length);
   pintarAntes(sesiones);
+  // Tu próxima cita (etapa 13): el día y la hora en que quedaste contigo.
+  const cg = citaGuardada();
+  const hoyK = E.claveDia(Date.now());
+  const cita = Ci.proximaCita({ programa: prog, dias: Ci.diasDeCita(cg.dias, perfil().dias), hora: cg.hora, movida: cg.movida, hechoHoy: sesiones.some((x) => E.claveDia(x.fecha) === hoyK) });
+  $('#hoy-cita').hidden = !cita;
+  $('#hoy-cita').textContent = cita ? `Tu próxima cita: ${Ci.textoCita(cita)}${cita.ent && cita.fecha !== hoyK ? ` · ${cita.ent}` : ''}` : '';
   $('#btn-hoy-detalle').hidden = !ent;
   const abierto = !!ent && ajustes.si('hoyDetalle', false);
   $('#btn-hoy-detalle').textContent = abierto ? 'Ocultar detalles' : 'Ver detalles';

@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.86.0 · 2026-11-21
+
+Una cita con el remo: eliges qué días y a qué hora remas, y tu calendario te lo recuerda. Todo funciona sin servidor.
+
+- **Tus días y tu hora.** En Ajustes › Perfil marcas tus días (de 1 a 5) y tu hora habitual. Vienen ya puestos: los días de siempre para tus días por semana y las 19:00, así la bienvenida no suma toques. Los días marcados son tus días por semana. El plan se arma en esos días, sin dos sesiones duras seguidas. Si tu plan va en otros días, Perfil te ofrece rehacerlo.
+- **Tu próxima cita en Hoy:** «Tu próxima cita: el jueves, 19:00 · Fondo 45». Con plan, es su próxima sesión; sin plan, el próximo de tus días.
+- **Al calendario.** «Añadir a mi calendario» baja un archivo .ics con lo que queda de tu plan (o tus días de las próximas 4 semanas), con un aviso 30 min antes. Si el plan cambia, se vuelve a añadir.
+- **Cierre con cita.** El resumen de la sesión termina con «¿Cuándo remas la próxima?», el día y la hora. Puedes añadir esa cita a tu calendario o cambiarla de día y de hora.
+
 ## 0.85.0 · 2026-11-21
 
 El plan se paga una vez. Desde el lunes 23 de noviembre las misiones piden lo que no harías de todas formas, y la XP que repetían pasa a la carga del entrenamiento. Lo ganado antes de ese día no cambia.

@@ -42,6 +42,9 @@ export function perfil() {
     dias: Math.min(5, Math.max(1, ajustes.num('diasSemana', 3))), minutos: min === '' ? null : Number(min) || 0,
   };
 }
+// Tu cita guardada: los días tal cual (pueden no estar o no cuadrar: cita.diasDeCita decide), la hora y la próxima movida.
+const jsonDe = (clave) => { try { return JSON.parse(ajustes.leer(clave, 'null')); } catch { return null; } };
+export const citaGuardada = () => ({ dias: jsonDe('diasRemo'), hora: ajustes.leer('horaRemo', '19:00'), movida: jsonDe('citaMovida') });
 
 // Los nombres los escribe el usuario: siempre escapados al meterlos en HTML.
 export function escaparHtml(t) { return String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

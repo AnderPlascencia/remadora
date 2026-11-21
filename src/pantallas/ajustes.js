@@ -12,7 +12,9 @@ import * as Pf from '../perfil.js';
 import * as R from '../respaldo.js';
 import { VERSION } from '../version.js';
 import { olvidarTokens } from '../grafica.js';
-import { $, COLOR_ZONA, ajustes, color, descargar, escaparHtml, fcRef, ftp, ico, perfil, toast } from '../ui.js';
+import { $, COLOR_ZONA, ajustes, citaGuardada, color, descargar, escaparHtml, fcRef, ftp, ico, perfil, toast } from '../ui.js';
+import * as Ci from '../cita.js';
+import * as P from '../programa.js';
 import { TEXTO_FUENTE_FC, cambioZona2, fcMaxDeHistorial, fcMaxEfectiva, rangoZona2 } from '../pulso.js';
 import { estado } from '../estado.js';
 import { irA, vistaActiva } from '../navegacion.js';
@@ -55,7 +57,22 @@ export function arrancarAjustes1() {
   campoNumero('#in-edad', 'edad', '', () => { aplicarEdad(); alCambiarPerfil(); });
   campoSelect('#sel-sexo', 'sexo', '', () => { pintarClasificacion(); alCambiarPerfil(); });
   campoSelect('#sel-experiencia', 'experiencia', '', () => alCambiarPerfil());
-  campoSelect('#sel-dias-perfil', 'diasSemana', '3', () => { asistente.dias = perfil().dias; alCambiarPerfil(); });
+  // Al cambiar cuántos días, tus días vuelven a los de serie para ese número (se pueden volver a marcar).
+  campoSelect('#sel-dias-perfil', 'diasSemana', '3', () => { asistente.dias = perfil().dias; ajustes.escribir('diasRemo', 'null'); pintarCita(); alCambiarPerfil(); });
+  $('#cita-dias').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-dia]');
+    if (!b) return;
+    const nuevos = Ci.alternarDia(misDias(), Number(b.dataset.dia));
+    if (!nuevos) { toast('Elige de 1 a 5 días por semana'); return; }
+    ajustes.escribir('diasRemo', JSON.stringify(nuevos));
+    // Los días marcados son tus días por semana.
+    if (nuevos.length !== perfil().dias) { ajustes.escribir('diasSemana', String(nuevos.length)); $('#sel-dias-perfil').value = String(nuevos.length); asistente.dias = nuevos.length; }
+    pintarCita();
+    alCambiarPerfil();
+  });
+  $('#in-hora-remo').addEventListener('change', () => { ajustes.escribir('horaRemo', Ci.horaValida($('#in-hora-remo').value)); pintarCita(); });
+  $('#btn-cita-ics').addEventListener('click', () => exportarCitas());
+  pintarCita();
   campoSelect('#sel-minutos', 'minutosSesion', '', () => alCambiarPerfil());
   $('#perfil-usos').addEventListener('click', async (e) => {
     if (!e.target.closest('#btn-plan-perfil')) return;
@@ -152,19 +169,44 @@ function campoSelect(sel, clave, defecto, alCambiar) {
 export function rellenarPerfil() {
   for (const [sel, clave, def] of [['#in-edad', 'edad', ''], ['#in-peso', 'peso', '75'], ['#in-altura', 'altura', ''], ['#in-ftp', 'ftp', ''], ['#in-fcmax', 'fcMax', ''], ['#in-fcreposo', 'fcReposo', ''],
     ['#sel-sexo', 'sexo', ''], ['#sel-experiencia', 'experiencia', ''], ['#sel-dias-perfil', 'diasSemana', '3'], ['#sel-minutos', 'minutosSesion', '']]) $(sel).value = ajustes.leer(clave, def);
+  pintarCita();
 }
 function alCambiarPerfil() { pintarPerfil(); ofrecerFtpInicial(); }
+// ---------- Tu cita (etapa 13) ----------
+const misDias = () => Ci.diasDeCita(citaGuardada().dias, perfil().dias);
+export function pintarCita() {
+  const dias = misDias();
+  $('#cita-dias').innerHTML = Ci.DIAS_CORTO.map((c, i) => `<button type="button" class="chip" data-dia="${i}" aria-pressed="${dias.includes(i)}" aria-label="${Ci.DIAS_NOMBRE[i]}">${c}</button>`).join('');
+  $('#in-hora-remo').value = Ci.horaValida(citaGuardada().hora);
+}
+// El plan que queda (o, sin plan, tus días de las próximas 4 semanas) como archivo de calendario con aviso 30 min antes.
+export async function exportarCitas() {
+  const { hora } = citaGuardada();
+  const prog = leerPrograma();
+  const ents = await db.listar('entrenamientos').catch(() => []);
+  const min = (n) => { const e = ents.find((x) => x.nombre === n); const seg = e ? P.duracionPlan(e) : 0; return seg ? Math.round(seg / 60) : null; };
+  let citas = prog?.dias?.length ? Ci.citasDelPlan(prog, { hora, duracion: min }) : [];
+  if (!citas.length) {
+    const dias = misDias();
+    citas = Array.from({ length: 28 }, (_, i) => E.claveDia(Date.now() + i * 864e5)).filter((k) => dias.includes((new Date(`${k}T12:00`).getDay() + 6) % 7)).map((fecha) => ({ fecha, hora }));
+  }
+  descargar('rower-citas.ics', Ci.ics(citas), 'text/calendar');
+  toast(prog?.dias?.length ? `${citas.length} sesiones de tu plan para tu calendario. Si el plan cambia, vuelve a añadirlo.` : `${citas.length} citas de las próximas 4 semanas para tu calendario`);
+}
 // Qué falta del perfil y para qué sirve; si tu plan no coincide con tus días o tu tiempo, ofrece rehacerlo.
 export function pintarPerfil() {
   const p = perfil();
   const c = Pf.completitud(p);
   $('#perfil-resumen').textContent = c.faltan.length ? `${c.hechos} de ${c.total} datos` : 'Completo';
   const prog = leerPrograma();
-  const distinto = prog?.objetivo && prog.dias?.length && (prog.porSemana !== p.dias || (p.minutos != null && (prog.minutosMax || 0) !== (p.minutos || 0)));
+  const hoy = E.claveDia(Date.now());
+  const diasPlan = [...new Set((prog?.dias || []).filter((d) => d.fecha >= hoy).map((d) => (new Date(`${d.fecha}T12:00`).getDay() + 6) % 7))].sort((a, b) => a - b);
+  const otrosDias = prog?.porSemana === p.dias && citaGuardada().dias && diasPlan.length === p.dias && diasPlan.join() !== misDias().join();
+  const distinto = prog?.objetivo && prog.dias?.length && (prog.porSemana !== p.dias || otrosDias || (p.minutos != null && (prog.minutosMax || 0) !== (p.minutos || 0)));
   $('#perfil-usos').innerHTML = (c.faltan.length
     ? `<p class="ayuda">Completa tu perfil para afinar la app:</p><ul class="lista-perfil">${c.faltan.map((u) => `<li>${escaparHtml(u.texto)}</li>`).join('')}</ul>`
     : '<p class="ayuda">Tu perfil se usa para tus calorías, pulso máximo, FTP inicial, puesto en la tripulación y para armar y ajustar tus planes.</p>')
-    + (distinto ? `<div class="aviso suave-aviso perfil-plan"><span>Tu plan es de ${prog.porSemana} días${prog.minutosMax ? ` y sesiones de hasta ${prog.minutosMax} min` : ''}. ¿Lo rehago con ${p.dias} ${p.dias === 1 ? 'día' : 'días'}${p.minutos ? ` y hasta ${p.minutos} min` : ''}?</span><button type="button" id="btn-plan-perfil" class="boton chico">Rehacer plan</button></div>` : '');
+    + (distinto ? `<div class="aviso suave-aviso perfil-plan"><span>${otrosDias ? `Tu plan va en otros días. ¿Lo rehago en ${misDias().map((d) => Ci.DIAS_NOMBRE[d]).join(', ')}?` : `Tu plan es de ${prog.porSemana} días${prog.minutosMax ? ` y sesiones de hasta ${prog.minutosMax} min` : ''}. ¿Lo rehago con ${p.dias} ${p.dias === 1 ? 'día' : 'días'}${p.minutos ? ` y hasta ${p.minutos} min` : ''}?`}</span><button type="button" id="btn-plan-perfil" class="boton chico">Rehacer plan</button></div>` : '');
 }
 // Sin sesiones ni FTP, el perfil da un FTP de arranque para que el plan y los rivales tengan watts con sentido.
 // Queda como estimado y la primera sesión de 10 min o más lo reemplaza, suba o baje.

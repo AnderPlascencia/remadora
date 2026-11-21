@@ -12,8 +12,9 @@ import * as V from '../ventajas.js';
 import * as B from '../base.js';
 import * as C from '../consejos.js';
 import {
-  $, ajustes, contarHasta, escaparHtml, fechaCorta, formatoMeta, ftp, ico, miles, sinMovimiento, toast, vibrar,
+  $, ajustes, citaGuardada, contarHasta, descargar, escaparHtml, fechaCorta, formatoMeta, ftp, ico, miles, perfil, sinMovimiento, toast, vibrar,
 } from '../ui.js';
+import * as Ci from '../cita.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { pintarClasificacion } from './ajustes.js';
@@ -206,6 +207,8 @@ export function arrancarHeroe() {
     pintarHeroe();
   });
   $('#hoja-atr').addEventListener('click', async (e) => {
+    const c = e.target.closest('[data-cita]');
+    if (c) { accionCita(c.dataset.cita); return; }
     const b = e.target.closest('[data-prox]');
     if (!b) return;
     cerrarHoja();
@@ -834,6 +837,41 @@ export function proximaDelPlan(programa, ahora = Date.now()) {
 const claveDiaLocal = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const programaGuardado = () => { try { return JSON.parse(ajustes.leer('programa', 'null')); } catch { return null; } };
 
+// ---------- Cierre con cita (etapa 13): «¿Cuándo remas la próxima?» ----------
+function citaDeAhora() {
+  const cg = citaGuardada();
+  return Ci.proximaCita({ programa: programaGuardado(), dias: Ci.diasDeCita(cg.dias, perfil().dias), hora: cg.hora, movida: cg.movida, hechoHoy: true });
+}
+function citaResumen() {
+  const c = citaDeAhora();
+  if (!c) return '';
+  return `<div class="cita-resumen" id="cita-resumen"><p>¿Cuándo remas la próxima? <b id="cita-texto">${escaparHtml(Ci.textoCita(c))}</b></p>
+    <div class="acciones"><button type="button" class="boton chico" data-cita="ics">Añadir a mi calendario</button><button type="button" class="boton chico secundario" data-cita="mover">Cambiar</button></div>
+    <div class="cita-mover" id="cita-mover" hidden></div></div>`;
+}
+function accionCita(accion) {
+  const c = citaDeAhora();
+  if (!c) return;
+  if (accion === 'ics') { descargar(`rower-cita-${c.fecha}.ics`, Ci.ics([c]), 'text/calendar'); toast(`Cita ${Ci.textoCita(c)}: tu calendario te avisa 30 min antes`); return; }
+  const caja = $('#cita-mover');
+  if (accion === 'mover') {
+    const opciones = Array.from({ length: 7 }, (_, i) => claveDiaLocal(Date.now() + (i + 1) * 864e5))
+      .map((k) => `<option value="${k}"${k === c.fecha ? ' selected' : ''}>${escaparHtml(Ci.textoCita({ fecha: k, hora: '' }).replace(/, $/, ''))}</option>`).join('');
+    caja.innerHTML = `<label class="campo">Día <select id="cita-dia">${opciones}</select></label><label class="campo">Hora <input type="time" id="cita-hora" value="${c.hora}"></label>
+      <button type="button" class="boton chico" data-cita="guardar">Guardar</button>`;
+    caja.hidden = false;
+    $('#cita-dia').focus();
+    return;
+  }
+  if (accion === 'guardar') {
+    const nueva = { fecha: $('#cita-dia').value, hora: Ci.horaValida($('#cita-hora').value), ent: c.ent || null };
+    ajustes.escribir('citaMovida', JSON.stringify(nueva));
+    caja.hidden = true;
+    $('#cita-texto').textContent = Ci.textoCita(nueva);
+    toast(`Quedaste ${Ci.textoCita(nueva)}`);
+  }
+}
+
 export async function pintarAtrSesion(s, previas, resumen) {
   const caja = $('#hoja-atr');
   estado.atrAbierta = { s, previas, resumen };
@@ -864,6 +902,7 @@ export async function pintarAtrSesion(s, previas, resumen) {
         ${chipsAtr(p.seguro, rec.atributo.clave, 3)}<button type="button" class="boton chico" data-prox="${ent.id}" data-reto="${rec.reto}">Dejarlo listo para la próxima</button></div>`;
     }
   }
+  if (resumen) prox += citaResumen();
   caja.hidden = !r.logros.length && !r.cerca.length && !prox;
   caja.innerHTML = `${r.logros.length ? `<h3>Lo que lograste</h3><ul class="lista-cond">${r.logros.map((x) => filaCond(x, 'hecho')).join('')}</ul>` : ''}
     ${r.cerca.length ? `<details class="mas-detalle"><summary>Te quedaste cerca <span class="seccion-resumen">${r.cerca.length}</span></summary><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul></details>` : ''}${prox}`;
