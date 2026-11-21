@@ -27,7 +27,8 @@ import { crearReferencias, crearRivales, estimarFtp, ftpAutomatico, hayCarrera, 
 import {
   abrirModoRemo, carreraActual, carreraEnt, carreraRemo, cerrarModoRemo, dibujarVivo, duracionCarrera, modoEnt, pintar, pintarModoEnt, retratoPropio, velocidadReciente, vigilarTipoSesion, vistaPrevia,
 } from './vivo.js';
-import { agregarLog } from '../registro.js';
+import { agregarLog, guardarRegistroSesion } from '../registro.js';
+import { datoRecibido, fijarFuenteBle, numerosPintados, reiniciarDiagnostico, resumenDiagnostico } from '../diagnostico.js';
 import { leyendaPerfil, obtenerEnt } from './planes.js';
 import { pintarCurva, pintarForma, pintarGasto, pintarMotor, pintarTendencia } from './progreso.js';
 import { estadoHeroe, guardarPersonaje, inventario, leerPersonaje, nombreAtributo, pintarLineaNivel } from './heroe.js';
@@ -55,6 +56,7 @@ export function arrancarSesion1() {
   }
 
   remadora.addEventListener('log', (e) => agregarLog(e.detail));
+  fijarFuenteBle(() => remadora.estadisticas);
   remadora.addEventListener('estado', (e) => {
     const texto = e.detail;
     const el = $('#estado');
@@ -79,6 +81,7 @@ export function arrancarSesion1() {
   remadora.addEventListener('datos', (e) => {
     const d = e.detail;
     ultimoDato = Date.now();
+    datoRecibido();
     if (d.tipo === 'remada') { actual.spm = d.spm; actual.split = d.split; }
     if (d.tipo === 'metricas') {
       actual.watts = d.watts; actual.distancia = d.distancia; actual.nivel = d.resistencia;
@@ -317,6 +320,8 @@ async function iniciarSesion(reanudar = null) {
   const pc = E.potenciaCritica(E.curvaHistorial(recientes));
   // Calentamientos de las últimas sesiones con pulso: para notar si hoy vas más cargado que de costumbre.
   const calentamientos = recientes.filter((x) => x.muestras?.some((m) => m.fc)).slice(-15).map((x) => ({ muestras: x.muestras.slice(240, 301) }));
+  // El diagnóstico (latencia, cuadros por segundo, Bluetooth) se cuenta por sesión.
+  if (!reanudar) { reiniciarDiagnostico(); remadora.reiniciarEstadisticas(); }
   estado.sesion = {
     inicio: Date.now(),
     tipoPlan: Cap.tipoPlan(estado.entrenamientoActivo),
@@ -425,6 +430,12 @@ async function iniciarSesion(reanudar = null) {
   }
 }
 
+// Una versión nueva de la app que llegó a mitad de la sesión espera instalada (sw.js) hasta que esta termina.
+export function activarVersionEnEspera() {
+  if (!('serviceWorker' in navigator) || estado.sesion) return;
+  navigator.serviceWorker.getRegistration?.().then((r) => r?.waiting?.postMessage({ tipo: 'activar' })).catch(() => {});
+}
+
 async function detenerSesion() {
   const s = estado.sesion;
   const ent = estado.entrenamientoActivo;
@@ -447,6 +458,7 @@ async function detenerSesion() {
   vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
+  activarVersionEnEspera();
   if (!s || s.muestras.length < 10) { await borrarSesionEnCurso(); toast('Sesión muy corta: no se guardó'); return; }
   // Primero la copia con el final de la sesión; se borra solo cuando la sesión quedó guardada.
   await guardarSesionEnCurso(s, ent);
@@ -565,6 +577,9 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     rpe: null,
     notas: '',
   };
+  // Cómo fue la app en esta sesión (latencia del dato, cuadros por segundo, Bluetooth): una recuperada no lo tiene.
+  const diagnostico = recuperada ? null : resumenDiagnostico(remadora.estadisticas);
+  if (diagnostico) registro.diagnostico = diagnostico;
   registro.estres = E.estres(registro, registro.ftp);
   Object.assign(registro, {
     kj: E.trabajoKj(m),
@@ -626,9 +641,9 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     registro.referencias = s.referencias.map((r) => ({ nombre: r.nombre, fecha: r.fecha ?? null, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)) }));
   }
   registro.marcas = E.marcasDeSesion(registro);
-  let previas;
+  // Primero se guarda, y solo después se lee el historial (récords, resumen, héroe): si leer cientos de sesiones con
+  // sus muestras falla o se queda sin memoria, la sesión ya está a salvo.
   try {
-    previas = await H.sesiones();
     const id = await H.guardar(registro);
     if (registro.id == null && id != null) registro.id = id;
   } catch (e) {
@@ -639,6 +654,13 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     return false;
   }
   await borrarSesionEnCurso();
+  if (!recuperada) guardarRegistroSesion(registro.fecha, registro.diagnostico);
+  let previas = null;
+  try {
+    previas = (await H.sesiones()).filter((x) => x.id !== registro.id);
+  } catch (e) {
+    agregarLog(`sesión guardada, pero no se pudo leer el historial: ${e?.name || ''} ${e?.message || e}`);
+  }
   if (registro.ventajaUsada) {
     const inv = inventario();
     guardarPersonaje({ inventario: { ...inv, [registro.ventajaUsada]: Math.max(0, (inv[registro.ventajaUsada] || 0) - 1) } });
@@ -650,6 +672,13 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   const porPulso = E.esfuerzoPorPulso(registro.muestras, fcParaEsfuerzo());
   if (porPulso) Object.assign(registro, { rpe: porPulso.rpe, rpeFuente: 'pulso', rpePct: porPulso.pct });
   if (porPulso) await H.actualizar(registro.id, { rpe: registro.rpe, rpeFuente: registro.rpeFuente, rpePct: registro.rpePct });
+  if (!previas) {
+    // Sin historial no se puede calcular el resumen (récords, juego): la sesión está guardada y su detalle se abre igual.
+    toast('Sesión guardada. El resumen completo estará en tu historial.', 6000);
+    abrirSesion(registro, { ftpAuto });
+    pintarHoy();
+    return true;
+  }
   const recs = E.nuevosRecords(registro, previas);
   if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
@@ -699,6 +728,7 @@ function tic() {
   if (copiaPendiente) { copiaPendiente = false; guardarSesionEnCurso(); }
   if (!Remadora.soportado()) $('#aviso-bt').hidden = !!remadora.demoTimer;
   pintar();
+  numerosPintados();
 }
 
 export function enPausa() {

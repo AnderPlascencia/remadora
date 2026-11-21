@@ -6,7 +6,7 @@ import { arrancarAjustes1, arrancarAjustes2, arrancarAjustes3, pintarPerfil } fr
 import { arrancarPreparar, hayCarrera } from './pantallas/preparar.js';
 import { ajustarNumeros, arrancarVivo1, arrancarVivo2, dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
 import { arrancarRegistro } from './registro.js';
-import { actualizarBotones, arrancarSesion1, arrancarSesion2 } from './pantallas/sesion.js';
+import { activarVersionEnEspera, actualizarBotones, arrancarSesion1, arrancarSesion2 } from './pantallas/sesion.js';
 import { arrancarPlanes1, arrancarPlanes2, llenarSelectorEntrenamientos } from './pantallas/planes.js';
 import { arrancarProgreso, pintarHistorial } from './pantallas/progreso.js';
 import { arrancarHeroe, pintarLineaNivel, precargarRecursos } from './pantallas/heroe.js';
@@ -57,7 +57,12 @@ pintarLineaNivel();
 
 // La versión va en la URL del service worker: es la de src/version.js y cada versión nueva instala uno nuevo.
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register(`sw.js?v=${VERSION}`).then(() => precargarRecursos()).catch(() => {});
+  navigator.serviceWorker.register(`sw.js?v=${VERSION}`).then(() => { precargarRecursos(); activarVersionEnEspera(); }).catch(() => {});
+  // El service worker nuevo pregunta antes de activarse si hay una sesión en curso (si la hay, espera a que termine).
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.tipo === 'sesionEnCurso?') e.ports?.[0]?.postMessage({ enCurso: !!estado.sesion });
+  });
+  navigator.serviceWorker.startMessages?.();
   // Al actualizar, el mensaje anterior llega al service worker viejo, cuya caché borra el nuevo al activarse:
   // se repite cuando el nuevo toma el control para que los paisajes comprados sigan disponibles sin conexión.
   navigator.serviceWorker.addEventListener('controllerchange', () => precargarRecursos());

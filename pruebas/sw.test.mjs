@@ -7,7 +7,9 @@ import vm from 'node:vm';
 const codigo = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const ORIGEN = 'https://app.test/remadora/';
 
-function montar({ red = () => respuesta(200) } = {}) {
+// pantallas: lista de respuestas de cada pantalla abierta a «¿hay sesión en curso?» (true, false o null = no contesta).
+function montar({ red = () => respuesta(200), pantallas = null } = {}) {
+  const activaciones = [];
   const almacenes = new Map();
   const abrir = (n) => {
     if (!almacenes.has(n)) almacenes.set(n, new Map());
@@ -38,9 +40,19 @@ function montar({ red = () => respuesta(200) } = {}) {
       location: { href: `${ORIGEN}sw.js?v=9.9.9`, origin: 'https://app.test' },
       registration: { scope: ORIGEN },
       addEventListener: (t, fn) => { oyentes[t] = fn; },
-      skipWaiting: () => {},
-      clients: { claim: () => {} },
+      skipWaiting: async () => { activaciones.push('skipWaiting'); },
+      clients: {
+        claim: () => {},
+        ...(pantallas ? {
+          matchAll: async () => pantallas.map((enCurso) => ({
+            postMessage: (m, [puerto]) => {
+              if (m.tipo === 'sesionEnCurso?' && enCurso != null) puerto.postMessage({ enCurso });
+            },
+          })),
+        } : {}),
+      },
     },
+    ...(pantallas ? { MessageChannel, setTimeout, clearTimeout } : {}),
   };
   vm.runInNewContext(codigo, ctx);
   const disparar = async (tipo, datos) => {
@@ -52,7 +64,7 @@ function montar({ red = () => respuesta(200) } = {}) {
     return r;
   };
   const guardado = async (url) => (await ctx.caches.open('remadora-9.9.9')).match(url);
-  return { disparar, guardado, almacenes, pedidas };
+  return { disparar, guardado, almacenes, pedidas, activaciones };
 }
 
 function respuesta(status, cuerpo = 'x') {
@@ -135,4 +147,20 @@ test('los paisajes comprados se guardan cuando la app lo pide, y solo imágenes 
   assert.ok(await sw.guardado('assets/carrera/canon.webp'));
   assert.ok(await sw.guardado('assets/carrera/canon_orilla.webp'));
   assert.deepEqual(sw.pedidas.map((u) => u.replace(ORIGEN, '')), ['assets/carrera/canon.webp', 'assets/carrera/canon_orilla.webp']);
+});
+
+test('una versión nueva se activa al instalarse si nadie está remando (también con pantallas viejas que no contestan)', async () => {
+  for (const pantallas of [null, [], [false], [null], [false, null]]) {
+    const { disparar, activaciones } = montar({ pantallas });
+    await disparar('install');
+    assert.deepEqual(activaciones, ['skipWaiting'], JSON.stringify(pantallas));
+  }
+});
+
+test('con una sesión en curso, la versión nueva espera a que la pantalla avise al terminar', async () => {
+  const { disparar, activaciones } = montar({ pantallas: [false, true] });
+  await disparar('install');
+  assert.deepEqual(activaciones, []);
+  await disparar('message', { data: { tipo: 'activar' } });
+  assert.deepEqual(activaciones, ['skipWaiting']);
 });

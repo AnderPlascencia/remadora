@@ -306,3 +306,21 @@ test('esperarResistencia sin datos de potencia (remadora quieta) cuenta 0 paquet
   await avanzar(4100);
   assert.deepEqual(await espera, { ok: false, metricas: 0, visto: null, byte: null });
 });
+
+test('si la consola tarda en contestar, las consultas se saltan en vez de amontonarse en la cola', async () => {
+  const r = await conectada();
+  r.reiniciarEstadisticas();
+  let ahora = 0;
+  r.reloj = () => ahora;
+  // Cada escritura tarda 700 ms: sin contrapresión, en 2 s se encolaban 10 consultas y el retraso crecía sin fin.
+  disp.escritura.writeValueWithResponse = function (bytes) {
+    return new Promise((ok) => setTimeout(() => { ahora += 700; this.escritos.push(bytesAHex(bytes)); ok(); }, 700));
+  };
+  await avanzar(2000);
+  assert.ok(r.estadisticas.colaMax <= 1, `cola máxima ${r.estadisticas.colaMax}`);
+  assert.ok(r.estadisticas.saltadas >= 5, `saltadas ${r.estadisticas.saltadas}`);
+  assert.ok(r.estadisticas.lentas >= 2, `lentas ${r.estadisticas.lentas}`);
+  assert.ok(logs.some((l) => /escritura lenta: \d+ ms/.test(l)));
+  // Y los paquetes no van al registro de texto: van al búfer binario del diagnóstico.
+  assert.ok(!logs.some((l) => / >> | << /.test(l)));
+});

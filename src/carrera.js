@@ -2,6 +2,7 @@
 // Los datos llegan una vez por segundo; entre lecturas se interpola para que todo se mueva fluido
 // a la frecuencia de pantalla. Los remos se animan al ritmo de golpes por minuto de cada bote.
 import { distanciaEn } from './estadisticas.js';
+import { cuadroPintado } from './diagnostico.js';
 import { PIEZAS, velaDeRival } from './coleccion-bote.js';
 import { pintarTela, pintarIcono } from './emblemas.js';
 
@@ -469,7 +470,9 @@ function cuadro(ahora) {
     alguna = true;
     // Un cuadro que se salta por el límite de fps no cuenta como «sin vista realista»: el clip sigue.
     if (!tocaPintar(c, ahora)) { if (c.modo === 'real') realEsperando = true; continue; }
-    medirCuadro(c.densidad, c.modo, c.ultimoPintado ? ahora - c.ultimoPintado : 0);
+    const intervalo = c.ultimoPintado ? ahora - c.ultimoPintado : 0;
+    medirCuadro(c.densidad, c.modo, intervalo);
+    cuadroPintado(c.modo, intervalo);
     c.ultimoPintado = ahora;
     pintarCarrera(c, ahora);
   }

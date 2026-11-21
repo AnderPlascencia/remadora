@@ -4,7 +4,7 @@
 const VERSION = `remadora-${new URL(self.location.href).searchParams.get('v') || 'dev'}`;
 const ARCHIVOS = ['./', 'index.html', 'src/estilos.css', 'src/app.js', 'src/estado.js', 'src/navegacion.js', 'src/registro.js', 'src/pantallas/ajustes.js', 'src/pantallas/preparar.js', 'src/pantallas/vivo.js', 'src/pantallas/sesion.js', 'src/pantallas/planes.js', 'src/pantallas/progreso.js', 'src/pantallas/heroe.js', 'src/pantallas/detalle.js', 'src/pantallas/programa.js', 'src/pantallas/inicio.js', 'src/pantallas/ayuda.js',
   'src/remadora.js', 'src/protocolo.js', 'src/variantes.js',
-  'src/grafica.js', 'src/db.js', 'src/historial.js', 'src/entrenamientos.js', 'src/estadisticas.js', 'src/voz.js', 'src/guion-voz.js', 'src/voz-juego.js', 'src/voces-clase.js', 'src/programa.js', 'src/fantasma.js', 'src/carrera.js', 'src/efectos.js', 'src/juego.js', 'src/xp-carga.js', 'src/talentos.js', 'src/tecnica.js', 'src/coleccion-bote.js', 'src/emblemas.js', 'src/ventajas.js', 'src/intensidad.js', 'src/habilidades.js', 'src/sagas.js', 'src/maestria.js', 'src/base.js', 'src/objetos.js', 'src/consejos.js', 'src/capacidades.js', 'src/adaptacion.js', 'src/pulso.js', 'src/perfil.js', 'src/guia.js', 'src/ui.js', 'src/ajustes-guardados.js', 'src/respaldo.js', 'src/reloj.js', 'src/version.js', 'manifest.webmanifest', 'assets/marca/rower-logo.svg', 'assets/marca/rower-marca.svg', 'assets/marca/rower-marca-clara.svg', 'assets/marca/rower-192.png', 'assets/marca/rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
+  'src/grafica.js', 'src/db.js', 'src/historial.js', 'src/entrenamientos.js', 'src/estadisticas.js', 'src/voz.js', 'src/guion-voz.js', 'src/voz-juego.js', 'src/voces-clase.js', 'src/programa.js', 'src/fantasma.js', 'src/carrera.js', 'src/efectos.js', 'src/juego.js', 'src/xp-carga.js', 'src/talentos.js', 'src/tecnica.js', 'src/coleccion-bote.js', 'src/emblemas.js', 'src/ventajas.js', 'src/intensidad.js', 'src/habilidades.js', 'src/sagas.js', 'src/maestria.js', 'src/base.js', 'src/objetos.js', 'src/consejos.js', 'src/capacidades.js', 'src/adaptacion.js', 'src/pulso.js', 'src/perfil.js', 'src/guia.js', 'src/ui.js', 'src/ajustes-guardados.js', 'src/respaldo.js', 'src/reloj.js', 'src/diagnostico.js', 'src/version.js', 'manifest.webmanifest', 'assets/marca/rower-logo.svg', 'assets/marca/rower-marca.svg', 'assets/marca/rower-marca-clara.svg', 'assets/marca/rower-192.png', 'assets/marca/rower-512.png', 'assets/fuentes/barlow-condensed-600.woff2', 'assets/fuentes/barlow-condensed-700.woff2'];
 
 // Ilustraciones de los héroes (5 clases × 9 rangos, figura y retrato): ~1.7 MB. Se guardan aparte para que,
 // si alguna falla, la app igual quede instalada; así los rangos que aún no has visto también salen sin conexión.
@@ -39,11 +39,30 @@ async function guardarEnCache(peticion, respuesta) {
   await c.put(peticion, respuesta);
 }
 
+// ¿Alguna pantalla abierta tiene una sesión en curso? Se pregunta a cada una por un canal propio; la que no contesta en
+// 1,5 s (una versión anterior de la app, que no sabe contestar) cuenta como libre.
+async function sesionEnCurso() {
+  if (typeof self.clients.matchAll !== 'function' || typeof MessageChannel !== 'function') return false;
+  const pantallas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  const respuestas = pantallas.map((p) => new Promise((resolver) => {
+    const canal = new MessageChannel();
+    const fin = (enCurso) => { clearTimeout(tope); canal.port1.close(); resolver(enCurso); };
+    const tope = setTimeout(() => fin(false), 1500);
+    canal.port1.onmessage = (m) => fin(!!m.data?.enCurso);
+    try { p.postMessage({ tipo: 'sesionEnCurso?' }, [canal.port2]); } catch { fin(false); }
+  }));
+  return (await Promise.all(respuestas)).some(Boolean);
+}
+
+// Una versión nueva no se activa a mitad de una sesión: al activarse borra la caché vieja, y la pantalla abierta (con
+// el código viejo) se quedaría sin los paisajes y las imágenes que pida después. Espera a que la pantalla avise al
+// terminar la sesión ({ tipo: 'activar' }), o a que se cierre la app.
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION)
     .then((c) => c.addAll(ARCHIVOS.map((a) => new Request(a, { cache: 'reload' })))
       .then(() => Promise.all([...HEROES, ...PAISAJE, ...Object.values(VOCES).flat()].map((a) => c.add(a).catch(() => {})))))
-    .then(() => self.skipWaiting()));
+    .then(() => sesionEnCurso())
+    .then((ocupada) => (ocupada ? undefined : self.skipWaiting())));
 });
 
 self.addEventListener('activate', (e) => {
@@ -56,6 +75,7 @@ self.addEventListener('activate', (e) => {
 // tienes, para verlos sin conexión. Solo se aceptan imágenes de assets/carrera/.
 const IMAGEN_CARRERA = /^assets\/carrera\/[\w-]+\.webp$/;
 self.addEventListener('message', (e) => {
+  if (e.data?.tipo === 'activar') { e.waitUntil(self.skipWaiting()); return; }
   if (e.data?.tipo !== 'precargar') return;
   const archivos = Array.isArray(e.data.archivos) ? e.data.archivos.filter((a) => typeof a === 'string' && IMAGEN_CARRERA.test(a)) : [];
   const lista = [...new Set([...(VIDEOS[e.data.clase] || []), ...archivos])];
