@@ -18,6 +18,7 @@ import {
   $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, escaparHtml, fcMaxima, fcRef, ftp, ico, miles, reajustarTextos, toast, vibrar,
 } from '../ui.js';
 import { estado } from '../estado.js';
+import { numerosPintados } from '../diagnostico.js';
 import { vistaActiva } from '../navegacion.js';
 import { avanzado, selVistaRemo, textoZona } from './ajustes.js';
 import { hayCarrera, pintarSelVentaja, prepararPronto, srcRetratoRango } from './preparar.js';
@@ -331,6 +332,22 @@ export function pintar() {
   if (vistaActiva('entrenar')) dibujarVivo();
   if (!$('#modo-remo').hidden && vistaGrafica()) pintarGraficaRemo(t);
   ajustarNumeros();
+}
+
+// Al llegar un dato de la consola: watts, split y golpes en el siguiente cuadro, sin esperar al tic de cada segundo
+// (que sigue contando el tiempo, grabando y pintando lo demás). Varios datos en el mismo cuadro se pintan una vez.
+let cuadroVivo = 0;
+export function pintarAlLlegar() {
+  if (cuadroVivo || typeof requestAnimationFrame !== 'function') return;
+  cuadroVivo = requestAnimationFrame(() => {
+    cuadroVivo = 0;
+    $('#m-watts').textContent = actual.watts;
+    $('#mr-watts').textContent = actual.watts;
+    cambiarTexto($('#m-split'), formatoSplit(actual.split));
+    cambiarTexto($('#mr-split'), formatoSplit(actual.split));
+    $('#m-spm').textContent = actual.spm;
+    numerosPintados();
+  });
 }
 
 // Casillas con números que crecen a lo largo de la sesión: se achican si ya no caben.

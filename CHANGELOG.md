@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.80.0 · 2026-11-21
+
+El sensor, más fiable: los números llegan antes y un corte de la consola ya no deja la sesión colgada.
+
+- Los watts, el split y los golpes se pintan en cuanto llega el dato de la consola, no en el siguiente tic de cada segundo (hasta 1 s menos de retraso visible).
+- Vigilante: si la consola deja de mandar datos 4 s mientras remas con el Bluetooth aún conectado, la app dice «La consola no responde», fuerza la desconexión y reconecta sola. Antes esperaba un aviso de Chrome que, con la consola colgada, podía no llegar.
+- Con una sesión en marcha la reconexión ya no se rinde a los 5 intentos (unos 15 s): sigue con una espera que crece hasta 5 s. Sin sesión, sigue rindiéndose a los 5. Cada intento de conexión tiene un límite de 10 s.
+- La banda de pulso también reconecta sola si se corta, con las mismas reglas. Mientras tanto el pulso marca 0.
+- El modo remo vuelve a empezar apagado (decisión de Ander): se abre con su botón o con el ajuste «Abrir modo remo al iniciar sesión».
+- Pruebas que reproducen sesiones grabadas de la consola con su ritmo real (`pruebas/grabaciones`). Por ahora hay una sintética con un corte; las reales de la RW200 se añaden copiando el registro de Ajustes › Diagnóstico.
+
 ## 0.79.0 · 2026-11-21
 
 Los números se leen remando, a 1,5 m del teléfono y en pleno esfuerzo.

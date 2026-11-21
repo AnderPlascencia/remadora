@@ -1,16 +1,17 @@
-// Leer los números remando (0.79): modo remo por defecto, watts de 64 px o más en todas sus vistas y avisos en cola.
+// Leer los números remando (0.79): watts de 64 px o más en todas sus vistas y avisos en cola.
 import { test, expect, abrirApp, completarBienvenida, avanzar, avisos } from './ayuda.mjs';
 
 const tamWatts = (page) => page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('#mr-watts')).fontSize));
 
 for (const [nombre, vp] of [['vertical', { width: 412, height: 839 }], ['horizontal', { width: 839, height: 412 }]]) {
-  test(`${nombre}: el modo remo se abre al empezar y los watts nunca bajan de 64 px`, async ({ page }) => {
-    // Sin el ajuste de las pruebas: el valor por defecto de la app.
-    await page.addInitScript(() => { if (!sessionStorage.getItem('ya')) { sessionStorage.setItem('ya', '1'); localStorage.removeItem('modoAuto'); } });
+  test(`${nombre}: el modo remo empieza apagado y sus watts nunca bajan de 64 px`, async ({ page }) => {
     await page.setViewportSize(vp);
     await abrirApp(page);
     await completarBienvenida(page);
     await page.locator('#btn-grabar').click();
+    // Decisión de Ander: el modo remo no se abre solo; se abre con su botón.
+    await expect(page.locator('#modo-remo')).toBeHidden();
+    await page.locator('#btn-modo-remo').click();
     await expect(page.locator('#modo-remo')).toBeVisible();
     await avanzar(page, 3_000);
     for (const vista of ['numeros', 'grafica', 'carrera']) {

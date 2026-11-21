@@ -63,7 +63,7 @@ export function arrancarAjustes1() {
   });
   interruptor('#in-voz', 'voz', true, (v) => { configurarVoz(v); if (v) hablar('Avisos por voz activados'); });
   campoSelect('#sel-cantidad-voz', 'cantidadVoz', 'completa', () => configurarCantidad(ajustes.leer('cantidadVoz', 'completa')));
-  interruptor('#in-modo-auto', 'modoAuto', true);
+  interruptor('#in-modo-auto', 'modoAuto', false);
   interruptor('#in-pausa-auto', 'pausaAuto', true);
   interruptor('#in-atr-vivo', 'atrVivo', true);
   interruptor('#in-res-auto', 'resAuto', false);

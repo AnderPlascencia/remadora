@@ -25,7 +25,7 @@ import { actualizarFcMax, repararSesiones, ritmoObjetivo, selVariante } from './
 import { fcMax5s } from '../pulso.js';
 import { crearReferencias, crearRivales, estimarFtp, ftpAutomatico, hayCarrera, pintarChips } from './preparar.js';
 import {
-  abrirModoRemo, carreraActual, carreraEnt, carreraRemo, cerrarModoRemo, dibujarVivo, duracionCarrera, modoEnt, pintar, pintarModoEnt, retratoPropio, velocidadReciente, vigilarTipoSesion, vistaPrevia,
+  abrirModoRemo, carreraActual, carreraEnt, carreraRemo, cerrarModoRemo, dibujarVivo, duracionCarrera, modoEnt, pintar, pintarAlLlegar, pintarModoEnt, retratoPropio, velocidadReciente, vigilarTipoSesion, vistaPrevia,
 } from './vivo.js';
 import { agregarLog, guardarRegistroSesion } from '../registro.js';
 import { datoRecibido, fijarFuenteBle, numerosPintados, reiniciarDiagnostico, resumenDiagnostico } from '../diagnostico.js';
@@ -56,6 +56,10 @@ export function arrancarSesion1() {
   }
 
   remadora.addEventListener('log', (e) => agregarLog(e.detail));
+  banda.addEventListener('log', (e) => agregarLog(e.detail));
+  // Con una sesión en marcha, la remadora y la banda reconectan sin rendirse.
+  remadora.debeMantener = () => !!estado.sesion;
+  banda.debeMantener = () => !!estado.sesion;
   fijarFuenteBle(() => remadora.estadisticas);
   remadora.addEventListener('estado', (e) => {
     const texto = e.detail;
@@ -70,6 +74,7 @@ export function arrancarSesion1() {
     // El aviso de Bluetooth sobra mientras se usa el modo demo.
     if (!Remadora.soportado()) $('#aviso-bt').hidden = !!remadora.demoTimer;
     if (estado.sesion) {
+      if (texto === 'La consola no responde') hablar('La consola no responde, reconectando', { clave: 'reconectando', cadaSeg: 30 });
       if (texto.startsWith('Reconectando')) hablar('Conexión perdida, reconectando', { clave: 'reconectando', cadaSeg: 30 });
       if (texto === 'Conectada' && estado.sesion.perdida) { hablar('Reconectada'); toast('Reconectada: la sesión sigue', 3000, 'seguridad'); }
       estado.sesion.perdida = !conectada;
@@ -88,6 +93,8 @@ export function arrancarSesion1() {
       // En modo demo, sin banda conectada, simula el pulso para poder probar las zonas.
       if (remadora.demoTimer && !bandaConectada) actual.fc = Math.round(actual.fc ? actual.fc + (Math.min(190, 95 + d.watts / 3) - actual.fc) * 0.05 : 100);
     }
+    // Los números grandes se pintan en el siguiente cuadro, no en el siguiente tic (hasta 1 s antes).
+    pintarAlLlegar();
   });
   // Un pulso fuera de 30–240 lpm es un error de lectura de la banda: se ignora. Un 0 (sin contacto o
   // desconectada) borra el pulso, para no seguir guardando el último valor como si fuera real.
@@ -422,7 +429,7 @@ async function iniciarSesion(reanudar = null) {
     hablar(`Comienza ${estado.entrenamientoActivo.nombre}${contra}.${prop ? ` ${prop}` : ''}`);
   } else hablar(`Sesión iniciada${contra}`);
   if (!reanudar) prepararVozJuego(estado.sesion);
-  if (ajustes.si('modoAuto', true)) abrirModoRemo();
+  if (ajustes.si('modoAuto', false)) abrirModoRemo();
   pintar();
   // En horizontal la carrera no cabe junto a los botones: se lleva a la vista al empezar.
   if (hayCarrera() && matchMedia('(orientation: landscape) and (max-height: 520px)').matches) {
