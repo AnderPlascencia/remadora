@@ -3,6 +3,7 @@ export const estado = {
   escalaTrip: null, // puestos de la tripulación ya calculados (pintarClasificacion)
   tVivo: 0,
   sesion: null,
+  guardando: false, // la sesión que terminó se está guardando (pantallas/sesion.js)
   entrenamientoPrevio: null,
   entrenamientoActivo: null,
   baseActual: [],

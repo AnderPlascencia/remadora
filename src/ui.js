@@ -67,13 +67,41 @@ export function cambiarTexto(el, texto) {
   el.classList.add('cambia');
 }
 
+// Cola de avisos: se ve uno a la vez y ninguno se pierde. El que llega espera a que el actual lleve al menos
+// TOAST_MIN en pantalla (antes lo pisaba al instante) y la cola va por prioridad: seguridad (conexión, guardar),
+// sesión, normal y juego. Un aviso de seguridad no espera. El mismo texto no se repite mientras está o espera.
+export const PRIORIDAD_AVISO = { seguridad: 0, sesion: 1, normal: 2, juego: 3 };
+export const TOAST_MIN = 1500;
+const colaAvisos = [];
+let avisoActual = null;
 let toastTimer = null;
-export function toast(texto, ms = 3000) {
+let siguienteTimer = null;
+function mostrarAviso(a) {
   const t = $('#toast');
-  t.textContent = texto;
+  t.textContent = a.texto;
   t.hidden = false;
+  avisoActual = { ...a, desde: Date.now() };
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+  clearTimeout(siguienteTimer);
+  toastTimer = setTimeout(() => {
+    t.hidden = true;
+    avisoActual = null;
+    if (colaAvisos.length) mostrarAviso(colaAvisos.shift());
+  }, a.ms);
+  if (colaAvisos.length) programarSiguiente();
+}
+function programarSiguiente() {
+  clearTimeout(siguienteTimer);
+  const espera = Math.max(0, avisoActual.desde + TOAST_MIN - Date.now());
+  siguienteTimer = setTimeout(() => { if (colaAvisos.length) mostrarAviso(colaAvisos.shift()); }, espera);
+}
+export function toast(texto, ms = 3000, prioridad = 'normal') {
+  if (avisoActual?.texto === texto || colaAvisos.some((a) => a.texto === texto)) return;
+  const a = { texto, ms, p: PRIORIDAD_AVISO[prioridad] ?? PRIORIDAD_AVISO.normal };
+  if (!avisoActual || a.p === 0) { mostrarAviso(a); return; }
+  const i = colaAvisos.findIndex((x) => x.p > a.p);
+  colaAvisos.splice(i < 0 ? colaAvisos.length : i, 0, a);
+  programarSiguiente();
 }
 
 export const fechaCorta = (ms) => new Date(ms).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });

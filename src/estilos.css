@@ -2047,3 +2047,32 @@ details.mas-detalle[hidden] { display: none; }
 #heroe-recomienda:empty { display: none; }
 /* Atributo aún sin entrenar: en lugar de un 0, el texto y el botón a la vista (etapa 5). */
 .atr-valor .atr-sin { font-size: var(--t-s); font-weight: 700; color: var(--texto-suave); }
+
+/* ---------- 0.79: leer los números remando ----------
+   Los watts nunca bajan de 64 px en ninguna vista del modo remo (antes, 24 px en la carrera). En la carrera en
+   vertical, la franja de abajo queda en dos casillas: watts grandes a la izquierda y split con golpes a la derecha;
+   el lago se encoge un poco. Lo que se lee remando va a 7:1 o más y los avisos salen arriba, sobre la cabecera. */
+.modo-remo.vista-carrera { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.modo-remo.vista-carrera .mr-principal { justify-content: center; padding: 2px 10px 4px; }
+.modo-remo.vista-carrera .mr-watts { font-size: clamp(64px, 18vw, 80px); line-height: .95; }
+.modo-remo.vista-carrera .mr-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 5px; }
+.modo-remo.vista-carrera .mr-grid > div { display: none; }
+.modo-remo.vista-carrera .mr-grid > div:nth-child(-n+2) { display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; }
+.modo-remo.vista-carrera .mr-grid > div:nth-child(1) .mr-valor { font-size: 40px; }
+.modo-remo.vista-carrera .mr-grid > div:nth-child(2) .mr-valor { font-size: var(--t-2xl); }
+.modo-remo.vista-carrera .mr-grid .mr-fin-c { display: none; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .modo-remo.vista-carrera { grid-template-columns: minmax(0, 1fr) clamp(236px, 31vw, 290px); }
+  .modo-remo.vista-carrera .mr-principal { flex-direction: row; align-items: baseline; justify-content: space-between; }
+  .modo-remo.vista-carrera .mr-watts { font-size: clamp(64px, 18vh, 80px); }
+  .modo-remo.vista-carrera .mr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; }
+  .modo-remo.vista-carrera .mr-grid > div:nth-child(-n+2) { flex-direction: column; align-items: flex-start; }
+  .modo-remo.vista-carrera .mr-grid > div:nth-child(1) .mr-valor { font-size: clamp(28px, 9vh, 40px); }
+  .modo-remo.vista-carrera .mr-grid > div:nth-child(2) .mr-valor { font-size: clamp(24px, 7.5vh, 32px); }
+  .modo-remo.vista-grafica:not(.vista-carrera) .mr-watts { font-size: 64px; }
+}
+/* 7:1 en el tema oscuro: etiquetas y textos secundarios del modo remo más claros, Terminar en un rojo más hondo. */
+:root:not([data-tema]) .modo-remo { --texto-tenue: #A9B8BF; --texto-suave: #D3DCE0; }
+:root:not([data-tema]) .modo-remo .boton.peligro.lleno { background: #B91C1C; border-color: #B91C1C; }
+/* Los avisos, en el modo remo, arriba: tapan la cabecera un momento y nunca los números. */
+body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-top)); bottom: auto; }
