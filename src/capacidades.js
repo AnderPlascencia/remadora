@@ -286,6 +286,16 @@ export function curvasComparadas(sesiones, ahora = Date.now()) {
   };
 }
 
+// Split de la meta de un entrenamiento escrito en split: el que guarda el plan, o (en los guardados antes) el que
+// sale de su calentamiento, que en los planes hacia una meta va de +32 a +45 s sobre la meta.
+export const SPLIT_CAL_META = [32, 45];
+export function splitMetaDe(ent) {
+  if (ent?.splitMeta > 0) return ent.splitMeta;
+  const [a, b] = SPLIT_CAL_META;
+  const cal = (ent?.bloques || []).find((x) => x.metrica === 'split' && x.nombre === 'Calentamiento' && x.min > 0 && x.max - x.min === b - a);
+  return cal ? cal.min - a : null;
+}
+
 // Tipo de un entrenamiento antes de remarlo (para elegir qué datos mostrar en el modo remo).
 // null = remo libre o sin meta clara: se usa la pantalla de siempre.
 export function tipoPlan(ent) {
@@ -295,6 +305,16 @@ export function tipoPlan(ent) {
   const trabajo = (ent.bloques || []).filter((b) => b.metrica && !/calentamiento|enfriamiento|descanso/i.test(b.nombre || ''));
   if (trabajo.some((b) => b.metrica === 'spm') || ent.enfoque === 'tecnica') return 'tecnica';
   const pct = Math.max(0, ...trabajo.filter((b) => b.metrica === 'ftp').map((b) => b.max));
+  // Bloques en split (los planes hacia una meta): se comparan con el split de la meta. A ritmo de meta o más
+  // rápido son series (vo2); a menos de 12 s más lento, umbral; más lento, fondo.
+  const enSplit = trabajo.filter((b) => b.metrica === 'split' && b.min > 0);
+  if (!pct && enSplit.length) {
+    const meta = splitMetaDe(ent);
+    if (meta) {
+      const dif = Math.min(...enSplit.map((b) => (b.min + b.max) / 2)) - meta;
+      return dif <= 3 ? 'vo2' : dif < 12 ? 'umbral' : 'fondo';
+    }
+  }
   if (pct > 120) return 'sprint';
   if (pct > 105) return 'vo2';
   if (pct > 90) return 'umbral';

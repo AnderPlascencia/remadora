@@ -338,6 +338,21 @@ export function conCalentamiento(bloques, calMin, enfMin) {
   return res;
 }
 
+// Antes de una sesión dura o de una prueba van al menos 5 min de calentamiento (como para las habilidades del juego).
+// Si el entrenamiento no los trae, o los trae más cortos, se añade al principio un calentamiento progresivo hasta
+// completarlos, y la voz explica por qué. Los bloques por distancia no cuentan (no se sabe cuánto duran).
+export const CALENTAMIENTO_MIN = 300;
+export const CONSEJO_CALENTAMIENTO = 'Antes de lo fuerte, 5 minutos subiendo poco a poco: la primera serie sale mejor y sin tirones';
+export function conCalentamientoMinimo(bloques, dura) {
+  if (!dura || !bloques?.length) return bloques;
+  const i = bloques.findIndex(esBloqueTrabajo);
+  if (i < 0) return bloques;
+  const antes = bloques.slice(0, i).reduce((a, b) => a + (finDe(b) === 'tiempo' ? b.duracion || 0 : 0), 0);
+  if (antes >= CALENTAMIENTO_MIN) return bloques;
+  const falta = Math.ceil((CALENTAMIENTO_MIN - antes) / 60) * 60;
+  return [{ nombre: 'Calentamiento progresivo', duracion: falta, metrica: 'ftp', min: 50, max: 65, guiado: true, consejo: CONSEJO_CALENTAMIENTO }, ...bloques];
+}
+
 // Predicción de tiempos con la ley de Paul: el split sube 5 s cada vez que la distancia se duplica.
 export const DISTANCIAS_PREDICCION = [500, 1000, 2000, 5000, 6000, 10000, 21097];
 export function predecir(metros, segundos, destino) {

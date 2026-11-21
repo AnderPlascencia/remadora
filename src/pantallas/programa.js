@@ -354,6 +354,7 @@ export function arrancarPrograma() {
     pintarHoy();
   });
   $('#pm-dist').addEventListener('change', pintarPlanMeta);
+  $('#pm-semanas').addEventListener('change', pintarPlanMeta);
 
   $('#btn-crear-programa').addEventListener('click', async () => {
     const semanas = Number($('#p-semanas').value);
@@ -397,25 +398,18 @@ export function arrancarPrograma() {
   });
 }
 
-// Plan automático: sugiere la meta a partir de tu mejor marca y predicción en esa distancia.
+// Plan automático: sugiere la meta desde tu marca reciente (o tu predicción más fiable) y lo que puedes mejorar
+// según cuánto remas y las semanas del plan.
 async function pintarPlanMeta() {
   const dist = Number($('#pm-dist').value);
+  const semanas = Math.round(Number($('#pm-semanas').value)) || 8;
   if (!$('#pm-inicio').value) $('#pm-inicio').value = E.claveDia(Date.now());
-  const sesiones = await H.sesiones();
-  let mejor = null;
-  for (const s of sesiones) {
-    for (const d of [dist, ...Ent.DISTANCIAS_PREDICCION]) {
-      const t = s.muestras?.length ? E.mejorTiempo(s.muestras, d) : null;
-      if (t) {
-        const pred = d === dist ? t : Ent.predecir(d, t, dist);
-        if (!mejor || pred < mejor.t) mejor = { t: pred, real: d === dist };
-      }
-    }
-  }
-  $('#pm-info').textContent = mejor
-    ? `${mejor.real ? 'Tu mejor' : 'Tu predicción para'} ${miles(dist)} m: ${Ent.formatoMmss(mejor.t)}. Una meta realista en 8 semanas: ${Ent.formatoMmss(Math.round(mejor.t * 0.96))}.`
+  const sug = P.sugerirMeta(await H.sesiones(), dist, semanas);
+  const pct = sug ? String(Math.round(sug.mejora * 1000) / 10).replace('.', ',') : '';
+  $('#pm-info').textContent = sug
+    ? `${sug.real ? 'Tu mejor' : `Tu predicción (desde tus ${miles(sug.desde)} m) para`} ${miles(dist)} m: ${Ent.formatoMmss(sug.t)}. Una meta realista en ${semanas} semanas: ${Ent.formatoMmss(sug.meta)} (un ${pct} % mejor${sug.nivel === 'inicio' ? ', al empezar se mejora rápido' : ''}).`
     : 'Aún no hay sesiones para sugerirte una meta: elige una que te rete.';
-  $('#pm-tiempo').placeholder = mejor ? Ent.formatoMmss(Math.round(mejor.t * 0.96)) : '8:00';
+  $('#pm-tiempo').placeholder = sug ? Ent.formatoMmss(sug.meta) : '8:00';
 }
 async function crearPlanMeta() {
   const distancia = Number($('#pm-dist').value);

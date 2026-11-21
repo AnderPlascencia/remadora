@@ -309,7 +309,7 @@ async function iniciarSesion(reanudar = null) {
   const intervalos = estado.entrenamientoActivo && Ent.tipoDe(estado.entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
   const plan = reanudar ? reanudar.plan || null
-    : intervalos ? Ent.normalizarBloques(Ent.conCalentamiento(estado.entrenamientoActivo.bloques, calMin, enfMin), ftpDelPlan(estado.entrenamientoActivo), fcRef()) : null;
+    : intervalos ? Ent.normalizarBloques(Ent.conCalentamientoMinimo(Ent.conCalentamiento(estado.entrenamientoActivo.bloques, calMin, enfMin), P.esDura(estado.entrenamientoActivo)), ftpDelPlan(estado.entrenamientoActivo), fcRef()) : null;
   $('#perfil-vivo').hidden = !plan;
   if (plan) $('#vivo-leyenda').innerHTML = leyendaPerfil(estado.entrenamientoActivo.bloques, true);
   const rivales = reanudar ? [] : await crearRivales(estado.entrenamientoActivo);
