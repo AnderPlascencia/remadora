@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.74.0 · 2026-11-21
+
+La carrera, más fluida en teléfonos de pantalla muy densa.
+
+- La carrera 2D y 3D pinta como mucho a densidad 2 (la realista ya iba a 1,5), igual que las gráficas. En un teléfono de densidad 4, como el CPH2653, pintaba 4 veces más píxeles que a densidad 2 y rendía la mitad, sin que se note la diferencia a la distancia de la remadora.
+- Si aun así el teléfono no llega, la densidad baja sola por escalones (2, 1,5 y 1,25) cuando dos tercios de 60 cuadros seguidos van lentos, y vuelve al máximo al cambiar de vista.
+- Las variantes de color de los paisajes (invierno, atardecer, tormenta, luna, aurora y dorada) ya no aplican su filtro en cada cuadro y a cada pieza de la orilla: la imagen se colorea una vez y se dibuja la copia.
+- Pruebas: la de cuadros por segundo y una nueva de densidad corren también con la pantalla del CPH2653 (densidad 4), y el presupuesto de la primera carga mide los bytes comprimidos, como los sirve GitHub Pages (436 KB; tope 520 KB, con topes para JS, CSS y HTML).
+
 ## 0.73.4 · 2026-11-20
 
 El polinesio completo, con ilustraciones nuevas.

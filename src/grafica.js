@@ -21,7 +21,12 @@ export function token(nombre, defecto = '') {
 }
 export function olvidarTokens() { tokens.clear(); }
 
-export function ajustarLienzo(canvas, ancho, alto, dpr = window.devicePixelRatio || 1) {
+// Densidad de píxeles de las gráficas: como mucho 2. En un teléfono de densidad 4 (1440 px de ancho) pintar a 4×
+// cuesta el cuádruple que a 2× y a la distancia de la remadora no se nota la diferencia.
+export const DPR_MAX_GRAFICA = 2;
+export const densidad = () => Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, DPR_MAX_GRAFICA);
+
+export function ajustarLienzo(canvas, ancho, alto, dpr = densidad()) {
   const w = Math.round(ancho * dpr);
   const h = Math.round(alto * dpr);
   if (canvas.width === w && canvas.height === h) return false;
@@ -56,7 +61,7 @@ export function marco(series, opciones = {}) {
 const MARGEN = { izq: 40, der: 40, arr: 10, aba: 22 };
 
 export function dibujar(canvas, series, opciones = {}) {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = densidad();
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   ajustarLienzo(canvas, ancho, alto, dpr);
@@ -187,7 +192,7 @@ export function crearGraficaVivo() {
     const ultimo = Math.max(0, ...series.map((s) => s.puntos.at(-1)?.[0] ?? 0));
     const rango = ventanaVivo(ultimo, opciones.ventana || 300);
     const op = { ...opciones, rango };
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = densidad();
     const { escalas } = marco(series, op);
     const firma = JSON.stringify([canvas.clientWidth, canvas.clientHeight, dpr, rango, escalas, op.metas || [],
       series.map((s) => [s.color, s.eje]), token('--texto-suave'), token('--rejilla')]);
@@ -225,7 +230,7 @@ export function crearGraficaVivo() {
 // eje Y = watts. Cada intervalo con meta de potencia pinta su rango en verde y el resto en rojo.
 // puntos: [[t, watts], ...] de la sesión (opcional); ahora: segundo actual (opcional).
 export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = densidad();
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return;
@@ -338,7 +343,7 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
 
 // Barras simples con etiqueta debajo y valor encima. datos: [{ etiqueta, valor, resaltar }]
 export function dibujarBarras(canvas, datos, { color = '#F2A33A', formato = (v) => v } = {}) {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = densidad();
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return;
@@ -374,7 +379,7 @@ export function dibujarBarras(canvas, datos, { color = '#F2A33A', formato = (v) 
 // Avance hacia una meta: acumulado contra tiempo, línea de meta y proyección punteada al ritmo actual.
 // puntos: [[t, acumulado], ...]; estimadoFin: segundo en que se llegaría a la meta (o null).
 export function dibujarAvance(canvas, puntos, meta, estimadoFin = null) {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = densidad();
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return;
