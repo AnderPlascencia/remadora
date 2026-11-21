@@ -429,7 +429,10 @@ export const segTrabajo = (e) => (e?.bloques?.length
 // ctx = { kcalHabitual: kcal de una sesión normal, kcalSemana: kcal de una semana normal, sinHistorial,
 //         minutosMax: tope de minutos por sesión (de tu perfil) }
 // meta = { distancia, segundos }: plan hacia una marca (planPorMeta), con sus sesiones en split.
+// ctx.diasSemana: tus días de remo (0 = lunes, etapa 13); si no cuadran con `dias`, los de DIAS_PLAN.
 export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas = 6, inicio, ctx = {}, meta = null }) {
+  const misDias = Array.isArray(ctx?.diasSemana) && ctx.diasSemana.length === dias && new Set(ctx.diasSemana).size === dias
+    && ctx.diasSemana.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) ? [...ctx.diasSemana].sort((a, b) => a - b) : DIAS_PLAN[dias];
   const split = meta ? Math.round((meta.segundos * 500) / meta.distancia) : null;
   const obj = meta ? { clave: 'meta', prueba: 'meta' } : objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
   const pruebaDe = () => (meta
@@ -557,16 +560,16 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     if (!descarga && !conPrueba) { previo = { total: trabajoDe(semana), intenso: Math.max(intensoDe(semana), intensoUlt), esfuerzo: esfuerzoDe(semana) }; intensoUlt = intensoDe(semana); pPrevio = p; }
     const lista = semana.map(agregar);
     const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
-    const orden = ordenarSemana(lista, DIAS_PLAN[dias], buscar, domingoDuro);
-    domingoDuro = DIAS_PLAN[dias].at(-1) === 6 && esDura(buscar(orden.at(-1)));
+    const orden = ordenarSemana(lista, misDias, buscar, domingoDuro);
+    domingoDuro = misDias.at(-1) === 6 && esDura(buscar(orden.at(-1)));
     return orden;
   });
   if (meta) {
-    const programa = desdePlantilla({ nombre: `Meta: ${meta.distancia} m en ${mm(meta.segundos)}`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
+    const programa = desdePlantilla({ nombre: `Meta: ${meta.distancia} m en ${mm(meta.segundos)}`, semanas: semanasPlan, diasSemana: misDias }, inicio);
     Object.assign(programa, { conDescarga: true, meta: { distancia: meta.distancia, segundos: meta.segundos }, porSemana: dias, nivel });
     return { programa, entrenamientos, split };
   }
-  const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: DIAS_PLAN[dias] }, inicio);
+  const programa = desdePlantilla({ nombre: `Plan de ${obj.tema} · ${semanas} semanas`, semanas: semanasPlan, diasSemana: misDias }, inicio);
   // Lo elegido queda en el plan: sirve para armar el siguiente y para ajustarlo cuando haya historial.
   Object.assign(programa, { objetivo: obj.clave, nivel, porSemana: dias, semanas, sinHistorial: !!ctx?.sinHistorial, ...(tope ? { minutosMax: ctx.minutosMax } : {}), ...(base ? { semanasBase: base } : {}) });
   // Plan de calorías: meta semanal que arranca en tu promedio y sube un 10 % por semana (un 20 % menos en la descarga).

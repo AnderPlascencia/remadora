@@ -80,6 +80,7 @@
         <p id="hoy-porque" class="hoy-porque" hidden></p>
         <p id="hoy-cuerpo" class="hoy-cuerpo" hidden></p>
         <p id="hoy-ajuste" class="hoy-ajuste" hidden></p>
+        <p id="hoy-cita" class="hoy-cita" hidden></p>
         <button type="button" id="btn-ver-plan" class="enlace-boton ver-plan" hidden>Ver tu plan: hoy y lo que sigue ›</button>
         <button type="button" id="btn-hoy-detalle" class="enlace-boton hoy-detalle" aria-controls="hoy-detalle-caja" aria-expanded="false" hidden>Ver detalles</button>
         <div id="hoy-detalle-caja" class="hoy-detalle-caja" hidden>
@@ -567,6 +568,13 @@
           <select id="sel-minutos"><option value="">Sin elegir</option><option value="30">Hasta 30 min</option><option value="45">Hasta 45 min</option><option value="60">Hasta 60 min</option><option value="0">Sin límite</option></select>
         </label>
       </div>
+      <fieldset class="cita-campo">
+        <legend>Tus días y tu hora</legend>
+        <div id="cita-dias" class="chips" role="group" aria-label="Días que remas"></div>
+        <label class="campo">Hora habitual <input type="time" id="in-hora-remo" value="19:00"></label>
+        <p id="cita-nota" class="ayuda">Tu plan se arma en estos días. Si lo añades a tu calendario, te avisa 30 min antes.</p>
+        <button type="button" id="btn-cita-ics" class="boton chico">Añadir a mi calendario</button>
+      </fieldset>
       <p class="ayuda">Esto lo usa el asistente para armar tu plan. Tu objetivo y los días del plan que sigues se cambian en <button type="button" class="enlace-chevron" data-ir="entrenamientos" data-pt="programa">Planes › Programa ›</button></p>
       <div class="fila-dos">
         <label class="campo"><span>FTP (W) <span id="ftp-estimado" class="etq-estimado" hidden>estimado</span> <button type="button" class="ayuda-q" data-ayuda="ftp" aria-label="¿Qué es el FTP?">?</button></span>
