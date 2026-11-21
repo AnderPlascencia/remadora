@@ -7,22 +7,22 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 0.707
+      "escala": 1.1088
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "vikingo_maestro_source.jpg",
-    "generador": "Ilustración aportada por Ander (nivel 8)",
-    "prompt": "sin indicar",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el novato",
+    "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#vikingo",
     "origen": {
-      "ancho": 896,
-      "alto": 1200,
+      "ancho": 576,
+      "alto": 768,
       "caja": {
-        "x0": 130,
-        "y0": 56,
-        "x1": 650,
-        "y1": 1148
+        "x0": 60,
+        "y0": 44,
+        "x1": 442,
+        "y1": 740
       }
     },
     "licencia": "según los términos del generador"

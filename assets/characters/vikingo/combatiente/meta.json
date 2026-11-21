@@ -7,22 +7,22 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 0.7116
+      "escala": 1.1184
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "vikingo_combatiente_source.jpg",
-    "generador": "Ilustración aportada por Ander (nivel 3)",
-    "prompt": "sin indicar",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el novato",
+    "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#vikingo",
     "origen": {
-      "ancho": 896,
-      "alto": 1200,
+      "ancho": 576,
+      "alto": 768,
       "caja": {
-        "x0": 230,
-        "y0": 63,
-        "x1": 650,
-        "y1": 1148
+        "x0": 139,
+        "y0": 44,
+        "x1": 419,
+        "y1": 734
       }
     },
     "licencia": "según los términos del generador"
