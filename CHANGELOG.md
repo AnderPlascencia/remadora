@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.73.3 · 2026-11-20
+
+El polinesio novato, con ilustración nueva.
+
+- El polinesio de nivel 1 (Novato) estrena ilustración semirrealista pintada, en la misma línea que el vikingo y el pirata: moño atado con cordel, lei de hojas de ti, malo de tapa y remo de pala en forma de hoja. Sustituye al recorte borroso de la lámina original.
+- Generada con Open Generative AI en modo local (stable-diffusion.cpp con Z-Image Turbo) e importada con `tools/ingest-character.mjs`; el resto de rangos del polinesio no cambia.
+
 ## 0.73.2 · 2026-11-11
 
 La bandera de popa, bien puesta.

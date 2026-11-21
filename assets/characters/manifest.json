@@ -2410,7 +2410,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/ingest-character.mjs",
         "motor": "Chromium canvas (croma, recorte, escala)",
@@ -2439,7 +2439,7 @@
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/ingest-character.mjs",
         "motor": "Chromium canvas (croma, recorte, escala)",
@@ -2468,7 +2468,7 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "pending",
+      "estado": "approved",
       "herramienta": {
         "nombre": "tools/ingest-character.mjs",
         "motor": "Chromium canvas (croma, recorte, escala)",
