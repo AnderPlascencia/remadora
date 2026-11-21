@@ -7,8 +7,9 @@ import { rangoZona2 } from '../pulso.js';
 import * as P from '../programa.js';
 import * as J from '../juego.js';
 import * as Cap from '../capacidades.js';
+import * as Pr from '../prediccion.js';
 import * as Hab from '../habito.js';
-import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles } from '../ui.js';
+import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles, perfil } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { avanzado, guardarRespaldo } from './ajustes.js';
@@ -209,11 +210,16 @@ export function pintarCurva() {
     { color: color('--watts'), eje: 'izq', puntos: ahora.map((p) => [idx(p.segs), p.w]) },
     { color: color('--split'), eje: 'izq', puntos: antes.map((p) => [idx(p.segs), p.w]) },
   ], { marcas: true, formatoX: (t) => etq(E.DURACIONES_CURVA[Math.round(t)] ?? 5) });
-  const pc = E.potenciaCritica(ahora);
+  // Etapa 17: CP y W′ solo con esfuerzos máximos de las últimas 6 semanas.
+  const pc = E.potenciaCriticaMax((estado.cacheSesiones || []).filter((s) => s.fecha > Date.now() - 42 * 864e5), { peso: perfil().peso });
+  const est = pc?.estimada ? ' (estimada: rema 3 y 12 min a tope para medirla)' : '';
   $('#curva-texto').textContent = !ahora.length ? 'Rema unas sesiones para ver tu curva.'
-    : pc && !avanzado() ? `Tu mejor media para cada duración. Puedes aguantar unos ${pc.cp} W casi sin cansarte; por encima gastas tu batería, que llega para unos ${Math.round(pc.wPrima / Math.max(1, pc.cp * 0.2))} s a ${Math.round(pc.cp * 1.2)} W.`
-    : pc ? `Tu potencia crítica es ${pc.cp} W y tu batería anaeróbica (W′) ${(pc.wPrima / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} kJ. Por encima de ${pc.cp} W la gastas; por debajo se recarga.`
+    : pc && !avanzado() ? `Tu mejor media para cada duración. Puedes aguantar unos ${pc.cp} W casi sin cansarte; por encima gastas tu batería, que llega para unos ${Math.round(pc.wPrima / Math.max(1, pc.cp * 0.2))} s a ${Math.round(pc.cp * 1.2)} W${est}.`
+    : pc ? `Tu potencia crítica es ${pc.cp} W y tu batería anaeróbica (W′) ${(pc.wPrima / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} kJ${est}. Por encima de ${pc.cp} W la gastas; por debajo se recarga.`
       : 'Cada punto es tu mejor media para esa duración. Con marcas de 3 y 12 min calculo tu potencia crítica.';
+  // Etapa 17: cuánto acierta la app tus marcas a tope (en Datos avanzados).
+  const rp = avanzado() ? Pr.resumenPredicciones(estado.cacheSesiones || []) : null;
+  if (rp) $('#curva-texto').textContent += ` La app predijo ${rp.n === 1 ? 'tu marca' : `tus ${rp.n} marcas a tope`} con un ${rp.mape.toLocaleString('es-MX')} % de error medio.`;
 }
 
 // Mi motor: watts al techo de tu zona 2, semana a semana. Si suben, el corazón rinde más.

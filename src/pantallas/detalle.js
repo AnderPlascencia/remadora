@@ -7,6 +7,7 @@ import * as E from '../estadisticas.js';
 import { confeti } from '../efectos.js';
 import * as V from '../ventajas.js';
 import * as Cap from '../capacidades.js';
+import * as Pr from '../prediccion.js';
 import {
   $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fcRef, fechaCorta, formatoMeta, ftp, ico, miles, toast,
 } from '../ui.js';
@@ -87,6 +88,12 @@ function tablaIntervalos(s) {
 
 // Predicción de otras distancias con la ley de Paul (+5 s de split cada vez que se duplica la distancia).
 function tablaPrediccion(s) {
+  // Etapa 17: con una marca a tope, lo que predecía la app y su error (en Datos avanzados).
+  const acierto = avanzado() && s.predicciones?.length
+    ? s.predicciones.map((p) => `<p class="ayuda prediccion-error">${escaparHtml(Pr.textoPrediccion(p, formatoTiempo))}</p>`).join('') : '';
+  return acierto + tablaPrediccionPaul(s);
+}
+function tablaPrediccionPaul(s) {
   const base = [2000, 5000, 1000, 500].map((d) => [d, E.mejorTiempo(s.muestras || [], d)]).find(([, t]) => t);
   const [metros, seg] = base || [];
   if (!metros) return '';

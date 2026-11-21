@@ -768,6 +768,57 @@ export function potenciaCritica(curva) {
   return { cp: Math.round(cp), wPrima: Math.round(wPrima) };
 }
 
+// ---------- CP y W′ solo con esfuerzos máximos (etapa 17, REN-P5) ----------
+// La mejor media de 3 min suele ser un trozo de un esfuerzo de 20 min: no fue a tope y hunde la W′ (hasta −48 %).
+// Un punto de la curva cuenta como máximo si ningún tramo más largo de la misma sesión va casi igual de fuerte.
+export const CASI_IGUAL = 0.97;
+export const W_PRIMA_JKG = 200; // W′ por defecto si solo hay un esfuerzo largo: ≈ 15 kJ para 75 kg
+export const W_PRIMA_DEFECTO = 15000;
+// Además, el tramo tiene que ser parejo (sus cuatro cuartos a menos de un 15 %): si no, es un esfuerzo corto diluido con
+// el calentamiento o la vuelta a la calma, o unas series, y tampoco mide lo que aguantas en esa duración.
+export function esfuerzosMaximos(muestras) {
+  const curva = curvaPotencia(muestras);
+  return curva.filter((p) => !curva.some((q) => q.segs > p.segs && q.w >= p.w * CASI_IGUAL) && tramoParejo(muestras, p.segs));
+}
+function tramoParejo(muestras, segs) {
+  let suma = 0;
+  let mejor = -1;
+  let ini = 0;
+  for (let i = 0; i < muestras.length; i++) {
+    suma += muestras[i].w;
+    if (i >= segs) suma -= muestras[i - segs].w;
+    if (i >= segs - 1 && suma > mejor) { mejor = suma; ini = i - segs + 1; }
+  }
+  if (mejor < 0) return false;
+  const prom = (a, b) => { let x = 0; for (let i = a; i < b; i++) x += muestras[i].w; return x / Math.max(1, b - a); };
+  const cuartos = [0, 1, 2, 3].map((k) => prom(ini + Math.floor((k * segs) / 4), ini + Math.floor(((k + 1) * segs) / 4)));
+  return Math.min(...cuartos) >= Math.max(...cuartos) * 0.85;
+}
+// Lo mejor de cada duración entre los esfuerzos máximos de varias sesiones: { segs, w, fecha }.
+export function curvaMaximos(sesiones) {
+  const mejor = new Map();
+  for (const s of sesiones || []) {
+    for (const p of esfuerzosMaximos(s.muestras || [])) {
+      if (!mejor.has(p.segs) || p.w > mejor.get(p.segs).w) mejor.set(p.segs, { ...p, fecha: s.fecha });
+    }
+  }
+  return DURACIONES_CURVA.filter((d) => mejor.has(d)).map((d) => mejor.get(d));
+}
+// CP y W′ con esfuerzos máximos de 2 a 20 min que abarquen al menos el triple de duración (p. ej. 3 y 12 min).
+// Con un solo esfuerzo largo (10–20 min), la W′ va por defecto y la CP sale de ella: { cp, wPrima, estimada }.
+export function potenciaCriticaMax(sesiones, { peso = 0 } = {}) {
+  const pts = curvaMaximos(sesiones).filter((p) => p.segs >= 120 && p.segs <= 1200);
+  if (pts.length >= 2 && pts.at(-1).segs >= pts[0].segs * 3) {
+    const pc = potenciaCritica(pts);
+    if (pc) return { ...pc, estimada: false };
+  }
+  const largo = pts.filter((p) => p.segs >= 600).at(-1);
+  if (!largo) return null;
+  const wPrima = peso > 0 ? Math.round(peso * W_PRIMA_JKG) : W_PRIMA_DEFECTO;
+  const cp = Math.round(largo.w - wPrima / largo.segs);
+  return cp > 0 ? { cp, wPrima, estimada: true } : null;
+}
+
 // Saldo de W′ segundo a segundo (modelo diferencial de Skiba): se gasta por encima de CP
 // y se recarga por debajo, más rápido cuanto más lejos de CP.
 export function saldoWPrima(muestras, cp, wPrima) {

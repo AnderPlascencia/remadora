@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.90.0 · 2026-11-21
+
+Medir cuánto acierta la app con tu rendimiento.
+
+- **Tu batería anaeróbica, con esfuerzos de verdad.** La potencia crítica (CP) y la batería (W′) ahora solo usan esfuerzos a tope y parejos. Antes contaban también los trozos de un esfuerzo más largo, por ejemplo los 3 min dentro de un 20 min, y la batería salía hasta un 48 % más pequeña. Con solo una prueba de 20 min ya tienes batería en el modo remo, con un valor por defecto (unos 200 J por kg) que Progreso marca como estimado.
+- **Lo que la app predecía, guardado.** Cuando remas a tope un 500, 2000, 5000 o 10 000 m (en una prueba, o una marca nueva cerca de tu máximo), la sesión guarda qué tiempo predecía la app antes. Con Datos avanzados, el detalle lo muestra («Tus 2 km: la app predecía 7:45 y remaste 7:37») y Progreso enseña el error medio.
+- **Una prueba que vigila el modelo.** `pruebas/prediccion.test.mjs` simula medio año de un remero y falla si el error de las predicciones empeora (hoy 1.3 %) o si la W′ vuelve a desviarse más de un 5 %.
+
 ## 0.89.0 · 2026-11-21
 
 Empezar y seguir la sesión sin pelearte con el teléfono.

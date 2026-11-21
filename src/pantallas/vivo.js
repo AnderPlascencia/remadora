@@ -710,8 +710,13 @@ export function arrancarVivo2() {
     });
   }
   // Si el usuario sale de pantalla completa con el gesto de atrás, también sale del modo remo.
+  // Solo cuenta la salida que no pedimos nosotros: al cerrar con Salir y volver a abrir enseguida, el aviso de esa
+  // salida llegaba tarde, con el modo remo ya abierto otra vez, y lo cerraba (fallo intermitente de leer-remando).
   document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && !$('#modo-remo').hidden) $('#modo-remo').hidden = true;
+    if (document.fullscreenElement) { enPantallaCompleta = true; return; }
+    const ajena = enPantallaCompleta;
+    enPantallaCompleta = false;
+    if (ajena && !$('#modo-remo').hidden) $('#modo-remo').hidden = true;
   });
 }
 
@@ -873,6 +878,7 @@ export function abrirModoRemo() {
 
 // Gestos en el modo remo: doble toque o pulsación larga pausan o siguen; deslizar a un lado cambia de vista.
 let gestoHecho = 0;
+let enPantallaCompleta = false;
 export const GESTO = { dobleMs: 450, largoMs: 600 };
 // Antes de empezar: Empezar está aquí mismo, o basta con remar si lo pediste.
 export function textoAntesDeEmpezar() {
@@ -884,5 +890,6 @@ export function cerrarModoRemo() {
   $('#modo-remo').hidden = true;
   carreraEnt.tapado = false;
   if (carreraEnt.estado) carreraEnt.actualizar(carreraEnt.estado);
+  enPantallaCompleta = false;
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }

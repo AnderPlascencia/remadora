@@ -8,6 +8,7 @@ import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { fijarSilencio, hablar, tiempoHablado } from '../voz.js';
 import * as G from '../guion-voz.js';
+import * as Pr from '../prediccion.js';
 import * as VJ from '../voz-juego.js';
 import * as P from '../programa.js';
 import { confeti } from '../efectos.js';
@@ -358,7 +359,8 @@ async function iniciarSesion(reanudar = null) {
   const rival = rivales[0] || null;
   // Potencia crítica y W′ con lo mejor de los últimos 90 días: alimentan la batería anaeróbica en vivo.
   const recientes = (await H.sesiones()).filter((x) => x.fecha > Date.now() - 90 * 864e5);
-  const pc = E.potenciaCritica(E.curvaHistorial(recientes));
+  // Etapa 17: solo con esfuerzos máximos; con un único esfuerzo largo, la W′ va por defecto (antes salía null o −48 %).
+  const pc = E.potenciaCriticaMax(recientes, { peso: perfil().peso });
   // Calentamientos de las últimas sesiones con pulso: para notar si hoy vas más cargado que de costumbre.
   const calentamientos = recientes.filter((x) => x.muestras?.some((m) => m.fc)).slice(-15).map((x) => ({ muestras: x.muestras.slice(240, 301) }));
   // El diagnóstico (latencia, cuadros por segundo, Bluetooth) se cuenta por sesión.
@@ -735,6 +737,11 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     return true;
   }
   const recs = E.nuevosRecords(registro, previas);
+  // Lo que la app predecía antes de esta marca a tope (etapa 17): se guarda para medir el error del modelo.
+  try {
+    const pred = Pr.registrarPredicciones(registro, previas);
+    if (pred.length) { registro.predicciones = pred; await H.actualizar(registro.id, { predicciones: pred }); }
+  } catch (e) { agregarLog(`predicciones: ${e?.message || e}`); }
   if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Según tu pulso, un esfuerzo de ${porPulso.rpe} de 10. ¿Cómo lo sentiste tú?` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
   if (!recuperada) setTimeout(() => decirResumenJuego(registro, previas), 0);
