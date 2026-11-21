@@ -17,8 +17,8 @@ assert.equal(E.estres(s, 200), 17); // 10 min a FTP ≈ 16.7
 const f = E.forma([s], 200, 10, Date.parse('2026-10-26T10:00'));
 assert.equal(f.length, 10);
 assert.ok(f.at(-1).condicion >= 0 && f.find((d) => d.dia === '2026-10-20').carga === 17);
-assert.deepEqual(E.tiempoEnZonasFc(muestras, 180), [0, 0, 0, 600, 0]);
-assert.equal(E.zonaFc(150, 180).n, 4);
+assert.deepEqual(E.tiempoEnZonasFc(muestras, 180), [0, 0, 600, 0, 0]); // 150 de 180: 76 % de la reserva
+assert.equal(E.zonaFc(150, 180).n, 3);
 assert.deepEqual(E.tecnica(s), { metrosPorPalada: 10, joulesPorPalada: 500, wattsPorLatido: 1.33 });
 assert.equal(E.distanciaEn(muestras, 100.5), 402);
 assert.equal(E.distanciaEn(muestras, 9999), 2400);

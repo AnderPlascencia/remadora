@@ -25,7 +25,7 @@ assert.equal(Cap.tipoSesion({ ...fondo, pruebaWatts: 210 }, 200), 'prueba');
 const a = Cap.analisisSesion({ ...fondo, fcRec60: 25 }, { ftp: 200, fcMax: 190 });
 assert.equal(a.tipo, 'fondo');
 assert.equal(a.datos.length, 4);
-assert.match(a.datos[0].valor, /132 lpm · Z2/);
+assert.match(a.datos[0].valor, /132 lpm · Z1/); // 56 % de la reserva (con el reposo supuesto, 57 lpm)
 assert.equal(a.datos.at(-1).valor, "25 lpm");
 assert.ok(a.lectura.length > 10);
 const u = Cap.analisisSesion(umbral, { ftp: 200 });
@@ -36,9 +36,9 @@ for (const s of [vo2, sprint, { ...fondo, enfoque: 'calorias' }, { ...fondo, enf
 }
 
 // ---------- Capacidades ----------
-// Hace 2 meses: 130 W a 133 lpm. Ahora: 150 W al mismo pulso. FTP de 190 a 200.
-const viejas = [sesion(60, 1800, () => ({ w: 130, fc: 133 }), { ftp: 190, fcRec60: 18 }), sesion(55, 600, () => ({ w: 230 }), { ftp: 190 })];
-const nuevas = [sesion(5, 1800, () => ({ w: 150, fc: 133 }), { ftp: 200, fcRec60: 24 }), sesion(3, 600, () => ({ w: 250 }), { ftp: 200 })];
+// Hace 2 meses: 130 W a 150 lpm (el techo de la zona 2). Ahora: 150 W al mismo pulso. FTP de 190 a 200.
+const viejas = [sesion(60, 1800, () => ({ w: 130, fc: 150 }), { ftp: 190, fcRec60: 18 }), sesion(55, 600, () => ({ w: 230 }), { ftp: 190 })];
+const nuevas = [sesion(5, 1800, () => ({ w: 150, fc: 150 }), { ftp: 200, fcRec60: 24 }), sesion(3, 600, () => ({ w: 250 }), { ftp: 200 })];
 const caps = Cap.capacidades([...viejas, ...nuevas], { ftp: 200, peso: 75, fcMax: 190, ahora });
 const c = Object.fromEntries(caps.map((x) => [x.clave, x]));
 assert.equal(c.base.valor, 150);
@@ -51,13 +51,13 @@ assert.ok(c.vo2.antes < 43);
 assert.equal(c.recuperacion.valor, 24);
 assert.equal(c.recuperacion.mejora, true);
 assert.equal(c.tecnica.valor, 10.91);
-assert.equal(c.base.como, 'Watts a 133 lpm');
+assert.equal(c.base.como, 'Watts a 150 lpm');
 const sinPulso = Cap.capacidades(nuevas, { ftp: 200, peso: 75, fcMax: 0, ahora });
 assert.equal(sinPulso.find((x) => x.clave === 'base').valor, null);
 assert.equal(Cap.capacidades([], { ahora }).every((x) => x.valor == null), true);
 
 // ---------- Series semanales ----------
-const motor = Cap.motorSemanal([...viejas, ...nuevas], 133, 10, ahora);
+const motor = Cap.motorSemanal([...viejas, ...nuevas], 150, 10, ahora);
 assert.equal(motor.length, 10);
 assert.equal(motor.filter((m) => m.w).length, 2);
 assert.equal(motor.at(-2).w, 150); // las sesiones de hace 3 y 5 días caen en la semana pasada

@@ -11,6 +11,7 @@ import {
   $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fcRef, fechaCorta, formatoMeta, ftp, ico, miles, toast,
 } from '../ui.js';
 import { estado } from '../estado.js';
+import { fcMaxDeEdad } from '../pulso.js';
 import { avanzado } from './ajustes.js';
 import { guardarFtp } from './preparar.js';
 import { formatoRecord } from './progreso.js';
@@ -23,29 +24,26 @@ async function guardarSesionAbierta() {
   if (estado.sesionAbierta?.id != null) await H.guardar(estado.sesionAbierta);
 }
 
-// Pulso máximo para el esfuerzo: el tuyo, o 220 − edad, o 190 como aproximación.
-export const fcParaEsfuerzo = () => fcMaxima() || (ajustes.num('edad', 0) ? 220 - ajustes.num('edad', 0) : 190);
-let corregirRpe = false;
+// Pulso máximo para el esfuerzo: el tuyo, o el de tu edad (Tanaka), o 190 como aproximación.
+export const fcParaEsfuerzo = () => fcMaxima() || fcMaxDeEdad(ajustes.num('edad', 0)) || 190;
+// Esfuerzo: lo marcas tú (1–10). Si la sesión tiene pulso, el esfuerzo según el pulso va como sugerencia aparte.
 function pintarRpe() {
   const s = estado.sesionAbierta;
-  const auto = s.rpeFuente === 'pulso' && !corregirRpe;
-  $('#hoja-esfuerzo-titulo').textContent = s.rpeFuente === 'pulso' ? 'Esfuerzo según tu pulso' : '¿Qué tan duro se sintió?';
-  $('#rpe').hidden = auto;
-  $('#rpe-auto').hidden = !auto;
-  if (auto) {
-    $('#rpe-auto').innerHTML = `<b class="rpe-valor">${s.rpe}</b><span>de 10 · ${TEXTO_RPE[s.rpe]}<small>Pulso medio al ${s.rpePct} % de tu máximo${fcMaxima() ? '' : ' (aproximado: pon tu edad en Ajustes › Pulso y zonas)'}</small></span>
-      <button type="button" class="boton chico" id="btn-corregir-rpe">Corregir</button>`;
-    $('#btn-corregir-rpe').onclick = () => { corregirRpe = true; pintarRpe(); };
-    $('#rpe-texto').textContent = '';
-    return;
+  const tuyo = E.rpeSentido(s);
+  const pulso = E.rpePulsoDe(s);
+  $('#hoja-esfuerzo-titulo').textContent = '¿Qué tan duro se sintió?';
+  $('#rpe-auto').hidden = !pulso;
+  if (pulso) {
+    $('#rpe-auto').innerHTML = `<b class="rpe-valor">${pulso}</b><span>de 10 según tu pulso · ${TEXTO_RPE[pulso]}<small>Pulso medio al ${s.rpePct} % de tu máximo${fcMaxima() ? '' : ' (aproximado: pon tu edad en Ajustes › Pulso y zonas)'}. Es una sugerencia: marca abajo cómo lo sentiste tú.</small></span>`;
   }
-  $('#rpe').innerHTML = Array.from({ length: 10 }, (_, i) => `<button type="button" class="boton${s.rpe === i + 1 ? ' activo' : ''}" data-rpe="${i + 1}" aria-pressed="${s.rpe === i + 1}">${i + 1}</button>`).join('');
-  $('#rpe-texto').textContent = s.rpe ? `${s.rpe}: ${TEXTO_RPE[s.rpe]}` : '1 = muy fácil, 10 = esfuerzo máximo';
+  $('#rpe').hidden = false;
+  $('#rpe').innerHTML = Array.from({ length: 10 }, (_, i) => `<button type="button" class="boton${tuyo === i + 1 ? ' activo' : ''}" data-rpe="${i + 1}" aria-pressed="${tuyo === i + 1}">${i + 1}</button>`).join('');
+  $('#rpe-texto').textContent = tuyo ? `${tuyo}: ${TEXTO_RPE[tuyo]}` : '1 = muy fácil, 10 = esfuerzo máximo';
   $('#rpe').querySelectorAll('button').forEach((b) => {
     b.onclick = async () => {
+      // Una sesión de antes con el esfuerzo del pulso en `rpe`: ese pasa a rpePulso y el tuyo queda en rpe.
+      if (s.rpeFuente === 'pulso') { s.rpePulso ??= s.rpe; delete s.rpeFuente; }
       s.rpe = Number(b.dataset.rpe);
-      if (s.rpeFuente === 'pulso') s.rpeFuente = 'tu';
-      corregirRpe = false;
       pintarRpe();
       await guardarSesionAbierta();
       if (estado.atrAbierta?.s === s) pintarAtrSesion(s, estado.atrAbierta.previas, estado.atrAbierta.resumen);
@@ -171,7 +169,6 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${escaparHtml(k)}</span><span class="valor">${v}</span></div>`).join('');
   requestAnimationFrame(() => $('#hoja-stats').querySelectorAll('.valor').forEach((el) => ajustarTexto(el)));
 
-  corregirRpe = false;
   pintarRpe();
   $('#in-notas').value = s.notas || '';
   $('#hoja-intervalos').innerHTML = tablaIntervalos(s);

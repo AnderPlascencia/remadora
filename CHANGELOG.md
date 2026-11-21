@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.77.0 · 2026-11-21
+
+Medidas del cuerpo más fiables: zonas de pulso, pulso máximo, FTP inicial y esfuerzo.
+
+- Zonas de pulso coherentes con y sin pulso en reposo. Sin él, la app supone uno típico (el 30 % de tu máximo), así la zona 2 va del 72 al 79 % del máximo y no se mueve unos 20 lpm cuando lo escribes (con 190 de máximo pasaba de 114–133 a 138–151 lpm; ahora de 137–150 a 138–151). Lo mismo para las 5 zonas y los bloques por % de pulso, que ahora dicen el % del máximo que de verdad es. Si al escribir tu pulso en reposo la zona 2 se mueve más de 5 lpm, la app te dice cuánto.
+- Pulso máximo por edad con la fórmula de Tanaka (208 − 0,7 × edad) en lugar de 220 − edad, que se quedaba corta a partir de los 40 (a los 60, 166 en vez de 160).
+- FTP sin prueba: cada sesión aporta el 95 % de su mejor tramo de 20 min (o el 90 % del de 10 min), no su media con el calentamiento y los descansos, y el FTP estimado es la mediana de tus 3 mejores sesiones recientes, así un día bueno no lo infla.
+- Esfuerzo: el que marcas tú y el que sale del pulso se guardan aparte (`rpe` y `rpePulso`). El del pulso se calcula con el TRIMP de Edwards (tiempo en cada zona) y el tiempo en zonas 4 y 5, así las series ya no se diluyen con sus descansos. En el resumen aparece como sugerencia y tú marcas cómo lo sentiste. La adaptación del plan solo sube tus rangos con el esfuerzo que diste tú. Las sesiones de antes conservan su dato y la XP no cambia.
+- Pruebas: dos pruebas de pantalla que a veces fallaban con la máquina cargada (la del historial ilegible y la de «Antes de remar») ya no dependen de quién llega antes.
+
 ## 0.76.0 · 2026-11-21
 
 Planes que respetan la fatiga.

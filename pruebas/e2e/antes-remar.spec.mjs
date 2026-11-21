@@ -38,6 +38,8 @@ test('antes de remar: responder cambia el estado de hoy, se pliega y desaparece 
   await remar(page, 30_000);
   await expect(caja).toBeHidden();
   await terminar(page);
+  // Se recarga cuando la sesión ya está guardada (antes, con la máquina cargada, la recarga podía llegar antes).
+  await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
   await page.reload();
   await expect(page.locator('#hoy-etq')).toBeVisible();
   await expect(caja).toBeHidden();

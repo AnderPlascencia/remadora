@@ -7,12 +7,19 @@ import * as C from '../src/capacidades.js';
 import * as A from '../src/adaptacion.js';
 import { AJUSTES } from '../src/ajustes-guardados.js';
 
-// (1) Una sola zona 2: 60–70 % de la reserva de pulso (con reposo) o del máximo (sin él).
-assert.deepEqual(Pu.rangoZona2(190), { min: 114, max: 133 });
+// (1) Una sola zona 2: 60–70 % de la reserva de pulso. Sin pulso en reposo se supone el 30 % del máximo, así la
+// zona casi no se mueve al darlo (antes saltaba de 114–133 a 138–151 lpm).
+assert.deepEqual(Pu.rangoZona2(190), { min: 137, max: 150 });
 assert.deepEqual(Pu.rangoZona2({ max: 190, reposo: 60 }), { min: 138, max: 151 }, 'Karvonen');
+assert.ok(Pu.cambioZona2(190, { max: 190, reposo: 60 }) <= 5, 'dar el pulso en reposo típico no mueve la zona');
+assert.ok(Pu.cambioZona2(190, { max: 190, reposo: 40 }) > 5, 'uno muy bajo sí, y se avisa');
+// Las 5 zonas usan la misma regla: sin reposo, la zona 2 va del 72 al 79 % del máximo.
+assert.equal(Math.round((100 * Pu.rangoZona2(200).min) / 200), 72);
+assert.equal(Math.round((100 * Pu.rangoZona2(200).max) / 200), 79);
 assert.ok(!Pu.usaReserva({ max: 190, reposo: 170 }), 'un reposo imposible no cuenta');
 assert.equal(E.zonaFc(145, { max: 190, reposo: 60 }).n, 2);
-assert.equal(E.zonaFc(145, 190).n, 3, 'sin reposo, % del máximo');
+assert.equal(E.zonaFc(145, 190).n, 2, 'sin reposo, la misma zona que con un reposo típico');
+assert.equal(E.zonaFc(155, 190).n, 3);
 // Los bloques por % de pulso usan la misma referencia, y el texto dice cuál.
 const b = { metrica: 'fcpct', min: 60, max: 70 };
 assert.deepEqual(Ent.rangoFc(b, { max: 190, reposo: 60 }), Pu.rangoZona2({ max: 190, reposo: 60 }));
@@ -20,7 +27,13 @@ assert.deepEqual(Ent.rangoFc(b, 190), Pu.rangoZona2(190));
 assert.match(Ent.textoMeta(b, 200, { max: 190, reposo: 60 }), /reserva de pulso/);
 assert.match(Ent.textoMeta(b, 200, 190), /pulso máx/);
 assert.equal(Ent.normalizarBloques([b], 200, { max: 190, reposo: 60 })[0].min, 138);
-// Pulso máximo: el observado en vez de 220 − edad, y se avisa cuando es estimado.
+// Sin pulso en reposo, el texto dice el % del máximo que de verdad es (72–79 %).
+assert.match(Ent.textoMeta(b, 200, 190), /137–150 lpm \(72–79% pulso máx\)/);
+// Pulso máximo por edad con Tanaka (208 − 0,7 × edad): igual a los 40, 6 lpm más a los 60 que 220 − edad.
+assert.equal(Pu.fcMaxDeEdad(40), 180);
+assert.equal(Pu.fcMaxDeEdad(60), 166);
+assert.equal(Pu.fcMaxDeEdad(20), 194);
+// Pulso máximo: el observado en vez del de la edad, y se avisa cuando es estimado.
 assert.deepEqual(Pu.fcMaxEfectiva({ edad: 40 }), { fcMax: 180, fuente: 'edad', estimado: true });
 assert.deepEqual(Pu.fcMaxEfectiva({ edad: 40, observada: 186 }), { fcMax: 186, fuente: 'observada', estimado: false });
 assert.equal(Pu.fcMaxEfectiva({ edad: 40, observada: 150 }).fuente, 'edad', 'un 150 no es tu máximo si nunca fuiste a tope');
@@ -35,6 +48,14 @@ assert.ok(AJUSTES.fcReposo && AJUSTES.fcMaxFuente && AJUSTES.antesDeRemar, 'clav
 assert.equal(E.ftpEstimadoDe([{ fecha: 1, duracion: 95, wattsProm: 400 }, { fecha: 2, duracion: 1800, wattsProm: 200 }]), 190);
 assert.equal(E.ftpEstimadoDe([{ fecha: 1, duracion: 900, wattsProm: 220 }]), 198);
 assert.equal(E.ftpEstimadoDe([{ fecha: 1, duracion: 120, wattsProm: 300 }]), 0);
+// Con muestras: el mejor tramo de 20 min (no la media con el calentamiento) y la mediana de las 3 mejores sesiones.
+const conTramo = (fecha, w20, resto = 120) => ({ fecha, duracion: 2400, wattsProm: Math.round((w20 + resto) / 2),
+  muestras: Array.from({ length: 2400 }, (_, t) => ({ t, w: t >= 600 && t < 1800 ? w20 : resto })) });
+assert.equal(E.ftpDeSesion(conTramo(1, 200)), 190, '95 % de 200 W en 20 min, aunque la media sea de 160');
+const corta = { fecha: 1, duracion: 900, muestras: Array.from({ length: 900 }, (_, t) => ({ t, w: t < 600 ? 220 : 100 })) };
+assert.equal(E.ftpDeSesion(corta), 198, 'sin 20 min, el 90 % del mejor tramo de 10 min');
+assert.equal(E.ftpEstimadoDe([conTramo(1, 200), conTramo(2, 210), conTramo(3, 300), conTramo(4, 180)]), 200, 'un día de 300 W no lo infla');
+assert.equal(E.ftpEstimadoDe([conTramo(1, 200), conTramo(2, 300)]), 190, 'con dos, la más baja');
 const ahora = Date.parse('2026-11-04T12:00');
 const DIA = 864e5;
 assert.equal(E.revisarFtp([{ fecha: ahora - 50 * DIA, pruebaFtp: true, pruebaWatts: 210 }], 200, ahora).repetir, 50);

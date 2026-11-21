@@ -93,7 +93,7 @@ export function analisisSesion(s, { ftp = 0, fcMax = 0 } = {}) {
   } else {
     datos.push({ etq: 'Watts prom', valor: s.pruebaWatts ? `${s.pruebaWatts} W` : `${s.wattsProm} W`, ayuda: 'Media del tramo de prueba.' });
     datos.push({ etq: 'Pulso máx', valor: s.fcMax ? `${s.fcMax} lpm` : '-', ayuda: 'Sirve para afinar tu pulso máximo.' });
-    datos.push({ etq: 'Esfuerzo', valor: s.rpe ? `${s.rpe} de 10` : '-', ayuda: 'Una prueba bien hecha debería sentirse 9 o 10.' });
+    datos.push({ etq: 'Esfuerzo', valor: E.rpeDe(s) ? `${E.rpeDe(s)} de 10${E.rpeSentido(s) ? '' : ' (pulso)'}` : '-', ayuda: 'Una prueba bien hecha debería sentirse 9 o 10.' });
     lectura = 'Prueba hecha: tus zonas y tus planes se recalculan con este resultado.';
   }
   if (s.fcRec60 != null) {

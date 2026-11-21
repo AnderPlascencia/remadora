@@ -27,7 +27,7 @@ export function basalPorHora({ peso = 75, edad = 0, altura = 0, sexo = '' } = {}
   return Math.max(30, dia / 24);
 }
 
-export const fcMaxDeEdad = (edad) => (edad > 0 ? 220 - edad : 0);
+export { fcMaxDeEdad } from './pulso.js';
 
 // FTP con el que arranca quien aún no ha remado: W/kg típicos en remo según experiencia y sexo,
 // con un 0.5 % menos por año después de los 35. Se reemplaza con la primera sesión de 10 min o más.
