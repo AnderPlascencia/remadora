@@ -28,5 +28,33 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Entrenar hoy",
+      "short_name": "Hoy",
+      "description": "La sesión de hoy, lista para empezar en el modo remo",
+      "url": "./?atajo=hoy",
+      "icons": [
+        {
+          "src": "assets/marca/rower-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Remo libre",
+      "short_name": "Libre",
+      "description": "Remo libre, listo para empezar en el modo remo",
+      "url": "./?atajo=libre",
+      "icons": [
+        {
+          "src": "assets/marca/rower-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

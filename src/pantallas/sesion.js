@@ -18,14 +18,14 @@ import * as Cap from '../capacidades.js';
 import * as Pf from '../perfil.js';
 import { crearReloj } from '../reloj.js';
 import { VERSION } from '../version.js';
-import { $, ajustes, escaparHtml, fcMaxima, fcRef, formatoMeta, ftp, ico, miles, perfil, pitido, previoHoy, toast, vibrar } from '../ui.js';
+import { $, ajustes, escaparHtml, fcMaxima, fcRef, formatoMeta, ftp, ico, miles, perfil, pitido, previoHoy, toast, VIBRA, vibrar } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { actualizarFcMax, repararSesiones, ritmoObjetivo, selVariante } from './ajustes.js';
 import { fcMax5s } from '../pulso.js';
 import { crearReferencias, crearRivales, estimarFtp, ftpAutomatico, hayCarrera, pintarChips } from './preparar.js';
 import {
-  abrirModoRemo, carreraActual, carreraEnt, carreraRemo, cerrarModoRemo, dibujarVivo, duracionCarrera, modoEnt, pintar, pintarAlLlegar, pintarModoEnt, retratoPropio, velocidadReciente, vigilarTipoSesion, vistaPrevia,
+  abrirModoRemo, carreraActual, carreraEnt, carreraRemo, cerrarModoRemo, dibujarVivo, duracionCarrera, modoEnt, pintar, pintarAlLlegar, pintarModoEnt, retratoPropio, textoAntesDeEmpezar, velocidadReciente, vigilarTipoSesion, vistaPrevia,
 } from './vivo.js';
 import { agregarLog, guardarRegistroSesion } from '../registro.js';
 import { datoRecibido, fijarFuenteBle, numerosPintados, reiniciarDiagnostico, resumenDiagnostico } from '../diagnostico.js';
@@ -96,6 +96,7 @@ export function arrancarSesion1() {
     }
     // Los números grandes se pintan en el siguiente cuadro, no en el siguiente tic (hasta 1 s antes).
     pintarAlLlegar();
+    empezarAlRemar(d);
   });
   // Un pulso fuera de 30–240 lpm es un error de lectura de la banda: se ignora. Un 0 (sin contacto o
   // desconectada) borra el pulso, para no seguir guardando el último valor como si fuera real.
@@ -160,6 +161,13 @@ export function arrancarSesion1() {
     iniciarSesion();
   });
   $('#mr-terminar').addEventListener('click', (e) => confirmarTerminar(e.currentTarget));
+  // Etapa 16: empezar sin salir del modo remo (el teléfono ya está en el soporte).
+  $('#mr-empezar').addEventListener('click', async () => {
+    if (estado.sesion || $('#btn-grabar').disabled) return;
+    if (!(await asegurarConexion())) return;
+    iniciarSesion();
+  });
+  $('#in-empezar-palada').addEventListener('change', (e) => { ajustes.escribir('empezarPalada', e.target.checked ? '1' : '0'); actualizarBotones(); });
   for (const b of ['#btn-pausa', '#mr-pausa']) {
     $(b).addEventListener('click', () => {
       if (!estado.sesion) return;
@@ -227,9 +235,20 @@ export function actualizarBotones() {
   }
   $('#mr-pausa').disabled = !estado.sesion;
   $('#mr-terminar').disabled = !estado.sesion;
+  // Antes de la sesión, el modo remo enseña Empezar (y la opción de empezar remando) en vez de Terminar y Pausar.
+  $('#mr-empezar').hidden = !!estado.sesion;
+  $('#mr-empezar').disabled = g.disabled;
+  $('#mr-empezar').querySelector('span').textContent = remadora.conectada ? 'Empezar' : 'Conectar y empezar';
+  $('#mr-terminar').hidden = !estado.sesion;
+  $('#mr-pausa').hidden = !estado.sesion;
+  $('#mr-auto').hidden = !!estado.sesion;
+  $('#in-empezar-palada').checked = ajustes.si('empezarPalada', false);
+  if (!estado.sesion && !$('#modo-remo').hidden) $('#mr-meta-texto').textContent = textoAntesDeEmpezar();
   $('#sel-entrenamiento').disabled = !!estado.sesion;
   // Antes de remar se muestra la tarjeta Preparar; durante la sesión, solo una línea de resumen.
   $('#preparar').hidden = !!estado.sesion;
+  // El primer día (hasta la primera sesión), sin Opciones de carrera: solo «Hoy toca» y Empezar.
+  $('#opciones-carrera').hidden = estado.primerDia;
   // Las preguntas de antes de remar, nunca durante la sesión (al terminar, Hoy decide si siguen).
   if (estado.sesion) $('#antes-remar').hidden = true;
   $('#linea-nivel').hidden = !!estado.sesion || !$('#linea-nivel').textContent;
@@ -256,6 +275,17 @@ function confirmarTerminar(boton) {
 }
 
 // Conecta la remadora si hace falta. Devuelve false si no se pudo (o la persona canceló).
+// «Empezar al dar la primera palada» (etapa 16): con el modo remo abierto y la opción encendida, la primera
+// potencia de la consola empieza la sesión. Nunca con otra capa encima ni sin entrenamiento elegido.
+let arrancandoSola = false;
+function empezarAlRemar(d) {
+  if (estado.sesion || arrancandoSola || !(d.tipo === 'metricas' && d.watts > 0) || !ajustes.si('empezarPalada', false)) return;
+  if ($('#modo-remo').hidden || $('#btn-grabar').disabled || [...document.querySelectorAll('.fin-fondo, .hoja-fondo')].some((x) => !x.hidden)) return;
+  arrancandoSola = true;
+  vibrar(VIBRA.gesto);
+  Promise.resolve(iniciarSesion()).finally(() => { arrancandoSola = false; });
+}
+
 async function asegurarConexion() {
   if (remadora.conectada) return true;
   try {
@@ -314,6 +344,7 @@ async function rachaConHoy() {
 // reanudar: la copia de una sesión que quedó a medias (al recuperar, «Seguir»). Se sigue en la misma sesión,
 // con su entrenamiento, su plan y lo ya remado, sin fantasmas (no se guardan en la copia).
 async function iniciarSesion(reanudar = null) {
+  estado.primerDia = false;
   document.querySelectorAll('.consejo').forEach((x) => x.remove());
   estado.entrenamientoActivo = reanudar ? reanudar.ent : await obtenerEnt($('#sel-entrenamiento').value);
   const intervalos = estado.entrenamientoActivo && Ent.tipoDe(estado.entrenamientoActivo) === 'intervalos';
@@ -1240,7 +1271,7 @@ function avanceBloque(t) {
   const { i, bloque: b, resta } = info;
   const fin = Ent.finDe(b);
   if (i !== estado.sesion.bloqueAnterior) {
-    if (estado.sesion.bloqueAnterior !== -1) { pitido(988, 0.25); vibrar(250); }
+    if (estado.sesion.bloqueAnterior !== -1) { pitido(988, 0.25); vibrar(VIBRA.bloque); }
     const anterior = estado.sesion.bloqueAnterior;
     cerrarSerie(t);
     estado.sesion.bloqueAnterior = i;
@@ -1269,6 +1300,9 @@ function avanceBloque(t) {
   Object.assign(estado.sesion, { segConMeta: cuenta.con, segEnRango: cuenta.dentro, segBajo: cuenta.bajo, segAlto: cuenta.alto });
   estado.sesion.fueraSeguidos = rango && rango !== 'dentro' ? estado.sesion.fueraSeguidos + 1 : 0;
   const s0 = estado.sesion;
+  // Fuera del rango 10 s seguidos (y luego cada 30 s): vibración distinta para subir o bajar, sin mirar.
+  const fuera = estado.sesion.fueraSeguidos;
+  if (fuera >= 10 && (fuera - 10) % 30 === 0 && info.restaSeg > 4 && G.esTrabajo(b)) vibrar(rango === 'bajo' ? VIBRA.sube : VIBRA.baja);
   seguirCorreccion(t, rango);
   if (estado.sesion.fueraSeguidos >= 5 && info.restaSeg > 4) {
     const spm = b.metrica === 'spm';
@@ -1335,6 +1369,8 @@ function avisosDelBloque(i, b, fin, resta) {
   if (trabajo && s.guion === 'prueba' && b.duracion >= 600 && resta === 180 && !dicho('vaciate')) hablar(G.VACIATE, { capa: G.CAPA.info });
   const cada = G.restanteCada(s.guion);
   if (trabajo && cada && resta % cada === 0 && resta < b.duracion && resta > 180 && !dicho(`resta${resta}`)) hablar(`Quedan ${tiempoHablado(resta)}`, { capa: G.CAPA.info });
+  // Los 30 s finales de una serie de 1 min o más: voz y vibración propia.
+  if (trabajo && b.duracion >= 60 && resta === 30 && !dicho('ult30')) { hablar('Últimos 30 segundos', { capa: G.CAPA.info }); vibrar(VIBRA.ultimos30); }
   // Fin de un descanso antes de una serie: a 10 s, «Prepárate».
   if (!trabajo && b.duracion >= 30 && resta === 10 && G.esTrabajo(s.plan[i + 1]) && !dicho('prep')) hablar(G.PREPARATE, { capa: G.CAPA.info });
 }

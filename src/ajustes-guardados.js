@@ -32,6 +32,7 @@ export const AJUSTES = {
   voz: A('si', true, true),
   cantidadVoz: A('texto', 'completa', true), // 'datos', 'entrenador' o 'completa' (voz.js)
   modoAuto: A('si', false, true),
+  empezarPalada: A('si', false, true), // etapa 16: en el modo remo, la sesión empieza con la primera palada
   pausaAuto: A('si', true, true),
   resAuto: A('si', false, true),
   atrVivo: A('si', true, true),

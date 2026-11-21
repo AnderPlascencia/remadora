@@ -166,16 +166,17 @@
         <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
       </div>
 
-      <div class="fila-botones barra-accion">
-        <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
-        <button id="btn-pausa" class="boton grande" hidden aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
-        <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
-      </div>
-
+      <!-- Etapa 16: las preguntas de antes de remar van encima de Empezar, donde se ven. -->
       <div id="antes-remar" class="antes-remar" hidden>
         <span class="etq-campo">Antes de remar <small>(opcional)</small></span>
         <div id="antes-preguntas"></div>
         <p id="antes-plegado" class="antes-plegado" hidden><span></span> · <button type="button" id="antes-cambiar" class="enlace-chevron">Cambiar ›</button></p>
+      </div>
+
+      <div class="fila-botones barra-accion">
+        <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
+        <button id="btn-pausa" class="boton grande" hidden aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
+        <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
       </div>
 
       <div id="pausa-aviso" class="aviso suave-aviso" hidden aria-live="polite">En pausa: empieza a remar para continuar</div>
@@ -630,6 +631,7 @@
       <label class="campo">Pantalla completa muestra
         <select id="sel-vista-remo">
           <option value="numeros">Números grandes</option>
+          <option value="uno">Solo un número</option>
           <option value="rango">Rango del intervalo (si el plan tiene rangos)</option>
           <option value="grafica">Gráfica del entrenamiento</option>
           <option value="carrera">Carrera contra el fantasma (si eliges uno)</option>
@@ -714,6 +716,7 @@
         <span id="mr-nombre" class="mr-nombre"></span>
         <span id="mr-meta-texto" class="mr-meta-texto"></span>
         <span id="mr-fin" class="mr-fin" hidden></span>
+        <label id="mr-auto" class="interruptor mr-auto" hidden><input type="checkbox" id="in-empezar-palada"><span>Empezar al dar la primera palada</span></label>
       </div>
       <div class="mr-tiempo">
         <span id="mr-resta" class="mr-resta"></span>
@@ -754,6 +757,7 @@
     <div id="mr-rival" class="rival mr-rival" hidden><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="mr-rival-texto"></span></div>
     <div id="mr-estado" class="mr-estado" aria-live="polite"></div>
     <div class="mr-botones">
+      <button id="mr-empezar" class="boton primario lleno grande" hidden><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
       <button id="mr-terminar" class="boton peligro lleno grande"><svg class="ico" aria-hidden="true"><use href="#i-stop"/></svg><span>Terminar</span></button>
       <button id="mr-pausa" class="boton grande" aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
       <button id="mr-vista" class="boton grande" aria-label="Cambiar a vista de gráfica"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg></button>

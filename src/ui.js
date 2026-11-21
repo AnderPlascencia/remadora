@@ -137,6 +137,8 @@ export function pitido(frecuencia, segundos) {
   } catch { /* sin audio */ }
 }
 
+// Patrones distintos para saber qué pasa sin mirar (etapa 16): sube son tres toques cortos, baja uno largo.
+export const VIBRA = Object.freeze({ gesto: 25, pausa: 60, bloque: 250, sube: [70, 60, 70, 60, 70], baja: [400], ultimos30: [40, 40, 40, 40, 40, 40] });
 export function vibrar(patron) {
   try { navigator.vibrate?.(patron); } catch { /* sin vibración */ }
 }
