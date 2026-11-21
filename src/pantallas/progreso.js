@@ -317,7 +317,9 @@ export async function pintarHistorial() {
     const r = h.racha || { dias: 0, semanasPlan: 0, mejor: 0 };
     $('#racha').textContent = r.dias;
     $('#racha-etq').textContent = r.dias === 1 ? 'día cumpliendo tu plan' : 'días cumpliendo tu plan';
-    const partes = [r.semanasPlan ? `${r.semanasPlan} ${r.semanasPlan === 1 ? 'semana del plan cumplida' : 'semanas del plan cumplidas'}` : '', r.mejor > r.dias ? `tu mejor: ${r.mejor}` : ''].filter(Boolean);
+    const partes = [r.semanasPlan ? `${r.semanasPlan} ${r.semanasPlan === 1 ? 'semana del plan cumplida' : 'semanas del plan cumplidas'}` : '', r.mejor > r.dias ? `tu mejor: ${r.mejor}` : '',
+      // Etapa 14: escudos guardados (cada semana cumplida da uno, hasta 2) y, si se cortó, volver a empezar sin reproches.
+      r.escudos ? `${r.escudos} ${r.escudos === 1 ? 'escudo guardado' : 'escudos guardados'}` : '', !r.dias && r.mejor ? 'hoy empieza una racha nueva' : ''].filter(Boolean);
     $('#racha-dias').textContent = partes.join(' · ');
     $('#racha-dias').hidden = !partes.length;
   } else {

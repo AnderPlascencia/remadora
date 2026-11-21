@@ -2,6 +2,19 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.87.0 · 2026-11-21
+
+Fallar un día o una semana ya no te saca del camino. Lo que da XP cuenta desde el lunes 23 de noviembre, y lo ganado antes de ese día no cambia.
+
+- **«Solo tengo 15 / 20 min».** En Hoy, con la sesión del día elegida, una versión corta conserva el estímulo clave: 5 min de calentamiento, el trabajo que quepa (2 de 4 series enteras, por ejemplo, o un fondo más corto) y 3 min de enfriamiento. Cuenta como la sesión del plan hecha a medias: mantiene la racha y la semana, y paga «Sesión del plan terminada» (la mitad).
+- **Protocolo de regreso.** Al volver tras un parón, la app te da la bienvenida sin reproches y adapta el plan:
+  - De 5 a 9 días fuera, tu primera sesión va al 80 %.
+  - De 10 a 20 días, una semana de vuelta al 65 % del trabajo y con los rangos un 5 % más bajos. Si la semana anterior quedó a medias, el plan la repite y se alarga.
+  - Desde 21 días, Hoy propone rehacer el plan desde hoy.
+  - Sin plan, te sugiere un fondo suave.
+- **Escudos de racha.** Cada semana del plan cumplida guarda un escudo, hasta 2. Un escudo salva solo un día perdido para que la racha no se corte. Progreso muestra tus escudos y tu mejor racha, y si la racha se corta dice «hoy empieza una racha nueva».
+- **Sesión de regreso.** Tras 10 días o más sin remar, tus 3 primeras sesiones pagan como la sesión del día (+150) aunque sean suaves. No es un multiplicador, para no premiar parar.
+
 ## 0.86.0 · 2026-11-21
 
 Una cita con el remo: eliges qué días y a qué hora remas, y tu calendario te lo recuerda. Todo funciona sin servidor.

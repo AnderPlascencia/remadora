@@ -359,6 +359,7 @@ async function iniciarSesion(reanudar = null) {
     avance: [],
     entrenamiento: estado.entrenamientoActivo ? estado.entrenamientoActivo.nombre : null,
     pruebaFtp: !!estado.entrenamientoActivo?.pruebaFtp,
+    versionCorta: estado.entrenamientoActivo?.versionCorta || null,
     plan,
     estadoAv: plan ? Ent.crearAvance() : null,
     info: null,
@@ -457,6 +458,7 @@ async function detenerSesion() {
   }
   estado.sesion = null;
   estado.entrenamientoActivo = null;
+  estado.versionCorta = null; // la versión corta vale para una sesión
   actualizarBotones();
   cerrarModoRemo();
   $('#pausa-aviso').hidden = true;
@@ -493,8 +495,8 @@ function copiaEnCurso(s, ent) {
   return {
     inicio: s.inicio, t: s.t, dist: s.dist, distConsola: s.distConsola, distFuente: s.distFuente, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
     segConMeta: s.segConMeta, segEnRango: s.segEnRango, segBajo: s.segBajo, segAlto: s.segAlto, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
-    pruebaFtp: s.pruebaFtp, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(), xpCtx: s.xpCtx ?? null,
-    ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo } : null,
+    pruebaFtp: s.pruebaFtp, versionCorta: s.versionCorta || null, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(), xpCtx: s.xpCtx ?? null,
+    ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo, ...(ent.versionCorta ? { versionCorta: ent.versionCorta } : {}) } : null,
   };
 }
 async function guardarSesionEnCurso(s = estado.sesion, ent = estado.entrenamientoActivo) {
@@ -581,6 +583,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     enfoque: ent ? P.enfoqueDe(ent) : null,
     tipoPlan: s.tipoPlan ?? null,
     tiempoMeta: s.tiempoMeta,
+    ...(s.versionCorta ? { versionCorta: s.versionCorta } : {}),
     delPrograma: delProgramaHoy(s),
     // Para el juego (xp-carga.js): reglas de XP por carga, si era la sesión del día y qué tocaba en el plan.
     ...(s.xpCtx || { reglasXp: XC.REGLAS_XP_CARGA }),

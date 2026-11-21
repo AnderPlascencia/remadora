@@ -1626,6 +1626,7 @@ details.mas-detalle[hidden] { display: none; }
 .hoy-ajuste { margin: 6px 0 0; font-size: var(--t-s); color: var(--primario); font-weight: 600; }
 .hoy-ajuste.atencion { color: var(--aviso); }
 .hoy-cita { margin: 6px 0 0; font-size: var(--t-s); color: var(--texto-suave); }
+.hoy-corta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 0; font-size: var(--t-s); color: var(--texto-suave); }
 .cita-campo { border: 0; padding: 0; margin: 12px 0; }
 .cita-campo legend { font-weight: 600; margin-bottom: 6px; }
 .cita-campo .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }

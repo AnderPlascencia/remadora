@@ -37,6 +37,8 @@ export const DESCANSO_IF_MAX = 0.65;
 const DURAS = new Set(['umbral', 'vo2', 'sprint']);
 export function cumplimientoPlan(s) {
   if (s.tiempoMeta == null) return null;
+  // La versión corta («Solo tengo 15 / 20 min», etapa 14) cuenta como la sesión del plan hecha a medias.
+  if (s.versionCorta) return 'terminada';
   if (s.pctEnRango == null) return 'cumplida';
   const enRango = s.pctEnRango || 0;
   const alto = s.pctAlto || 0;
