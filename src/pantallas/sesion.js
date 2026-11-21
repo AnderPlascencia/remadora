@@ -668,10 +668,13 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   pitido(660, 0.2);
   agregarLog(`sesión guardada: ${formatoTiempo(registro.duracion)}, ${registro.distancia} m`);
   const ftpAuto = ftpAutomatico(registro);
-  // Con pulso, el esfuerzo se calcula solo; sin pulso, se pregunta en el resumen.
-  const porPulso = E.esfuerzoPorPulso(registro.muestras, fcParaEsfuerzo());
-  if (porPulso) Object.assign(registro, { rpe: porPulso.rpe, rpeFuente: 'pulso', rpePct: porPulso.pct });
-  if (porPulso) await H.actualizar(registro.id, { rpe: registro.rpe, rpeFuente: registro.rpeFuente, rpePct: registro.rpePct });
+  // Con pulso, el esfuerzo según el pulso se guarda aparte (rpePulso) como sugerencia: el tuyo (rpe) lo marcas en el
+  // resumen, y es el que usa la adaptación del plan.
+  const porPulso = E.esfuerzoPorPulso(registro.muestras, { ...fcRef(), max: fcParaEsfuerzo() });
+  if (porPulso) {
+    Object.assign(registro, { rpePulso: porPulso.rpe, rpePct: porPulso.pct, trimp: porPulso.trimp });
+    await H.actualizar(registro.id, { rpePulso: registro.rpePulso, rpePct: registro.rpePct, trimp: registro.trimp });
+  }
   if (!previas) {
     // Sin historial no se puede calcular el resumen (récords, juego): la sesión está guardada y su detalle se abre igual.
     toast('Sesión guardada. El resumen completo estará en tu historial.', 6000);
@@ -680,7 +683,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
     return true;
   }
   const recs = E.nuevosRecords(registro, previas);
-  if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Esfuerzo ${porPulso.rpe} de 10 según tu pulso` : '. ¿Qué tan duro se sintió?'}`);
+  if (!recuperada) hablar(`Sesión terminada. ${(registro.distancia / 1000).toFixed(1).replace('.', ' punto ')} kilómetros${recs.length ? `. ${recs.length === 1 ? 'Nuevo récord' : `${recs.length} récords nuevos`}` : ''}${porPulso ? `. Según tu pulso, un esfuerzo de ${porPulso.rpe} de 10. ¿Cómo lo sentiste tú?` : '. ¿Qué tan duro se sintió?'}`);
   abrirSesion(registro, { resumen: true, previas, ftpAuto });
   if (!recuperada) setTimeout(() => decirResumenJuego(registro, previas), 0);
   await revisarPlanAuto();

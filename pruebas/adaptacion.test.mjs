@@ -37,6 +37,11 @@ const r2 = A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: 
 assert.equal(r2.programa.factor, 0.97);
 const r3 = A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: [umbral(-3, 98, 5), umbral(-1, 97, 5)], entrenamientos, ftp: 200, ahora });
 assert.equal(r3.programa.factor, 1.03);
+// Solo con el esfuerzo según el pulso (sin el tuyo) no se suben los rangos: puede que no te sintieras bien.
+const soloPulso = [umbral(-3, 98, 5), umbral(-1, 97, 5)].map(({ rpe, ...x }) => ({ ...x, rpePulso: rpe }));
+assert.equal(A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: soloPulso, entrenamientos, ftp: 200, ahora }).programa.factor, 1);
+const deAntes = [umbral(-3, 98, 5), umbral(-1, 97, 5)].map((x) => ({ ...x, rpeFuente: 'pulso' }));
+assert.equal(A.revisarPlan({ programa: conHoy('Fondo 40 min (zona 2)'), sesiones: deAntes, entrenamientos, ftp: 200, ahora }).programa.factor, 1, 'tampoco con el del pulso de las sesiones de antes');
 // La misma pareja de sesiones no se cuenta dos veces.
 const r3b = A.revisarPlan({ programa: { ...r3.programa, revision: 'otra' }, sesiones: [umbral(-3, 98, 5), umbral(-1, 97, 5)], entrenamientos, ftp: 200, ahora });
 assert.equal(r3b.programa.factor, 1.03);

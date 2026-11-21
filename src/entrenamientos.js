@@ -5,9 +5,10 @@
 //  - 'intervalos': { tipo, nombre, bloques: [{ nombre, fin?, duracion (s), cantidad?, metrica, min, max, nivel? }] }
 //    fin: 'tiempo' (por defecto, usa duracion), 'distancia' (cantidad en m) o 'paladas' (cantidad de paladas).
 //    metrica: 'watts' (min/max en W), 'ftp' (min/max en % del FTP), 'split' (min/max en s por 500 m),
-//    'spm' (golpes/min), 'fc' (pulso en lpm), 'fcpct' (% de la reserva de pulso o del pulso máximo) o '' (libre).
+//    'spm' (golpes/min), 'fc' (pulso en lpm), 'fcpct' (% de la reserva de pulso; sin pulso en reposo, con uno supuesto)
+//    o '' (libre).
 //    nivel (1-24, opcional): resistencia que se pide a la consola si la resistencia automática está activa.
-import { pulsoDePct, usaReserva } from './pulso.js';
+import { pulsoDePct, usaReserva, REPOSO_SUPUESTO } from './pulso.js';
 
 // Zonas de potencia como % del FTP.
 export const ZONAS = [
@@ -37,8 +38,8 @@ export function wattsDeSplit(split) {
   return split > 0 ? Math.round(2.8 / (split / 500) ** 3) : 0;
 }
 
-// Rango de pulso en lpm. null si el bloque no es por pulso. 'fcpct' es % de tu reserva de pulso si conoces
-// tu pulso en reposo (fcRef = { max, reposo }), o % de tu pulso máximo (fcRef = número).
+// Rango de pulso en lpm. null si el bloque no es por pulso. 'fcpct' es % de tu reserva de pulso (fcRef = { max, reposo });
+// sin pulso en reposo (fcRef = número) se supone uno típico (ver pulso.js).
 export function rangoFc(b, fcRef) {
   if (b.metrica === 'fc') return { min: b.min, max: b.max };
   if (b.metrica === 'fcpct') { const min = pulsoDePct(b.min, fcRef); return min ? { min, max: pulsoDePct(b.max, fcRef) } : null; }
@@ -66,8 +67,11 @@ function textoMetaSolo(b, ftp, fcMax) {
   if (b.metrica === 'fc') return `${b.min}–${b.max} lpm`;
   if (b.metrica === 'fcpct') {
     const r = rangoFc(b, fcMax);
-    const de = usaReserva(fcMax) ? 'reserva de pulso' : 'pulso máx';
-    return r ? `${r.min}–${r.max} lpm (${b.min}–${b.max}% ${de})` : `${b.min}–${b.max}% ${de}`;
+    // Sin pulso en reposo, el % se dice sobre el máximo (60–70 % de la reserva supuesta ≈ 72–79 % del máximo).
+    const reserva = usaReserva(fcMax);
+    const pm = (x) => Math.round(REPOSO_SUPUESTO * 100 + (1 - REPOSO_SUPUESTO) * x);
+    const pct = reserva ? `${b.min}–${b.max}% reserva de pulso` : `${pm(b.min)}–${pm(b.max)}% pulso máx`;
+    return r ? `${r.min}–${r.max} lpm (${pct})` : pct;
   }
   const r = rangoWatts(b, ftp);
   if (b.metrica === 'ftp') return r ? `${r.min}–${r.max} W (${b.min}–${b.max}% FTP)` : `${b.min}–${b.max}% FTP`;

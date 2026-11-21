@@ -291,8 +291,7 @@ export function ftpAutomatico(s) {
   if (s.pruebaWatts || s.duracion < 600) return null;
   const estimado = ajustes.si('ftpEstimado', false);
   if (ftp() && !estimado) return null;
-  const p10 = E.mejorPotencia(s.muestras || [], 600);
-  const nuevo = E.ftpSugerido(s) || (p10 ? Math.round(p10 * 0.9) : 0);
+  const nuevo = Math.round(E.ftpDeSesion(s));
   const dePerfil = ajustes.si('ftpDePerfil', false);
   if (!nuevo || (nuevo <= ftp() && !dePerfil)) return null;
   const antes = ftp();

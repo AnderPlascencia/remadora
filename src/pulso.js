@@ -1,37 +1,51 @@
 // Pulso: una sola definición de las zonas, con pulso de reserva (Karvonen) si conoces tu pulso en reposo,
-// y el pulso máximo que de verdad has alcanzado en vez de la fórmula 220 − edad. Sin dependencias.
+// y el pulso máximo que de verdad has alcanzado en vez de una fórmula por edad. Sin dependencias.
 
-// Zona 2 (fondo): del 60 al 70 % de tu reserva de pulso, o de tu pulso máximo si no hay pulso en reposo.
+// Zona 2 (fondo): del 60 al 70 % de tu reserva de pulso.
 export const ZONA2 = { min: 60, max: 70 };
+// Sin pulso en reposo se supone el de un adulto típico, el 30 % del máximo (57 lpm con 190). Así las zonas son las
+// mismas en promedio con y sin él (la zona 2 queda en el 72–79 % del máximo) y no saltan unos 20 lpm al darlo.
+export const REPOSO_SUPUESTO = 0.3;
 
 // Referencia de pulso: un número (pulso máximo) o { max, reposo }.
 export const refPulso = (x) => (x && typeof x === 'object' ? { max: x.max || 0, reposo: x.reposo || 0 } : { max: x || 0, reposo: 0 });
 // El pulso en reposo solo vale si es creíble (30 lpm o más y al menos 40 por debajo del máximo).
 export const usaReserva = (ref) => { const r = refPulso(ref); return r.max > 0 && r.reposo >= 30 && r.reposo <= r.max - 40; };
 
-// Pulso (lpm) para un % de la zona: reposo + % × (máximo − reposo), o % × máximo.
+// Pulso en reposo con el que se calculan las zonas: el tuyo o el supuesto.
+export const reposoZonas = (ref) => { const r = refPulso(ref); return usaReserva(r) ? r.reposo : r.max * REPOSO_SUPUESTO; };
+// Pulso (lpm) para un % de la zona: reposo + % × (máximo − reposo) (Karvonen).
 export function pulsoDePct(pct, ref) {
   const r = refPulso(ref);
   if (!r.max) return 0;
-  return Math.round(usaReserva(r) ? r.reposo + ((r.max - r.reposo) * pct) / 100 : (r.max * pct) / 100);
+  const rep = reposoZonas(r);
+  return Math.round(rep + ((r.max - rep) * pct) / 100);
 }
 // Al revés: qué % de la zona es un pulso.
 export function pctDePulso(fc, ref) {
   const r = refPulso(ref);
   if (!fc || !r.max) return null;
-  return usaReserva(r) ? (100 * (fc - r.reposo)) / (r.max - r.reposo) : (100 * fc) / r.max;
+  const rep = reposoZonas(r);
+  return (100 * (fc - rep)) / (r.max - rep);
 }
+// Cuántos lpm se mueve la zona 2 de una referencia a otra (para avisar al escribir el pulso en reposo).
+export const cambioZona2 = (antes, despues) => {
+  const a = rangoZona2(antes);
+  const d = rangoZona2(despues);
+  return Math.max(Math.abs(a.min - d.min), Math.abs(a.max - d.max));
+};
 export const rangoZona2 = (ref) => ({ min: pulsoDePct(ZONA2.min, ref), max: pulsoDePct(ZONA2.max, ref) });
 
 // Pulso máximo que usa la app y de dónde sale:
 //  - 'manual': lo escribiste tú;
 //  - 'observada': el más alto de tus sesiones (media de 5 s), en cuanto llega al 92 % de lo que da tu edad
 //    (antes aún no has ido a tope y te dejaría zonas demasiado bajas);
-//  - 'edad': 220 − edad, estimado.
+//  - 'edad': 208 − 0,7 × edad (Tanaka), estimado; la de 220 − edad se queda corta pasados los 40.
 // estimado: true si no sale de una medida tuya completa (la edad, o lo observado sin edad para contrastarlo).
+export const fcMaxDeEdad = (edad) => (edad > 0 ? Math.round(208 - 0.7 * edad) : 0);
 export function fcMaxEfectiva({ manual = 0, edad = 0, observada = 0 } = {}) {
   if (manual > 0) return { fcMax: manual, fuente: 'manual', estimado: false };
-  const deEdad = edad > 0 ? 220 - edad : 0;
+  const deEdad = fcMaxDeEdad(edad);
   if (observada > 0 && (!deEdad || observada >= deEdad * 0.92)) return { fcMax: observada, fuente: 'observada', estimado: !deEdad };
   if (deEdad) return { fcMax: deEdad, fuente: 'edad', estimado: true };
   return { fcMax: 0, fuente: '', estimado: true };
@@ -39,7 +53,7 @@ export function fcMaxEfectiva({ manual = 0, edad = 0, observada = 0 } = {}) {
 export const TEXTO_FUENTE_FC = {
   manual: 'Lo escribiste tú.',
   observada: 'El más alto que has alcanzado en tus sesiones (media de 5 s). Sube solo si un día llegas más arriba.',
-  edad: 'Estimado con tu edad (220 − edad): puede fallar 10 lpm o más. Con una prueba a tope y el reloj puesto se mide el tuyo.',
+  edad: 'Estimado con tu edad (208 − 0,7 × edad): puede fallar 10 lpm o más. Con una prueba a tope y el reloj puesto se mide el tuyo.',
 };
 
 // Pulso máximo de una sesión: la mejor media de 5 s seguidos. Ignora lecturas imposibles y los picos sueltos

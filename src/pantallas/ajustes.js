@@ -12,8 +12,8 @@ import * as Pf from '../perfil.js';
 import * as R from '../respaldo.js';
 import { VERSION } from '../version.js';
 import { olvidarTokens } from '../grafica.js';
-import { $, COLOR_ZONA, ajustes, color, descargar, escaparHtml, ftp, ico, perfil, toast } from '../ui.js';
-import { TEXTO_FUENTE_FC, fcMaxDeHistorial, fcMaxEfectiva } from '../pulso.js';
+import { $, COLOR_ZONA, ajustes, color, descargar, escaparHtml, fcRef, ftp, ico, perfil, toast } from '../ui.js';
+import { TEXTO_FUENTE_FC, cambioZona2, fcMaxDeHistorial, fcMaxEfectiva, rangoZona2 } from '../pulso.js';
 import { estado } from '../estado.js';
 import { irA, vistaActiva } from '../navegacion.js';
 import { asistente, estimarFtp, guardarFtp, leerMmss, pintarFtpEstado } from './preparar.js';
@@ -42,7 +42,15 @@ export function arrancarAjustes1() {
     ajustes.escribir('fcMaxFuente', ajustes.num('fcMax', 0) ? 'manual' : '');
     H.sesiones().then(actualizarFcMax);
   });
-  campoNumero('#in-fcreposo', 'fcReposo', '');
+  // Al dar (o cambiar) el pulso en reposo, las zonas pasan a tu reserva de pulso: si la zona 2 se mueve más de
+  // 5 lpm, se dice cuánto, para que no sorprenda en el próximo fondo.
+  let reposoPrevio = fcRef().reposo;
+  campoNumero('#in-fcreposo', 'fcReposo', '', () => {
+    const ref = fcRef();
+    const d = cambioZona2({ ...ref, reposo: reposoPrevio }, ref);
+    if (d > 5) { const z = rangoZona2(ref); toast(`Tu zona 2 ahora va de ${z.min} a ${z.max} lpm (se movió ${d} lpm con tu pulso en reposo)`); }
+    reposoPrevio = ref.reposo;
+  });
   campoNumero('#in-edad', 'edad', '', () => { aplicarEdad(); alCambiarPerfil(); });
   campoSelect('#sel-sexo', 'sexo', '', () => { pintarClasificacion(); alCambiarPerfil(); });
   campoSelect('#sel-experiencia', 'experiencia', '', () => alCambiarPerfil());
@@ -106,7 +114,7 @@ function campoNumero(sel, clave, defecto, alCambiar) {
     alCambiar?.();
   });
 }
-// Pulso máximo: el tuyo si lo escribiste; si no, el más alto de tus sesiones o, mientras no llegues cerca, 220 − edad.
+// Pulso máximo: el tuyo si lo escribiste; si no, el más alto de tus sesiones o, mientras no llegues cerca, el de tu edad.
 // Las versiones de antes no guardaban la fuente: un pulso que no salió de la edad era tuyo.
 export function fuenteFcMax() {
   const f = ajustes.leer('fcMaxFuente', '');
@@ -127,9 +135,9 @@ export function actualizarFcMax(sesiones = []) {
   const f = fuenteFcMax();
   $('#fcmax-fuente').hidden = !f || f === 'manual';
   $('#fcmax-fuente').textContent = f === 'observada' ? 'observado' : 'estimado';
-  $('#fcmax-ayuda').textContent = TEXTO_FUENTE_FC[f] || 'Si no lo escribes, la app usa el más alto que alcances en tus sesiones (o, mientras tanto, 220 menos tu edad).';
+  $('#fcmax-ayuda').textContent = TEXTO_FUENTE_FC[f] || 'Si no lo escribes, la app usa el más alto que alcances en tus sesiones (o, mientras tanto, uno estimado con tu edad).';
 }
-// La edad rellena el pulso máximo (220 − edad) si no lo has puesto a mano ni lo has alcanzado remando.
+// La edad rellena el pulso máximo (208 − 0,7 × edad) si no lo has puesto a mano ni lo has alcanzado remando.
 export function aplicarEdad() {
   if (!ajustes.num('edad', 0) || fuenteFcMax() === 'manual') return;
   H.sesiones().then(actualizarFcMax);

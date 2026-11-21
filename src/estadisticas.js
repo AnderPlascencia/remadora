@@ -1,7 +1,7 @@
 // Cálculos de seguimiento: récords, comparación con la sesión anterior y progreso por periodo.
 // Una muestra de sesión es { t, w, spm, split, dist, nivel, fc } con t en segundos activos.
 import { enRango, esBloqueTrabajo } from './entrenamientos.js';
-import { fcMax5De, pctDePulso } from './pulso.js';
+import { fcMax5De, pctDePulso, refPulso } from './pulso.js';
 
 // Resúmenes por sesión: récords y curva de potencia se piden muchas veces sobre las mismas muestras.
 // Se guardan junto a la lista de muestras (si cambia la lista o crece, la clave ya no coincide); una sesión
@@ -306,7 +306,7 @@ export const ZONAS_FC = [
   { n: 5, nombre: 'Máxima', min: 90, max: 100 },
 ];
 
-// Las zonas son % de tu reserva de pulso si conoces tu pulso en reposo (ref = { max, reposo }), o de tu máximo.
+// Las zonas son % de tu reserva de pulso (ref = { max, reposo }); sin pulso en reposo, con uno supuesto (pulso.js).
 export function zonaFc(fc, ref) {
   const pct = pctDePulso(fc, ref);
   if (pct == null || pct < 50) return null;
@@ -534,18 +534,34 @@ export function distanciaPorWatts(s) {
   return r;
 }
 
-// Esfuerzo (1–10) a partir del pulso: el pulso medio como % del máximo marca la base
-// (60 % → 3, 70 % → 5, 80 % → 7, 90 % → 9) y una sesión larga a buen pulso suma 1.
-// Hace falta pulso en al menos el 60 % de la sesión y 5 minutos con dato; si no, null.
-export function esfuerzoPorPulso(muestras, fcMax) {
-  if (!fcMax || !muestras?.length) return null;
+// Esfuerzo (1–10) a partir del pulso, con el TRIMP de Edwards: el tiempo en cada zona pesa de 1 a 5, así que la
+// media de esos pesos da la base (zona 2 → 4, zona 3 → 6, zona 4 → 8). Las series no se diluyen con sus descansos:
+// 5 min en zona 5 ya son un 8, 10 min en zona 4 o más un 7 y 20 min un 8. Una sesión larga a buen pulso suma 1.
+// ref: pulso máximo o { max, reposo } (con reposo, por reserva de pulso). Hace falta pulso en al menos el 60 % de
+// la sesión y 5 minutos con dato; si no, null. pct: pulso medio como % del máximo (para el texto).
+export function esfuerzoPorPulso(muestras, ref) {
+  const r = refPulso(ref);
+  if (!r.max || !muestras?.length) return null;
   const con = muestras.filter((x) => x.fc > 0);
   if (con.length < 300 || con.length < muestras.length * 0.6) return null;
-  const pct = (100 * con.reduce((a, x) => a + x.fc, 0)) / con.length / fcMax;
-  let rpe = Math.round((pct - 45) / 5);
-  if (muestras.length > 2700 && pct >= 70) rpe += 1;
-  return { rpe: Math.max(1, Math.min(10, rpe)), pct: Math.round(pct) };
+  const z = tiempoEnZonasFc(con, r);
+  const fuera = con.length - z.reduce((a, x) => a + x, 0); // por debajo de la zona 1: pesa 0,5
+  const trimp = z.reduce((a, x, i) => a + x * (i + 1), 0) + fuera * 0.5;
+  let rpe = Math.round((2 * trimp) / con.length);
+  const fuerte = z[3] + z[4];
+  if (z[4] >= 300 || fuerte >= 1200) rpe = Math.max(rpe, 8);
+  else if (fuerte >= 600) rpe = Math.max(rpe, 7);
+  else if (fuerte >= 300) rpe = Math.max(rpe, 6);
+  if (muestras.length > 2700 && trimp / con.length >= 2) rpe += 1;
+  const pct = (100 * con.reduce((a, x) => a + x.fc, 0)) / con.length / r.max;
+  return { rpe: Math.max(1, Math.min(10, rpe)), pct: Math.round(pct), trimp: Math.round(trimp / 60) };
 }
+// El RPE que diste tú (null si no lo marcaste): es el que deciden la adaptación y las reglas de fatiga.
+// Las sesiones de antes de la 0.77 guardaban el del pulso en `rpe` con rpeFuente 'pulso'; ahora va en `rpePulso`.
+export const rpeSentido = (s) => (s?.rpe > 0 && s.rpeFuente !== 'pulso' ? s.rpe : null);
+export const rpePulsoDe = (s) => s?.rpePulso ?? (s?.rpeFuente === 'pulso' && s.rpe > 0 ? s.rpe : null);
+// Para mostrar: el tuyo y, si no lo diste, el del pulso.
+export const rpeDe = (s) => rpeSentido(s) ?? rpePulsoDe(s);
 
 // ---------- Métricas avanzadas: potencia ----------
 // Muestras a 1 Hz. Las funciones devuelven null cuando no hay datos suficientes para que la cifra signifique algo.
@@ -590,15 +606,25 @@ export const bandasRemo = (ftp) => BANDAS_REMO.map((b) => ({
   ...(ftp > 0 ? { wMin: Math.round((ftp * b.min) / 100), wMax: Math.round((ftp * b.max) / 100), splitRapido: splitDeW((ftp * b.max) / 100), splitLento: splitDeW((ftp * b.min) / 100) } : {}),
 }));
 
-// FTP aproximado sin prueba, con tus últimas 20 sesiones (por fecha, sin importar el orden de la lista):
-// el 95 % de la media de una sesión de 20 min o más, o el 90 % de una de 10 a 20 min. Las más cortas no cuentan:
-// un 500 m va al 140 % del FTP o más y lo inflaba.
+// FTP que da una sesión sin ser una prueba: el 95 % de tu mejor tramo de 20 min o, si no llega, el 90 % del de 10 min
+// (la media de toda la sesión lo hundía con el calentamiento y los descansos). Sin muestras, con su media.
+// Las de menos de 10 min no cuentan: un 500 m va al 140 % del FTP o más y lo inflaba.
+export function ftpDeSesion(s) {
+  if (!s || (s.duracion || 0) < 600) return 0;
+  const m = s.muestras || [];
+  const p20 = m.length ? mejorPotencia(m, 1200) : null;
+  if (p20) return p20 * 0.95;
+  const p10 = m.length ? mejorPotencia(m, 600) : null;
+  if (p10) return p10 * 0.9;
+  return s.wattsProm > 0 ? s.wattsProm * ((s.duracion || 0) >= 1200 ? 0.95 : 0.9) : 0;
+}
+// FTP aproximado sin prueba, con tus últimas 20 sesiones (por fecha, sin importar el orden de la lista): la mediana
+// de las 3 mejores, así un día bueno (o un dato raro de la consola) no lo infla.
 export function ftpEstimadoDe(sesiones) {
-  const w = [...(sesiones || [])].sort((a, b) => a.fecha - b.fecha).slice(-20).map((s) => {
-    const d = s.duracion || 0;
-    return s.wattsProm > 0 ? (d >= 1200 ? s.wattsProm * 0.95 : d >= 600 ? s.wattsProm * 0.9 : 0) : 0;
-  }).filter((x) => x > 0);
-  return w.length ? Math.round(Math.max(...w)) : 0;
+  const w = [...(sesiones || [])].sort((a, b) => a.fecha - b.fecha).slice(-20).map(ftpDeSesion).filter((x) => x > 0);
+  if (!w.length) return 0;
+  const tres = w.sort((a, b) => b - a).slice(0, 3);
+  return Math.round(tres[Math.floor(tres.length / 2)]);
 }
 
 // ¿Toca revisar el FTP? Repetir la prueba cada 6–8 semanas, y bajarlo si varias sesiones duras se quedan cortas.

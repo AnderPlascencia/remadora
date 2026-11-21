@@ -350,7 +350,7 @@ export async function pintarHistorial() {
     li.innerHTML = `<div class="info"><div class="titulo"></div><div class="suave"></div></div>${ico('i-baja')}`;
     li.querySelector('.ico').style.transform = 'rotate(-90deg)';
     li.querySelector('.titulo').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${s.entrenamiento || 'Remo libre'}`;
-    if (s.rpe) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip solo-avanzado">Esfuerzo ${s.rpe}</span>`);
+    if (E.rpeDe(s)) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip solo-avanzado">Esfuerzo ${E.rpeDe(s)}</span>`);
     li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoMeta(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
     li.addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') li.click(); });

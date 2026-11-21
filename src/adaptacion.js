@@ -105,7 +105,8 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
   if (a && b && recientes.includes(b)) {
     const ratio = ftp ? E.ratioCarga(orden, ftp, ahora) : null;
     const cargaOk = ratio == null || ratio <= 1.3;
-    const facil = (b.rpe ?? 10) <= 6;
+    // Solo cuenta el esfuerzo que diste tú: sin él (o con solo el del pulso) no se suben los rangos.
+    const facil = (E.rpeSentido(b) ?? 10) <= 6;
     if (corta(a) && corta(b) && p.factor > FACTOR_MIN) {
       p.factor = Math.max(FACTOR_MIN, Math.round(p.factor * 0.97 * 100) / 100);
       avisos.push('Dos sesiones fuertes seguidas te quedaste por debajo del rango: bajé tus rangos un 3 %.');
