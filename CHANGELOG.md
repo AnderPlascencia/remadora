@@ -2,6 +2,19 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.84.0 · 2026-11-21
+
+La carga se calcula aunque no tengas FTP, y el FTP se mantiene al día solo con tus sesiones.
+
+- **Carga por esfuerzo (sRPE).** Sin FTP, o si la consola no manda watts, la carga sale de cómo se sintió la sesión × sus minutos. De serie, una hora a tu FTP sentida como un 7 vale unos 100. Con 3 sesiones que tengan watts y esfuerzo a la vez, el factor se calibra a ti. La forma, el ratio de carga y la recuperación ya cuentan esas sesiones. En el resumen, con Datos avanzados, la carga dice si sale del esfuerzo.
+- **FTP vivo.** La app propone cambiar tu FTP con un toque y nunca lo cambia sola:
+  - Lo propone subir cuando la mediana de tus 3 mejores sesiones de los últimos 90 días pasa de tu FTP. Antes bastaba una sola sesión buena.
+  - Lo propone bajar si tu potencia crítica de las últimas 6 semanas, con alguna sesión dura, cae más de un 5 %.
+  - También lo propone bajar un 5 % si llevas 21 días sin una sesión dura.
+  - Si aceptas o tocas «Ahora no», no vuelve a proponer nada durante 14 días.
+- **Esfuerzo en 5 botones grandes:** Fácil, Moderado, Duro, Muy duro y Máximo. Se guardan como 2, 4, 6, 8 y 10 en la escala CR10, y «Afinar de 1 a 10» da la escala entera.
+- «Tu constancia» muestra qué parte de tus sesiones de los últimos 28 días tiene carga conocida y cuál tiene tu esfuerzo marcado.
+
 ## 0.83.0 · 2026-11-21
 
 Más fácil de usar con lector de pantalla y con el dedo, y un CI que vigila todas las pantallas.

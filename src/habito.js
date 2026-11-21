@@ -2,7 +2,7 @@
 // (abrirla, empezar una sesión y dejarla, la bienvenida, compartir la imagen). Todo se queda en el teléfono:
 // los eventos viven en el almacén «estado» de IndexedDB y van en el respaldo.
 import * as db from './db.js';
-import { claveDia, inicioPeriodo } from './estadisticas.js';
+import { cargaDe, claveDia, factorSrpe, inicioPeriodo, rpeSentido } from './estadisticas.js';
 import * as P from './programa.js';
 
 export const ESTADO_EVENTOS = 'eventosHabito';
@@ -101,8 +101,17 @@ export function resumenEventos(eventos, sesiones, dias = 28, ahora = Date.now())
   };
 }
 
+// De las sesiones de los últimos `dias`: % con carga conocida (watts o esfuerzo) y % con tu esfuerzo marcado.
+export function datosDeCarga(sesiones, ftp = 0, dias = 28, ahora = Date.now()) {
+  const l = sesiones.filter((s) => s.fecha > ahora - dias * DIA && s.fecha <= ahora);
+  if (!l.length) return { sesiones: 0, pctCarga: null, pctEsfuerzo: null };
+  const k = factorSrpe(sesiones, ftp);
+  const pct = (n) => Math.round((100 * n) / l.length);
+  return { sesiones: l.length, pctCarga: pct(l.filter((s) => cargaDe(s, ftp, k).valor != null).length), pctEsfuerzo: pct(l.filter((s) => rpeSentido(s)).length) };
+}
+
 // Todo junto para la tarjeta «Tu constancia».
-export function resumenHabito({ sesiones = [], eventos = [], programa = null, ahora = Date.now() } = {}) {
+export function resumenHabito({ sesiones = [], eventos = [], programa = null, ftp = 0, ahora = Date.now() } = {}) {
   const semanas = sesionesPorSemana(sesiones, 8, ahora);
   const cerradas = semanas.slice(0, -1);
   const primera = sesiones.reduce((m, s) => Math.min(m, s.fecha), Infinity);
@@ -116,7 +125,7 @@ export function resumenHabito({ sesiones = [], eventos = [], programa = null, ah
     const c = P.cumplimiento(P.estadoDias(programa, sesiones, ahora));
     cumplimiento = { ...c, pct: c.pasados ? Math.round((100 * c.hechos) / c.pasados) : null };
   }
-  return { semanas, media, cumplimiento, ...pausas(sesiones, ahora), eventos: resumenEventos(eventos, sesiones, 28, ahora) };
+  return { semanas, media, cumplimiento, ...pausas(sesiones, ahora), eventos: resumenEventos(eventos, sesiones, 28, ahora), carga: datosDeCarga(sesiones, ftp, 28, ahora) };
 }
 
 // ---------- Guardar y leer ----------

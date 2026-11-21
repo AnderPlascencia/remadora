@@ -420,7 +420,12 @@ textarea { font: inherit; color: var(--texto); background: var(--panel); border:
 .leyenda .lmpp::before { background: var(--exito); height: 3px; vertical-align: 3px; }
 .leyenda .ljp::before { background: var(--split); height: 3px; vertical-align: 3px; }
 
-.rpe { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.rpe { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.rpe-fino { grid-template-columns: repeat(10, 1fr); gap: 4px; margin-top: 6px; }
+.rpe-grande { min-height: 64px !important; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1.1; }
+.rpe-grande small { font-size: var(--t-xs); font-weight: 600; }
+.rpe-fino-caja { margin-top: 6px; }
+.rpe-fino-caja > summary { min-height: 44px; display: flex; align-items: center; font-size: var(--t-s); color: var(--texto-suave); cursor: pointer; }
 .rpe button { min-height: 44px; padding: 0; border-radius: var(--r-chico); font-weight: 800; font-variant-numeric: tabular-nums; }
 .rpe button.activo { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); }
 .desliza { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
@@ -2090,3 +2095,7 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 .hoy .enlace-boton, .hoy-sugerencia .enlace-boton, .mision-pie .enlace-boton, .consejo .enlace-boton { min-height: 44px; }
 .base-nombre { min-height: 44px; align-items: center; }
 .separador-plan .enlace-boton { min-height: 44px; }
+/* Con «Ahora no», la sugerencia pasa a dos filas: el texto arriba y los dos botones debajo. */
+.hoy-sugerencia:has(.sug-no:not([hidden])) { flex-wrap: wrap; }
+.hoy-sugerencia:has(.sug-no:not([hidden])) span { flex-basis: 100%; }
+.hoy-sugerencia .sug-no { color: var(--texto-suave); padding: 0 8px; }

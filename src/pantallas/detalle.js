@@ -18,7 +18,9 @@ import { formatoRecord } from './progreso.js';
 import { leerPersonaje, pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
 
 // ---------- Resumen / detalle de sesión ----------
-const TEXTO_RPE = ['', 'Muy fácil', 'Muy fácil', 'Fácil', 'Fácil', 'Moderado', 'Moderado', 'Duro', 'Duro', 'Muy duro', 'Máximo'];
+// Escala CR10: los cinco botones grandes caen en 2, 4, 6, 8 y 10 con el mismo nombre.
+const TEXTO_RPE = ['', 'Muy fácil', 'Fácil', 'Fácil', 'Moderado', 'Moderado', 'Duro', 'Duro', 'Muy duro', 'Muy duro', 'Máximo'];
+const RPE_GRANDE = [[2, 'Fácil'], [4, 'Moderado'], [6, 'Duro'], [8, 'Muy duro'], [10, 'Máximo']];
 
 async function guardarSesionAbierta() {
   if (estado.sesionAbierta?.id != null) await H.guardar(estado.sesionAbierta);
@@ -37,9 +39,12 @@ function pintarRpe() {
     $('#rpe-auto').innerHTML = `<b class="rpe-valor">${pulso}</b><span>de 10 según tu pulso · ${TEXTO_RPE[pulso]}<small>Pulso medio al ${s.rpePct} % de tu máximo${fcMaxima() ? '' : ' (aproximado: pon tu edad en Ajustes › Pulso y zonas)'}. Es una sugerencia: marca abajo cómo lo sentiste tú.</small></span>`;
   }
   $('#rpe').hidden = false;
-  $('#rpe').innerHTML = Array.from({ length: 10 }, (_, i) => `<button type="button" class="boton${tuyo === i + 1 ? ' activo' : ''}" data-rpe="${i + 1}" aria-pressed="${tuyo === i + 1}">${i + 1}</button>`).join('');
-  $('#rpe-texto').textContent = tuyo ? `${tuyo}: ${TEXTO_RPE[tuyo]}` : '1 = muy fácil, 10 = esfuerzo máximo';
-  $('#rpe').querySelectorAll('button').forEach((b) => {
+  // Cinco botones grandes que se guardan en la escala CR10 (2, 4, 6, 8 y 10); «Afinar» da el 1 a 10 entero.
+  const grande = tuyo ? Math.min(10, Math.ceil(tuyo / 2) * 2) : null;
+  $('#rpe').innerHTML = RPE_GRANDE.map(([v, t]) => `<button type="button" class="boton rpe-grande${grande === v ? ' activo' : ''}" data-rpe="${v}" aria-pressed="${grande === v}"><span>${t}</span><small>${v}</small></button>`).join('');
+  $('#rpe-fino').innerHTML = Array.from({ length: 10 }, (_, i) => `<button type="button" class="boton${tuyo === i + 1 ? ' activo' : ''}" data-rpe="${i + 1}" aria-pressed="${tuyo === i + 1}">${i + 1}</button>`).join('');
+  $('#rpe-texto').textContent = tuyo ? `${tuyo} de 10: ${TEXTO_RPE[tuyo]}` : 'Toca cómo se sintió: cuenta para tu carga aunque no tengas FTP.';
+  document.querySelectorAll('#rpe button, #rpe-fino button').forEach((b) => {
     b.onclick = async () => {
       // Una sesión de antes con el esfuerzo del pulso en `rpe`: ese pasa a rpePulso y el tuyo queda en rpe.
       if (s.rpeFuente === 'pulso') { s.rpePulso ??= s.rpe; delete s.rpeFuente; }
@@ -123,19 +128,22 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   if (resumen && (recs.length || medallas.length || gano || subio)) setTimeout(confeti, 250);
 
   const hojaFtp = $('#hoja-ftp');
-  const sugerido = !s.pruebaWatts ? E.ftpSugerido(s) : null;
-  const subeFtp = sugerido && sugerido > ftp() + 2;
+  // Sin prueba, el FTP solo se propone subir con la mediana de tus 3 mejores sesiones de los últimos 90 días
+  // (esta incluida): un día bueno o un dato raro de la consola no lo infla.
+  const sugerido = !s.pruebaWatts && ftp() ? E.ftpEstimadoDe([...previas.filter((x) => x.fecha > s.fecha - 90 * 864e5), s]) : null;
+  const subeFtp = sugerido && sugerido >= ftp() + 3 && E.ftpDeSesion(s) >= sugerido * 0.97;
   hojaFtp.hidden = !s.pruebaWatts && !subeFtp && !ftpAuto;
   if (ftpAuto && !s.pruebaWatts) {
     hojaFtp.innerHTML = `${ftpAuto.antes ? `Tu FTP estimado sube a <b>${ftpAuto.nuevo} W</b> (antes ${ftpAuto.antes} W).` : `Calculé tu FTP con esta sesión: <b>${ftpAuto.nuevo} W</b>.`}
       Ahora tus entrenamientos te piden watts reales. Para afinarlo, haz la Prueba FTP 20 min cuando quieras.`;
   } else if (s.pruebaWatts || subeFtp) {
     const nuevo = s.pruebaWatts ? Ent.ftpDesdePrueba(s.pruebaWatts) : sugerido;
-    const origen = s.pruebaWatts ? `Promedio en la prueba: <b>${s.pruebaWatts} W</b>.` : `Tus mejores 20 min de esta sesión dan más que tu FTP actual.`;
+    const origen = s.pruebaWatts ? `Promedio en la prueba: <b>${s.pruebaWatts} W</b>.` : `Con esta sesión, tus 3 mejores de los últimos 90 días dan más que tu FTP actual.`;
     hojaFtp.innerHTML = `${origen} Tu FTP estimado es <b>${nuevo} W</b>${ftp() ? ` (antes ${ftp()} W)` : ''}.
       <div class="fila-botones"><button class="boton primario" id="btn-usar-ftp">Usar ${nuevo} W como FTP</button></div>`;
     $('#btn-usar-ftp').onclick = () => {
       guardarFtp(nuevo, !s.pruebaWatts);
+      ajustes.escribir('ftpRevisado', String(Date.now()));
       toast(`FTP actualizado a ${nuevo} W`);
       $('#btn-usar-ftp').disabled = true;
     };
@@ -144,7 +152,7 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   pintarCapacidadSesion(s);
 
   const tec = E.tecnica(s);
-  const estres = s.estres ?? E.estres(s, s.ftp || ftp());
+  const carga = E.cargaDe(s, ftp(), E.factorSrpe([...previas, s], ftp()));
   const stats = [
     ['Duración', formatoTiempo(s.duracion)], ['Distancia', `${miles(s.distancia)} m`],
     ['Watts prom', s.wattsProm], ['Watts máx', s.wattsMax],
@@ -156,7 +164,7 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   stats.push(['Pulso prom', s.fcProm || '-']);
   if (s.fcMax) stats.push(['Pulso máx', s.fcMax]);
   if (tec.wattsPorLatido && avanzado()) stats.push(['Watts/latido', tec.wattsPorLatido]);
-  if (estres != null && avanzado()) stats.push(['Carga', estres]);
+  if (carga.valor != null && avanzado()) stats.push([carga.fuente === 'esfuerzo' ? 'Carga (por esfuerzo)' : 'Carga', carga.valor]);
   if (s.tiempoMeta != null) stats.push(['Meta en', formatoMeta(s.tiempoMeta)]);
   const parado = E.tiempoParado(s.pausas);
   if (parado >= 5) stats.push([s.pausas.length > 1 ? `Parado (${s.pausas.length} pausas)` : 'Parado', formatoTiempo(parado)]);

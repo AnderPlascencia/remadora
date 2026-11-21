@@ -12,10 +12,10 @@ async function revisar(page, pantalla) {
 }
 
 // Botones y controles visibles de menos de 44 × 44 px. Excepciones: el «?» de ayuda (24 px a la vista, con 44 px
-// de zona táctil por su ::before) y la escala de esfuerzo del 1 al 10, que en una fila no cabe a 44 px de ancho
-// (mide 44 de alto y cumple los 24 px del nivel AA de WCAG 2.2).
+// de zona táctil por su ::before) y el «Afinar de 1 a 10» del esfuerzo (plegado), que en una fila no cabe a 44 px
+// de ancho (mide 44 de alto y cumple los 24 px del nivel AA de WCAG 2.2). Los 5 botones grandes sí miden 44.
 const tactilesChicos = (page) => page.evaluate(() => [...document.querySelectorAll('button, a[href], input:not([type=hidden]), select, summary, [role=button], [role=radio], [role=tab]')]
-  .filter((e) => e.checkVisibility({ visibilityProperty: true }) && !e.closest('[aria-hidden="true"], [inert]') && !e.matches('.ayuda-q, #rpe button'))
+  .filter((e) => e.checkVisibility({ visibilityProperty: true }) && !e.closest('[aria-hidden="true"], [inert]') && !e.matches('.ayuda-q, #rpe-fino button'))
   .map((e) => { const r = e.getBoundingClientRect(); return { el: `${e.id ? `#${e.id}` : e.className} ${e.textContent.trim().slice(0, 24)}`, w: Math.round(r.width), h: Math.round(r.height) }; })
   .filter((x) => x.w > 0 && x.h > 0 && (x.w < 44 || x.h < 44))
   .filter((x) => !/^(checkbox|radio)$/.test(x.el)) // las casillas van dentro de su etiqueta, que es la zona táctil

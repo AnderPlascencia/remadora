@@ -110,8 +110,8 @@ export function pintarForma() {
     { color: color('--fres'), eje: 'izq', puntos: datos.map((d, i) => [i, Math.max(0, d.frescura)]) },
   ], { formatoX: fx });
   const hoy = datos.at(-1);
-  if (!ftp()) $('#forma-texto').textContent = 'Define tu FTP en Ajustes para calcular la carga de cada sesión.';
-  else if (!hay) $('#forma-texto').textContent = 'Aún no hay sesiones en los últimos 60 días.';
+  // Sin FTP la carga sale de cómo se sintió cada sesión (sRPE): basta con marcarlo al terminar.
+  if (!hay) $('#forma-texto').textContent = ftp() ? 'Aún no hay sesiones en los últimos 60 días.' : 'Define tu FTP en Ajustes, o marca cómo se sintió cada sesión al terminarla, para calcular tu carga.';
   else {
     let consejo = 'Vas equilibrado: cualquier entrenamiento del plan te queda bien.';
     if (hoy.frescura < -20) consejo = 'Vienes cansado: hoy toca algo suave o descansar.';
@@ -119,7 +119,7 @@ export function pintarForma() {
     $('#forma-texto').textContent = (avanzado() ? `Condición ${hoy.condicion}, fatiga ${hoy.fatiga}, frescura ${hoy.frescura}. ${consejo}` : consejo) + textoCarga();
   }
   const textoForma = () => (hoy.frescura < -20 ? 'Cansado' : hoy.frescura > 10 ? 'Fresco' : 'Equilibrado');
-  $('#forma-resumen').textContent = !(ftp() && hay) ? '' : avanzado() ? `Frescura ${hoy.frescura > 0 ? '+' : ''}${hoy.frescura}` : textoForma();
+  $('#forma-resumen').textContent = !hay ? '' : avanzado() ? `Frescura ${hoy.frescura > 0 ? '+' : ''}${hoy.frescura}` : textoForma();
 }
 
 // Ratio agudo:crónico y reparto 80/20 de la semana, en una o dos frases.
@@ -243,7 +243,7 @@ export function pintarGasto() {
 // Tu constancia (con Datos avanzados): sesiones por semana, plan cumplido, pausas y qué pasa con la app.
 const dias = (n) => `${n} ${n === 1 ? 'día' : 'días'}`;
 export async function pintarConstancia() {
-  const r = Hab.resumenHabito({ sesiones: estado.cacheSesiones || [], eventos: await Hab.leerEventos(), programa: leerPrograma() });
+  const r = Hab.resumenHabito({ sesiones: estado.cacheSesiones || [], eventos: await Hab.leerEventos(), programa: leerPrograma(), ftp: ftp() });
   const lunes = E.inicioPeriodo(Date.now(), 'semana');
   dibujarBarras($('#grafica-constancia'), r.semanas.map((v, i) => ({
     etiqueta: fechaCorta(lunes - (r.semanas.length - 1 - i) * 7 * 864e5), valor: v, resaltar: i === r.semanas.length - 1,
@@ -257,6 +257,7 @@ export async function pintarConstancia() {
     r.masLarga ? ['Pausa más larga', dias(r.masLarga)] : null,
     ['Días con la app abierta (28 días)', String(ev.diasConApp)],
     ['Sesiones empezadas · dejadas (28 días)', `${ev.empezadas} · ${ev.dejadas}`],
+    r.carga.sesiones ? ['Sesiones con carga conocida · con tu esfuerzo (28 días)', `${r.carga.pctCarga} % · ${r.carga.pctEsfuerzo} %`] : null,
     ['Imágenes compartidas (28 días)', ev.compartidas ? `${ev.compartidas}${ev.tasaCompartir != null ? ` · ${ev.tasaCompartir} % de tus sesiones` : ''}` : '0'],
   ].filter(Boolean);
   $('#tabla-constancia').innerHTML = `<tbody>${filas.map(([k, v]) => `<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join('')}</tbody>`;
