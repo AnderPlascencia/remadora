@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.88.0 · 2026-11-21
+
+La imagen para compartir se ve antes de mandarla, habla claro y tiene los colores de la app.
+
+- **Vista previa.** «Compartir imagen» abre primero la imagen. Ahí eliges el formato (historia 9:16, vertical 4:5 o cuadrada 1:1) y qué enseñar: el nombre de tu héroe sale, el pulso y las calorías no, hasta que los enciendas. Después, Guardar o Compartir.
+- **Un dato protagonista.** Grande y según la sesión: un récord si lo hubo, el tiempo en la prueba de 2000 m, el % del tiempo en tu rango en los intervalos, o la distancia. Debajo, tres datos más (el mejor minuto en los intervalos, el split en la prueba).
+- **Título honesto.** «✓ Completado», «18 de 25 min» si la dejaste a medias o «Versión corta de 15 min», y «Semana 2 de 6 · sesión 3 de 4» si era del plan.
+- **Con la letra y los colores de Rower.** Barlow Condensed para los números, un solo logo y todo el texto con buen contraste (al menos 4,5:1). En historias, el texto queda lejos de los bordes, donde la app pone sus botones.
+
 ## 0.87.0 · 2026-11-21
 
 Fallar un día o una semana ya no te saca del camino. Lo que da XP cuenta desde el lunes 23 de noviembre, y lo ganado antes de ese día no cambia.

@@ -946,6 +946,27 @@
       </div>
     </div>
   </div>
+  <div id="compartir-dialogo" class="fin-fondo" hidden role="dialog" aria-modal="true" aria-labelledby="compartir-titulo">
+    <div class="fin-caja compartir-caja">
+      <h3 id="compartir-titulo">Compartir imagen</h3>
+      <div class="compartir-vista"><img id="compartir-img" alt="Vista previa de la imagen de tu sesión"></div>
+      <div id="compartir-formatos" class="chips" role="radiogroup" aria-label="Formato">
+        <button type="button" class="chip" role="radio" data-formato="9:16" aria-checked="false">Historia 9:16</button>
+        <button type="button" class="chip" role="radio" data-formato="4:5" aria-checked="true">Vertical 4:5</button>
+        <button type="button" class="chip" role="radio" data-formato="1:1" aria-checked="false">Cuadrada 1:1</button>
+      </div>
+      <div class="compartir-opciones">
+        <label class="interruptor"><input type="checkbox" id="compartir-heroe" checked><span>Nombre del héroe</span></label>
+        <label class="interruptor"><input type="checkbox" id="compartir-pulso"><span>Pulso</span></label>
+        <label class="interruptor"><input type="checkbox" id="compartir-kcal"><span>Calorías</span></label>
+      </div>
+      <div class="fin-botones">
+        <button type="button" id="compartir-cerrar" class="boton grande">Cerrar</button>
+        <button type="button" id="compartir-guardar" class="boton grande">Guardar</button>
+        <button type="button" id="compartir-enviar" class="boton primario grande">Compartir</button>
+      </div>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <div id="atr-pop" class="atr-pop" role="status" aria-live="polite" hidden></div>
 

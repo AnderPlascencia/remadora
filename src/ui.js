@@ -171,7 +171,7 @@ export function ajustarTexto(el, minimo = 0.55) {
 // Con una hoja, un diálogo, la bienvenida o el modo remo abiertos, lo de detrás queda «inert» (ni se toca ni lo
 // lee el lector de pantalla), el foco entra en la capa y al cerrarla vuelve a donde estaba. Los avisos (toast)
 // quedan fuera para que se sigan anunciando.
-export const CAPAS = ['modo-remo', 'hoja', 'inicio', 'hoja-trip', 'guia', 'hoja-ent', 'fin-dialogo', 'recuperar-dialogo'];
+export const CAPAS = ['modo-remo', 'hoja', 'inicio', 'hoja-trip', 'guia', 'hoja-ent', 'fin-dialogo', 'recuperar-dialogo', 'compartir-dialogo'];
 const FONDO = ['header.barra', 'main', 'nav.nav-inferior'];
 export function vigilarCapas(ids = CAPAS) {
   const capas = ids.map((id) => document.getElementById(id)).filter(Boolean);

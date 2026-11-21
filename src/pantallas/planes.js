@@ -7,6 +7,7 @@ import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
 import { tarjetaSesion } from '../efectos.js';
+import * as Tj from '../tarjeta.js';
 import * as J from '../juego.js';
 import * as B from '../base.js';
 import * as C from '../consejos.js';
@@ -633,31 +634,37 @@ export function arrancarPlanes2() {
       cerrarHoja();
     }
   });
-  $('#btn-compartir-img').addEventListener('click', async (ev) => {
-    const s = estado.sesionAbierta;
-    if (!s) return;
+  // Compartir imagen (etapa 15): primero la vista previa, con el formato y lo que se enseña a tu elección.
+  $('#btn-compartir-img').addEventListener('click', () => abrirCompartir(estado.sesionAbierta));
+  $('#compartir-formatos').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-formato]');
+    if (!b || !compartir) return;
+    compartir.opciones.formato = b.dataset.formato;
+    pintarCompartir();
+  });
+  for (const [id, k] of [['#compartir-heroe', 'heroe'], ['#compartir-pulso', 'pulso'], ['#compartir-kcal', 'kcal']]) {
+    $(id).addEventListener('change', (e) => { if (compartir) { compartir.opciones[k] = e.target.checked; pintarCompartir(); } });
+  }
+  $('#compartir-cerrar').addEventListener('click', cerrarCompartir);
+  $('#compartir-dialogo').addEventListener('click', (e) => { if (e.target === $('#compartir-dialogo')) cerrarCompartir(); });
+  $('#compartir-guardar').addEventListener('click', async () => {
+    const listo = await imagenCompartir();
+    if (!listo) return;
+    descargar(listo.nombre, listo.blob, 'image/png');
+    anotarCompartir('guardar');
+  });
+  $('#compartir-enviar').addEventListener('click', async (ev) => {
+    const listo = await imagenCompartir();
+    if (!listo) return;
     const boton = ev.currentTarget;
     boton.disabled = true;
-    const f = new Date(s.fecha);
-    const stats = [['Distancia', `${miles(s.distancia)} m`], ['Tiempo', formatoTiempo(s.duracion)], ['Split prom', formatoSplit(s.splitProm)],
-      ['Watts prom', `${s.wattsProm} W`], ['Golpes/min', s.spmProm], [s.fcProm ? 'Pulso prom' : 'Calorías', s.fcProm ? `${s.fcProm} lpm` : s.kcal]];
-    const rivales = s.rivales || (s.rival ? [s.rival] : []);
-    const recs = E.nuevosRecords(s, (estado.cacheSesiones || []).filter((x) => x.id !== s.id && x.fecha < s.fecha));
-    const extra = recs.length ? `Récord: ${recs[0].nombre} ${formatoRecord(recs[0], recs[0].valor)}`
-      : rivales.length ? rivales.map((r) => `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m vs. ${r.nombre.replace(/^Fantasma /, '')}`).join(' · ') : '';
     try {
-      const blob = await tarjetaSesion({
-        titulo: s.entrenamiento || 'Remo libre',
-        fecha: f.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-        stats, extra, puntos: (s.muestras || []).map((x) => [x.t, x.w]),
-      });
-      const nombre = `rower-${marcaFecha(s.fecha)}.png`;
-      const archivo = new File([blob], nombre, { type: 'image/png' });
+      const archivo = new File([listo.blob], listo.nombre, { type: 'image/png' });
       if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Mi sesión en Rower' });
-      else descargar(nombre, blob, 'image/png');
-      Hab.anotar('compartir', { sesion: s.fecha });
+      else descargar(listo.nombre, listo.blob, 'image/png');
+      anotarCompartir('compartir');
     } catch (err) {
-      if (err.name !== 'AbortError') toast('No se pudo crear la imagen');
+      if (err.name !== 'AbortError') toast('No se pudo compartir la imagen');
     } finally { boton.disabled = false; }
   });
 
@@ -677,13 +684,84 @@ export function arrancarPlanes2() {
   });
 }
 
+// ---------- Compartir imagen ----------
+let compartir = null; // { s, opciones, ctx, blob, url, turno }
+async function abrirCompartir(s) {
+  if (!s) return;
+  const rivales = s.rivales || (s.rival ? [s.rival] : []);
+  const records = E.nuevosRecords(s, (estado.cacheSesiones || []).filter((x) => x.id !== s.id && x.fecha < s.fecha));
+  const extra = records.length ? `Récord: ${records[0].nombre} ${formatoRecord(records[0], records[0].valor)}`
+    : rivales.length ? rivales.map((r) => `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m vs. ${r.nombre.replace(/^Fantasma /, '')}`).join(' · ') : '';
+  let heroe = null;
+  try {
+    const { per, h } = await estadoHeroe();
+    if (per.clase) heroe = `${per.nombre || 'Tu héroe'} · ${J.tituloDe(h.nivel, per.clase)} · nivel ${h.nivel}`;
+  } catch { /* sin héroe */ }
+  compartir = {
+    s, opciones: { ...Tj.OPCIONES_DEFECTO }, blob: null, url: null, turno: 0,
+    ctx: { records, extra, heroe, semanaPlan: s.delPrograma ? Tj.semanaDelPlan(leerPrograma(), s.fecha) : null },
+  };
+  $('#compartir-heroe').checked = true;
+  $('#compartir-heroe').closest('label').hidden = !heroe;
+  $('#compartir-pulso').checked = false;
+  $('#compartir-pulso').closest('label').hidden = !s.fcProm;
+  $('#compartir-kcal').checked = false;
+  $('#compartir-dialogo').hidden = false;
+  pintarCompartir();
+}
+// Rehace la imagen con lo elegido; si cambias algo mientras se pinta, gana lo último.
+async function pintarCompartir() {
+  const c = compartir;
+  if (!c) return null;
+  for (const b of document.querySelectorAll('#compartir-formatos [data-formato]')) b.setAttribute('aria-checked', String(b.dataset.formato === c.opciones.formato));
+  const turno = ++c.turno;
+  c.blob = null;
+  c.listo = (async () => {
+    const s = c.s;
+    const blob = await tarjetaSesion(Tj.contenidoTarjeta(s, c.opciones, c.ctx), {
+      formato: c.opciones.formato,
+      fecha: new Date(s.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      puntos: (s.muestras || []).map((x) => [x.t, x.w]),
+    });
+    if (turno !== c.turno || compartir !== c) return null;
+    if (c.url) URL.revokeObjectURL(c.url);
+    c.blob = blob;
+    c.url = URL.createObjectURL(blob);
+    const img = $('#compartir-img');
+    img.src = c.url;
+    img.dataset.vista = c.opciones.formato;
+    return blob;
+  })().catch(() => { toast('No se pudo crear la imagen'); return null; });
+  return c.listo;
+}
+async function imagenCompartir() {
+  const c = compartir;
+  if (!c) return null;
+  const blob = c.blob || await c.listo;
+  if (!blob || compartir !== c) return null;
+  return { blob, nombre: `rower-${marcaFecha(c.s.fecha)}-${c.opciones.formato.replace(':', 'x')}.png` };
+}
+// Una vez por vista previa, para que guardar y luego compartir no cuente doble en la tasa de compartir.
+function anotarCompartir(como) {
+  if (!compartir || compartir.anotado) return;
+  compartir.anotado = true;
+  Hab.anotar('compartir', { sesion: compartir.s.fecha, formato: compartir.opciones.formato, como });
+}
+export function cerrarCompartir() {
+  if (compartir?.url) URL.revokeObjectURL(compartir.url);
+  compartir = null;
+  $('#compartir-img').removeAttribute('src');
+  $('#compartir-dialogo').hidden = true;
+}
+
 export function cerrarHoja() {
   $('#hoja').hidden = true;
   if (vistaActiva('historial')) pintarHistorial();
 }
 // Cierra lo que esté encima (detalle, hoja, modo remo). Devuelve false si no había nada abierto.
 function cerrarLoDeEncima() {
-  if (!$('#fin-dialogo').hidden) cerrarFin();
+  if (!$('#compartir-dialogo').hidden) cerrarCompartir();
+  else if (!$('#fin-dialogo').hidden) cerrarFin();
   else if (!$('#guia').hidden) cerrarGuia();
   else if (!$('#hoja-trip').hidden) cerrarTripulacion();
   else if (!$('#hoja-ent').hidden) cerrarDetalleEnt();
