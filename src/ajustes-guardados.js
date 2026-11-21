@@ -26,7 +26,7 @@ export const AJUSTES = {
   // Preferencias
   voz: A('si', true, true),
   cantidadVoz: A('texto', 'completa', true), // 'datos', 'entrenador' o 'completa' (voz.js)
-  modoAuto: A('si', true, true),
+  modoAuto: A('si', false, true),
   pausaAuto: A('si', true, true),
   resAuto: A('si', false, true),
   atrVivo: A('si', true, true),

@@ -429,7 +429,7 @@ async function iniciarSesion(reanudar = null) {
     hablar(`Comienza ${estado.entrenamientoActivo.nombre}${contra}.${prop ? ` ${prop}` : ''}`);
   } else hablar(`Sesión iniciada${contra}`);
   if (!reanudar) prepararVozJuego(estado.sesion);
-  if (ajustes.si('modoAuto', true)) abrirModoRemo();
+  if (ajustes.si('modoAuto', false)) abrirModoRemo();
   pintar();
   // En horizontal la carrera no cabe junto a los botones: se lleva a la vista al empezar.
   if (hayCarrera() && matchMedia('(orientation: landscape) and (max-height: 520px)').matches) {
