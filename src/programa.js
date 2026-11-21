@@ -1,8 +1,8 @@
 // Programas de varias semanas: una lista de días con el entrenamiento que toca.
 // programa = { nombre, inicio: 'AAAA-MM-DD', dias: [{ fecha: 'AAAA-MM-DD', ent: nombre del entrenamiento }] }
-import { claveDia } from './estadisticas.js';
-import { formatoMmss as mm, PRUEBAS, esBloqueTrabajo, ACTIVACION } from './entrenamientos.js';
-import { tipoPlan } from './capacidades.js';
+import { claveDia, mejorTiempo } from './estadisticas.js';
+import { formatoMmss as mm, PRUEBAS, esBloqueTrabajo, ACTIVACION, predecir, DISTANCIAS_PREDICCION } from './entrenamientos.js';
+import { tipoPlan, SPLIT_CAL_META } from './capacidades.js';
 
 const DIA = 864e5;
 const aFecha = (clave) => new Date(`${clave}T12:00:00`);
@@ -145,11 +145,12 @@ export function proximo(programa, ahora = Date.now()) {
 // más suave que el fondo (+32–45 s). Una descarga cada 4 semanas y la última semana un 40 % más corta.
 export const META_FONDO = [20, 30];
 export const META_UMBRAL = [8, 12];
-export const META_CAL = [32, 45];
+export const META_CAL = SPLIT_CAL_META;
 export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana = [0, 2, 5] }) {
   const split = Math.round((segundos * 500) / distancia);
   const entrenamientos = [];
-  const crear = (e) => { if (!entrenamientos.some((x) => x.nombre === e.nombre)) entrenamientos.push(e); return e.nombre; };
+  // Cada sesión guarda el split de la meta: con él se sabe cuáles son duras (umbral y series) y cuáles fondo.
+  const crear = (e) => { if (!entrenamientos.some((x) => x.nombre === e.nombre)) entrenamientos.push({ ...e, splitMeta: split }); return e.nombre; };
   const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + META_CAL[0], max: split + META_CAL[1] };
   const enf = { nombre: 'Enfriamiento', duracion: 300, metrica: '', min: 0, max: 0 };
   const prueba = crear({ tipo: 'objetivo', nombre: `Prueba ${distancia} m`, prueba: true, objetivo: { metrica: 'distancia', valor: distancia } });
@@ -194,6 +195,43 @@ export function planPorMeta({ distancia, segundos, semanas, inicio, diasSemana =
   const programa = desdePlantilla({ nombre: `Meta: ${distancia} m en ${mm(segundos)}`, semanas: semanasPlan, diasSemana }, inicio);
   programa.conDescarga = true;
   return { programa, entrenamientos, split };
+}
+
+// ---------- Asistente de metas: de dónde partes y cuánto puedes mejorar ----------
+// Mejora esperada del tiempo en 8 semanas según cuánto remas: quien empieza mejora mucho más que quien ya entrena.
+// Con más o menos semanas se escala con la raíz (las primeras semanas rinden más que las últimas), hasta 1,5 veces.
+export const MEJORA_META = { inicio: 0.06, medio: 0.04, alto: 0.025 };
+export function nivelRemero(sesiones, ahora = Date.now()) {
+  const n = (sesiones || []).filter((s) => s.fecha <= ahora).length;
+  const ultimas = (sesiones || []).filter((s) => s.fecha <= ahora && s.fecha > ahora - 56 * DIA).length / 8;
+  return n < 10 || ultimas < 1.5 ? 'inicio' : ultimas >= 3 ? 'alto' : 'medio';
+}
+export const mejoraMeta = (nivel, semanas = 8) => (MEJORA_META[nivel] ?? MEJORA_META.medio) * Math.min(1.5, Math.sqrt(Math.max(1, semanas) / 8));
+
+// Tiempo del que partes en una distancia: tu marca real de los últimos 90 días; si no la hay, la predicción desde la
+// distancia más cercana que hayas remado (la media de tus 3 mejores, pesando más las recientes), nunca la más
+// optimista de todas. Sin nada en 90 días, lo mismo con todo el historial.
+// → { t, real, desde (distancia de la que sale), nivel, meta (tiempo meta sugerido), mejora } o null.
+export function sugerirMeta(sesiones, distancia, semanas = 8, ahora = Date.now()) {
+  const nivel = nivelRemero(sesiones, ahora);
+  const mejora = mejoraMeta(nivel, semanas);
+  const con = (sesiones || []).filter((s) => s.fecha <= ahora && s.muestras?.length);
+  const marcas = (lista, d) => lista.map((s) => ({ t: mejorTiempo(s.muestras, d), edad: (ahora - s.fecha) / DIA })).filter((x) => x.t > 0);
+  const partida = (lista) => {
+    const real = marcas(lista, distancia);
+    if (real.length) return { t: Math.min(...real.map((x) => x.t)), real: true, desde: distancia };
+    const otras = DISTANCIAS_PREDICCION.filter((d) => d !== distancia)
+      .map((d) => ({ d, m: marcas(lista, d) })).filter((x) => x.m.length)
+      .sort((a, b) => Math.abs(Math.log2(a.d / distancia)) - Math.abs(Math.log2(b.d / distancia)));
+    if (!otras.length) return null;
+    const { d, m } = otras[0];
+    const tres = m.sort((a, b) => a.t - b.t).slice(0, 3);
+    const peso = tres.map((x) => 0.5 ** (x.edad / 30));
+    const t = tres.reduce((a, x, i) => a + predecir(d, x.t, distancia) * peso[i], 0) / peso.reduce((a, x) => a + x, 0);
+    return { t: Math.round(t), real: false, desde: d };
+  };
+  const p = partida(con.filter((s) => s.fecha > ahora - 90 * DIA)) || partida(con);
+  return p ? { ...p, nivel, mejora, meta: Math.round(p.t * (1 - mejora)) } : null;
 }
 
 // ---------- Plan por objetivo: la app decide intensidades, ritmos y volúmenes ----------
@@ -335,8 +373,10 @@ export const duracionPlan = (e) => (e.bloques || []).reduce((a, b) => a + (b.dur
 // Trabajo por encima del 106 % del FTP (VO₂ y más): hasta 25 min por sesión y unos 40 min por semana.
 export const VO2_MAX_SESION = 25 * 60;
 export const VO2_MAX_SEMANA = 40 * 60;
-// La carga de trabajo de una semana sube como mucho un 15 % respecto a la última semana normal.
+// La carga de una semana (trabajo en segundos y esfuerzo planificado, como el TSS) sube como mucho un 15 %
+// respecto a la última semana normal; la semana que vuelve de una descarga, como mucho un 5 %.
 export const SUBIDA_MAX = 1.15;
+export const VUELTA_DESCARGA = 1.05;
 // Planes intensos: quien está empezando hace primero unas semanas de base aeróbica.
 export const OBJETIVOS_INTENSOS = new Set(['umbral', 'vo2', 'potencia']);
 export const semanasDeBase = (objetivo, nivel, semanas) => (nivel === 'inicio' && OBJETIVOS_INTENSOS.has(objetivo) ? Math.min(3, Math.floor(semanas / 2)) : 0);
@@ -408,9 +448,13 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
   };
   const trabajoDe = (lista) => lista.reduce((a, e) => a + segTrabajo(e), 0);
   const intensoDe = (lista) => lista.reduce((a, e) => a + segIntenso(e), 0);
-  // Cabe si el trabajo total sube como mucho un 15 % y el intenso un 15 % (o 5 min, para que los pasos chicos avancen).
+  const esfuerzoDe = (lista) => lista.reduce((a, e) => a + esfuerzoSesion(e), 0);
+  // Cabe si el trabajo total sube como mucho un 15 %, el intenso un 15 % (o 5 min, para que los pasos chicos avancen)
+  // y el esfuerzo planificado un 15 % (un 5 % al volver de una descarga): el trabajo intenso pesa más que los minutos.
+  let subida = SUBIDA_MAX;
   const cabe = (lista) => trabajoDe(lista) <= previo.total * SUBIDA_MAX
-    && intensoDe(lista) <= Math.max(previo.intenso * SUBIDA_MAX, previo.intenso + 300);
+    && intensoDe(lista) <= Math.max(previo.intenso * SUBIDA_MAX, previo.intenso + 300)
+    && esfuerzoDe(lista) <= previo.esfuerzo * subida + 0.5;
   const esDescarga = (s) => (s + 1) % 4 === 0 && s < semanas - 1;
   // El avance de cada semana normal (sin descarga) dentro de su fase: 0 en la primera, 1 en la última.
   const avance = Array.from({ length: semanas }, (_, s) => {
@@ -418,7 +462,6 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     const fase = Array.from({ length: semanas }, (_, x) => x).filter((x) => !esDescarga(x) && (x < base) === (s < base));
     return fase.length > 1 ? fase.indexOf(s) / (fase.length - 1) : 0;
   });
-  const prueba = (nombre) => agregar({ ...structuredClone(PRUEBAS[nombre]), enfoque: 'pruebas' });
   let domingoDuro = false;
   let previo = null; // trabajo total e intenso de la última semana normal (sin descarga), en segundos
   let pPrevio = 0;
@@ -433,31 +476,42 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     const meta = avance[s];
     const k = vol * (descarga ? 0.7 : 1);
     let p = meta;
-    let semana = armarSemana(fns, p, k, s);
-    // La carga sube poco a poco: si la semana se pasa del 15 % sobre la anterior, se avanza menos.
-    if (!descarga && previo != null && !cabe(semana) && meta > pPrevio) {
+    const conPrueba = obj.prueba && (s === semanas - 1 || (semanas >= 6 && s === Math.floor(semanas / 2) - 1));
+    // La prueba ocupa el lugar de la última sesión dura (así la semana no suma más intensidad: con 1 o 2 días
+    // no quedan dos duras); en un plan sin sesiones duras, el de la última. Va al final de la semana.
+    const conLaPrueba = (lista) => {
+      if (!conPrueba) return lista;
+      const duras = lista.map((e, i) => (esDura(e) ? i : -1)).filter((i) => i >= 0);
+      const quitar = duras.length ? duras.at(-1) : lista.length - 1;
+      return [...lista.filter((_, i) => i !== quitar), { ...structuredClone(PRUEBAS[obj.prueba]), enfoque: 'pruebas' }];
+    };
+    const armar = (q, kk) => conLaPrueba(armarSemana(fns, q, kk, s));
+    let semana = armar(p, k);
+    subida = s > 0 && esDescarga(s - 1) ? VUELTA_DESCARGA : SUBIDA_MAX;
+    // La carga sube poco a poco: si la semana (con su prueba, si la tiene) se pasa del tope sobre la última normal,
+    // se avanza menos.
+    if (previo != null && !cabe(semana)) {
       let mejor = null;
-      for (let i = 1; i <= 12; i++) {
+      // Primero el mayor avance que quepa, con el volumen del nivel o hasta un 20 % menos (los pasos son discretos:
+      // sin recortar un poco el volumen la semana se quedaría igual varias semanas seguidas).
+      for (let i = 1; !descarga && !mejor && meta > pPrevio && i <= 12; i++) {
         const q = pPrevio + ((meta - pPrevio) * (12 - i)) / 12;
-        const otra = armarSemana(fns, q, k, s);
-        if (cabe(otra)) { mejor = { q, otra }; break; }
+        for (const f of [1, 0.9, 0.8]) {
+          const otra = armar(q, k * f);
+          if (cabe(otra)) { mejor = { q, otra }; break; }
+        }
       }
-      if (mejor) { p = mejor.q; semana = mejor.otra; } else { p = pPrevio; semana = armarSemana(fns, p, k, s); }
-      // Aun sin avanzar puede pasarse (una sesión que alterna con otra más larga): se recorta el volumen.
-      for (let i = 0, kk = k; i < 4 && !cabe(semana); i++) { kk *= 0.9; semana = armarSemana(fns, p, kk, s); }
+      if (mejor) { p = mejor.q; semana = mejor.otra; } else if (!descarga) { p = Math.min(p, pPrevio); semana = armar(p, k); }
+      // Aun sin avanzar puede pasarse (una sesión que alterna con otra más larga, el paso de la base al plan o una
+      // prueba): se recorta el volumen del resto de la semana.
+      for (let i = 0, kk = k; i < 6 && !cabe(semana); i++) { kk *= 0.9; semana = armar(p, kk); }
     }
+    // La última semana normal es la referencia de la siguiente; las de descarga y las de prueba no lo son
+    // (así la vuelta de una descarga o de una prueba no sube dos escalones de golpe).
     // El intenso se compara con la más alta de las dos últimas semanas normales: algunos planes alternan
     // una sesión cada semana (sweet spot y VO₂) y no por eso la carga debe bajar a la mitad.
-    if (!descarga) { previo = { total: trabajoDe(semana), intenso: Math.max(intensoDe(semana), intensoUlt) }; intensoUlt = intensoDe(semana); pPrevio = p; }
+    if (!descarga && !conPrueba) { previo = { total: trabajoDe(semana), intenso: Math.max(intensoDe(semana), intensoUlt), esfuerzo: esfuerzoDe(semana) }; intensoUlt = intensoDe(semana); pPrevio = p; }
     const lista = semana.map(agregar);
-    const conPrueba = obj.prueba && (s === semanas - 1 || (semanas >= 6 && s === Math.floor(semanas / 2) - 1));
-    // La prueba ocupa el lugar de la segunda sesión dura (así la semana no suma más intensidad);
-    // en un plan sin sesiones duras, el de la última. Va al final de la semana, ya con la carga más baja.
-    if (conPrueba) {
-      const duras = lista.map((n, i) => (i > 0 && esDura(entrenamientos.find((e) => e.nombre === n)) ? i : -1)).filter((i) => i >= 0);
-      lista.splice(duras.length ? duras.at(-1) : lista.length - 1, 1);
-      lista.push(prueba(obj.prueba));
-    }
     const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
     const orden = ordenarSemana(lista, DIAS_PLAN[dias], buscar, domingoDuro);
     domingoDuro = DIAS_PLAN[dias].at(-1) === 6 && esDura(buscar(orden.at(-1)));

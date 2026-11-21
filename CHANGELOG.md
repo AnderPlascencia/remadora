@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.76.0 · 2026-11-21
+
+Planes que respetan la fatiga.
+
+- El tope de subida semanal de los planes por objetivo ahora mide también la carga planificada (como el TSS), no solo los minutos de trabajo: el trabajo intenso pesa más. La semana que vuelve de una descarga sube como mucho un 5 % sobre la última semana normal, y las semanas con prueba ya no sirven de referencia para la siguiente. Antes la vuelta de la descarga podía subir la carga un 40–50 % de golpe; ahora ninguna semana pasa de 1,15 × la última normal y el ratio agudo:crónico simulado se queda en 1,3 o menos (lo comprueba una prueba nueva con 480 planes).
+- Si el siguiente paso no cabe en el tope, el plan avanza igual con un poco menos de volumen (hasta un 20 %) en lugar de quedarse varias semanas en la misma sesión.
+- Con 1 o 2 días por semana, la prueba ocupa el lugar de la sesión dura: la semana de la prueba ya no tiene dos sesiones duras.
+- Plan hacia una meta (por ejemplo 2000 m): las sesiones escritas en split ahora se reconocen como umbral, series o fondo comparándolas con el split de la meta. Así «nunca dos duras seguidas», el cambio por un fondo cuando vas cansado y las casillas del modo remo funcionan también en estos planes. Los planes ya guardados se reconocen por su calentamiento.
+- Antes de una sesión dura o de una prueba van siempre al menos 5 min de calentamiento: si el entrenamiento no los trae, se añade un calentamiento progresivo al principio y la voz explica por qué.
+- El asistente de metas parte de tu marca real de los últimos 90 días en esa distancia; si no la hay, de la predicción desde la distancia más cercana que hayas remado (tus 3 mejores, pesando más las recientes), y ya no de la predicción más optimista de todas. La mejora sugerida depende de cuánto remas (6 % si empiezas, 4 % o 2,5 % si ya entrenas, en 8 semanas) y de las semanas del plan, en lugar de un 4 % fijo.
+
 ## 0.75.0 · 2026-11-21
 
 Ninguna sesión se pierde por culpa de la app, y la app mide cómo va mientras remas.

@@ -40,3 +40,24 @@ test('el historial de Progreso va plegado y dice cuántas sesiones hay', async (
   await historial.locator('summary').click();
   await expect(page.locator('#lista-sesiones')).toBeVisible();
 });
+
+test('el asistente de metas parte de tu predicción y la mejora cambia con las semanas', async ({ page }) => {
+  await abrirApp(page);
+  await completarBienvenida(page);
+  await remar(page, 150_000);
+  await terminar(page);
+  await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
+  await page.reload();
+  await page.locator('#tab-entrenamientos').click();
+  await page.locator('.planes-pestanas [data-pt="programa"]').click();
+  // La bienvenida ya creó un plan: se quita para volver al asistente (el diálogo se acepta solo).
+  await page.locator('#btn-quitar-programa').click();
+  await page.locator('#as-objetivo [data-v="meta"]').click();
+  const info = page.locator('#pm-info');
+  await expect(info).toContainText(/Tu predicción \(desde tus [\d,]+ m\) para 2,000 m: \d+:\d\d\. Una meta realista en 8 semanas: \d+:\d\d \(un 6 % mejor, al empezar se mejora rápido\)/);
+  await expect(page.locator('#pm-tiempo')).toHaveAttribute('placeholder', /^\d+:\d\d$/);
+  await page.locator('#pm-semanas').fill('4');
+  await page.locator('#pm-semanas').dispatchEvent('change');
+  await expect(info).toContainText('en 4 semanas');
+  await expect(info).toContainText('un 4,2 % mejor');
+});
