@@ -12,7 +12,8 @@ export const CLAVES_AJUSTES = CLAVES_RESPALDO;
 const CLAVES_PERFIL = ['peso', 'ftp', 'edad', 'fcMax', 'metaSemana', 'sexo', 'altura', 'experiencia', 'diasSemana', 'minutosSesion'];
 
 // leer(clave) devuelve el ajuste guardado como texto, o null si no existe.
-export function armarRespaldo({ version, sesiones, entrenamientos, programa, leer, fecha = new Date() }) {
+// eventos: los del hábito (habito.js), para no perder la constancia al cambiar de teléfono.
+export function armarRespaldo({ version, sesiones, entrenamientos, programa, leer, eventos = [], fecha = new Date() }) {
   return {
     app: 'remadora',
     formato: FORMATO,
@@ -21,6 +22,7 @@ export function armarRespaldo({ version, sesiones, entrenamientos, programa, lee
     sesiones,
     entrenamientos,
     programa,
+    eventos,
     ajustes: Object.fromEntries(CLAVES_AJUSTES.map((k) => [k, aTipo(k, leer(k))]).filter(([, v]) => v !== undefined)),
   };
 }

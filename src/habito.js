@@ -1,0 +1,143 @@
+// Medir el hábito: con qué constancia remas, cuánto tardas en volver tras una pausa y qué pasa con la app
+// (abrirla, empezar una sesión y dejarla, la bienvenida, compartir la imagen). Todo se queda en el teléfono:
+// los eventos viven en el almacén «estado» de IndexedDB y van en el respaldo.
+import * as db from './db.js';
+import { claveDia, inicioPeriodo } from './estadisticas.js';
+import * as P from './programa.js';
+
+export const ESTADO_EVENTOS = 'eventosHabito';
+export const EVENTOS_MAX = 3000;
+// Tipos de evento. «sesionFin» lleva { completa } (false: terminada antes del final del plan del día).
+export const TIPOS_EVENTO = ['app', 'sesionInicio', 'sesionFin', 'sesionCorta', 'sesionDescartada', 'bienvenida', 'bienvenidaFin', 'compartir'];
+// Una pausa: 4 días o más sin remar. Un hueco largo: 8 días o más.
+export const PAUSA_DIAS = 4;
+export const HUECO_DIAS = 8;
+const DIA = 864e5;
+
+// ---------- Cálculos (puros) ----------
+
+// Añade un evento a la lista sin pasar del máximo (se olvidan los más viejos).
+export function agregarEvento(lista, ev, max = EVENTOS_MAX) {
+  const nueva = [...(Array.isArray(lista) ? lista : []), ev];
+  return nueva.length > max ? nueva.slice(nueva.length - max) : nueva;
+}
+
+// Junta dos listas de eventos sin repetir (mismo momento y tipo), en orden.
+export function unirEventos(a = [], b = [], max = EVENTOS_MAX) {
+  const vistos = new Set();
+  const todos = [...(a || []), ...(b || [])].filter((e) => {
+    if (!e || typeof e.t !== 'number' || !TIPOS_EVENTO.includes(e.tipo)) return false;
+    const k = `${e.t}|${e.tipo}`;
+    if (vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  }).sort((x, y) => x.t - y.t);
+  return todos.length > max ? todos.slice(todos.length - max) : todos;
+}
+
+// Sesiones de cada una de las últimas n semanas (de lunes a domingo), de la más antigua a la actual.
+export function sesionesPorSemana(sesiones, n = 8, ahora = Date.now()) {
+  const lunes = inicioPeriodo(ahora, 'semana');
+  const cuentas = Array(n).fill(0);
+  for (const s of sesiones) {
+    const i = n - 1 - Math.round((lunes - inicioPeriodo(s.fecha, 'semana')) / (7 * DIA));
+    if (i >= 0 && i < n) cuentas[i]++;
+  }
+  return cuentas;
+}
+
+// Días entre sesiones seguidas (por día de calendario), de las más viejas a las más nuevas.
+function distanciasEntreDias(sesiones) {
+  const dias = [...new Set(sesiones.map((s) => claveDia(s.fecha)))].sort();
+  const res = [];
+  for (let i = 1; i < dias.length; i++) res.push(Math.round((Date.parse(`${dias[i]}T12:00`) - Date.parse(`${dias[i - 1]}T12:00`)) / DIA));
+  return res;
+}
+const mediana = (xs) => {
+  if (!xs.length) return null;
+  const o = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(o.length / 2);
+  return o.length % 2 ? o[m] : Math.round((o[m - 1] + o[m]) / 2);
+};
+
+// Pausas y vuelta: cuántas pausas (4+ días) y huecos largos (8+ días) hubo, la más larga, cuánto se tarda
+// de normal en volver tras una pausa (mediana, en días) y los días desde la última sesión.
+export function pausas(sesiones, ahora = Date.now()) {
+  const d = distanciasEntreDias(sesiones);
+  const largas = d.filter((x) => x >= PAUSA_DIAS);
+  const ultima = sesiones.reduce((m, s) => Math.max(m, s.fecha), 0);
+  return {
+    pausas: largas.length,
+    huecos: d.filter((x) => x >= HUECO_DIAS).length,
+    masLarga: largas.length ? Math.max(...largas) : 0,
+    vuelta: mediana(largas),
+    diasSinRemar: ultima ? Math.round((Date.parse(`${claveDia(ahora)}T12:00`) - Date.parse(`${claveDia(ultima)}T12:00`)) / DIA) : null,
+  };
+}
+
+// Lo que dicen los eventos en los últimos `dias` días.
+export function resumenEventos(eventos, sesiones, dias = 28, ahora = Date.now()) {
+  const desde = ahora - dias * DIA;
+  const ev = (eventos || []).filter((e) => e.t >= desde && e.t <= ahora);
+  const de = (tipo) => ev.filter((e) => e.tipo === tipo);
+  const empezadas = de('sesionInicio').filter((e) => !e.reanudada).length;
+  const fines = de('sesionFin');
+  const incompletas = fines.filter((e) => e.completa === false).length;
+  const cortas = de('sesionCorta').length;
+  const descartadas = de('sesionDescartada').length;
+  const remadas = sesiones.filter((s) => s.fecha >= desde && s.fecha <= ahora).length;
+  const pasos = de('bienvenida').map((e) => e.paso || 0);
+  return {
+    aperturas: de('app').length,
+    diasConApp: new Set(de('app').map((e) => claveDia(e.t))).size,
+    empezadas,
+    terminadas: fines.length,
+    // Dejadas: muy cortas para guardarse, descartadas al volver, sin acabar el plan del día o empezadas y nunca
+    // terminadas (la app se cerró y no se recuperó).
+    dejadas: cortas + descartadas + incompletas + Math.max(0, empezadas - fines.length - cortas - descartadas),
+    compartidas: de('compartir').length,
+    tasaCompartir: remadas ? Math.round((100 * de('compartir').length) / remadas) : null,
+    bienvenida: { pasoMax: pasos.length ? Math.max(...pasos) : 0, terminada: de('bienvenidaFin').length > 0 },
+  };
+}
+
+// Todo junto para la tarjeta «Tu constancia».
+export function resumenHabito({ sesiones = [], eventos = [], programa = null, ahora = Date.now() } = {}) {
+  const semanas = sesionesPorSemana(sesiones, 8, ahora);
+  const cerradas = semanas.slice(0, -1);
+  const primera = sesiones.reduce((m, s) => Math.min(m, s.fecha), Infinity);
+  // Solo cuentan las semanas desde que empezaste a remar.
+  const desdeInicio = Number.isFinite(primera)
+    ? cerradas.slice(Math.max(0, cerradas.length - Math.ceil((inicioPeriodo(ahora, 'semana') - inicioPeriodo(primera, 'semana')) / (7 * DIA))))
+    : [];
+  const media = desdeInicio.length ? Math.round((10 * desdeInicio.reduce((a, b) => a + b, 0)) / desdeInicio.length) / 10 : null;
+  let cumplimiento = null;
+  if (programa?.dias?.length) {
+    const c = P.cumplimiento(P.estadoDias(programa, sesiones, ahora));
+    cumplimiento = { ...c, pct: c.pasados ? Math.round((100 * c.hechos) / c.pasados) : null };
+  }
+  return { semanas, media, cumplimiento, ...pausas(sesiones, ahora), eventos: resumenEventos(eventos, sesiones, 28, ahora) };
+}
+
+// ---------- Guardar y leer ----------
+// Las escrituras van en cola para que dos eventos seguidos no se pisen.
+let cola = Promise.resolve();
+export function anotar(tipo, datos = {}, t = Date.now()) {
+  cola = cola.then(async () => {
+    const lista = (await db.leerEstado(ESTADO_EVENTOS)) || [];
+    await db.guardarEstado(ESTADO_EVENTOS, agregarEvento(lista, { t, tipo, ...datos }));
+  }).catch(() => { /* medir nunca rompe la app */ });
+  return cola;
+}
+export async function leerEventos() {
+  await cola;
+  try { return (await db.leerEstado(ESTADO_EVENTOS)) || []; } catch { return []; }
+}
+// Al restaurar un respaldo: los eventos del archivo se suman a los de este teléfono.
+export async function restaurarEventos(eventos) {
+  if (!Array.isArray(eventos) || !eventos.length) return 0;
+  const antes = await leerEventos();
+  const juntos = unirEventos(antes, eventos);
+  await db.guardarEstado(ESTADO_EVENTOS, juntos);
+  return juntos.length - antes.length;
+}

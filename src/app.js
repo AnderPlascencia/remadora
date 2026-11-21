@@ -6,6 +6,7 @@ import { arrancarAjustes1, arrancarAjustes2, arrancarAjustes3, pintarPerfil } fr
 import { arrancarPreparar, hayCarrera } from './pantallas/preparar.js';
 import { ajustarNumeros, arrancarVivo1, arrancarVivo2, dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
 import { arrancarRegistro } from './registro.js';
+import * as Hab from './habito.js';
 import { activarVersionEnEspera, actualizarBotones, arrancarSesion1, arrancarSesion2 } from './pantallas/sesion.js';
 import { arrancarPlanes1, arrancarPlanes2, llenarSelectorEntrenamientos } from './pantallas/planes.js';
 import { arrancarProgreso, pintarHistorial } from './pantallas/progreso.js';
@@ -35,6 +36,7 @@ arrancarSesion2();
 arrancarInicio();
 arrancarAyuda();
 pintarPerfil();
+Hab.anotar('app');
 
 const horizontalTel = matchMedia('(orientation: landscape) and (max-height: 520px)');
 // Al girar a horizontal a mitad de una carrera, la pista se lleva a la vista igual que al empezar.

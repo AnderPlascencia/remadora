@@ -12,6 +12,7 @@ import { irA } from '../navegacion.js';
 import { aplicarEdad, ofrecerFtpInicial, pintarClasificacion, pintarPerfil, rellenarPerfil, selVariante } from './ajustes.js';
 import { asistente, guardarFtp } from './preparar.js';
 import { agregarLog } from '../registro.js';
+import * as Hab from '../habito.js';
 import { ofrecerRecuperar, remadora } from './sesion.js';
 import { llenarSelectorEntrenamientos } from './planes.js';
 import { guardarPersonaje, leerPersonaje, nombreAtributo, pintarLineaNivel, srcHeroe } from './heroe.js';
@@ -98,7 +99,12 @@ export function arrancarInicio() {
   });
   $('#inicio').addEventListener('input', (e) => { if (e.target.matches('.inicio-numeros input')) notaPerfilInicio(); });
   $('#inicio-siguiente').addEventListener('click', () => {
-    if (inicio.paso < ultimoPasoInicio()) { inicio.paso++; pintarInicio(); $('#inicio .inicio-cuerpo').scrollTop = 0; } else terminarInicio();
+    if (inicio.paso < ultimoPasoInicio()) {
+      inicio.paso++;
+      if (!inicio.repetir) Hab.anotar('bienvenida', { paso: inicio.paso });
+      pintarInicio();
+      $('#inicio .inicio-cuerpo').scrollTop = 0;
+    } else terminarInicio();
   });
   $('#inicio-atras').addEventListener('click', () => { inicio.paso = Math.max(1, inicio.paso - 1); pintarInicio(); });
   $('#inicio-saltar').addEventListener('click', () => (inicio.repetir ? cerrarInicio() : terminarInicio({ saltar: true })));
@@ -146,6 +152,7 @@ async function guardarPerfilInicio() {
 // Guarda lo elegido (al saltar: héroe y perfil, sin plan) y deja la app lista para pulsar Empezar.
 async function terminarInicio({ saltar = false } = {}) {
   const repetir = inicio.repetir;
+  if (!repetir) Hab.anotar('bienvenidaFin', { paso: inicio.paso, saltar });
   ajustes.escribir('inicioHecho', '1');
   cerrarInicio();
   const per = leerPersonaje();

@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.82.0 · 2026-11-21
+
+La app mide tu constancia, solo en tu teléfono, para saber qué te ayuda a seguir remando.
+
+- Nueva tarjeta «Tu constancia» en Progreso, visible con Datos avanzados. Muestra tus sesiones por semana (8 semanas), cuánto del plan cumpliste, tus pausas de 4 días o más (y las de 8 o más), cuánto tardas de normal en volver tras una pausa y la pausa más larga.
+- En los últimos 28 días también muestra cuántos días abriste la app, cuántas sesiones empezaste y cuántas dejaste (muy cortas, descartadas, sin acabar el plan o cerradas sin recuperar), y cuántas imágenes compartiste.
+- Quedan anotados como eventos locales abrir la app, empezar y terminar una sesión, cada paso de la bienvenida y compartir la imagen. Se guardan como mucho 3000 y nunca salen del teléfono.
+- Los eventos van en el respaldo y se suman sin repetirse al restaurarlo.
+
 ## 0.81.0 · 2026-11-21
 
 El plan «Meta 2000 m» pasa a ser un plan de verdad: sale del mismo motor que los demás planes, con sus topes y su descarga.
