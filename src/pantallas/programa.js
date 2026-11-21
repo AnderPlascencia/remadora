@@ -421,7 +421,8 @@ async function crearPlanMeta() {
   const split = (segundos * 500) / distancia;
   if (split < 80 || split > 200) { $('#pm-error').textContent = 'Ese tiempo da un ritmo fuera de lo posible: revisa la distancia y el tiempo.'; return; }
   $('#pm-error').textContent = '';
-  const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio });
+  const nivel = P.nivelRemero(await H.sesiones());
+  const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio, nivel });
   await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
   estado.elegirLoDeHoy = true;

@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.81.0 · 2026-11-21
+
+El plan «Meta 2000 m» pasa a ser un plan de verdad: sale del mismo motor que los demás planes, con sus topes y su descarga.
+
+- Una sola sesión dura por semana, que alterna umbral (series largas a tu split meta + 10 s) y ritmo (tramos de 500 a 750 m a tu split meta). El resto son fondos suaves y un fondo con tramos firmes: cerca del 80/20.
+- Mismos topes que los otros planes: la carga semanal sube como mucho un 15 %, hay semana de descarga y el trabajo por encima del umbral está limitado.
+- La prueba de la distancia, a mitad y al final del plan, con afinamiento: esa semana las otras sesiones bajan un 20 % (mitad) o un 45 % (final).
+- Cada bloque lleva una cadencia guía según su zona: 18–22 golpes/min en suave, 20–24 en firme, 24–28 en umbral y 28–34 a ritmo de carrera. Se ve junto a la meta del bloque y se dice por voz; los sprints no llevan.
+- En un bloque suave con guía, si pasas 2 golpes del tope durante un minuto, la app te avisa con voz y un aviso corto.
+- El plan se adapta a tu nivel (empezando, a veces o seguido) según tu historial.
+
 ## 0.80.0 · 2026-11-21
 
 El sensor, más fiable: los números llegan antes y un corte de la consola ya no deja la sesión colgada.

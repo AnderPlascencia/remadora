@@ -1193,7 +1193,8 @@ export function progresoActual(t) {
 const splitHablado = (s) => `${Math.floor(s / 60)} ${String(s % 60).padStart(2, '0')}`;
 function metaHablada(b) {
   const meta = metaHabladaSola(b);
-  return b.spmMeta ? `${meta}, a ${b.spmMeta[0]} a ${b.spmMeta[1]} golpes por minuto` : meta;
+  const spm = b.spmMeta || b.spmGuia;
+  return spm ? `${meta}, a ${spm[0]} a ${spm[1]} golpes por minuto` : meta;
 }
 function metaHabladaSola(b) {
   const r = Ent.rangoWatts(b, ftp());
