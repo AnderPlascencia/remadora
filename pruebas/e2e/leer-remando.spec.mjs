@@ -14,7 +14,7 @@ for (const [nombre, vp] of [['vertical', { width: 412, height: 839 }], ['horizon
     await page.locator('#btn-modo-remo').click();
     await expect(page.locator('#modo-remo')).toBeVisible();
     await avanzar(page, 3_000);
-    for (const vista of ['numeros', 'grafica', 'carrera']) {
+    for (const vista of ['numeros', 'uno', 'grafica', 'carrera']) {
       await page.evaluate((v) => localStorage.setItem('vistaRemo', v), vista);
       await page.locator('#mr-salir').click();
       await page.locator('#btn-modo-remo').click();

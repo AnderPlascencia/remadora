@@ -55,6 +55,8 @@ export function mostrarConsejo(vista) {
   document.querySelectorAll('.consejo').forEach((x) => x.remove());
   const t = G.consejoDe(vista);
   // Ni a media sesión ni con el teléfono en horizontal: ahí cada línea de alto cuenta.
+  // El día de la bienvenida, Entrenar va sin consejo: sale la próxima vez que abras la app.
+  if (vista === 'entrenar' && estado.primerDia) return;
   if (!t || ajustes.si(`consejo-${vista}`, false) || !$('#inicio').hidden || estado.sesion || matchMedia('(orientation: landscape) and (max-height: 520px)').matches) return;
   const el = document.createElement('div');
   el.className = 'consejo';

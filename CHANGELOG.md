@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.89.0 · 2026-11-21
+
+Empezar y seguir la sesión sin pelearte con el teléfono.
+
+- **Empezar desde el modo remo.** Con el teléfono ya en el soporte, Empezar está ahí mismo. Y si enciendes «Empezar al dar la primera palada», basta con remar.
+- **Atajos en el icono.** Mantén pulsado el icono de Rower: «Entrenar hoy» y «Remo libre» abren el modo remo listo para empezar.
+- **Gestos más tolerantes.** El doble toque tiene más margen (450 ms) y mantener pulsado también pausa. Cada gesto reconocido vibra.
+- **Sin mirar la pantalla.** Si llevas 10 s fuera de tu rango en una serie, el teléfono vibra: tres toques cortos para subir, uno largo para bajar. En los 30 s finales de cada serie, voz y vibración propia.
+- **Vista «solo un número».** Los watts a pantalla casi completa, para remar mirando por la ventana. Va después de los números grandes al cambiar de vista, y se puede elegir en Ajustes.
+- **Un primer día sin ruido.** Tras la bienvenida solo ves «Hoy toca» y Empezar: sin confeti, sin consejo de la pestaña y sin Opciones de carrera hasta tu primera sesión. Las preguntas de «Antes de remar» pasan encima de Empezar, donde se ven.
+
 ## 0.88.0 · 2026-11-21
 
 La imagen para compartir se ve antes de mandarla, habla claro y tiene los colores de la app.

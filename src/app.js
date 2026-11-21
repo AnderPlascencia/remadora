@@ -1,10 +1,10 @@
 // Punto de entrada: carga cada pantalla y la arranca en el mismo orden de siempre.
-import { $, reajustarTextos, vigilarCapas } from './ui.js';
+import { $, ajustes, reajustarTextos, vigilarCapas } from './ui.js';
 import { estado } from './estado.js';
-import { arrancarNavegacion, vistaActiva } from './navegacion.js';
+import { arrancarNavegacion, irA, vistaActiva } from './navegacion.js';
 import { arrancarAjustes1, arrancarAjustes2, arrancarAjustes3, pintarPerfil } from './pantallas/ajustes.js';
 import { arrancarPreparar, hayCarrera } from './pantallas/preparar.js';
-import { ajustarNumeros, arrancarVivo1, arrancarVivo2, dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
+import { abrirModoRemo, ajustarNumeros, arrancarVivo1, arrancarVivo2, dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
 import { arrancarRegistro } from './registro.js';
 import * as Hab from './habito.js';
 import { activarVersionEnEspera, actualizarBotones, arrancarSesion1, arrancarSesion2 } from './pantallas/sesion.js';
@@ -54,7 +54,16 @@ window.addEventListener('resize', () => {
   if (vistaActiva('entrenamientos')) pintarPrograma();
 });
 actualizarBotones();
-limpiarSobrantesDePlan().then(() => llenarSelectorEntrenamientos()).then(revisarPlanAuto);
+// Atajos del icono (etapa 16): «Entrenar hoy» y «Remo libre» abren el modo remo listo para empezar.
+const atajo = new URLSearchParams(location.search).get('atajo');
+if (atajo) history.replaceState(history.state, '', location.pathname + location.hash);
+limpiarSobrantesDePlan().then(() => llenarSelectorEntrenamientos()).then(revisarPlanAuto).then(() => abrirAtajo(atajo));
+function abrirAtajo(a) {
+  if ((a !== 'hoy' && a !== 'libre') || !ajustes.si('inicioHecho', false) || estado.sesion) return;
+  irA('entrenar');
+  if (a === 'libre') $('#modo-ent [data-modo="libre"]').click();
+  abrirModoRemo();
+}
 dibujarVivo();
 pintarLineaNivel();
 

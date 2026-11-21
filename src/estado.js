@@ -10,6 +10,7 @@ export const estado = {
   baseActual: [],
   condicionBase: 0, // condición con la que se armaron los base
   elegirLoDeHoy: true,
+  primerDia: false, // recién terminada la bienvenida: solo «Hoy toca» y Empezar, sin consejos ni opciones de carrera
   cacheSesiones: [],
   tendencia: 'potencia',
   atrAbierta: null,

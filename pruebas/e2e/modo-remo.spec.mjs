@@ -7,7 +7,9 @@ async function fueraDePantalla(page) {
   return page.evaluate((sel) => {
     const w = innerWidth;
     const h = innerHeight;
-    return sel.filter((s) => {
+    // La vista «solo un número» (etapa 16) enseña solo los watts: ahí el split no está, a propósito.
+    const uno = document.querySelector('#modo-remo').classList.contains('vista-uno');
+    return sel.filter((s) => !(uno && s === '#mr-split')).filter((s) => {
       const r = document.querySelector(s).getBoundingClientRect();
       return !r.width || !r.height || r.left < -1 || r.top < -1 || r.right > w + 1 || r.bottom > h + 1;
     });

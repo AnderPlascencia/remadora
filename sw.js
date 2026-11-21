@@ -103,5 +103,6 @@ self.addEventListener('fetch', (e) => {
   // cache: 'no-cache' revalida con el servidor para no quedarse con archivos viejos del navegador.
   e.respondWith(fetch(e.request, { cache: 'no-cache' })
     .then((r) => { e.waitUntil(guardarEnCache(e.request, r.clone())); return r; })
-    .catch(() => caches.match(e.request)));
+    // Sin conexión, la página abierta desde un atajo del icono (?atajo=…) es la misma página guardada.
+    .catch(() => caches.match(e.request, e.request.mode === 'navigate' ? { ignoreSearch: true } : undefined)));
 });

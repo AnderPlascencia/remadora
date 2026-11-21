@@ -3,7 +3,6 @@ import { Remadora } from '../remadora.js';
 import * as H from '../historial.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
-import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
 import * as Pf from '../perfil.js';
 import { $, ajustes, fcMaxima, ftp, miles, perfil, toast } from '../ui.js';
@@ -13,7 +12,7 @@ import { aplicarEdad, ofrecerFtpInicial, pintarClasificacion, pintarPerfil, rell
 import { asistente, guardarFtp } from './preparar.js';
 import { agregarLog } from '../registro.js';
 import * as Hab from '../habito.js';
-import { ofrecerRecuperar, remadora } from './sesion.js';
+import { actualizarBotones, ofrecerRecuperar, remadora } from './sesion.js';
 import { llenarSelectorEntrenamientos } from './planes.js';
 import { guardarPersonaje, leerPersonaje, nombreAtributo, pintarLineaNivel, srcHeroe } from './heroe.js';
 import { contextoPlan, guardarEntrenamientosDePlan, guardarPrograma, leerPrograma } from './programa.js';
@@ -154,6 +153,7 @@ async function terminarInicio({ saltar = false } = {}) {
   const repetir = inicio.repetir;
   if (!repetir) Hab.anotar('bienvenidaFin', { paso: inicio.paso, saltar });
   ajustes.escribir('inicioHecho', '1');
+  if (!repetir) { estado.primerDia = true; actualizarBotones(); }
   cerrarInicio();
   const per = leerPersonaje();
   if (inicio.clase && (inicio.clase !== per.clase || $('#inicio-nombre').value.trim() !== (per.nombre || ''))) guardarPersonaje({ clase: inicio.clase, nombre: $('#inicio-nombre').value.trim() });
@@ -174,7 +174,7 @@ async function terminarInicio({ saltar = false } = {}) {
   await llenarSelectorEntrenamientos();
   pintarLineaNivel();
   pintarPerfil();
-  if (inicio.clase && !repetir) confeti(1200);
+  // El primer día, sin ruido (etapa 16): ni confeti ni consejo de la pestaña; solo «Hoy toca», Empezar y un aviso.
   if (texto) toast(texto, 4000);
 }
 export function abrirInicio({ repetir = false } = {}) {

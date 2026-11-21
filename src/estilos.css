@@ -1633,7 +1633,7 @@ details.mas-detalle[hidden] { display: none; }
 .cita-resumen .acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .cita-mover { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 8px; }
 /* Antes de remar: dos preguntas opcionales, debajo de Empezar; se pliegan a una línea al responder. */
-.antes-remar { margin: 12px 0 0; }
+.antes-remar { margin: 12px 0; }
 .antes-pregunta { margin: 8px 0 0; }
 .antes-pregunta > span { display: block; font-size: var(--t-s); color: var(--texto-suave); margin-bottom: 6px; }
 .antes-chips { display: flex; gap: 8px; flex-wrap: nowrap; }
@@ -2115,3 +2115,23 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 #compartir-formatos { justify-content: center; margin-bottom: 8px; }
 .compartir-opciones { display: grid; gap: 2px; text-align: left; margin-bottom: 12px; }
 .compartir-opciones .interruptor { min-height: 44px; }
+
+/* Empezar desde el modo remo (etapa 16): antes de la sesión, Empezar ocupa el sitio de Terminar y Pausar. */
+#mr-empezar { grid-column: span 2; }
+.mr-auto { min-height: 44px; font-size: var(--t-s); color: var(--texto-suave); }
+.mr-auto[hidden] { display: none; }
+
+/* Vista «solo un número»: un dato gigante y nada más; lo demás llega por voz y vibración. */
+.modo-remo.vista-uno .mr-grid, .modo-remo.vista-uno .mr-perfil, .modo-remo.vista-uno .mr-zona-grafica { display: none; }
+.modo-remo.vista-uno .mr-watts { font-size: min(42vh, 44vw); line-height: .9; }
+.modo-remo.vista-uno .mr-indicador { font-size: var(--t-2xl, 28px); min-height: 40px; }
+.modo-remo.vista-uno .mr-indicador .ico { width: 34px; height: 34px; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .modo-remo.vista-uno .mr-principal { grid-column: 1 / -1; grid-row: 3 / 5; }
+  .modo-remo.vista-uno .mr-botones { grid-column: 1 / -1; grid-row: 5; }
+  .modo-remo.vista-uno .mr-watts { font-size: min(52vh, 30vw); }
+}
+/* Con «solo un número» hay hasta 5 vistas: en el botón estrecho de la carrera en horizontal, los puntos más juntos. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #mr-vista .vista-puntos { letter-spacing: 0; font-size: 10px; }
+}

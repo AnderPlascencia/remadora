@@ -15,7 +15,7 @@ import * as V from '../ventajas.js';
 import * as Cap from '../capacidades.js';
 import * as A from '../adaptacion.js';
 import {
-  $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, escaparHtml, fcMaxima, fcRef, ftp, ico, miles, reajustarTextos, toast, vibrar,
+  $, COLOR_ZONA, ajustarTexto, ajustes, cambiarTexto, color, escaparHtml, fcMaxima, fcRef, ftp, ico, miles, reajustarTextos, toast, VIBRA, vibrar,
 } from '../ui.js';
 import { estado } from '../estado.js';
 import { numerosPintados } from '../diagnostico.js';
@@ -610,7 +610,7 @@ function pintarGraficaRemo(t) {
 }
 
 // Orden al tocar el botón: números → gráfica → carrera (si hay fantasma) → números.
-const vistasRemo = () => ['numeros', ...(hayRangos() ? ['rango'] : []), 'grafica', ...(hayCarrera() ? ['carrera'] : [])];
+const vistasRemo = () => ['numeros', 'uno', ...(hayRangos() ? ['rango'] : []), 'grafica', ...(hayCarrera() ? ['carrera'] : [])];
 function siguienteVista() {
   const vs = vistasRemo();
   return vs[(vs.indexOf(vistaRemo()) + 1) % vs.length];
@@ -622,12 +622,13 @@ function aplicarVistaRemo() {
   $('#modo-remo').classList.toggle('vista-grafica', v === 'grafica' || v === 'carrera');
   $('#modo-remo').classList.toggle('vista-carrera', v === 'carrera');
   $('#modo-remo').classList.toggle('vista-rango', v === 'rango');
+  $('#modo-remo').classList.toggle('vista-uno', v === 'uno');
   const sig = siguienteVista();
   const b = $('#mr-vista');
   // El botón muestra la vista actual y unos puntos con su lugar en la vuelta; tocarlo pasa a la siguiente.
   const vistas = vistasRemo();
-  const icono = { numeros: '<span class="num" aria-hidden="true">Vista</span>', rango: '<span class="num" aria-hidden="true">Vista</span>', grafica: '<span class="num" aria-hidden="true">Vista</span>', carrera: '<span class="num" aria-hidden="true">Vista</span>' };
-  const nombre = { numeros: 'números grandes', rango: 'rango del intervalo', grafica: 'gráfica', carrera: 'carrera' };
+  const icono = { numeros: '<span class="num" aria-hidden="true">Vista</span>', uno: '<span class="num" aria-hidden="true">Vista</span>', rango: '<span class="num" aria-hidden="true">Vista</span>', grafica: '<span class="num" aria-hidden="true">Vista</span>', carrera: '<span class="num" aria-hidden="true">Vista</span>' };
+  const nombre = { numeros: 'números grandes', uno: 'solo un número', rango: 'rango del intervalo', grafica: 'gráfica', carrera: 'carrera' };
   b.innerHTML = `${icono[v]}<span class="vista-puntos" aria-hidden="true">${vistas.map((x) => (x === v ? '●' : '○')).join('')}</span>`;
   b.setAttribute('aria-label', `Vista: ${nombre[v]}. Toca para cambiar a ${nombre[sig]}`);
 }
@@ -664,12 +665,27 @@ export function arrancarVivo2() {
   $('#btn-modo-remo').addEventListener('click', abrirModoRemo);
   $('#mr-salir').addEventListener('click', cerrarModoRemo);
   {
+    // Gestos (etapa 16): doble toque en 450 ms o mantener pulsado 0,6 s pausan o siguen; deslizar cambia de vista.
+    // Cada gesto reconocido vibra, para saber que entró sin mirar.
     const mr = $('#modo-remo');
     let inicio = null;
     let ultimoToque = 0;
-    mr.addEventListener('pointerdown', (e) => { inicio = e.target.closest('button, select, input') ? null : { x: e.clientX, y: e.clientY, t: Date.now() }; });
+    let largo = 0;
+    const pausarConGesto = () => { gestoHecho = Date.now(); $('#mr-pausa').click(); vibrar(VIBRA.pausa); };
+    mr.addEventListener('pointerdown', (e) => {
+      clearTimeout(largo);
+      inicio = e.target.closest('button, select, input, label') ? null : { x: e.clientX, y: e.clientY, t: Date.now() };
+      if (!inicio || !estado.sesion) return;
+      const yo = inicio;
+      largo = setTimeout(() => { if (inicio === yo && !yo.movido) { yo.largo = true; pausarConGesto(); } }, GESTO.largoMs);
+    });
+    mr.addEventListener('pointermove', (e) => {
+      if (inicio && (Math.abs(e.clientX - inicio.x) > 12 || Math.abs(e.clientY - inicio.y) > 12)) inicio.movido = true;
+    });
+    mr.addEventListener('pointercancel', () => { clearTimeout(largo); inicio = null; });
     mr.addEventListener('pointerup', (e) => {
-      if (!inicio) return;
+      clearTimeout(largo);
+      if (!inicio || inicio.largo) { inicio = null; return; }
       const dx = e.clientX - inicio.x;
       const dy = e.clientY - inicio.y;
       const rapido = Date.now() - inicio.t < 600;
@@ -679,6 +695,7 @@ export function arrancarVivo2() {
         ajustes.escribir('vistaRemo', siguienteVista());
         selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
         aplicarVistaRemo();
+        vibrar(VIBRA.gesto);
         requestAnimationFrame(pintar);
         return;
       }
@@ -686,11 +703,9 @@ export function arrancarVivo2() {
       // En la carrera un toque cambia 2D/3D: ahí el doble toque no pausa.
       if (e.target.id === 'mr-grafica' && vistaRemo() === 'carrera') return;
       const ahora = Date.now();
-      if (ahora - ultimoToque < 350) {
+      if (ahora - ultimoToque < GESTO.dobleMs) {
         ultimoToque = 0;
-        gestoHecho = ahora;
-        $('#mr-pausa').click();
-        vibrar(60);
+        pausarConGesto();
       } else ultimoToque = ahora;
     });
   }
@@ -843,21 +858,27 @@ export function abrirModoRemo() {
   $('#mr-perfil').hidden = !intervalos;
   if (!estado.sesion) {
     $('#mr-nombre').textContent = ($('#sel-entrenamiento').value && $('#sel-entrenamiento').selectedOptions[0]?.textContent) || 'Remo libre';
-    $('#mr-meta-texto').textContent = 'Pulsa Empezar fuera de este modo';
+    $('#mr-meta-texto').textContent = textoAntesDeEmpezar();
     $('#mr-resta').textContent = '';
     $('#mr-resta-etq').textContent = '';
   }
   aplicarVistaRemo();
   actualizarBotones();
   const vistas = ajustes.num('ayudaGestos', 0);
-  if (vistas < 3) { ajustes.escribir('ayudaGestos', vistas + 1); toast('Doble toque: pausa · Desliza: cambia la vista'); }
+  if (vistas < 3) { ajustes.escribir('ayudaGestos', vistas + 1); toast('Doble toque o mantén pulsado: pausa · Desliza: cambia la vista'); }
   // Pantalla completa sobre todo el documento: así el aviso de fin, los mensajes y el confeti siguen viéndose encima.
   try { document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {}); } catch { /* opcional */ }
   pintar();
 }
 
-// Gestos en el modo remo: doble toque pausa o sigue; deslizar a un lado cambia de vista.
+// Gestos en el modo remo: doble toque o pulsación larga pausan o siguen; deslizar a un lado cambia de vista.
 let gestoHecho = 0;
+export const GESTO = { dobleMs: 450, largoMs: 600 };
+// Antes de empezar: Empezar está aquí mismo, o basta con remar si lo pediste.
+export function textoAntesDeEmpezar() {
+  if (!remadora.conectada) return 'Pulsa Empezar para conectar';
+  return ajustes.si('empezarPalada', false) ? 'Rema y empieza solo' : 'Pulsa Empezar';
+}
 
 export function cerrarModoRemo() {
   $('#modo-remo').hidden = true;
