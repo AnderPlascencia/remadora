@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generadoPor": "tools/build-manifest.mjs",
-  "total": 108,
+  "total": 109,
   "assets": [
     {
       "id": "vikingo.novato.cuerpo",
@@ -2401,7 +2401,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 319867,
+      "bytes": 315308,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2410,25 +2410,13 @@
         "y": 0.97
       },
       "versionMaestro": "3.0.0",
-      "estado": "approved",
+      "estado": "pending",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            300,
-            587,
-            437,
-            749
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            12,
-            82,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1024
         }
       }
     },
@@ -2445,31 +2433,48 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 62450,
+      "bytes": 94911,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
       "pivote": null,
       "versionMaestro": "3.0.0",
-      "estado": "approved",
+      "estado": "pending",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            300,
-            587,
-            437,
-            749
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            12,
-            82,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1024
+        }
+      }
+    },
+    {
+      "id": "polinesio.novato.fuente",
+      "clase": "polinesio",
+      "rango": "novato",
+      "nombre": "polinesio_novato_source.jpg",
+      "ruta": "assets/characters/polinesio/novato/polinesio_novato_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 90265,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "pending",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1024
         }
       }
     },
