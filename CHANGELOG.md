@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.79.0 · 2026-11-21
+
+Los números se leen remando, a 1,5 m del teléfono y en pleno esfuerzo.
+
+- Watts de 64 px o más en todas las vistas del modo remo. En la carrera en vertical pasan de 24 a unos 74 px, con el split a 40 px al lado (el lago se encoge un poco). En horizontal, de 41 a 74 px en la carrera y de 48 a 64 px en la gráfica.
+- El modo remo se abre solo al empezar la sesión. Si prefieres la vista normal, apágalo en Ajustes › «Abrir modo remo al iniciar sesión».
+- Los avisos ya no tapan los números: en el modo remo salen arriba, sobre la cabecera. Van en cola, uno a la vez: el siguiente espera a que el actual lleve 1,5 s en pantalla en lugar de pisarlo. Los de seguridad (conexión, guardar) pasan primero y los del juego al final. Fuera el aviso duplicado al abrir el modo remo.
+- Contraste 7:1 en el modo remo con el tema oscuro: etiquetas más claras y Terminar en un rojo más hondo.
+- Carrera en 3D: la cámara va más cerca y más baja, así tu bote y los de al lado se ven unas 1,5 veces más grandes. La tabla de rivales se pliega a una línea con el más cercano («Silas Crane +1 m · 2 más»), a 14 px.
+- Al terminar, la vista previa de Entrenar espera a que la sesión quede guardada antes de leer el historial, y si esa lectura falla se anota en el registro en lugar de dar un error.
+
 ## 0.78.0 · 2026-11-21
 
 Una sola racha y un solo «qué toca»: la app ya no te pide cosas distintas a la vez.

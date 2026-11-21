@@ -45,7 +45,7 @@ export function arrancarAyuda() {
   $('#btn-repetir-inicio').addEventListener('click', () => abrirInicio({ repetir: true }));
   $('#btn-consejos').addEventListener('click', () => {
     for (const v of Object.keys(G.CONSEJO_DE_VISTA)) ajustes.escribir(`consejo-${v}`, '0');
-    ajustes.escribir('consejoModoRemo', '0');
+    ajustes.escribir('ayudaGestos', '0');
     toast('Los consejos vuelven a salir al abrir cada pestaña');
     mostrarConsejo('ajustes');
   });

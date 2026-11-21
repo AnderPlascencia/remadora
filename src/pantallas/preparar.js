@@ -10,6 +10,7 @@ import * as V from '../ventajas.js';
 import * as Pf from '../perfil.js';
 import { $, ajustes, escaparHtml, ftp, ico, miles, perfil, toast } from '../ui.js';
 import { estado } from '../estado.js';
+import { agregarLog } from '../registro.js';
 import { pintarClasificacion, pintarZonas, ritmoObjetivo } from './ajustes.js';
 import { modoEnt } from './vivo.js';
 import { chipsAtr, filaCond, icoMoneda, inventario, leerPersonaje, opcConsejos, previsionDe } from './heroe.js';
@@ -203,7 +204,8 @@ let preparoTimer = null;
 let preparoTurno = 0;
 export function prepararPronto() {
   clearTimeout(preparoTimer);
-  preparoTimer = setTimeout(pintarPreparar, 150);
+  // La vista previa lee el historial: si esa lectura falla (memoria, otra pestaña), se anota y la pantalla sigue.
+  preparoTimer = setTimeout(() => pintarPreparar().catch((e) => agregarLog(`vista previa sin historial: ${e?.name || ''} ${e?.message || e}`)), 150);
 }
 export const srcRetratoRango = (clase, rango) => `assets/heroes/${clase}_${rango}_retrato.webp`;
 const fechaMini = (f) => new Date(f).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
@@ -243,6 +245,7 @@ function sesionHipotetica(ent, rivales, sesiones) {
 
 async function pintarPreparar() {
   if (estado.sesion) return;
+  if (estado.guardando) { prepararPronto(); return; }
   const turno = ++preparoTurno;
   const ent = estado.entrenamientoPrevio;
   const elegidos = rivalesElegidos();

@@ -71,9 +71,9 @@ export function arrancarSesion1() {
     if (!Remadora.soportado()) $('#aviso-bt').hidden = !!remadora.demoTimer;
     if (estado.sesion) {
       if (texto.startsWith('Reconectando')) hablar('Conexión perdida, reconectando', { clave: 'reconectando', cadaSeg: 30 });
-      if (texto === 'Conectada' && estado.sesion.perdida) { hablar('Reconectada'); toast('Reconectada: la sesión sigue'); }
+      if (texto === 'Conectada' && estado.sesion.perdida) { hablar('Reconectada'); toast('Reconectada: la sesión sigue', 3000, 'seguridad'); }
       estado.sesion.perdida = !conectada;
-      if (texto === 'Desconectada') toast('Sin conexión. La sesión sigue en pausa: reconecta o termínala.');
+      if (texto === 'Desconectada') toast('Sin conexión. La sesión sigue en pausa: reconecta o termínala.', 3000, 'seguridad');
     }
     actualizarBotones();
     if (!estado.sesion) vistaPrevia();
@@ -422,7 +422,7 @@ async function iniciarSesion(reanudar = null) {
     hablar(`Comienza ${estado.entrenamientoActivo.nombre}${contra}.${prop ? ` ${prop}` : ''}`);
   } else hablar(`Sesión iniciada${contra}`);
   if (!reanudar) prepararVozJuego(estado.sesion);
-  if (ajustes.si('modoAuto', false)) abrirModoRemo();
+  if (ajustes.si('modoAuto', true)) abrirModoRemo();
   pintar();
   // En horizontal la carrera no cabe junto a los botones: se lleva a la vista al empezar.
   if (hayCarrera() && matchMedia('(orientation: landscape) and (max-height: 520px)').matches) {
@@ -455,14 +455,20 @@ async function detenerSesion() {
   carreraEnt.detener();
   carreraRemo.detener();
   cerrarFin();
+  // Mientras se guarda, la vista previa de Entrenar espera: no lee el historial a la vez que el guardado.
+  estado.guardando = true;
   vistaPrevia();
   try { await wakeLock?.release(); } catch { /* nada */ }
   wakeLock = null;
   activarVersionEnEspera();
-  if (!s || s.muestras.length < 10) { await borrarSesionEnCurso(); toast('Sesión muy corta: no se guardó'); return; }
-  // Primero la copia con el final de la sesión; se borra solo cuando la sesión quedó guardada.
-  await guardarSesionEnCurso(s, ent);
-  await guardarSesionTerminada(s, ent);
+  if (!s || s.muestras.length < 10) { estado.guardando = false; await borrarSesionEnCurso(); toast('Sesión muy corta: no se guardó'); return; }
+  try {
+    // Primero la copia con el final de la sesión; se borra solo cuando la sesión quedó guardada.
+    await guardarSesionEnCurso(s, ent);
+    await guardarSesionTerminada(s, ent);
+  } finally {
+    estado.guardando = false;
+  }
 }
 
 // ---------- Sesión en curso a salvo ----------
@@ -649,7 +655,7 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   } catch (e) {
     // La copia de la sesión en curso se queda: se puede volver a intentar ahora o al abrir la app.
     agregarLog(`no se pudo guardar la sesión: ${e?.name || ''} ${e?.message || e}`);
-    toast('No se pudo guardar la sesión. Sigue a salvo: vuelve a intentarlo.', 6000);
+    toast('No se pudo guardar la sesión. Sigue a salvo: vuelve a intentarlo.', 6000, 'seguridad');
     ofrecerRecuperar();
     return false;
   }
@@ -892,7 +898,7 @@ function avisarTalentos() {
     const m = ev.m >= 1 ? Math.round(ev.m) : ev.m.toFixed(1).replace('.', ',');
     eventoCarrera('ventaja', `+${m} m`, ev.nombre);
     if (!ev.discreto) {
-      toast(`${ev.nombre}: +${m} m`);
+      toast(`${ev.nombre}: +${m} m`, 3000, 'juego');
       hablar(`${ev.nombre}: más ${m} metros`, { clave: 'talento', cadaSeg: 15 });
     }
   }

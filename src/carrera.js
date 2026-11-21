@@ -1693,6 +1693,9 @@ const ruido = (n) => {
   return x - Math.floor(x);
 };
 
+export const CAM_ATRAS = 8.5;
+export const CAM_ALTO = 3.4;
+
 function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], sprint, dt }, arriba) {
   const yo = botes[0];
   // En el sprint la cámara se acerca y baja.
@@ -1706,8 +1709,10 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   c.alejar = (c.alejar || 0) + (alejarObj - (c.alejar || 0)) * Math.min(1, (dt || 0) * 1.2);
   if (sinMovimiento) c.alejar = alejarObj;
   const al = c.alejar;
-  const camZ = yo.dist - 13 + c.zoom * 3.5 * (al < 12 ? 1 : 0) - Math.min(atrasM, al) - al * 0.12;
-  const camH = 4.6 - c.zoom * (al < 12 ? 1 : 0) + al * 0.085;
+  // 0.79: la cámara va más cerca y más baja (antes a 13 m y 4,6 m de alto) para que tu bote y los rivales de al lado
+  // se vean ~1,5 veces más grandes; el agua vacía de abajo se reduce.
+  const camZ = yo.dist - CAM_ATRAS + c.zoom * 3.5 * (al < 12 ? 1 : 0) - Math.min(atrasM, al) - al * 0.12;
+  const camH = CAM_ALTO - c.zoom * (al < 12 ? 1 : 0) + al * 0.085;
   const alcance = Math.max(300, al + 80);
   // El horizonte y la escala se calculan con el alto que queda bajo la cabecera.
   const util = alto - arriba;
@@ -1990,7 +1995,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   const lista = botes.map((b, i) => ({ ...b, x: lateral[i] })).sort((a, b) => b.dist - a.dist);
   for (const b of lista) {
     // Los rivales que van justo detrás de ti se verían enormes y deformados: solo salen en la tabla.
-    if (!b.yo && b.dist - camZ < 9) continue;
+    if (!b.yo && b.dist - camZ < CAM_ATRAS - 3) continue;
     if (b.yo && b.dist - camZ < 4.5) continue;
     bote3d(ctx, P, b, t);
     if (b.yo) {
@@ -2019,26 +2024,34 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
 
 // Diferencias de la vista 3D: todas juntas en la esquina, ordenadas por posición (también los que van detrás
 // y no salen en cámara). Sobre cada bote solo queda una marca de su color.
+// 0.79: plegada a una línea con el rival más cercano (antes una fila por bote, ~12 % de la escena) y a 14 px; si hay
+// más rivales, «+N» al final.
 function tabla3d(ctx, botes, yo, arriba, ancho, medir = false) {
-  const filas = [...botes].sort((a, b) => b.dist - a.dist);
-  const alto = 19;
-  const r = 6.5;
-  ctx.font = '700 12px system-ui, sans-serif';
+  const rivales = botes.filter((b) => !b.yo).sort((a, b) => Math.abs(a.dist - yo.dist) - Math.abs(b.dist - yo.dist));
+  if (!rivales.length) return medir ? { derecha: 0, abajo: arriba } : undefined;
+  const filas = [rivales[0]];
+  const mas = rivales.length - 1;
+  const alto = 24;
+  const r = 8;
+  ctx.font = '700 14px system-ui, sans-serif';
   const maxNombre = Math.min(96, ancho * 0.24);
   const nombres = filas.map((b) => cabe(ctx, b.nombre, maxNombre));
   const wNombre = Math.max(...nombres.map((n) => ctx.measureText(n).width));
-  ctx.font = '800 12px system-ui, sans-serif';
+  ctx.font = '800 14px system-ui, sans-serif';
   const difs = filas.map((b) => {
     if (b.yo) return '';
     const d = Math.round(b.dist - yo.dist);
     return d === 0 ? 'parejos' : `${d > 0 ? '+' : '−'}${Math.abs(d).toLocaleString('es-MX')} m`;
   });
   const wDif = Math.max(28, ...difs.map((d) => ctx.measureText(d).width));
-  const w = 8 + r * 2 + 6 + wNombre + 10 + wDif + 8;
+  ctx.font = '700 14px system-ui, sans-serif';
+  const txtMas = mas ? `· ${mas} más` : '';
+  const wMas = mas ? ctx.measureText(txtMas).width + 10 : 0;
+  const w = 8 + r * 2 + 6 + wNombre + 10 + wDif + wMas + 8;
   const x0 = 6;
   const y0 = arriba + 6;
   if (medir) return { derecha: x0 + w, abajo: y0 + filas.length * alto + 6 };
-  ctx.fillStyle = 'rgba(2,6,23,0.7)';
+  ctx.fillStyle = 'rgba(2,6,23,0.82)';
   ctx.beginPath();
   ctx.roundRect ? ctx.roundRect(x0, y0, w, filas.length * alto + 6, 10) : ctx.rect(x0, y0, w, filas.length * alto + 6);
   ctx.fill();
@@ -2050,21 +2063,27 @@ function tabla3d(ctx, botes, yo, arriba, ancho, medir = false) {
     }
     retrato(ctx, b.retrato, x0 + 8 + r, y, r, b.color);
     ctx.textAlign = 'left';
-    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.font = '700 14px system-ui, sans-serif';
     ctx.fillStyle = b.color;
-    ctx.fillText(nombres[i], x0 + 8 + r * 2 + 6, y + 4);
+    ctx.fillText(nombres[i], x0 + 8 + r * 2 + 6, y + 5);
     if (b.acelera || b.aviso) {
       ctx.fillStyle = '#FDE047';
       ctx.fillText('⚡', x0 + 8 + r * 2 + 6 + ctx.measureText(nombres[i]).width + 2, y + 4);
     }
     if (!b.yo) {
       const d = b.dist - yo.dist;
-      ctx.font = '800 12px system-ui, sans-serif';
+      ctx.font = '800 14px system-ui, sans-serif';
       ctx.textAlign = 'right';
       ctx.fillStyle = Math.round(d) > 0 ? '#FCA5A5' : Math.round(d) < 0 ? '#86EFAC' : '#F8FAFC';
-      ctx.fillText(difs[i], x0 + w - 8, y + 4);
+      ctx.fillText(difs[i], x0 + w - 8 - wMas, y + 5);
     }
   });
+  if (mas) {
+    ctx.font = '700 14px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#CBD5E1';
+    ctx.fillText(txtMas, x0 + w - 8, y0 + 3 + alto / 2 + 5);
+  }
 }
 
 // Vela cuadrada vista desde atrás: un cuadrilátero de lado a lado entre dos alturas.

@@ -10,6 +10,9 @@ async function prepararPagina(page) {
   page.on('dialog', (d) => d.accept());
   await page.addInitScript(() => {
     window.__avisos = [];
+    // El modo remo se abre solo al empezar (0.79). Las pruebas usan los botones de Entrenar: se apaga salvo que
+    // una prueba lo quite antes con su propio addInitScript.
+    try { if (localStorage.getItem('modoAuto') == null) localStorage.setItem('modoAuto', '0'); } catch { /* about:blank */ }
     Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
     // «interactive» llega antes de que corran los módulos: no se pierde ningún aviso del arranque.
     document.addEventListener('readystatechange', () => {

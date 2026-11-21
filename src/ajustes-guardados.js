@@ -26,7 +26,7 @@ export const AJUSTES = {
   // Preferencias
   voz: A('si', true, true),
   cantidadVoz: A('texto', 'completa', true), // 'datos', 'entrenador' o 'completa' (voz.js)
-  modoAuto: A('si', false, true),
+  modoAuto: A('si', true, true),
   pausaAuto: A('si', true, true),
   resAuto: A('si', false, true),
   atrVivo: A('si', true, true),
@@ -64,7 +64,6 @@ export const AJUSTES = {
   ayudaGestos: A('numero', 0, false),
   avisoXpLenta: A('si', false, false),
   avisoTriunfo12: A('si', false, false), // etapa 12: el Triunfo romano cambió (se avisa una vez)
-  consejoModoRemo: A('si', false, false),
   // La copia de la sesión en curso cuando IndexedDB falla (ver pantallas/sesion.js).
   sesionEnCurso: A('json', null, false),
 };
