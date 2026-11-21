@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.73.4 · 2026-11-20
+
+El polinesio completo, con ilustraciones nuevas.
+
+- Los 8 rangos del polinesio que faltaban (de Aprendiz a Legendario) estrenan ilustración semirrealista pintada, a juego con el novato nuevo. Conservan su cara, el moño y la pose, y suben según la matriz de progresión: flor en el moño, primer kākau, malo teñido y luego rojo, lanza, lāʻau y leiomano con dientes de tiburón, y el mahiole con capa de plumas en Legendario.
+- Generadas con Open Generative AI en modo local (stable-diffusion.cpp con Z-Image Turbo), cada rango a partir de la imagen del novato, e importadas con `tools/ingest-character.mjs`.
+
 ## 0.73.3 · 2026-11-20
 
 El polinesio novato, con ilustración nueva.

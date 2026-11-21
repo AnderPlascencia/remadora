@@ -3,35 +3,29 @@
   "rango": "campeon",
   "versionMaestro": "3.0.0",
   "herramienta": {
-    "nombre": "tools/extract-sheet.py",
-    "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+    "nombre": "tools/ingest-character.mjs",
+    "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
-      "celda": [
-        977,
-        587,
-        1115,
-        749
-      ],
-      "escala": 5.051,
-      "cajaFigura": [
-        2,
-        9,
-        94,
-        162
-      ],
-      "retrato": true
+      "croma": true,
+      "escala": 1.1135
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
-    "archivo": null,
-    "lamina": "assets/characters/_source/lamina_clases_v1.png",
-    "generador": "sin indicar (lámina aportada por el usuario)",
-    "licencia": "según los términos del generador",
-    "resolucionOrigen": [
-      92,
-      153
-    ]
+    "archivo": "polinesio_campeon_source.jpg",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), img2img desde el novato, 576x768, 8 pasos, semilla 23",
+    "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#polinesio",
+    "origen": {
+      "ancho": 576,
+      "alto": 768,
+      "caja": {
+        "x0": 107,
+        "y0": 49,
+        "x1": 445,
+        "y1": 742
+      }
+    },
+    "licencia": "según los términos del generador"
   },
   "pivote": {
     "x": 0.5,

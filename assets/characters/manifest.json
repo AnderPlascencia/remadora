@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generadoPor": "tools/build-manifest.mjs",
-  "total": 109,
+  "total": 117,
   "assets": [
     {
       "id": "vikingo.novato.cuerpo",
@@ -2491,7 +2491,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 350514,
+      "bytes": 330685,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2502,23 +2502,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            437,
-            587,
-            568,
-            749
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            12,
-            84,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1009
         }
       }
     },
@@ -2535,7 +2523,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 72197,
+      "bytes": 96208,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2543,23 +2531,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            437,
-            587,
-            568,
-            749
-          ],
-          "escala": 5.152,
-          "cajaFigura": [
-            0,
-            12,
-            84,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1009
+        }
+      }
+    },
+    {
+      "id": "polinesio.aprendiz.fuente",
+      "clase": "polinesio",
+      "rango": "aprendiz",
+      "nombre": "polinesio_aprendiz_source.jpg",
+      "ruta": "assets/characters/polinesio/aprendiz/polinesio_aprendiz_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 100549,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1009
         }
       }
     },
@@ -2576,7 +2581,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 396190,
+      "bytes": 333527,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2587,23 +2592,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            568,
-            587,
-            700,
-            749
-          ],
-          "escala": 5.084,
-          "cajaFigura": [
-            0,
-            10,
-            87,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1072
         }
       }
     },
@@ -2620,7 +2613,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 77346,
+      "bytes": 98876,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2628,23 +2621,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            568,
-            587,
-            700,
-            749
-          ],
-          "escala": 5.084,
-          "cajaFigura": [
-            0,
-            10,
-            87,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1072
+        }
+      }
+    },
+    {
+      "id": "polinesio.combatiente.fuente",
+      "clase": "polinesio",
+      "rango": "combatiente",
+      "nombre": "polinesio_combatiente_source.jpg",
+      "ruta": "assets/characters/polinesio/combatiente/polinesio_combatiente_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 102741,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1072
         }
       }
     },
@@ -2661,7 +2671,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 422511,
+      "bytes": 331003,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2672,23 +2682,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            700,
-            587,
-            837,
-            749
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            0,
-            9,
-            92,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1056
         }
       }
     },
@@ -2705,7 +2703,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 83088,
+      "bytes": 91435,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2713,23 +2711,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            700,
-            587,
-            837,
-            749
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            0,
-            9,
-            92,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1056
+        }
+      }
+    },
+    {
+      "id": "polinesio.guerrero.fuente",
+      "clase": "polinesio",
+      "rango": "guerrero",
+      "nombre": "polinesio_guerrero_source.jpg",
+      "ruta": "assets/characters/polinesio/guerrero/polinesio_guerrero_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 102788,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1056
         }
       }
     },
@@ -2746,7 +2761,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 418665,
+      "bytes": 334503,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2757,23 +2772,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            837,
-            587,
-            977,
-            749
-          ],
-          "escala": 4.986,
-          "cajaFigura": [
-            1,
-            7,
-            94,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1103
         }
       }
     },
@@ -2790,7 +2793,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 82782,
+      "bytes": 93482,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2798,23 +2801,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            837,
-            587,
-            977,
-            749
-          ],
-          "escala": 4.986,
-          "cajaFigura": [
-            1,
-            7,
-            94,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1103
+        }
+      }
+    },
+    {
+      "id": "polinesio.veterano.fuente",
+      "clase": "polinesio",
+      "rango": "veterano",
+      "nombre": "polinesio_veterano_source.jpg",
+      "ruta": "assets/characters/polinesio/veterano/polinesio_veterano_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 104180,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1103
         }
       }
     },
@@ -2831,7 +2851,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 436924,
+      "bytes": 367881,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2842,23 +2862,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            977,
-            587,
-            1115,
-            749
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            2,
-            9,
-            94,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1135
         }
       }
     },
@@ -2875,7 +2883,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 88310,
+      "bytes": 100954,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2883,23 +2891,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            977,
-            587,
-            1115,
-            749
-          ],
-          "escala": 5.051,
-          "cajaFigura": [
-            2,
-            9,
-            94,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1135
+        }
+      }
+    },
+    {
+      "id": "polinesio.campeon.fuente",
+      "clase": "polinesio",
+      "rango": "campeon",
+      "nombre": "polinesio_campeon_source.jpg",
+      "ruta": "assets/characters/polinesio/campeon/polinesio_campeon_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 106436,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1135
         }
       }
     },
@@ -2916,7 +2941,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 480763,
+      "bytes": 342544,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2927,23 +2952,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1115,
-            587,
-            1254,
-            749
-          ],
-          "escala": 4.77,
-          "cajaFigura": [
-            0,
-            0,
-            100,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1119
         }
       }
     },
@@ -2960,7 +2973,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 112939,
+      "bytes": 94763,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -2968,23 +2981,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1115,
-            587,
-            1254,
-            749
-          ],
-          "escala": 4.77,
-          "cajaFigura": [
-            0,
-            0,
-            100,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1119
+        }
+      }
+    },
+    {
+      "id": "polinesio.elite.fuente",
+      "clase": "polinesio",
+      "rango": "elite",
+      "nombre": "polinesio_elite_source.jpg",
+      "ruta": "assets/characters/polinesio/elite/polinesio_elite_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 103190,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1119
         }
       }
     },
@@ -3001,7 +3031,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 464504,
+      "bytes": 357267,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -3012,23 +3042,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1254,
-            587,
-            1387,
-            749
-          ],
-          "escala": 5.018,
-          "cajaFigura": [
-            0,
-            8,
-            95,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1088
         }
       }
     },
@@ -3045,7 +3063,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 92820,
+      "bytes": 92239,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -3053,23 +3071,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1254,
-            587,
-            1387,
-            749
-          ],
-          "escala": 5.018,
-          "cajaFigura": [
-            0,
-            8,
-            95,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.1088
+        }
+      }
+    },
+    {
+      "id": "polinesio.maestro.fuente",
+      "clase": "polinesio",
+      "rango": "maestro",
+      "nombre": "polinesio_maestro_source.jpg",
+      "ruta": "assets/characters/polinesio/maestro/polinesio_maestro_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 107548,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.1088
         }
       }
     },
@@ -3086,7 +3121,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 588822,
+      "bytes": 355036,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -3097,23 +3132,11 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1387,
-            587,
-            1536,
-            749
-          ],
-          "escala": 4.77,
-          "cajaFigura": [
-            1,
-            0,
-            107,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.0869
         }
       }
     },
@@ -3130,7 +3153,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 116922,
+      "bytes": 89049,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -3138,23 +3161,40 @@
       "versionMaestro": "3.0.0",
       "estado": "approved",
       "herramienta": {
-        "nombre": "tools/extract-sheet.py",
-        "motor": "Pillow + NumPy (fondo por relleno desde bordes, componentes conexos)",
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
-          "celda": [
-            1387,
-            587,
-            1536,
-            749
-          ],
-          "escala": 4.77,
-          "cajaFigura": [
-            1,
-            0,
-            107,
-            162
-          ],
-          "retrato": true
+          "croma": true,
+          "escala": 1.0869
+        }
+      }
+    },
+    {
+      "id": "polinesio.legendario.fuente",
+      "clase": "polinesio",
+      "rango": "legendario",
+      "nombre": "polinesio_legendario_source.jpg",
+      "ruta": "assets/characters/polinesio/legendario/polinesio_legendario_source.jpg",
+      "tipo": "fuente",
+      "dimensiones": null,
+      "formato": "jpg",
+      "transparencia": true,
+      "bytes": 111697,
+      "fotogramas": 1,
+      "animaciones": [],
+      "duracionFotogramaMs": null,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.97
+      },
+      "versionMaestro": "3.0.0",
+      "estado": "approved",
+      "herramienta": {
+        "nombre": "tools/ingest-character.mjs",
+        "motor": "Chromium canvas (croma, recorte, escala)",
+        "parametros": {
+          "croma": true,
+          "escala": 1.0869
         }
       }
     },
