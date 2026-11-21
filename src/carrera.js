@@ -271,12 +271,39 @@ Object.assign(PAISAJES, {
   }),
 });
 let paisaje = PAISAJES.fiordo;
-// Dibuja con el filtro de color del paisaje (las variantes); sin filtro, tal cual.
-function conFiltro(ctx, dibujar) {
-  if (!paisaje.filtro || !('filter' in ctx)) { dibujar(); return; }
+// Dibuja una imagen del paisaje con su filtro de color (las variantes); sin filtro, tal cual. `ctx.filter` es de lo más
+// caro de Canvas 2D y antes se aplicaba en cada cuadro y a cada pieza de la orilla: ahora la imagen se pasa por el
+// filtro una sola vez (por imagen y filtro) y se dibuja la copia ya coloreada. Si no se puede hacer la copia, se usa
+// el filtro como antes.
+const coloreadas = new WeakMap();
+function coloreada(im, filtro) {
+  let porFiltro = coloreadas.get(im);
+  if (!porFiltro) coloreadas.set(im, (porFiltro = new Map()));
+  if (porFiltro.has(filtro)) return porFiltro.get(filtro);
+  let copia = null;
+  const w = im.naturalWidth || im.width;
+  const h = im.naturalHeight || im.height;
+  if (w && h && typeof document !== 'undefined') {
+    const lienzo = document.createElement('canvas');
+    lienzo.width = w;
+    lienzo.height = h;
+    const cx = lienzo.getContext('2d');
+    if (cx && 'filter' in cx) {
+      cx.filter = filtro;
+      cx.drawImage(im, 0, 0);
+      copia = lienzo;
+    }
+  }
+  porFiltro.set(filtro, copia);
+  return copia;
+}
+function conFiltro(ctx, im, dibujar) {
+  if (!paisaje.filtro || !('filter' in ctx)) { dibujar(im); return; }
+  const copia = coloreada(im, paisaje.filtro);
+  if (copia) { dibujar(copia); return; }
   const antes = ctx.filter;
   ctx.filter = paisaje.filtro;
-  dibujar();
+  dibujar(im);
   ctx.filter = antes;
 }
 export function usarPaisaje(id) { paisaje = PAISAJES[id] || PAISAJES.fiordo; }
@@ -391,6 +418,7 @@ export function crearCarrera(canvas) {
     vistos: null,
     yoPantalla: null,
     ultimoCuadro: 0,
+    densidad: { modo: null, escalon: 0, n: 0, lentos: 0 },
     actualizar(estado) {
       const previo = this.estado;
       // El reloj de interpolación solo se reinicia cuando avanza el segundo de la sesión.
@@ -441,6 +469,7 @@ function cuadro(ahora) {
     alguna = true;
     // Un cuadro que se salta por el límite de fps no cuenta como «sin vista realista»: el clip sigue.
     if (!tocaPintar(c, ahora)) { if (c.modo === 'real') realEsperando = true; continue; }
+    medirCuadro(c.densidad, c.modo, c.ultimoPintado ? ahora - c.ultimoPintado : 0);
     c.ultimoPintado = ahora;
     pintarCarrera(c, ahora);
   }
@@ -584,11 +613,34 @@ function palasReal(ctx, vista, f, palas, ox, oy, kx, ky) {
   ctx.restore();
 }
 
-// La vista realista es un vídeo de 720 px de alto escalado: más de 1,5 píxeles por punto no se nota y
-// cuesta mucho dibujarlo (con densidad 2,6 era el 70 % del tiempo de cada cuadro).
-const DPR_MAX = { real: 1.5 };
-function preparar(canvas, modo) {
-  const dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX[modo] ?? Infinity);
+// Densidad de píxeles como mucho, por vista. La realista es un vídeo de 720 px de alto escalado: más de 1,5 píxeles
+// por punto no se nota y cuesta mucho dibujarlo (con densidad 2,6 era el 70 % del tiempo de cada cuadro). La 2D y la
+// 3D, a 2: en un teléfono de densidad 4 (1440 px de ancho) pintaban 4 veces más píxeles que a 2 y rendían la mitad,
+// sin que se note a la distancia de la remadora.
+export const DPR_MAX = { '2d': 2, '3d': 2, real: 1.5 };
+// Si el teléfono no llega, la densidad baja sola por escalones (2 → 1,5 → 1,25, nunca por debajo de 1).
+const DPR_ESCALONES = [1, 0.75, 0.625];
+export function densidadCarrera(modo, dprPantalla = 1, escalon = 0) {
+  const tope = (DPR_MAX[modo] ?? 2) * DPR_ESCALONES[Math.min(escalon, DPR_ESCALONES.length - 1)];
+  return Math.min(dprPantalla || 1, Math.max(1, tope));
+}
+// Cuenta los cuadros lentos de cada lienzo: si en 60 cuadros pintados, 40 o más tardaron más de 1,5 veces lo que
+// pide su tope de fps (25 ms en 2D, 50 ms en 3D y realista), baja un escalón. Al cambiar de vista se vuelve a empezar.
+// Los huecos de más de medio segundo (pausa, pestaña oculta, lienzo fuera de la pantalla) no cuentan.
+export const DENSIDAD_VENTANA = 60;
+export function medirCuadro(d, modo, intervalo) {
+  if (d.modo !== modo) { d.modo = modo; d.escalon = 0; d.n = 0; d.lentos = 0; }
+  if (!(intervalo > 0) || intervalo > 500) return false;
+  d.n += 1;
+  if (intervalo > 1.5 * (1000 / (FPS_MAX[modo] ?? 60))) d.lentos += 1;
+  if (d.n < DENSIDAD_VENTANA) return false;
+  const bajar = d.lentos >= (DENSIDAD_VENTANA * 2) / 3 && d.escalon < DPR_ESCALONES.length - 1;
+  if (bajar) d.escalon += 1;
+  d.n = 0; d.lentos = 0;
+  return bajar;
+}
+function preparar(canvas, modo, escalon = 0) {
+  const dpr = densidadCarrera(modo, window.devicePixelRatio || 1, escalon);
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
   if (!ancho || !alto) return null;
@@ -606,7 +658,7 @@ function preparar(canvas, modo) {
 }
 
 export function pintarCarrera(c, ahora = performance.now()) {
-  const p = preparar(c.canvas, c.modo);
+  const p = preparar(c.canvas, c.modo, c.densidad?.modo === c.modo ? c.densidad.escalon : 0);
   if (!p) return;
   const datos = interpolar(c, ahora);
   const arriba = altoCabecera(c);
@@ -968,7 +1020,7 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
       ctx.save();
       ctx.translate(0, y);
       if (volteada) ctx.scale(1, -1);
-      conFiltro(ctx, () => { for (let x = x0; x < ancho; x += w) ctx.drawImage(costa, 0, costa.naturalHeight - sh, costa.naturalWidth, sh, x, -h, w + 0.5, h); });
+      conFiltro(ctx, costa, (im) => { for (let x = x0; x < ancho; x += w) ctx.drawImage(im, 0, costa.naturalHeight - sh, costa.naturalWidth, sh, x, -h, w + 0.5, h); });
       ctx.restore();
     };
     tira(y0, tierraArriba, false);
@@ -1002,8 +1054,8 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     const x0 = -((((yo.dist + c.centro) * ppm) % lado) + lado) % lado;
     ctx.save();
     ctx.beginPath(); ctx.rect(0, y0, ancho, pista); ctx.clip();
-    conFiltro(ctx, () => {
-      for (let x = x0; x < ancho; x += lado) for (let y = y0; y < y0 + pista; y += lado) ctx.drawImage(texAgua, x, y, lado + 0.5, lado + 0.5);
+    conFiltro(ctx, texAgua, (im) => {
+      for (let x = x0; x < ancho; x += lado) for (let y = y0; y < y0 + pista; y += lado) ctx.drawImage(im, x, y, lado + 0.5, lado + 0.5);
     });
     ctx.globalAlpha = 0.45;
     ctx.fillStyle = grad;
@@ -1694,7 +1746,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     const y = horizonte - paisaje.panorama.horizonte * k;
     let x = cx - w / 2;
     while (x > 0) x -= w;
-    conFiltro(ctx, () => { for (; x < ancho; x += w) ctx.drawImage(fiordo, x, y, w, h); });
+    conFiltro(ctx, fiordo, (im) => { for (; x < ancho; x += w) ctx.drawImage(im, x, y, w, h); });
   } else {
     ctx.fillStyle = '#244634';
     ctx.beginPath();
@@ -1866,10 +1918,10 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
       ctx.save();
       ctx.translate(base.x, 0);
       ctx.scale(-1, 1);
-      conFiltro(ctx, () => ctx.drawImage(atlas, q.x, q.y, q.w, q.h, -q.pie[0] * w, base.y - q.pie[1] * h, w, h));
+      conFiltro(ctx, atlas, (im) => ctx.drawImage(im, q.x, q.y, q.w, q.h, -q.pie[0] * w, base.y - q.pie[1] * h, w, h));
       ctx.restore();
     } else {
-      conFiltro(ctx, () => ctx.drawImage(atlas, q.x, q.y, q.w, q.h, base.x - q.pie[0] * w, base.y - q.pie[1] * h, w, h));
+      conFiltro(ctx, atlas, (im) => ctx.drawImage(im, q.x, q.y, q.w, q.h, base.x - q.pie[0] * w, base.y - q.pie[1] * h, w, h));
     }
     ctx.globalAlpha = 1;
   };

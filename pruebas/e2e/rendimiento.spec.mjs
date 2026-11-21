@@ -2,11 +2,13 @@
 // con la CPU 4 veces más lenta (un teléfono de gama media) y que una sesión de 2 h no acumule memoria ni nodos.
 // Los límites tienen margen sobre lo medido en local para que CI no falle por ruido; si uno se rompe, algo empeoró.
 import { test, expect, completarBienvenida, avanzar, enCurso } from './ayuda.mjs';
-import { FPS_MAX } from '../../src/carrera.js';
+import { FPS_MAX, DPR_MAX } from '../../src/carrera.js';
 
-// Medido el 2026-11-04 (0.52.0): 1,10 MB en 56 archivos.
-// 2026-11-11 (0.69.0): 1,26 MB con las habilidades de clase; Ander subió el tope a 1,30 MB.
-const BYTES_MAX = 1_300_000;
+// Bytes que de verdad bajan (el servidor de pruebas comprime con gzip como GitHub Pages), en total y por tipo.
+// Antes se medía sin comprimir: 1,10 MB el 2026-11-04 (0.52.0) y 1,26 MB el 2026-11-11 (0.69.0), con el tope en
+// 1,30 MB y un 1 % de margen. Comprimido, el 2026-11-21 (0.74.0): 436 KB.
+const BYTES_MAX = 520_000;
+const BYTES_MAX_TIPO = { js: 380_000, css: 45_000, html: 30_000 };
 const ARCHIVOS_MAX = 70;
 // Cuadros pintados por segundo, con CPU ×4. En local, solo: 2D 36, 3D 21, realista 13, modo remo 20; con otra prueba
 // en paralelo (como en CI) cae a la mitad o menos y salta mucho. El mínimo atrapa lo que se vuelve varias veces más
@@ -41,7 +43,7 @@ async function pintadasPorSegundo(page, id, ms = 4_000) {
   return page.evaluate(([i, s]) => (window.__pintadas[i] || 0) / s, [id, ms / 1000]);
 }
 
-test('la primera carga pesa menos de 1,30 MB y no baja videos', async ({ page, context }) => {
+test('la primera carga pesa menos de 520 KB comprimida y no baja videos', async ({ page, context }) => {
   const archivos = [];
   context.on('requestfinished', async (r) => archivos.push({ url: r.url(), bytes: (await r.sizes()).responseBodySize }));
   await page.goto('./');
@@ -49,7 +51,15 @@ test('la primera carga pesa menos de 1,30 MB y no baja videos', async ({ page, c
   await page.waitForTimeout(1_000);
   const total = archivos.reduce((a, f) => a + f.bytes, 0);
   const grandes = [...archivos].sort((a, b) => b.bytes - a.bytes).slice(0, 5).map((f) => `${new URL(f.url).pathname} ${f.bytes}`);
+  const porTipo = {};
+  for (const f of archivos) {
+    const ruta = new URL(f.url).pathname;
+    const tipo = ruta.endsWith('/') ? 'html' : ruta.split('.').pop();
+    porTipo[tipo] = (porTipo[tipo] || 0) + f.bytes;
+  }
+  console.log('primera carga en bytes comprimidos:', total, JSON.stringify(porTipo));
   expect(total, `primera carga de ${total} bytes; los más grandes: ${grandes.join(', ')}`).toBeLessThanOrEqual(BYTES_MAX);
+  for (const [tipo, max] of Object.entries(BYTES_MAX_TIPO)) expect(porTipo[tipo] || 0, `${tipo}: ${porTipo[tipo]} bytes`).toBeLessThanOrEqual(max);
   expect(archivos.length).toBeLessThanOrEqual(ARCHIVOS_MAX);
   expect(archivos.filter((f) => /\.(mp4|webm)$/.test(f.url)).map((f) => f.url)).toEqual([]);
 });
@@ -90,6 +100,30 @@ test('la carrera da sus cuadros por segundo en 2D, 3D, realista y modo remo con 
 
   console.log('cuadros por segundo con CPU ×4:', JSON.stringify(medido));
   for (const [vista, min] of Object.entries(FPS_MIN)) expect(medido[vista], `${vista}: ${medido[vista]} cuadros/s`).toBeGreaterThanOrEqual(min);
+});
+
+test('la carrera y la gráfica en vivo no pintan a más densidad que su tope', async ({ page }) => {
+  await page.goto('./');
+  await completarBienvenida(page, { reloj: false });
+  await page.locator('#btn-grabar').click();
+  const carrera = page.locator('#carrera');
+  await expect(carrera).toBeVisible();
+  await carrera.scrollIntoViewIfNeeded();
+  const densidad = (sel) => page.evaluate((s) => {
+    const c = document.querySelector(s);
+    return c && c.clientWidth ? c.width / c.clientWidth : null;
+  }, sel);
+  const pantalla = await page.evaluate(() => window.devicePixelRatio);
+  for (const vista of ['2d', '3d', 'real']) {
+    expect(await page.evaluate(() => localStorage.getItem('vistaCarrera') || '2d')).toBe(vista);
+    await page.waitForTimeout(500);
+    const d = await densidad('#carrera');
+    expect(d, `${vista} a densidad ${d} en una pantalla de ${pantalla}`).toBeLessThanOrEqual(Math.min(pantalla, DPR_MAX[vista]) + 0.01);
+    await carrera.click();
+  }
+  await page.locator('#grafica-vivo').scrollIntoViewIfNeeded();
+  await expect.poll(() => densidad('#grafica-vivo')).toBeGreaterThan(0);
+  expect(await densidad('#grafica-vivo')).toBeLessThanOrEqual(Math.min(pantalla, 2) + 0.01);
 });
 
 test('la carrera no se pinta cuando queda fuera de la pantalla', async ({ page }) => {
