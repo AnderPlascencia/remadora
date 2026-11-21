@@ -254,6 +254,7 @@
         </details>
       </div>
       <div id="programa-activo" hidden>
+        <h2 class="solo-lector">Tu programa</h2>
         <div class="tm-fila"><b id="prog-nombre"></b><span id="prog-cumple"></span></div>
         <div class="progreso" role="progressbar" aria-label="Avance del programa"><div id="prog-barra"></div></div>
         <section id="plan-hoy" class="plan-hoy" aria-labelledby="plan-hoy-etq">
@@ -269,7 +270,7 @@
         <ol id="semana-plan" class="semana-plan"></ol>
         <p id="semana-plan-nota" class="ayuda" hidden></p>
         <h3 class="etq-campo">Cómo sube tu plan</h3>
-        <div id="plan-curva" class="plan-curva" role="img"></div>
+        <div id="plan-curva" class="plan-curva" role="group"></div>
         <p id="plan-curva-texto" class="ayuda"></p>
         <div class="leyenda plan-leyenda"><span class="pl-actual">Esta semana</span><span class="pl-futura">Próximas</span><span class="pl-descarga">Descarga</span><span class="pl-prueba">Con prueba</span></div>
         <h3 id="plan-sigue-titulo" class="etq-campo">Lo que sigue</h3>
@@ -687,12 +688,14 @@
     </section>
   </main>
 
-  <nav class="nav-inferior" role="tablist" aria-label="Secciones">
+  <nav class="nav-inferior" aria-label="Secciones">
+  <div class="nav-pestanas" role="tablist" aria-label="Secciones">
     <button id="tab-entrenar" role="tab" data-vista="entrenar" class="activa" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="#i-remo"/></svg><span>Entrenar</span></button>
     <button id="tab-entrenamientos" role="tab" data-vista="entrenamientos" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg><span>Planes</span></button>
     <button id="tab-heroe" role="tab" data-vista="heroe" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-heroe"/></svg><span>Héroe</span></button>
     <button id="tab-historial" role="tab" data-vista="historial" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg><span>Progreso</span></button>
     <button id="tab-ajustes" role="tab" data-vista="ajustes" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg><span>Ajustes</span></button>
+  </div>
   </nav>
 
   <!-- MODO REMO (pantalla completa) -->

@@ -187,9 +187,14 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
 .lista li.vacio { color: var(--texto-tenue); justify-content: center; text-align: center; padding: 24px 16px; }
 .lista .info { flex: 1; min-width: 0; }
 .lista .titulo { font-weight: 700; }
+.lista span.info, .lista span.titulo, .lista span.suave { display: block; }
 .lista .suave { color: var(--texto-tenue); font-size: var(--t-s); }
 .lista .acciones { display: flex; gap: 4px; flex: none; }
-.lista li.clic { cursor: pointer; }
+.lista li.clic { cursor: pointer; padding: 0; }
+.lista .fila-boton { all: unset; box-sizing: border-box; flex: 1; min-width: 0; min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 12px 12px 12px 16px; border-radius: var(--r-medio); cursor: pointer; }
+.lista .fila-boton:focus-visible { outline: 2px solid var(--primario-claro); outline-offset: 2px; }
+.lista .ver-ent { all: unset; box-sizing: border-box; flex: 1; min-width: 0; min-height: 44px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; border-radius: var(--r-chico); }
+.lista .ver-ent:focus-visible { outline: 2px solid var(--primario-claro); outline-offset: 3px; }
 .lista li.clic:active { background: var(--panel-2); }
 .etiqueta { display: inline-block; font-size: var(--t-xs); font-weight: 700; padding: 1px 8px; border-radius: var(--r-pildora); background: rgba(233, 162, 59, .15); color: var(--acento); margin-left: 6px; vertical-align: 1px; }
 
@@ -257,6 +262,7 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   font-size: var(--t-xs); font-weight: 600; min-height: 48px; cursor: pointer;
 }
+.nav-pestanas { display: contents; } /* el menú es una zona de navegación con sus pestañas dentro */
 .nav-inferior button .ico { width: 24px; height: 24px; }
 .nav-inferior button.activa { color: var(--primario-claro); }
 .nav-inferior button.activa .ico { stroke-width: 2.4; }
@@ -396,7 +402,7 @@ textarea { font: inherit; color: var(--texto); background: var(--panel); border:
 .calendario button { aspect-ratio: 1; min-height: 40px; padding: 0; border-radius: var(--r-chico); font-size: var(--t-s); font-weight: 700; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; background: var(--fondo); border: 1px solid transparent; color: var(--texto-tenue); }
 .calendario button .ico { width: 14px; height: 14px; stroke-width: 3; }
 .calendario .vacio { visibility: hidden; }
-.calendario .libre { opacity: .45; }
+.calendario .libre { font-weight: 500; } /* sin sesión: letra tenue y fina (con opacidad no llegaba al 4,5:1) */
 .calendario .hecho { background: rgba(34, 197, 94, .2); color: var(--ok-texto); }
 .calendario .perdido { background: rgba(239, 68, 68, .15); color: var(--mal-texto); }
 .calendario .hoy { border-color: var(--primario-claro); color: var(--texto); background: rgba(233, 162, 59, .15); }
@@ -433,8 +439,8 @@ textarea { font: inherit; color: var(--texto); background: var(--panel); border:
 .fantasmas[hidden] { display: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .chip { min-height: 40px; padding: 6px 14px; border-radius: var(--r-pildora); border: 1px solid var(--borde); background: var(--panel); color: var(--texto-suave); font: inherit; font-size: var(--t-s); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-.chip[aria-pressed="true"] { background: var(--panel-2); color: var(--texto); border-color: var(--chip, var(--primario)); box-shadow: inset 0 0 0 1px var(--chip, var(--primario)); }
-.chip[aria-pressed="true"]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--chip, var(--primario)); }
+.chip[aria-pressed="true"], .chip[aria-checked="true"] { background: var(--panel-2); color: var(--texto); border-color: var(--chip, var(--primario)); box-shadow: inset 0 0 0 1px var(--chip, var(--primario)); }
+.chip[aria-pressed="true"]::before, .chip[aria-checked="true"]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--chip, var(--primario)); }
 .chip:disabled { opacity: .45; cursor: not-allowed; }
 .perso-panel { background: var(--panel); border-radius: var(--r-medio); padding: 4px 12px; margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .perso-panel[hidden] { display: none; }
@@ -491,7 +497,7 @@ details.seccion[open] { padding-bottom: 8px; }
   --primario: #E39A30; --primario-osc: #B97A22; --primario-claro: #8A520C; --sobre-primario: #1A1206; --acento: #9C6210; --exito: #15803D; --peligro: #DC2626;
   --watts: #C2410C; --spm: #0284C7; --split: #7C3AED; --fondo-remo: #F6F8F9;
   --xp: #0F766E; --moneda: #A16207; --info: #075985;
-  --ok-texto: #15803D; --mal-texto: #B91C1C;
+  --ok-texto: #166534; --mal-texto: #B91C1C;
   color-scheme: light;
 }
 :root[data-tema="claro"] .mr-estado { color: #0369A1; }
@@ -533,7 +539,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .insignia .medalla .ico { width: 24px; height: 24px; }
 .insignia b { font-size: var(--t-s); line-height: 1.2; }
 .insignia small { font-size: var(--t-xs); color: var(--texto-tenue); line-height: 1.25; }
-.insignia.bloqueada { opacity: .7; }
+.insignia.bloqueada .medalla { opacity: .7; }
 .insignia.bloqueada b { color: var(--texto-suave); }
 .insignia.bloqueada .medalla { background: var(--panel-2); color: var(--texto-tenue); box-shadow: none; }
 .prediccion { margin-top: 8px; }
@@ -758,7 +764,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .podio-puesto small { color: var(--texto-tenue); font-variant-numeric: tabular-nums; }
 .podio-escalon { width: 100%; margin-top: 4px; border-radius: 8px 8px 0 0; background: var(--panel-2); font-weight: 800; padding-top: 6px; }
 .p1 .podio-escalon { height: 64px; background: #A16207; color: #FEF9C3; }
-.p2 .podio-escalon { height: 46px; background: #64748B; color: #F1F5F9; }
+.p2 .podio-escalon { height: 46px; background: #5B6B80; color: #F1F5F9; } /* plata: 4,9:1 con su número */
 .p3 .podio-escalon { height: 34px; background: #8C5A33; color: #FDEBD8; } /* bronce: el rojo teja se leía como «mal» */
 .podio-resto { margin: 6px 0 0; color: var(--texto-suave); font-size: .9rem; }
 .podio-xp { margin: 8px 0 0; font-weight: 700; color: var(--xp); }
@@ -1581,7 +1587,7 @@ details.mas-detalle[hidden] { display: none; }
 .capacidad.vacia .sub { margin-top: 4px; }
 .capacidad > summary { display: block; list-style: none; cursor: pointer; }
 .capacidad > summary::-webkit-details-marker { display: none; }
-.capacidad .tecnico { display: block; font-size: var(--t-xs); font-weight: 500; color: var(--texto-tenue); opacity: .8; }
+.capacidad .tecnico { display: block; font-size: var(--t-xs); font-weight: 500; color: var(--texto-tenue); }
 .capacidad .igual { color: var(--texto-tenue); }
 .capacidad .mini-linea { display: block; width: 100%; height: 28px; margin-top: 4px; color: var(--texto-tenue); }
 .capacidad.sube .mini-linea { color: var(--exito); }
@@ -1893,7 +1899,7 @@ details.mas-detalle[hidden] { display: none; }
 #mr-vista .num { font-size: var(--t-s); font-weight: 800; letter-spacing: .02em; }
 /* En vertical la línea de atributos en vivo cabe en dos renglones en vez de cortarse con «…». */
 @media (orientation: portrait) { .mr-atr span:last-child { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-align: center; } }
-:root[data-tema="claro"] .base-tarjeta.mant .dif { color: #A16207; } :root[data-tema="claro"] .base-tarjeta.mejora .dif { color: #C2410C; }
+:root[data-tema="claro"] .base-tarjeta.suave .dif, :root[data-tema="claro"] .he-sub .dif.suave { color: #0369A1; } :root[data-tema="claro"] .he-sub .dif.mejora { color: #C2410C; } :root[data-tema="claro"] .base-tarjeta.mant .dif { color: #A16207; } :root[data-tema="claro"] .base-tarjeta.mejora .dif { color: #C2410C; }
 /* Filas de chips que se desplazan: un degradado al borde avisa que hay más a la derecha. */
 .secciones-ent { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 24px; }
 .etq-secciones { display: block; font-size: var(--t-s); color: var(--texto-tenue); margin: 4px 0 4px; }
@@ -2076,3 +2082,11 @@ details.mas-detalle[hidden] { display: none; }
 :root:not([data-tema]) .modo-remo .boton.peligro.lleno { background: #B91C1C; border-color: #B91C1C; }
 /* Los avisos, en el modo remo, arriba: tapan la cabecera un momento y nunca los números. */
 body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-top)); bottom: auto; }
+
+/* Objetivos táctiles de 44 px como mínimo (etapa 10): chips, botones chicos, segmentos, pestañas de Planes,
+   enlaces-botón, nombres de las tarjetas base y el desglose de XP. Lo que se ve igual, solo crece la zona que se toca. */
+.chip, .boton.chico, .segmentado button, .planes-pestanas button, .xp-desglose > summary { min-height: 44px; }
+.boton.chico { min-width: 44px; }
+.hoy .enlace-boton, .hoy-sugerencia .enlace-boton, .mision-pie .enlace-boton, .consejo .enlace-boton { min-height: 44px; }
+.base-nombre { min-height: 44px; align-items: center; }
+.separador-plan .enlace-boton { min-height: 44px; }

@@ -163,3 +163,49 @@ export function ajustarTexto(el, minimo = 0.55) {
   const base = parseFloat(getComputedStyle(el).fontSize);
   el.style.fontSize = `${Math.max(base * minimo, Math.floor((base * ancho * 10) / el.scrollWidth) / 10)}px`;
 }
+
+// ---------- Capas modales ----------
+// Con una hoja, un diálogo, la bienvenida o el modo remo abiertos, lo de detrás queda «inert» (ni se toca ni lo
+// lee el lector de pantalla), el foco entra en la capa y al cerrarla vuelve a donde estaba. Los avisos (toast)
+// quedan fuera para que se sigan anunciando.
+export const CAPAS = ['modo-remo', 'hoja', 'inicio', 'hoja-trip', 'guia', 'hoja-ent', 'fin-dialogo', 'recuperar-dialogo'];
+const FONDO = ['header.barra', 'main', 'nav.nav-inferior'];
+export function vigilarCapas(ids = CAPAS) {
+  const capas = ids.map((id) => document.getElementById(id)).filter(Boolean);
+  const abiertas = []; // en el orden en que se abrieron: la última es la de arriba
+  const focoAntes = new Map();
+  // Lo último enfocado fuera de las capas: algunas capas mueven el foco al abrirse (p. ej. a «Cerrar»),
+  // antes de que llegue el aviso de que se abrieron.
+  let ultimoFoco = document.activeElement;
+  document.addEventListener('focusin', (e) => { if (!capas.some((c) => c.contains(e.target))) ultimoFoco = e.target; });
+  const aplicar = () => {
+    const arriba = abiertas.at(-1) || null;
+    for (const sel of FONDO) { const el = document.querySelector(sel); if (el) el.inert = !!arriba; }
+    for (const c of capas) c.inert = !!arriba && c !== arriba && !c.hidden;
+  };
+  const enfocar = (c) => {
+    if (c.contains(document.activeElement)) return;
+    const destino = c.querySelector('[role="dialog"], [role="alertdialog"]') || c;
+    if (!destino.hasAttribute('tabindex')) destino.setAttribute('tabindex', '-1');
+    destino.focus({ preventScroll: true });
+  };
+  const cambio = (c) => {
+    const i = abiertas.indexOf(c);
+    if (!c.hidden && i < 0) {
+      focoAntes.set(c, c.contains(document.activeElement) ? ultimoFoco : document.activeElement);
+      abiertas.push(c);
+      aplicar();
+      enfocar(c);
+    } else if (c.hidden && i >= 0) {
+      abiertas.splice(i, 1);
+      aplicar();
+      const antes = focoAntes.get(c);
+      focoAntes.delete(c);
+      if (antes?.isConnected && !antes.closest('[inert]') && typeof antes.focus === 'function') antes.focus({ preventScroll: true });
+      else if (abiertas.length) enfocar(abiertas.at(-1));
+    }
+  };
+  const obs = new MutationObserver((cambios) => { for (const m of cambios) cambio(m.target); });
+  for (const c of capas) { obs.observe(c, { attributes: true, attributeFilter: ['hidden'] }); if (!c.hidden) cambio(c); }
+  return obs;
+}

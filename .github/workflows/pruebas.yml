@@ -5,29 +5,39 @@ on:
     branches: [main]
   pull_request:
 
+# Las acciones van fijadas por SHA (con su versión al lado): una etiqueta movida no puede cambiar lo que corre aquí.
 jobs:
   pruebas:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-      - run: npm test
+      # Las pruebas unitarias con cobertura: el resumen sale en la página del trabajo y el lcov como artefacto.
+      - run: npm run test:cobertura
+      - run: node tools/cobertura-resumen.mjs lcov.info
+        if: always() && hashFiles('lcov.info') != ''
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always() && hashFiles('lcov.info') != ''
+        with:
+          name: cobertura
+          path: lcov.info
+          retention-days: 14
 
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
           name: informe-e2e

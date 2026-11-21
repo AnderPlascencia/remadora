@@ -229,11 +229,11 @@ function pintarPlanFuturo(prog, sesiones, buscar) {
   const max = Math.max(1, ...semanas.map((s) => s.esfuerzo));
   const curva = $('#plan-curva');
   curva.style.setProperty('--n', semanas.length);
-  curva.setAttribute('aria-label', `Esfuerzo por semana: ${semanas.map((s) => `semana ${s.n}, ${minTexto(s.minutos)}${s.descarga ? ', descarga' : ''}${s.prueba ? ', con prueba' : ''}`).join('; ')}`);
+  curva.setAttribute('aria-label', 'Esfuerzo por semana: toca una para ver sus sesiones');
   curva.innerHTML = semanas.map((s) => `<button type="button" class="pc-semana${s.actual ? ' actual' : s.pasada ? ' pasada' : ''}${s.descarga ? ' descarga' : ''}" data-semana="${s.n}" title="Semana ${s.n}: ${minTexto(s.minutos)}">
       <span class="pc-min">${s.minutos >= 60 ? `${Math.round(s.minutos / 6) / 10}`.replace('.', ',') + ' h' : `${s.minutos}′`}</span>
       <span class="pc-barra" style="height:${Math.max(6, Math.round((s.esfuerzo / max) * 100))}%">${s.prueba ? '<b class="pc-prueba" aria-hidden="true">★</b>' : ''}</span>
-      <span class="pc-n">${s.actual ? 'Hoy' : `S${s.n}`}</span></button>`).join('');
+      <span class="pc-n">${s.actual ? 'Hoy' : `S${s.n}`}</span><span class="solo-lector">: semana ${s.n}, ${minTexto(s.minutos)}${s.descarga ? ', descarga' : ''}${s.prueba ? ', con prueba' : ''}</span></button>`).join('');
   const actual = semanas.find((s) => s.actual);
   const pico = semanas.reduce((a, s) => (s.esfuerzo > a.esfuerzo ? s : a), semanas[0]);
   const ultima = semanas.at(-1);
@@ -315,9 +315,9 @@ async function pintarAsistente() {
   $('#as-meta').hidden = !meta;
   if (meta) pintarPlanMeta();
   $('#as-objetivo').innerHTML = OBJETIVOS_ASISTENTE.map((o) => `<button type="button" role="radio" class="opcion" data-v="${o.clave}" ${marcar(asistente.objetivo, o.clave)}><b>${o.nombre}</b><small>${o.texto}</small></button>`).join('');
-  $('#as-nivel').innerHTML = P.NIVELES_PLAN.map((n) => `<button type="button" role="radio" class="chip" data-v="${n.clave}" aria-pressed="${asistente.nivel === n.clave}">${n.nombre}</button>`).join('');
-  $('#as-dias').innerHTML = [1, 2, 3, 4, 5].map((d) => `<button type="button" role="radio" class="chip" data-v="${d}" aria-pressed="${asistente.dias === d}">${d} ${d === 1 ? 'día' : 'días'}</button>`).join('');
-  $('#as-semanas').innerHTML = [4, 6, 8, 12].map((d) => `<button type="button" role="radio" class="chip" data-v="${d}" aria-pressed="${asistente.semanas === d}">${d} semanas</button>`).join('');
+  $('#as-nivel').innerHTML = P.NIVELES_PLAN.map((n) => `<button type="button" role="radio" class="chip" data-v="${n.clave}" aria-checked="${asistente.nivel === n.clave}">${n.nombre}</button>`).join('');
+  $('#as-dias').innerHTML = [1, 2, 3, 4, 5].map((d) => `<button type="button" role="radio" class="chip" data-v="${d}" aria-checked="${asistente.dias === d}">${d} ${d === 1 ? 'día' : 'días'}</button>`).join('');
+  $('#as-semanas').innerHTML = [4, 6, 8, 12].map((d) => `<button type="button" role="radio" class="chip" data-v="${d}" aria-checked="${asistente.semanas === d}">${d} semanas</button>`).join('');
   $('#btn-asistente').disabled = !asistente.objetivo;
   const res = $('#as-resumen');
   res.hidden = !asistente.objetivo || meta;

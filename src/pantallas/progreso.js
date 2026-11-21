@@ -370,6 +370,8 @@ export async function pintarHistorial() {
   $('#historial-resumen').textContent = lista.length ? `${miles(lista.length)} ${lista.length === 1 ? 'sesión' : 'sesiones'}` : '';
   const visibles = lista.filter(filtroCoincide);
   const ul = $('#lista-sesiones');
+  // Si el foco estaba en una fila (p. ej. al volver de su hoja), se queda en la misma sesión tras repintar.
+  const enfocada = ul.contains(document.activeElement) ? document.activeElement.dataset.sesion : null;
   ul.innerHTML = '';
   const totalM = visibles.reduce((a, s) => a + s.distancia, 0);
   const totalT = visibles.reduce((a, s) => a + s.duracion, 0);
@@ -381,18 +383,17 @@ export async function pintarHistorial() {
   for (const s of visibles.slice(0, sesionesVisibles)) {
     const li = document.createElement('li');
     li.className = 'clic';
-    li.tabIndex = 0;
-    li.setAttribute('role', 'button');
     const f = new Date(s.fecha);
-    li.innerHTML = `<div class="info"><div class="titulo"></div><div class="suave"></div></div>${ico('i-baja')}`;
+    // El botón va dentro del elemento de la lista: así la lista sigue siendo lista para el lector de pantalla.
+    li.innerHTML = `<button type="button" class="fila-boton" data-sesion="${s.id}"><span class="info"><span class="titulo"></span><span class="suave"></span></span>${ico('i-baja')}</button>`;
     li.querySelector('.ico').style.transform = 'rotate(-90deg)';
     li.querySelector('.titulo').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${s.entrenamiento || 'Remo libre'}`;
     if (E.rpeDe(s)) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip solo-avanzado">Esfuerzo ${E.rpeDe(s)}</span>`);
     li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoMeta(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
-    li.addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
-    li.addEventListener('keydown', (e) => { if (e.key === 'Enter') li.click(); });
+    li.querySelector('button').addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     ul.append(li);
   }
+  if (enfocada) ul.querySelector(`[data-sesion="${enfocada}"]`)?.focus({ preventScroll: true });
   const quedan = visibles.length - sesionesVisibles;
   if (quedan > 0) {
     const li = document.createElement('li');

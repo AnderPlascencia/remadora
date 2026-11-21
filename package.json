@@ -7,6 +7,7 @@
   },
   "scripts": {
     "test": "node --test pruebas/*.test.mjs",
+    "test:cobertura": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info pruebas/*.test.mjs",
     "test:e2e": "playwright test",
     "test:todo": "npm test && npm run test:e2e",
     "publicar": "node tools/publicar.mjs"

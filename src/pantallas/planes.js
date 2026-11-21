@@ -104,7 +104,7 @@ export async function pintarEntrenamientos() {
   const tuyos = mios.filter((x) => !x.dePlan);
   const ul = $('#lista-ent');
   const fila = (x) => `<li data-id="${x.id}">
-      <div class="info clic" role="button" tabindex="0" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}"><div class="titulo">${escaparHtml(x.nombre)}</div><div class="suave">${escaparHtml(B.resumenEnt(x))}</div></div>
+      <button type="button" class="info clic ver-ent" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}"><span class="titulo">${escaparHtml(x.nombre)}</span><span class="suave">${escaparHtml(B.resumenEnt(x))}</span></button>
       <details class="menu-fila"><summary class="boton icono chico" aria-label="Opciones de ${escaparHtml(x.nombre)}">⋯</summary>
         <div class="menu-fila-caja"><button type="button" data-a="editar">${ico('i-editar')} Editar</button><button type="button" data-a="duplicar">${ico('i-copiar')} Duplicar</button>
         <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`;
@@ -204,7 +204,6 @@ export function arrancarPlanes1() {
     pintarEntrenamientos();
     window.scrollTo({ top: 0 });
   });
-  $('#lista-ent').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ver]')) { e.preventDefault(); e.target.click(); } });
   // Un solo menú «⋯» abierto a la vez.
   $('#lista-ent').addEventListener('toggle', (e) => {
     if (e.target.open) $('#lista-ent').querySelectorAll('details[open]').forEach((d) => { if (d !== e.target) d.open = false; });

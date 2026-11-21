@@ -53,10 +53,10 @@ function pintarInicio() {
   $('#inicio-clases').innerHTML = J.CLASES.map((c) => `<button type="button" class="clase-mini" role="radio" aria-checked="${c.clave === inicio.clase}" data-clase="${c.clave}">
     <img src="${srcHeroe(c.clave, 1, true)}" width="56" height="56" alt=""><b>${c.nombre}</b><small>+15 % ${nombreAtributo(c.favorito)}</small><span class="lema">${c.para}</span></button>`).join('');
   $('#inicio-objetivos').innerHTML = OBJETIVOS_INICIO.map((o) => `<button type="button" role="radio" class="opcion" data-obj="${o.clave}" aria-checked="${o.clave === inicio.objetivo}"><b>${o.nombre}</b><small>${o.texto}</small></button>`).join('');
-  $('#inicio-dias').innerHTML = [1, 2, 3, 4, 5].map((d) => `<button type="button" role="radio" class="chip" data-dias="${d}" aria-pressed="${inicio.dias === d}">${d} ${d === 1 ? 'día' : 'días'}</button>`).join('');
-  $('#inicio-minutos').innerHTML = Pf.MINUTOS.map((m) => `<button type="button" role="radio" class="chip" data-minutos="${m}" aria-pressed="${inicio.minutos === m}">${m ? `Hasta ${m} min` : 'Sin límite'}</button>`).join('');
-  $('#inicio-experiencia').innerHTML = Pf.EXPERIENCIAS.map((x) => `<button type="button" role="radio" class="chip" data-exp="${x.clave}" aria-pressed="${inicio.experiencia === x.clave}" title="${x.texto}">${x.nombre}</button>`).join('');
-  $('#inicio-sexo').innerHTML = Pf.SEXOS.map((x) => `<button type="button" role="radio" class="chip" data-sexo="${x.clave}" aria-pressed="${inicio.sexo === x.clave}">${x.nombre}</button>`).join('');
+  $('#inicio-dias').innerHTML = [1, 2, 3, 4, 5].map((d) => `<button type="button" role="radio" class="chip" data-dias="${d}" aria-checked="${inicio.dias === d}">${d} ${d === 1 ? 'día' : 'días'}</button>`).join('');
+  $('#inicio-minutos').innerHTML = Pf.MINUTOS.map((m) => `<button type="button" role="radio" class="chip" data-minutos="${m}" aria-checked="${inicio.minutos === m}">${m ? `Hasta ${m} min` : 'Sin límite'}</button>`).join('');
+  $('#inicio-experiencia').innerHTML = Pf.EXPERIENCIAS.map((x) => `<button type="button" role="radio" class="chip" data-exp="${x.clave}" aria-checked="${inicio.experiencia === x.clave}" title="${x.texto}">${x.nombre}</button>`).join('');
+  $('#inicio-sexo').innerHTML = Pf.SEXOS.map((x) => `<button type="button" role="radio" class="chip" data-sexo="${x.clave}" aria-checked="${inicio.sexo === x.clave}">${x.nombre}</button>`).join('');
   $('#inicio-dias-campo').hidden = !inicio.objetivo || inicio.objetivo === 'libre';
   $('#inicio-obj-ayuda').textContent = inicio.repetir && leerPrograma()?.dias?.length
     ? 'Ya tienes un plan: si cambias el objetivo, los días o el tiempo, armo uno nuevo desde hoy.'
