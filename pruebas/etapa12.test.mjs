@@ -83,7 +83,8 @@ const muestras = (seg, { w = 150, ruido = 0.03, spm = 24, dspm = 0.5, desde = 0 
 {
   const rit = { metros: 5000, min: 30, conRango: true, conPlan: true, conPulso: true, kcal: 300, kcalSemana: 900, sesSemana: 3, kmSemana: 15 };
   const grupo = { plan: 'plan', suave: 'plan', deldia: 'plan', parejo: 'tec', ritmo: 'tec', rango: 'tec', fantasma: 'juego', renida: 'juego', altamar: 'juego' };
-  for (let d = 4; d <= 30; d++) {
+  // Hasta el 22 de noviembre: desde el plan se paga una vez, una sola diaria (pruebas/curva-sim.test.mjs).
+  for (let d = 4; d <= 22; d++) {
     const k = `2026-11-${String(d).padStart(2, '0')}`;
     const l = J.misionesDelDia(k, rit, { planHoy: d % 3 ? 'Umbral' : '' });
     assert.equal(l.length, 3, k);
