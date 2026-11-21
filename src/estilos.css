@@ -2045,3 +2045,5 @@ details.mas-detalle[hidden] { display: none; }
 .atributos-guia.vacio > details[open] { grid-column: 1 / -1; }
 .atributos-guia.vacio .atr-valor small, .atributos-guia.vacio .atr-barra, .atributos-guia.vacio .atr-titulo { display: none; }
 #heroe-recomienda:empty { display: none; }
+/* Atributo aún sin entrenar: en lugar de un 0, el texto y el botón a la vista (etapa 5). */
+.atr-valor .atr-sin { font-size: var(--t-s); font-weight: 700; color: var(--texto-suave); }

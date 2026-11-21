@@ -37,6 +37,11 @@ export const esEtapa12 = (fecha) => claveDia(fecha) >= ETAPA12_DESDE;
 // plan con su sesión terminada y un descanso respetado (o en el que recuperaste una sesión del plan); un día fuera del
 // calendario vale si remaste, como antes. Las sesiones anteriores siguen con la racha de días seguidos remando.
 export const RACHA_PLAN_DESDE = '2026-11-04';
+// Una sola racha (etapa 5 del plan por etapas): desde este día la racha ya no paga XP («Racha de N días») ni Voluntad
+// por día (queda solo como contador del plan), remar fuerte en un descanso no la corta (ese día no suma) y la misión
+// de juego solo sale en días sin sesión del plan. Lo anterior no cambia: nadie pierde XP.
+export const UNA_RACHA_DESDE = '2026-11-22';
+export const esUnaRacha = (fecha) => claveDia(fecha) >= UNA_RACHA_DESDE;
 
 // Cómo sube cada atributo, con tus vatios: lo mismo que calcula gananciaSesion, dicho en claro.
 // f = tu FTP (0 si no lo tienes). Devuelve frases cortas, de la que más suma a la que menos.
@@ -402,6 +407,14 @@ function misionesDelDia12(dia, rit, planHoy) {
   const plan = planHoy ? D12.plan(planHoy) : planHoy === '' ? D12.descanso : D12.delDia;
   const tecnica = [D12.tecnica, D12.ritmo, ...(rit?.conRango ? [D12.rango] : [])];
   const juego = [D12.fantasma, D12.renida, ...(rit ? [D12.altamar] : [])];
+  // Un día con sesión del plan no pide una carrera (las habilidades de intensidad no van en el plan): en su lugar,
+  // otra de técnica o ritmo distinta, con la XP de la de juego.
+  if (planHoy && dia >= UNA_RACHA_DESDE) {
+    const i = Math.floor(r() * tecnica.length);
+    const otra = tecnica.filter((_, j) => j !== i);
+    const d = otra[Math.floor(r() * otra.length)];
+    return [crear12(plan, r, semilla), crear12(tecnica[i], r, semilla), crear12({ ...d, xp: d.metas.map(() => XP_MISION_DIARIA.juego) }, r, semilla)];
+  }
   return [crear12(plan, r, semilla), ...[tecnica, juego].map((pool) => crear12(pool[Math.floor(r() * pool.length)], r, semilla))];
 }
 
@@ -745,7 +758,7 @@ function gananciaSesion(s, m, ctx) {
   // en su lugar, cada semana del plan cumplida da +5.
   if (!nueva && s.rpe >= 8) at.voluntad += 3;
   if (nueva) at.voluntad += 5 * (ctx.creditos?.semanas || 0);
-  at.voluntad += Math.min(ctx.racha, 7) * 0.5;
+  if (!esUnaRacha(s.fecha)) at.voluntad += Math.min(ctx.racha, 7) * 0.5;
 
   const carga = s.estres ?? estres(s, m.f) ?? Math.round(m.min * 0.8);
   if (nueva) return gananciaCarga(s, m, ctx, at, carga);
@@ -764,7 +777,7 @@ function gananciaSesion(s, m, ctx) {
     const vencidos = (s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : [])).filter((r) => r.diferencia > 0).slice(0, 3);
     detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, vencidos.reduce((a, r) => a + xpPorFantasma(r.dificultad), 0)]);
   }
-  if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
+  if (ctx.racha > 1 && !esUnaRacha(s.fecha)) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
   if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', XP_ESTANDARTE_ANTES]);
   // Talentos de la clase (solo los grados aprendidos antes de esta sesión): números fijos con tope por sesión.
   if (ctx.clase) {
@@ -785,7 +798,7 @@ function bonosDeJuego(s, m, ctx) {
     const valor = (r) => xpPorFantasma(r.dificultad) * (XC.usaReglas9(s) ? factorMargen(r.diferencia, s.distancia) : 1);
     detalle.push([m.ganados === 1 ? 'Fantasma vencido' : `${m.ganados} fantasmas vencidos`, Math.round(vencidos.reduce((a, r) => a + valor(r), 0))]);
   }
-  if (ctx.racha > 1) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
+  if (ctx.racha > 1 && !esUnaRacha(s.fecha)) detalle.push([`Racha de ${ctx.racha} días`, 5 * Math.min(ctx.racha, 7)]);
   const tiendaNueva = claveDia(s.fecha) >= COLECCION_DESDE;
   if (s.ventajaUsada === 'estandarte' && m.ganados) detalle.push(['Estandarte', tiendaNueva ? XP_ESTANDARTE : XP_ESTANDARTE_ANTES]);
   if (tiendaNueva && s.ventajaUsada === 'bitacora' && sinPausas(s) && !s.carreraSinTerminar) detalle.push(['Bitácora del capitán', XP_BITACORA]);
@@ -864,7 +877,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const cerrada = claveDia(diaMs(lunes) + 6 * 864e5) < refK;
     for (const k of dias7) {
       if (planHecho.has(k)) out.set(k, 'C');
-      else if (!descansoRespetado(k)) out.set(k, 'X');
+      // Remar fuerte en un descanso: antes cortaba la racha; desde la etapa de una sola racha ese día no suma ni corta.
+      else if (!descansoRespetado(k)) out.set(k, !cal[k] && k >= UNA_RACHA_DESDE ? 'N' : 'X');
       else if (descansos > 0) { descansos--; out.set(k, 'C'); } else out.set(k, cerrada ? 'X' : 'N');
     }
     return out;
@@ -1110,6 +1124,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     g.fantasmas += m.ganados || 0;
     g.tecMin += Math.min(TOPE_TECNICA_MIN, m.tec ? m.tec.minutos : minutosTecnicos(s, s.ftp || ftp));
     g.semanasPlan += creditos?.semanas || 0;
+    if (creditos?.semanas && g.primeraSemanaPlan == null) g.primeraSemanaPlan = s.fecha;
     g.kmMax = Math.max(g.kmMax, m.metros / 1000);
     g.sesiones++;
     for (const k of m.clasesVencidas) g.clasesVencidas.add(k);
@@ -1222,6 +1237,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     monedas: monedas - (per.gastado || 0),
     monedasGanadas: monedas,
     insignias: premios,
+    // La racha del plan (la única que se muestra): días seguidos cumpliéndolo, la mejor, y semanas del plan cumplidas.
+    racha: { dias: rachaPlan(claveDia(ahora), dias, true, claveDia(ahora)), mejor: g.rachaMax, semanasPlan: g.semanasPlan, primeraSemanaPlan: g.primeraSemanaPlan ?? null },
     diarias: vista(diaHoy),
     semanales: vista(semanaHoy),
     capitulo,

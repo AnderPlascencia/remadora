@@ -371,14 +371,18 @@ export const INSIGNIAS = [
   { clave: 'ses10', nombre: 'Constancia', detalle: '10 sesiones' },
   { clave: 'ses50', nombre: 'Veterano', detalle: '50 sesiones' },
   { clave: 'tot100', nombre: '100 km', detalle: '100 km en total' },
-  { clave: 'racha7', nombre: 'Semana perfecta', detalle: '7 días seguidos remando' },
+  { clave: 'racha7', nombre: 'Semana perfecta', detalle: 'Completa una semana entera de tu plan' },
   { clave: 'fantasma', nombre: 'Cazafantasmas', detalle: 'Ganarle a un fantasma' },
   { clave: 'avanzado', nombre: 'Rival avanzado', detalle: 'Ganarle al fantasma avanzado' },
   { clave: 'sub8', nombre: 'Bajo 8 minutos', detalle: '2000 m en menos de 8:00' },
   { clave: 'sub7', nombre: 'Bajo 7 minutos', detalle: '2000 m en menos de 7:00' },
 ];
 
-export function insignias(sesiones) {
+// «Semana perfecta» era 7 días seguidos remando (empujaba a no descansar); desde UNA_RACHA_DESDE es completar una
+// semana entera del plan (primeraSemanaPlan: la fecha en que se cobró la primera, de estadoJuego().racha). Las que
+// ya se ganaron con 7 días seguidos se conservan.
+const UNA_RACHA_DESDE = '2026-11-22';
+export function insignias(sesiones, { primeraSemanaPlan = null } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
   const ganadas = {};
   let total = 0;
@@ -402,8 +406,9 @@ export function insignias(sesiones) {
     dias.add(claveDia(s.fecha));
     let n = 0;
     for (let d = new Date(`${claveDia(s.fecha)}T12:00`); dias.has(claveDia(d.getTime())); d = new Date(d.getTime() - 864e5)) n++;
-    if (n >= 7) marca('racha7', s);
+    if (n >= 7 && claveDia(s.fecha) < UNA_RACHA_DESDE) marca('racha7', s);
   });
+  if (primeraSemanaPlan != null && !ganadas.racha7) ganadas.racha7 = primeraSemanaPlan;
   return INSIGNIAS.map((x) => ({ ...x, ganada: !!ganadas[x.clave], fecha: ganadas[x.clave] ?? null }));
 }
 

@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.78.0 · 2026-11-21
+
+Una sola racha y un solo «qué toca»: la app ya no te pide cosas distintas a la vez.
+
+- Una racha: los días seguidos cumpliendo tu plan (las sesiones y los descansos). Desde el 22 de noviembre la racha ya no da XP ni Voluntad, para que no compita con el plan. Remar fuerte en un día de descanso ya no la rompe (antes se perdía por entrenar de más). Progreso enseña esa racha, las semanas del plan cumplidas y tu mejor marca; sin plan, las semanas seguidas remando. Desaparece «días seguidos remando».
+- «Semana perfecta» se gana al completar una semana entera de tu plan, no 7 días seguidos remando. Las insignias que ya tienes se quedan.
+- El resumen al terminar dice cuál es la próxima sesión de tu plan y cuándo («Próxima de tu plan: Fondo 30 min, el sábado»), y después qué atributo sube. Sin plan sigue la recomendación por atributo.
+- En los días de plan la misión del juego se cambia por una de técnica, así la sesión del plan no compite con otra cosa.
+- Los atributos que aún no has entrenado dicen «Sin entrenar aún» y te dejan ver cómo subirlos, en lugar de un 0.
+
 ## 0.77.0 · 2026-11-21
 
 Medidas del cuerpo más fiables: zonas de pulso, pulso máximo, FTP inicial y esfuerzo.
