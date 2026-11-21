@@ -3,13 +3,16 @@
 
 import {
   SERVICIO_IFIT, CARACT_ESCRITURA, CARACT_NOTIFICACION, SERVICIO_1400,
-  hexABytes, bytesAHex, parsePaquete, paqueteRemada, paqueteMetricas, parseMedidaPulso,
+  hexABytes, parsePaquete, paqueteRemada, paqueteMetricas, parseMedidaPulso,
 } from './protocolo.js';
 import { VARIANTES } from './variantes.js';
+import { paquetesConsola } from './diagnostico.js';
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const CABECERA_RESISTENCIA = 'fe 02 0d 02';
 const MAX_REINTENTOS = 5;
+// Una escritura a la consola que tarda más que esto se anota como lenta (la consulta va cada 200 ms).
+export const ESCRITURA_LENTA_MS = 150;
 
 export class Remadora extends EventTarget {
   constructor() {
@@ -26,6 +29,14 @@ export class Remadora extends EventTarget {
     this.cierreManual = false;
     this.nivelPendiente = null;
     this.demoNivel = null;
+    this.pendientes = 0; // escrituras en la cola sin terminar
+    this.reloj = () => performance.now();
+    this.reiniciarEstadisticas();
+  }
+
+  // Escrituras, profundidad máxima de la cola, escrituras lentas y consultas que se saltaron por tener la cola ocupada.
+  reiniciarEstadisticas() {
+    this.estadisticas = { escrituras: 0, colaMax: 0, lentas: 0, saltadas: 0, msMax: 0 };
   }
 
   emitir(tipo, detail) {
@@ -93,12 +104,25 @@ export class Remadora extends EventTarget {
   }
 
   escribir(hex) {
+    this.pendientes += 1;
+    const est = this.estadisticas;
+    est.colaMax = Math.max(est.colaMax, this.pendientes);
     const tarea = this.cola.then(async () => {
       if (!this.escritura || !this.conectada) return;
-      this.log(`>> ${hex}`);
-      await this.escritura.writeValueWithResponse(hexABytes(hex));
+      const bytes = hexABytes(hex);
+      paquetesConsola.anotar('>>', '1535', bytes);
+      const t0 = this.reloj();
+      await this.escritura.writeValueWithResponse(bytes);
+      const ms = this.reloj() - t0;
+      est.escrituras += 1;
+      est.msMax = Math.max(est.msMax, Math.round(ms));
+      if (ms > ESCRITURA_LENTA_MS) {
+        est.lentas += 1;
+        // Solo las primeras y luego una de cada 50, para no llenar el registro si la consola va lenta toda la sesión.
+        if (est.lentas <= 5 || est.lentas % 50 === 0) this.log(`escritura lenta: ${Math.round(ms)} ms (${est.lentas} en la sesión)`);
+      }
     });
-    this.cola = tarea.catch((err) => this.log(`error al escribir: ${err.message}`));
+    this.cola = tarea.catch((err) => this.log(`error al escribir: ${err.message}`)).finally(() => { this.pendientes -= 1; });
     return this.cola;
   }
 
@@ -109,6 +133,9 @@ export class Remadora extends EventTarget {
     const poll = this.variante.poll;
     this.indicePoll = 0;
     this.pollTimer = setInterval(() => {
+      // Contrapresión: si la escritura anterior no terminó, esta consulta se salta en vez de encolarse. Antes la cola
+      // crecía sin límite cuando la consola tardaba, y el retraso de los datos se acumulaba durante la sesión.
+      if (this.pendientes > 0) { this.estadisticas.saltadas += 1; return; }
       if (this.indicePoll % 3 === 0 && this.nivelPendiente != null) {
         const nivel = this.nivelPendiente;
         this.nivelPendiente = null;
@@ -160,7 +187,8 @@ export class Remadora extends EventTarget {
 
   alRecibir(dataView, origen) {
     const bytes = new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength);
-    this.log(`<< [${origen}] ${bytesAHex(bytes)}`);
+    // Cada paquete va al búfer binario del diagnóstico, no al registro de texto (más de 10 líneas por segundo).
+    paquetesConsola.anotar('<<', origen, bytes);
     if (origen !== '1535') return;
     const datos = parsePaquete(bytes);
     if (datos) this.emitir('datos', datos);

@@ -2,7 +2,7 @@
 import { $, toast } from './ui.js';
 import { pintarClasificacion, pintarPerfil } from './pantallas/ajustes.js';
 import { dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
-import { lineasLog } from './registro.js';
+import { lineasLog, pintarDiagnostico } from './registro.js';
 import { pintarEntrenamientos } from './pantallas/planes.js';
 import { pintarHistorial } from './pantallas/progreso.js';
 import { pintarHeroe } from './pantallas/heroe.js';
@@ -23,7 +23,7 @@ export function irA(vista) {
   if (vista === 'entrenamientos') pintarEntrenamientos();
   if (vista === 'entrenar') { dibujarVivo(); vistaPrevia(); }
   if (vista === 'ajustes') pintarClasificacion();
-  if (vista === 'ajustes') { $('#log').textContent = lineasLog.slice(-300).join('\n'); pintarPerfil(); }
+  if (vista === 'ajustes') { $('#log').textContent = lineasLog.slice(-300).join('\n'); pintarDiagnostico(); pintarPerfil(); }
   mostrarConsejo(vista);
 }
 

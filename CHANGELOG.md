@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.75.0 · 2026-11-21
+
+Ninguna sesión se pierde por culpa de la app, y la app mide cómo va mientras remas.
+
+- Al terminar, la sesión se guarda **antes** de leer el historial para los récords y el resumen. Si leer el historial falla (por ejemplo, sin memoria con cientos de sesiones), la sesión ya está a salvo y se avisa de que el resumen completo estará en el historial.
+- Una versión nueva de la app ya no se activa a mitad de una sesión: espera instalada hasta que la terminas (antes borraba la caché de la versión anterior con la pantalla abierta y los paisajes que se pidieran después ya no estaban).
+- Bluetooth: si la consola tarda en contestar, la siguiente consulta se salta en lugar de amontonarse en la cola, así el retraso de los datos ya no crece durante la sesión. Las escrituras lentas (más de 150 ms) quedan anotadas.
+- Registro de diagnóstico: los paquetes de la consola van a un búfer binario de unos 30 min (antes, unos 8 min de texto que se escribía más de 10 veces por segundo en pleno remo). El texto solo se arma al descargar. Se guardan el registro y los paquetes de las 3 últimas sesiones, y la descarga los incluye.
+- Ajustes › Diagnóstico muestra cuánto tarda un dato de la consola en verse en pantalla (mediana y peor 5 %), los cuadros por segundo de cada vista de la carrera y cómo fue el Bluetooth. Cada sesión lo guarda en `diagnostico`, así que sale en el respaldo. Nada sale del teléfono.
+
 ## 0.74.0 · 2026-11-21
 
 La carrera, más fluida en teléfonos de pantalla muy densa.

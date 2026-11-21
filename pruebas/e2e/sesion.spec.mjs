@@ -1,4 +1,4 @@
-import { test, expect, abrirApp, completarBienvenida, remar, terminar, listar, enCurso, esperarAviso, avanzar } from './ayuda.mjs';
+import { test, expect, abrirApp, completarBienvenida, remar, terminar, listar, enCurso, esperarAviso, avanzar, leerEstado } from './ayuda.mjs';
 
 test.beforeEach(async ({ page }) => {
   await abrirApp(page);
@@ -35,6 +35,37 @@ test('una sesión terminada se guarda con sus muestras y abre el resumen', async
   await page.reload();
   await expect(page.locator('#recuperar-dialogo')).toBeHidden();
   expect(await listar(page, 'sesiones')).toHaveLength(1);
+});
+
+test('si leer el historial falla al terminar, la sesión se guarda igual', async ({ page }) => {
+  await remar(page, 30_000);
+  // La primera lectura de todas las muestras del historial falla (como al quedarse sin memoria con cientos de sesiones).
+  await page.evaluate(() => {
+    const getAll = IDBObjectStore.prototype.getAll;
+    window.__falloMuestras = true;
+    IDBObjectStore.prototype.getAll = function (...a) {
+      if (window.__falloMuestras && this.name === 'muestras') { window.__falloMuestras = false; throw new DOMException('sin memoria', 'UnknownError'); }
+      return getAll.apply(this, a);
+    };
+  });
+  await terminar(page);
+  await esperarAviso(page, /^Sesión guardada\. El resumen completo estará en tu historial\.$/);
+  const [s, ...otras] = await listar(page, 'sesiones');
+  expect(otras).toHaveLength(0);
+  expect(s.duracion).toBeGreaterThanOrEqual(25);
+  expect(await enCurso(page)).toBeNull();
+});
+
+test('la sesión guarda su diagnóstico (latencia del dato y Bluetooth) y Ajustes lo muestra', async ({ page }) => {
+  await remar(page, 30_000);
+  await terminar(page);
+  await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
+  const [s] = await listar(page, 'sesiones');
+  expect(s.diagnostico?.latencia?.n).toBeGreaterThan(10);
+  expect(s.diagnostico.latencia.p95).toBeLessThan(1_000);
+  const registros = await leerEstado(page, 'registroSesiones');
+  expect(registros).toHaveLength(1);
+  expect(registros[0].fecha).toBe(s.fecha);
 });
 
 test('una sesión de menos de 10 s no se guarda', async ({ page }) => {
