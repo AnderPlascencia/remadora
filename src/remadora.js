@@ -11,6 +11,21 @@ import { paquetesConsola } from './diagnostico.js';
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const CABECERA_RESISTENCIA = 'fe 02 0d 02';
 const MAX_REINTENTOS = 5;
+// Vigilante (0.80): con el GATT conectado y la persona remando, 4 s sin paquetes es una consola que no responde.
+export const SIN_DATOS_MS = 4000;
+// «Venía remando»: hubo potencia o paladas en los últimos 15 s (una consola quieta puede dejar de mandar).
+export const REMANDO_MS = 15000;
+// gatt.connect() a veces no vuelve nunca: se corta a los 10 s y cuenta como un reintento fallido.
+export const CONEXION_MAX_MS = 10000;
+// Con sesión en marcha la reconexión no se rinde; la espera crece de 1 en 1 s hasta este tope.
+export const ESPERA_MAX_MS = 5000;
+
+// Una promesa que falla si tarda más de `ms`.
+export function conLimite(promesa, ms, que) {
+  let t;
+  return Promise.race([promesa, new Promise((_, mal) => { t = setTimeout(() => mal(new Error(`${que}: sin respuesta en ${ms / 1000} s`)), ms); })])
+    .finally(() => clearTimeout(t));
+}
 // Una escritura a la consola que tarda más que esto se anota como lenta (la consulta va cada 200 ms).
 export const ESCRITURA_LENTA_MS = 150;
 
@@ -31,6 +46,13 @@ export class Remadora extends EventTarget {
     this.demoNivel = null;
     this.pendientes = 0; // escrituras en la cola sin terminar
     this.reloj = () => performance.now();
+    // Hora para el vigilante (Date.now: en las pruebas se simula junto con los temporizadores).
+    this.ahora = () => Date.now();
+    this.ultimoPaquete = 0;
+    this.ultimoRemando = -Infinity;
+    this.vigilanteTimer = null;
+    // Quien usa la remadora dice si hay una sesión en marcha: entonces la reconexión no se rinde.
+    this.debeMantener = () => false;
     this.reiniciarEstadisticas();
   }
 
@@ -71,7 +93,7 @@ export class Remadora extends EventTarget {
   // Conecta (o reconecta) con el dispositivo ya elegido y repite el saludo inicial.
   async abrir() {
     this.estado(this.reconectando ? 'Reconectando…' : 'Conectando…');
-    const servidor = await this.dispositivo.gatt.connect();
+    const servidor = await conLimite(this.dispositivo.gatt.connect(), CONEXION_MAX_MS, 'gatt.connect');
     const servicio = await servidor.getPrimaryService(SERVICIO_IFIT);
     this.escritura = await servicio.getCharacteristic(CARACT_ESCRITURA);
     const notif = await servicio.getCharacteristic(CARACT_NOTIFICACION);
@@ -101,6 +123,27 @@ export class Remadora extends EventTarget {
     this.reconectando = false;
     this.estado('Conectada');
     this.iniciarPoll();
+    this.iniciarVigilante();
+  }
+
+  // Cada segundo: si la consola calla con el GATT conectado y venías remando, se fuerza la reconexión. Antes la
+  // app esperaba al aviso de desconexión de Chrome, que con la consola colgada podía no llegar nunca.
+  iniciarVigilante() {
+    clearInterval(this.vigilanteTimer);
+    this.ultimoPaquete = this.ahora();
+    this.vigilanteTimer = setInterval(() => this.vigilar(), 1000);
+  }
+
+  vigilar() {
+    if (!this.conectada || this.reconectando || this.demoTimer) return;
+    const ahora = this.ahora();
+    const callada = ahora - this.ultimoPaquete;
+    if (callada < SIN_DATOS_MS || ahora - this.ultimoRemando > REMANDO_MS) return;
+    clearInterval(this.vigilanteTimer);
+    this.log(`la consola no responde: ${Math.round(callada / 1000)} s sin datos; se reconecta`);
+    this.estado('La consola no responde');
+    if (this.dispositivo?.gatt?.connected) this.dispositivo.gatt.disconnect();
+    else this.alDesconectar();
   }
 
   escribir(hex) {
@@ -190,12 +233,17 @@ export class Remadora extends EventTarget {
     // Cada paquete va al búfer binario del diagnóstico, no al registro de texto (más de 10 líneas por segundo).
     paquetesConsola.anotar('<<', origen, bytes);
     if (origen !== '1535') return;
+    this.ultimoPaquete = this.ahora();
     const datos = parsePaquete(bytes);
-    if (datos) this.emitir('datos', datos);
+    if (!datos) return;
+    if (datos.spm > 0 || datos.watts > 0) this.ultimoRemando = this.ultimoPaquete;
+    this.emitir('datos', datos);
   }
 
   async alDesconectar() {
+    if (this.reconectando && !this.conectada) return; // ya se está reconectando (aviso repetido de Chrome)
     clearInterval(this.pollTimer);
+    clearInterval(this.vigilanteTimer);
     this.conectada = false;
     this.log('desconectada');
     if (this.cierreManual || !this.dispositivo) {
@@ -203,11 +251,13 @@ export class Remadora extends EventTarget {
       this.estado('Desconectada');
       return;
     }
-    // Se perdió la conexión sin que el usuario la cerrara: reintentar con espera creciente.
+    // Se perdió la conexión sin que el usuario la cerrara: reintentar con espera creciente. Sin sesión se rinde
+    // tras MAX_REINTENTOS; con una sesión en marcha sigue (antes se rendía a los 15 s y la sesión quedaba en pausa).
     this.reconectando = true;
-    for (let intento = 1; intento <= MAX_REINTENTOS && !this.cierreManual; intento++) {
-      this.estado(`Reconectando (${intento}/${MAX_REINTENTOS})…`);
-      await espera(1000 * intento);
+    for (let intento = 1; (intento <= MAX_REINTENTOS || this.debeMantener()) && !this.cierreManual; intento++) {
+      this.estado(this.debeMantener() ? `Reconectando (intento ${intento})…` : `Reconectando (${intento}/${MAX_REINTENTOS})…`);
+      await espera(Math.min(1000 * intento, ESPERA_MAX_MS));
+      if (this.cierreManual) break;
       try {
         await this.abrir();
         this.log('reconectada');
@@ -223,6 +273,7 @@ export class Remadora extends EventTarget {
 
   desconectar() {
     this.cierreManual = true;
+    clearInterval(this.vigilanteTimer);
     // Un cambio de resistencia sin mandar no debe aplicarse en la próxima conexión.
     this.nivelPendiente = null;
     clearInterval(this.pollTimer);
@@ -257,20 +308,61 @@ export class Remadora extends EventTarget {
 }
 
 // Banda de pecho o reloj que transmite el pulso (servicio Heart Rate 0x180D).
-// Eventos: 'fc' (lpm; 0 si el sensor no toca la piel o se desconecta) y 'rr' (intervalos en ms, si el sensor los manda).
+// Eventos: 'fc' (lpm; 0 si el sensor no toca la piel o se desconecta), 'rr' (intervalos en ms, si el sensor los manda)
+// y 'log'. Si se corta, reconecta como la remadora: con espera creciente, sin rendirse mientras haya sesión.
 export class BandaCardiaca extends EventTarget {
+  constructor() {
+    super();
+    this.dispositivo = null;
+    this.cierreManual = false;
+    this.reconectando = false;
+    this.debeMantener = () => false;
+  }
+
+  log(texto) { this.dispatchEvent(new CustomEvent('log', { detail: `banda: ${texto}` })); }
+
   async conectar() {
-    const disp = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
-    const serv = await (await disp.gatt.connect()).getPrimaryService('heart_rate');
+    this.dispositivo = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+    this.cierreManual = false;
+    this.dispositivo.addEventListener('gattserverdisconnected', () => this.alDesconectar());
+    await this.abrir();
+    return this.dispositivo.name;
+  }
+
+  async abrir() {
+    const serv = await (await conLimite(this.dispositivo.gatt.connect(), CONEXION_MAX_MS, 'gatt.connect')).getPrimaryService('heart_rate');
     const c = await serv.getCharacteristic('heart_rate_measurement');
-    c.addEventListener('characteristicvaluechanged', (e) => {
+    c.oncharacteristicvaluechanged = (e) => {
       const m = parseMedidaPulso(e.target.value);
       if (!m) return;
       this.dispatchEvent(new CustomEvent('fc', { detail: m.contacto === false ? 0 : m.fc }));
       if (m.rr.length && m.contacto !== false) this.dispatchEvent(new CustomEvent('rr', { detail: m.rr }));
-    });
+    };
     await c.startNotifications();
-    disp.addEventListener('gattserverdisconnected', () => this.dispatchEvent(new CustomEvent('fc', { detail: 0 })));
-    return disp.name;
+  }
+
+  async alDesconectar() {
+    this.dispatchEvent(new CustomEvent('fc', { detail: 0 }));
+    if (this.cierreManual || this.reconectando || !this.dispositivo) return;
+    this.reconectando = true;
+    this.log('se cortó; reconectando');
+    for (let intento = 1; (intento <= MAX_REINTENTOS || this.debeMantener()) && !this.cierreManual; intento++) {
+      await espera(Math.min(1000 * intento, ESPERA_MAX_MS));
+      if (this.cierreManual) break;
+      try {
+        await this.abrir();
+        this.log(`reconectada (intento ${intento})`);
+        this.reconectando = false;
+        return;
+      } catch (err) {
+        this.log(`reintento ${intento} falló: ${err.message}`);
+      }
+    }
+    this.reconectando = false;
+  }
+
+  desconectar() {
+    this.cierreManual = true;
+    if (this.dispositivo?.gatt?.connected) this.dispositivo.gatt.disconnect();
   }
 }

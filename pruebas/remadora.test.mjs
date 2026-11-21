@@ -4,63 +4,17 @@ import { test, mock, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { Remadora } from '../src/remadora.js';
 import { VARIANTES } from '../src/variantes.js';
+import { Dispositivo, avanzar } from './ble-falso.mjs';
 import { SERVICIO_IFIT, CARACT_ESCRITURA, CARACT_NOTIFICACION, SERVICIO_1400, bytesAHex, hexABytes, nivelDesdeByte, paqueteMetricas, paqueteRemada } from '../src/protocolo.js';
 
 const V = VARIANTES.generica;
 const CABECERA_RESISTENCIA = 'fe 02 0d 02';
-
-class Caracteristica {
-  constructor(uuid, { notify = false } = {}) { this.uuid = uuid; this.properties = { notify }; this.escritos = []; this.oncharacteristicvaluechanged = null; }
-  async writeValueWithResponse(bytes) { this.escritos.push(bytesAHex(bytes)); }
-  async startNotifications() {}
-  emitir(bytes) { this.oncharacteristicvaluechanged?.({ target: { value: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength) } }); }
-}
-
-// Remadora falsa: `fallos` es cuántas veces seguidas falla gatt.connect() (Infinity = nunca vuelve).
-class Dispositivo extends EventTarget {
-  constructor() {
-    super();
-    this.name = 'I_RW_PRUEBA';
-    this.fallos = 0;
-    this.conexiones = 0;
-    this.escritura = new Caracteristica(CARACT_ESCRITURA);
-    this.notificacion = new Caracteristica(CARACT_NOTIFICACION, { notify: true });
-    this.diag = new Caracteristica('00001401-555e-e99c-e511-f9f4f8daeb24', { notify: true });
-    const disp = this;
-    this.gatt = {
-      connected: false,
-      async connect() {
-        disp.conexiones += 1;
-        if (disp.fallos > 0) { disp.fallos -= 1; throw new Error('GATT no disponible'); }
-        this.connected = true;
-        return {
-          async getPrimaryService(uuid) {
-            if (uuid === SERVICIO_IFIT) return { getCharacteristic: async (c) => (c === CARACT_ESCRITURA ? disp.escritura : disp.notificacion) };
-            if (uuid === SERVICIO_1400) return { getCharacteristics: async () => [disp.diag] };
-            throw new Error(`servicio ${uuid} no existe`);
-          },
-        };
-      },
-      disconnect() { this.connected = false; disp.dispatchEvent(new Event('gattserverdisconnected')); },
-    };
-  }
-  // Se pierde la señal sin que nadie lo pida.
-  perderSenal() { this.gatt.connected = false; this.dispatchEvent(new Event('gattserverdisconnected')); }
-}
 
 let disp;
 let filtros;
 let estados;
 let datos;
 let logs;
-
-// Avanza el reloj falso en pasos cortos y deja correr las promesas entre paso y paso.
-async function avanzar(ms, paso = 50) {
-  for (let t = 0; t < ms; t += paso) {
-    mock.timers.tick(paso);
-    await new Promise((r) => setImmediate(r));
-  }
-}
 
 function nuevaRemadora() {
   const r = new Remadora();

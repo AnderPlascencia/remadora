@@ -149,6 +149,26 @@ export function crearBufferPaquetes(capacidad = 36000, copia = null) {
 }
 export const paquetesConsola = crearBufferPaquetes();
 
+// Lee el texto del registro (el de texto(), tal como se copia de Ajustes › Diagnóstico) y devuelve los paquetes con
+// su hora relativa al primero, en ms: [{ ms, dir, origen, datos }]. Sirve para reproducir sesiones reales en las
+// pruebas. Las líneas que no son paquetes se ignoran; un paquete cortado («…») se deja fuera porque está incompleto.
+export function paquetesDeTexto(texto) {
+  const lista = [];
+  let primero = null;
+  let previo = null;
+  let dias = 0;
+  for (const linea of texto.split('\n')) {
+    const m = linea.match(/^(\d\d):(\d\d):(\d\d)\.(\d{3}) (<<|>>)(?: \[(\w+)\])? ([0-9a-f ]+?)( …)?$/);
+    if (!m || m[8]) continue;
+    let ms = ((+m[1] * 60 + +m[2]) * 60 + +m[3]) * 1000 + +m[4] + dias * 864e5;
+    if (previo != null && ms < previo - 3600e3) { dias += 1; ms += 864e5; } // pasó la medianoche
+    previo = ms;
+    primero ??= ms;
+    lista.push({ ms: ms - primero, dir: m[5], origen: m[5] === '<<' ? (m[6] === '1535' ? '1535' : 'otro') : '1535', datos: Uint8Array.from(m[7].trim().split(' '), (h) => parseInt(h, 16)) });
+  }
+  return lista;
+}
+
 // La BLE de la remadora la pone sesion.js (este módulo no conoce la conexión).
 let fuenteBle = () => null;
 export function fijarFuenteBle(fn) { fuenteBle = fn; }
