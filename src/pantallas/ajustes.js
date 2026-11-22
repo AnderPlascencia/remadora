@@ -108,7 +108,7 @@ export function arrancarAjustes1() {
   });
 
   // Pantalla de bienvenida: se desvanece sola.
-  setTimeout(() => $('#bienvenida')?.remove(), 1700);
+  setTimeout(() => $('#bienvenida')?.remove(), 3100);
 }
 
 function campoNumero(sel, clave, defecto, alCambiar) {
