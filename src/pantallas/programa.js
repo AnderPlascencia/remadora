@@ -417,7 +417,7 @@ async function pintarPlanMeta() {
   const sug = P.sugerirMeta(await H.sesiones(), dist, semanas);
   const pct = sug ? String(Math.round(sug.mejora * 1000) / 10).replace('.', ',') : '';
   $('#pm-info').textContent = sug
-    ? `${sug.real ? 'Tu mejor' : `Tu predicción (desde tus ${miles(sug.desde)} m) para`} ${miles(dist)} m: ${Ent.formatoMmss(sug.t)}. Una meta realista en ${semanas} semanas: ${Ent.formatoMmss(sug.meta)} (un ${pct} % mejor${sug.nivel === 'inicio' ? ', al empezar se mejora rápido' : ''}).`
+    ? `${sug.real ? 'Tu mejor' : sug.modelo ? 'Tu predicción (con tu curva de potencia) para' : `Tu predicción (desde tus ${miles(sug.desde)} m) para`} ${miles(dist)} m: ${Ent.formatoMmss(sug.t)}. Una meta realista en ${semanas} semanas: ${Ent.formatoMmss(sug.meta)} (un ${pct} % mejor${sug.nivel === 'inicio' ? ', al empezar se mejora rápido' : ''}).`
     : 'Aún no hay sesiones para sugerirte una meta: elige una que te rete.';
   $('#pm-tiempo').placeholder = sug ? Ent.formatoMmss(sug.meta) : '8:00';
 }
@@ -512,6 +512,15 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const cita = Ci.proximaCita({ programa: prog, dias: Ci.diasDeCita(cg.dias, perfil().dias), hora: cg.hora, movida: cg.movida, hechoHoy: sesiones.some((x) => E.claveDia(x.fecha) === hoyK) });
   $('#hoy-cita').hidden = !cita;
   $('#hoy-cita').textContent = cita ? `Tu próxima cita: ${Ci.textoCita(cita)}${cita.ent && cita.fecha !== hoyK ? ` · ${cita.ent}` : ''}` : '';
+  // Tu meta a la vista (etapa 18): con un plan hacia una meta, tu tiempo estimado hoy frente a la meta.
+  const meta = prog?.meta;
+  const est = meta ? E.estimar(sesiones, meta.distancia, { peso: perfil().peso }) : null;
+  $('#hoy-meta').hidden = !est;
+  if (est) {
+    const d = meta.distancia >= 1000 ? `${meta.distancia / 1000} km` : `${meta.distancia} m`;
+    const falta = est.t - meta.segundos;
+    $('#hoy-meta').textContent = `Tus ${d} estimados: ${Ent.formatoMmss(est.t)} → meta ${Ent.formatoMmss(meta.segundos)}${falta > 0 ? ` (te faltan ${falta} s)` : ' (¡ya la tienes a tu alcance!)'}`;
+  }
   // «Solo tengo 15 / 20 min» (etapa 14): con la sesión del día elegida, una versión corta que conserva el estímulo.
   const corta = $('#hoy-corta');
   const vc = estado.versionCorta && String(estado.versionCorta.valor) === String(valorDia) ? estado.versionCorta : null;

@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.91.0 · 2026-11-21
+
+Un solo motor para tus tiempos estimados, y tu meta a la vista.
+
+- **Las mismas cifras en toda la app.** El detalle de la sesión y el asistente de metas ahora sacan tus tiempos del mismo motor: tu curva de potencia (CP y W′ con tus esfuerzos a tope). Antes cada pantalla usaba su cálculo y podían diferir entre un 2 % y un 5 %. Donde ya tienes una marca de los últimos 90 días, manda tu marca. Sin datos para la curva, la ley de Paul queda de respaldo.
+- **Con un rango honesto.** Cada tiempo estimado lleva su rango, por ejemplo «7:38 (entre 7:27 y 7:49)». El rango se ensancha si la app falló más de la cuenta en tus marcas anteriores.
+- **Tu meta en Hoy.** Con un plan hacia una meta, Hoy muestra tu tiempo estimado frente a la meta: «Tus 2 km estimados: 7:58 → meta 7:50 (te faltan 8 s)».
+- Por encima de 30 min, el motor tiene en cuenta que la potencia cae un poco más (modelo Omni-PD).
+
 ## 0.90.0 · 2026-11-21
 
 Medir cuánto acierta la app con tu rendimiento.

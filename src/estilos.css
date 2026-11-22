@@ -2135,3 +2135,6 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 @media (orientation: landscape) and (max-height: 560px) {
   #mr-vista .vista-puntos { letter-spacing: 0; font-size: 10px; }
 }
+
+/* Etapa 18: el rango de cada tiempo estimado, bajo el tiempo. */
+.rango-pred { display: block; font-size: var(--t-xs); color: var(--texto-suave); font-weight: 500; }
