@@ -22,6 +22,8 @@ const SPRINT_M = 250;
 // - colores: lo que se pinta mientras cargan las imágenes y las partes que no son imagen (agua, tierra).
 // El fiordo (v0.62.0) y la laguna (v0.64.0) ya no salen de Blender: panorama, costa y piezas son imágenes realistas
 // generadas aparte, recortadas del fondo magenta y montadas con las mismas medidas (prompts en docs/PAISAJES_REALISTAS.md).
+// Desde la 0.98.0 el fiordo está pintado con el mismo motor y estilo que los héroes, y su vista 3D lleva suelo y agua
+// pintados (suelo3d y aguaTextura3d, ver franjas3d) en lugar de colores planos.
 export const PAISAJES = {
   fiordo: {
     nombre: 'Fiordo nórdico',
@@ -30,6 +32,9 @@ export const PAISAJES = {
     miniatura: 'assets/carrera/fiordo_mini.webp',
     panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 379 },
     costa: 'assets/carrera/costa.webp',
+    // Texturas pintadas del suelo de las orillas y del agua de la vista 3D (m = metros que cubre cada repetición)
+    suelo3d: { src: 'assets/carrera/fiordo_suelo.webp', m: 8 },
+    aguaTextura3d: { src: 'assets/carrera/fiordo_agua.webp', m: 10 },
     orilla: {
       src: 'assets/carrera/orilla.webp',
       piezas: {
@@ -298,6 +303,8 @@ function coloreada(im, filtro) {
   porFiltro.set(filtro, copia);
   return copia;
 }
+// La imagen con el filtro de color de la variante ya aplicado (o la misma si no hay filtro o no se puede).
+const conTinte = (im) => (im && paisaje.filtro ? coloreada(im, paisaje.filtro) || im : im);
 function conFiltro(ctx, im, dibujar) {
   if (!paisaje.filtro || !('filter' in ctx)) { dibujar(im); return; }
   const copia = coloreada(im, paisaje.filtro);
@@ -306,6 +313,85 @@ function conFiltro(ctx, im, dibujar) {
   ctx.filter = paisaje.filtro;
   dibujar(im);
   ctx.filter = antes;
+}
+// Pinta una textura sobre el plano del agua o del suelo en perspectiva, en franjas de profundidad: cada franja es un
+// trapecio relleno con un patrón cuya transformación copia la escala de esa profundidad. ~26 franjas por zona.
+const patrones = new WeakMap();
+function franjas3d(ctx, P, camZ, tex, metros, lado, ancho, alto, cx, fx) {
+  let pat = patrones.get(tex);
+  if (!pat) { pat = ctx.createPattern(tex, 'repeat'); patrones.set(tex, pat); }
+  if (!pat || !pat.setTransform || typeof DOMMatrix === 'undefined') return;
+  const tw = tex.naturalWidth || tex.width;
+  const th = tex.naturalHeight || tex.height;
+  ctx.fillStyle = pat;
+  let z0 = camZ + 1.2;
+  // Solo hasta 140 m: más lejos la bruma lo tapa y basta el color de fondo. Franjas cada vez más largas (×1,5).
+  const hasta = camZ + 140;
+  while (z0 < hasta) {
+    const z1 = Math.min(hasta, camZ + (z0 - camZ) * 1.5 + 0.6);
+    const a = P(0, z0);
+    const b = P(0, z1);
+    if (!a || !b) break;
+    const zm = (z0 + z1) / 2;
+    const m = P(0, zm);
+    const sx = (fx / m.d) * (metros / tw);
+    const sy = -((a.y - b.y) / (z1 - z0)) * (metros / th);
+    pat.setTransform(new DOMMatrix([sx, 0, 0, sy, cx, m.y - sy * ((zm / metros) * th)]));
+    ctx.beginPath();
+    if (lado) {
+      const ia = P(lado.borde, z0);
+      const ib = P(lado.borde, z1);
+      const fuera = lado.s < 0 ? Math.min(0, ia.x) - 2 : Math.max(ancho, ia.x) + 2;
+      ctx.moveTo(ia.x, a.y + 1); ctx.lineTo(ib.x, b.y); ctx.lineTo(fuera, b.y); ctx.lineTo(fuera, a.y + 1);
+    } else {
+      ctx.rect(0, b.y, ancho, a.y - b.y + 1);
+    }
+    ctx.fill();
+    z0 = z1;
+  }
+}
+// Lienzo reutilizable para el plano del agua y el suelo de la vista 3D, a 1 píxel por punto.
+let plano3d = null;
+function lienzoPlano(ancho, alto) {
+  if (typeof document === 'undefined') return null;
+  const w = Math.max(1, Math.ceil(ancho));
+  const h = Math.max(1, Math.ceil(alto));
+  if (!plano3d) {
+    const lienzo = document.createElement('canvas');
+    plano3d = { lienzo, ctx: lienzo.getContext('2d') };
+  }
+  if (plano3d.lienzo.width !== w || plano3d.lienzo.height !== h) { plano3d.lienzo.width = w; plano3d.lienzo.height = h; }
+  return plano3d.ctx ? plano3d : null;
+}
+// Color medio del pie del panorama (las filas justo sobre el horizonte), para que la bruma lejana case con él.
+const pies = new WeakMap();
+function colorPie(im, horizonte) {
+  if (pies.has(im)) return pies.get(im);
+  let c = null;
+  try {
+    const l = document.createElement('canvas');
+    l.width = 64; l.height = 1;
+    const x = l.getContext('2d', { willReadFrequently: true });
+    x.drawImage(im, 0, horizonte - 24, im.naturalWidth || im.width, 20, 0, 0, 64, 1);
+    const d = x.getImageData(0, 0, 64, 1).data;
+    c = [0, 1, 2].map((k) => { let t = 0; for (let i = 0; i < 64; i++) t += d[i * 4 + k]; return Math.round(t / 64); });
+  } catch { c = null; }
+  pies.set(im, c);
+  return c;
+}
+// Suelo de las orillas: lejos se funde con la bruma del cielo y cerca se oscurece, para que no se vea como un
+// color plano junto a las imágenes pintadas.
+function degradadoSuelo(ctx, color, y0, alto) {
+  const g = ctx.createLinearGradient(0, y0, 0, alto);
+  g.addColorStop(0, mezclar(color, paisaje.colores.cielo3d[1], 0.55));
+  g.addColorStop(0.35, color);
+  g.addColorStop(1, mezclar(color, '#000000', 0.35));
+  return g;
+}
+function mezclar(a, b, t) {
+  const n = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const [x, y] = [n(a), n(b)];
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',')})`;
 }
 export function usarPaisaje(id) { paisaje = PAISAJES[id] || PAISAJES.fiordo; }
 
@@ -1740,11 +1826,18 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   cielo.addColorStop(1, paisaje.colores.cielo3d[1]);
   ctx.fillStyle = cielo;
   ctx.fillRect(0, 0, ancho, horizonte);
-  const agua = ctx.createLinearGradient(0, horizonte, 0, alto);
+  const texAgua = conTinte(paisaje.aguaTextura3d && imagen(paisaje.aguaTextura3d.src));
+  const texSuelo = conTinte(paisaje.suelo3d && imagen(paisaje.suelo3d.src));
+  // Con texturas pintadas, el plano (agua, arena y suelo) se pinta en un lienzo aparte a 1 píxel por punto y se
+  // copia escalado: las franjas con patrón son lo caro y así se pinta 4 veces menos en un teléfono de densidad 2.
+  const plano = texAgua || texSuelo ? lienzoPlano(ancho, alto - horizonte) : null;
+  const pc = plano ? plano.ctx : ctx;
+  if (plano) pc.setTransform(1, 0, 0, 1, 0, -horizonte);
+  const agua = pc.createLinearGradient(0, horizonte, 0, alto);
   agua.addColorStop(0, paisaje.colores.agua3d[0]);
   agua.addColorStop(1, paisaje.colores.agua3d[1]);
-  ctx.fillStyle = agua;
-  ctx.fillRect(0, horizonte, ancho, alto - horizonte);
+  pc.fillStyle = agua;
+  pc.fillRect(0, horizonte, ancho, alto - horizonte);
   const fiordo = imagen(paisaje.panorama.src);
   if (fiordo) {
     // 360° del panorama = 2π·f píxeles, con el horizonte de la imagen sobre el del lienzo y el frente centrado.
@@ -1763,12 +1856,14 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     ctx.lineTo(ancho, horizonte);
     ctx.fill();
   }
+  // Agua pintada en perspectiva (franjas con la textura repetida) cuando el paisaje la tiene.
+  if (texAgua) franjas3d(pc, P, camZ, texAgua, paisaje.aguaTextura3d.m, null, ancho, alto, cx, fx);
   // Reflejo del cielo cerca del horizonte
-  const reflejo = ctx.createLinearGradient(0, horizonte, 0, horizonte + alto * 0.12);
+  const reflejo = pc.createLinearGradient(0, horizonte, 0, horizonte + alto * 0.12);
   reflejo.addColorStop(0, `rgba(${paisaje.colores.reflejo},0.12)`);
   reflejo.addColorStop(1, `rgba(${paisaje.colores.reflejo},0)`);
-  ctx.fillStyle = reflejo;
-  ctx.fillRect(0, horizonte, ancho, alto * 0.12);
+  pc.fillStyle = reflejo;
+  pc.fillRect(0, horizonte, ancho, alto * 0.12);
 
   // Orillas (franjas a los lados del canal) con arena en el borde
   const lejos = 400;
@@ -1780,18 +1875,31 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     const a2 = P(borde + s * 0.8, camZ + 1.2);
     if (!a || !b || !a2) continue;
     // Se usan los puntos proyectados de verdad: con la cámara alta el borde cercano cae muy por debajo del lienzo.
-    ctx.fillStyle = paisaje.colores.arena3d;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(a2.x, a2.y); ctx.fill();
+    pc.fillStyle = degradadoSuelo(pc, paisaje.colores.arena3d, b.y, alto);
+    pc.beginPath();
+    pc.moveTo(a.x, a.y); pc.lineTo(b.x, b.y); pc.lineTo(a2.x, a2.y); pc.fill();
     const lado = s < 0 ? Math.min(0, a2.x) : Math.max(ancho, a2.x);
-    ctx.fillStyle = paisaje.colores.tierra3d;
-    ctx.beginPath();
-    ctx.moveTo(lado, Math.max(alto, a2.y));
-    ctx.lineTo(a2.x, a2.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.lineTo(lado, b.y);
-    ctx.fill();
+    pc.fillStyle = degradadoSuelo(pc, paisaje.colores.tierra3d, b.y, alto);
+    pc.beginPath();
+    pc.moveTo(lado, Math.max(alto, a2.y));
+    pc.lineTo(a2.x, a2.y);
+    pc.lineTo(b.x, b.y);
+    pc.lineTo(lado, b.y);
+    pc.fill();
+    if (texSuelo) franjas3d(pc, P, camZ, texSuelo, paisaje.suelo3d.m, { borde: borde + s * 0.8, s }, ancho, alto, cx, fx);
   }
+  // Bruma sobre el suelo y el agua lejanos: une las texturas con el pie del panorama.
+  if (plano) {
+    const bruma = pc.createLinearGradient(0, horizonte, 0, horizonte + (alto - horizonte) * 0.35);
+    const [r, g, b] = (fiordo && colorPie(conTinte(fiordo), paisaje.panorama.horizonte))
+      || [1, 3, 5].map((i) => parseInt(paisaje.colores.cielo3d[1].slice(i, i + 2), 16));
+    bruma.addColorStop(0, `rgba(${r},${g},${b},0.85)`);
+    bruma.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    pc.fillStyle = bruma;
+    pc.fillRect(0, horizonte, ancho, (alto - horizonte) * 0.35);
+  }
+
+  if (plano) ctx.drawImage(plano.lienzo, 0, 0, plano.lienzo.width, plano.lienzo.height, 0, horizonte, ancho, alto - horizonte);
 
   // Olas
   if (!sinMovimiento) {

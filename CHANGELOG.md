@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.98.0 · 2026-11-22
+
+El fiordo, repintado con el mismo estilo que los héroes.
+
+- **Paisaje pintado.** Montañas al atardecer, pinos, abedules, cabaña, rocas y juncos pintados con el mismo motor y la misma mano que los retratos nuevos. El panorama ya no se ve espejado.
+- **Suelo y agua pintados en la vista 3D.** Las orillas tienen pasto con musgo y el canal tiene ondas, en perspectiva y moviéndose con la carrera, en lugar de colores planos. A lo lejos se funden con una bruma del color del pie de las montañas.
+- **Mismo rendimiento.** El suelo y el agua se pintan en un lienzo aparte a un píxel por punto; en la prueba con la CPU ×4 del teléfono de Ander la vista 3D se queda entre 24 y 30 cuadros por segundo.
+- Las variantes del fiordo (invierno, tormenta, aurora) tiñen también el suelo y el agua.
+
 ## 0.97.0 · 2026-11-22
 
 La app abre más rápido y las actualizaciones bajan solo lo que cambió.
