@@ -68,8 +68,17 @@ dibujarVivo();
 pintarLineaNivel();
 
 // La versión va en la URL del service worker: es la de src/version.js y cada versión nueva instala uno nuevo.
+// El código sale de la caché (abre al instante aunque la red sea lenta): aquí se mira en segundo plano si ya hay otra
+// versión publicada y, si la hay, se instala para la próxima vez que abras la app (etapa 19).
+async function buscarVersionNueva() {
+  try {
+    const texto = await (await fetch(`src/version.js?comprobar=${Date.now()}`, { cache: 'no-store' })).text();
+    const nueva = texto.match(/VERSION = '([\d.]+)'/)?.[1];
+    if (nueva && nueva !== VERSION) await navigator.serviceWorker.register(`sw.js?v=${nueva}`);
+  } catch { /* sin conexión: se mira la próxima vez */ }
+}
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register(`sw.js?v=${VERSION}`).then(() => { precargarRecursos(); activarVersionEnEspera(); }).catch(() => {});
+  navigator.serviceWorker.register(`sw.js?v=${VERSION}`).then(() => { precargarRecursos(); activarVersionEnEspera(); buscarVersionNueva(); }).catch(() => {});
   // El service worker nuevo pregunta antes de activarse si hay una sesión en curso (si la hay, espera a que termine).
   navigator.serviceWorker.addEventListener('message', (e) => {
     if (e.data?.tipo === 'sesionEnCurso?') e.ports?.[0]?.postMessage({ enCurso: !!estado.sesion });

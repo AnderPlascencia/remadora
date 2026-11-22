@@ -30,13 +30,55 @@ const VOCES = {
   pirata: [1, 2, 3, 4, 5].map((n) => `assets/voces/pirata/frase-${n}.mp3`),
 };
 
+// Imágenes, voces y vídeos van en una caché sin versión (etapa 19): sobreviven a las actualizaciones y solo se vuelve a
+// bajar lo que cambió. Lo dice huellas.json (lo genera tools/huellas.mjs): una huella del contenido de cada archivo.
+// Con él, al instalar se copia de la caché lo que tiene la misma huella (también el código que no cambió) y solo se
+// baja lo distinto. Sin huellas.json (sin red, o un servidor viejo) se baja todo, como antes.
+const RECURSOS = 'recursos-remadora';
+const HUELLAS = 'huellas.json';
+
 // Solo se guardan respuestas completas: ni errores (404, 500), ni respuestas opacas, ni trozos de un vídeo (206).
 const sePuedeGuardar = (r) => !!r && r.ok && r.status !== 206;
 
-async function guardarEnCache(peticion, respuesta) {
+async function guardarEnCache(peticion, respuesta, cache = VERSION) {
   if (!sePuedeGuardar(respuesta)) return;
-  const c = await caches.open(VERSION);
+  const c = await caches.open(cache);
   await c.put(peticion, respuesta);
+}
+
+// Los primeros 16 hex del SHA-256 del contenido, como en tools/huellas.mjs.
+async function huellaDe(r) {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', await r.clone().arrayBuffer()));
+  return [...h.slice(0, 8)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function leerHuellas() {
+  try {
+    const r = await fetch(new Request(HUELLAS, { cache: 'reload' }));
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+// «./» y «index.html» son la misma página; el resto, su ruta dentro de la app.
+const BASE = new URL('./', self.location.href);
+const rutaDe = (a) => new URL(a, BASE).pathname.slice(BASE.pathname.length) || 'index.html';
+
+// Guarda «a» en la caché «destino»: si alguna caché ya lo tiene con la huella de ahora, lo copia; si no, lo baja.
+async function traer(destino, a, huellas) {
+  const esperada = huellas?.[rutaDe(a)];
+  if (esperada) {
+    const guardada = await caches.match(a);
+    if (guardada && (await huellaDe(guardada)) === esperada) { await destino.put(a, guardada); return; }
+  }
+  const r = await fetch(new Request(a, { cache: 'reload' }));
+  if (!sePuedeGuardar(r)) throw new Error(`${a}: ${r.status}`);
+  await destino.put(a, r);
+}
+// Quita de los recursos lo que cambió o ya no existe (un paisaje comprado o un vídeo se vuelven a bajar al pedirlos).
+async function limpiarRecursos(recursos, huellas) {
+  for (const p of await recursos.keys()) {
+    const esperada = huellas[rutaDe(p.url || p)];
+    const r = await recursos.match(p);
+    if (!esperada || !r || (await huellaDe(r)) !== esperada) await recursos.delete(p);
+  }
 }
 
 // ¿Alguna pantalla abierta tiene una sesión en curso? Se pregunta a cada una por un canal propio; la que no contesta en
@@ -57,14 +99,22 @@ async function sesionEnCurso() {
 // Una versión nueva no se activa a mitad de una sesión: al activarse borra la caché vieja, y la pantalla abierta (con
 // el código viejo) se quedaría sin los paisajes y las imágenes que pida después. Espera a que la pantalla avise al
 // terminar la sesión ({ tipo: 'activar' }), o a que se cierre la app.
+// El código es todo o nada (si falta un archivo, no se instala); las imágenes y voces, cada una por su lado.
+async function instalar() {
+  const huellas = await leerHuellas();
+  const codigo = await caches.open(VERSION);
+  await Promise.all(ARCHIVOS.map((a) => traer(codigo, a, huellas)));
+  const recursos = await caches.open(RECURSOS);
+  if (huellas) await limpiarRecursos(recursos, huellas);
+  await Promise.all([...HEROES, ...PAISAJE, ...Object.values(VOCES).flat()].map((a) => traer(recursos, a, huellas).catch(() => {})));
+}
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION)
-    .then((c) => c.addAll(ARCHIVOS.map((a) => new Request(a, { cache: 'reload' })))
-      .then(() => Promise.all([...HEROES, ...PAISAJE, ...Object.values(VOCES).flat()].map((a) => c.add(new Request(a, { cache: 'reload' })).catch(() => {})))))
+  e.waitUntil(instalar()
     .then(() => sesionEnCurso())
     .then((ocupada) => (ocupada ? undefined : self.skipWaiting())));
 });
 
+// Al activarse borra el código de las versiones anteriores; los recursos se quedan (ya se limpiaron al instalar).
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys()
     .then((ks) => Promise.all(ks.filter((k) => k.startsWith('remadora-') && k !== VERSION).map((k) => caches.delete(k))))
@@ -79,9 +129,9 @@ self.addEventListener('message', (e) => {
   if (e.data?.tipo !== 'precargar') return;
   const archivos = Array.isArray(e.data.archivos) ? e.data.archivos.filter((a) => typeof a === 'string' && IMAGEN_CARRERA.test(a)) : [];
   const lista = [...new Set([...(VIDEOS[e.data.clase] || []), ...archivos])];
-  e.waitUntil(caches.open(VERSION).then((c) => Promise.all(lista.map(async (a) => {
+  e.waitUntil(caches.open(RECURSOS).then((c) => Promise.all(lista.map(async (a) => {
     if (await c.match(a)) return;
-    try { await guardarEnCache(a, await fetch(a)); } catch { /* sin conexión: otra vez será */ }
+    try { await guardarEnCache(a, await fetch(a), RECURSOS); } catch { /* sin conexión: otra vez será */ }
   }))));
 });
 
@@ -90,19 +140,23 @@ const enAssets = (url) => url.origin === self.location.origin && url.pathname.st
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // Imágenes, fuentes y vídeos (assets/) no cambian dentro de una versión: caché primero y red si no están.
-  // Cada versión nueva estrena caché, así que una imagen cambiada llega con la versión siguiente.
+  // Imágenes, fuentes y vídeos (assets/): caché primero y red si no están (y se guardan para la próxima).
   if (enAssets(url)) {
     e.respondWith(caches.match(e.request).then((guardada) => guardada || fetch(e.request).then((r) => {
-      e.waitUntil(guardarEnCache(e.request, r.clone()));
+      e.waitUntil(guardarEnCache(e.request, r.clone(), RECURSOS));
       return r;
     })));
     return;
   }
-  // El código y la página: red primero (para recibir actualizaciones) y caché si no hay conexión.
-  // cache: 'no-cache' revalida con el servidor para no quedarse con archivos viejos del navegador.
-  e.respondWith(fetch(e.request, { cache: 'no-cache' })
-    .then((r) => { e.waitUntil(guardarEnCache(e.request, r.clone())); return r; })
-    // Sin conexión, la página abierta desde un atajo del icono (?atajo=…) es la misma página guardada.
-    .catch(() => caches.match(e.request, e.request.mode === 'navigate' ? { ignoreSearch: true } : undefined)));
+  // El código y la página salen de la caché de esta versión (etapa 19): abre al instante aunque la red sea lenta, y
+  // nunca mezcla archivos de dos versiones. La versión nueva la busca la app en segundo plano (buscarVersionNueva en
+  // src/app.js) y se instala para la próxima vez. Lo que no está en la caché va a la red; lo que lleva «?…» (como esa
+  // consulta de la versión) no se guarda.
+  const navegar = e.request.mode === 'navigate';
+  e.respondWith(caches.open(VERSION)
+    .then((c) => c.match(e.request, navegar ? { ignoreSearch: true } : undefined))
+    .then((guardada) => guardada || fetch(e.request, { cache: 'no-cache' }).then((r) => {
+      if (!url.search) e.waitUntil(guardarEnCache(e.request, r.clone()));
+      return r;
+    })));
 });

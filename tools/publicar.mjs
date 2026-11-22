@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-// Lo que entra: la página, el manifest, el service worker, el código y los recursos.
-export const INCLUIR = ['index.html', 'manifest.webmanifest', 'sw.js', 'src', 'assets'];
+// Lo que entra: la página, el manifest, el service worker (con las huellas de su caché), el código y los recursos.
+export const INCLUIR = ['index.html', 'manifest.webmanifest', 'sw.js', 'huellas.json', 'src', 'assets'];
 // Lo que nunca entra aunque esté dentro de lo anterior: fuentes de arte y herramientas de trabajo.
 export const EXCLUIR = ['assets/characters', 'tools', 'docs', '.claude', 'pruebas', 'node_modules'];
 
