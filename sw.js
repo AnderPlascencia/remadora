@@ -60,7 +60,7 @@ async function sesionEnCurso() {
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION)
     .then((c) => c.addAll(ARCHIVOS.map((a) => new Request(a, { cache: 'reload' })))
-      .then(() => Promise.all([...HEROES, ...PAISAJE, ...Object.values(VOCES).flat()].map((a) => c.add(a).catch(() => {})))))
+      .then(() => Promise.all([...HEROES, ...PAISAJE, ...Object.values(VOCES).flat()].map((a) => c.add(new Request(a, { cache: 'reload' })).catch(() => {})))))
     .then(() => sesionEnCurso())
     .then((ocupada) => (ocupada ? undefined : self.skipWaiting())));
 });
