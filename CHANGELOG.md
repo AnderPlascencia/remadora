@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.96.0 · 2026-11-22
+
+Tarjetas para compartir tu semana y tu mes.
+
+- **Compartir mi semana / mi mes.** En Progreso, debajo de la gráfica de Semanas y Meses. La misma vista previa que la de la sesión, en 9:16, 4:5 y 1:1, y eliges esta semana o la pasada (este mes o el pasado). Los lunes y martes (y del 1 al 5 del mes) sale primero la que acaba de terminar.
+- **La semanal («Tablero»):** los km, el cambio contra la semana pasada, una equivalencia con un lugar conocido («Como cruzar el Estrecho de Gibraltar 2 veces»), las últimas 8 semanas con el promedio de las 4 anteriores, tiempo, calorías estimadas, split promedio, sesiones del plan y hasta 3 logros.
+- **La mensual («Póster»):** con el paisaje y el héroe, los km del mes, el cambio contra el anterior, la equivalencia, tiempo, calorías estimadas, sesiones, lo que mejoró (mejor 2000 m, ritmo de una hora con prueba de FTP y split en los fondos) y los logros del mes.
+- **Honesta:** nada en rojo. Si bajó, el dato de antes va en gris; si no hubo nada antes, «Semana de regreso». Las mejoras solo salen con una marca anterior con qué comparar.
+- Nuevo lugar para las equivalencias: el Canal de Panamá (82 km).
+
 ## 0.95.0 · 2026-11-22
 
 Tus marcas se miden contra ti, no contra otra máquina.
