@@ -339,14 +339,6 @@ function enSesiones(xp, h) {
   const n = Math.max(1, Math.ceil(xp / h.xpPorSesion));
   return `≈ ${n} ${n === 1 ? 'sesión' : 'sesiones'}`;
 }
-// «≈ 5 semanas a tu ritmo», con tus sesiones por semana de las últimas 4 semanas.
-function enSemanas(xp, h) {
-  const porSemana = h.ritmo?.sesSemana;
-  if (!(h.xpPorSesion > 0) || !porSemana || xp <= 0) return '';
-  const n = Math.max(1, Math.ceil(xp / (h.xpPorSesion * porSemana)));
-  return `≈ ${n} ${n === 1 ? 'semana' : 'semanas'} a tu ritmo`;
-}
-
 export async function estadoHeroe() {
   const per = leerPersonaje();
   return { per, h: H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per }) };
