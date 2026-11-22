@@ -65,6 +65,12 @@ export async function abrirApp(page, { reloj = true } = {}) {
 export async function completarBienvenida(page, opciones = {}) {
   const inicio = page.locator('#inicio');
   await expect(inicio).toBeVisible();
+  // Desde la etapa 20 la bienvenida no pide héroe (se elige en el resumen de la primera sesión). Las pruebas que
+  // dan por hecho un héroe lo reciben como antes lo guardaba la bienvenida: la primera clase, sin historial de clases.
+  if (opciones.heroe !== false) {
+    const clase = await page.locator('#inicio-clases [data-clase]').first().getAttribute('data-clase');
+    await page.evaluate((c) => localStorage.setItem('personaje', JSON.stringify({ ...JSON.parse(localStorage.getItem('personaje') || '{}'), clase: c, nombre: '' })), clase);
+  }
   for (let paso = 0; paso < 6; paso++) {
     for (const grupo of await page.locator('#inicio [role=radiogroup]:visible').all()) {
       const opcion = grupo.locator('button, [role=radio]').first();
@@ -77,17 +83,6 @@ export async function completarBienvenida(page, opciones = {}) {
   await page.locator('#inicio-demo').click();
   await expect(inicio).toBeHidden();
   await expect(page.locator('#estado')).toHaveText('Modo demo');
-  // Desde la etapa 20 la bienvenida no pide héroe (se elige en el resumen de la primera sesión). Las pruebas que
-  // dan por hecho un héroe lo crean en la pestaña Héroe, con la primera clase, como antes lo hacía la bienvenida.
-  if (opciones.heroe !== false) await crearHeroe(page);
-}
-
-export async function crearHeroe(page) {
-  await page.locator('#tab-heroe').click();
-  await page.locator('#clases [data-clase]').first().click();
-  await page.locator('#btn-crear-heroe').click();
-  await expect(page.locator('#heroe-crear')).toBeHidden();
-  await page.locator('#tab-entrenar').click();
 }
 
 export const avisos = (page) => page.evaluate(() => window.__avisos);
