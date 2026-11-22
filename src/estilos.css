@@ -1209,18 +1209,36 @@ body:has(#modo-remo:not([hidden])) .toast { top: auto; bottom: calc(96px + env(s
 .prediccion-corta b { font-family: var(--num); font-size: var(--t-xl); color: var(--texto); }
 
 /* ---------- Animaciones 0.23: cada una dice algo; con «reducir animaciones» se apagan (regla global de arriba) ---------- */
-/* 1. Bienvenida: el sol sale del mar y los remos se cruzan */
-.bienvenida { background: radial-gradient(circle at 50% 40%, #16303E, #050B0E 70%); animation-duration: 1.6s; }
+/* 1. Bienvenida (0.94): cae el escudo, se cruzan los remos, el blasón pasa por las cinco clases y se queda azul y ámbar */
+.bienvenida { background: radial-gradient(circle at 50% 40%, #16303E, #050B0E 70%); animation-name: bv-fin; animation-duration: 3s; }
+@keyframes bv-fin { 0%, 85% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
 .bienvenida .sello { width: 132px; height: 132px; filter: drop-shadow(0 12px 32px rgba(233, 162, 59, .3)); }
-.bienvenida .sol { animation: bv-sol .9s cubic-bezier(.2, .8, .2, 1) both; }
-.bienvenida .remo { transform: translate(256px, 262px) scale(.7); animation: .7s .35s cubic-bezier(.2, .8, .2, 1) both; }
-.bienvenida .r1 { animation-name: bv-r1; }
-.bienvenida .r2 { animation-name: bv-r2; }
-.bienvenida .marca { animation: bv-aparece .4s .75s ease-out both; }
-.bienvenida span { animation: bv-aparece .4s .9s ease-out both; }
-@keyframes bv-sol { from { transform: translateY(150px); } to { transform: none; } }
-@keyframes bv-r1 { from { transform: translate(256px, 262px) scale(.7) rotate(0); } to { transform: translate(256px, 262px) scale(.7) rotate(-40deg); } }
-@keyframes bv-r2 { from { transform: translate(256px, 262px) scale(.7) rotate(0); } to { transform: translate(256px, 262px) scale(.7) rotate(40deg); } }
+.bienvenida .escudo, .bienvenida .estrella { transform-box: fill-box; transform-origin: 50% 50%; }
+.bienvenida .escudo { animation: bv-cae .55s cubic-bezier(.3, 1.5, .5, 1) both; }
+.bienvenida .remo { transform: translate(256px, 250px) scale(.62) rotate(var(--g)); animation: .5s .4s cubic-bezier(.3, 1.4, .5, 1) both; }
+.bienvenida .r1 { --g: -40deg; animation-name: bv-r1; }
+.bienvenida .r2 { --g: 40deg; animation-name: bv-r2; }
+.bienvenida .capa { opacity: 0; animation: bv-clase 1s .45s steps(1, end) both; }
+.bienvenida .brillo { transform: translateX(760px); animation: bv-brillo .8s 1.45s ease-in-out both; }
+.bienvenida .estrella { animation: bv-estrella .35s 1.55s cubic-bezier(.3, 1.8, .5, 1) both; }
+.bienvenida .e2 { animation-delay: 1.65s; }
+.bienvenida .e3 { animation-delay: 1.75s; }
+.bienvenida .clases { position: relative; height: 0; width: 100%; top: 26px; }
+.bienvenida svg.marca { width: auto; height: 40px; }
+.bienvenida .clases b { position: absolute; inset: 0; text-align: center; font-family: var(--num); font-weight: 600; font-size: var(--t-s); letter-spacing: .18em; text-transform: uppercase; color: var(--texto-suave); opacity: 0; animation: bv-nombre .2s .45s steps(1, end) forwards; }
+.bienvenida .clases b:nth-child(2) { animation-delay: .65s; }
+.bienvenida .clases b:nth-child(3) { animation-delay: .85s; }
+.bienvenida .clases b:nth-child(4) { animation-delay: 1.05s; }
+.bienvenida .clases b:nth-child(5) { animation-delay: 1.25s; }
+.bienvenida .marca { animation: bv-aparece .45s 1.55s cubic-bezier(.2, .8, .2, 1) both; }
+.bienvenida .lema { animation: bv-aparece .4s 1.7s ease-out both; }
+@keyframes bv-cae { from { transform: scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes bv-r1 { from { transform: translate(256px, 250px) scale(.62) rotate(0); opacity: 0; } 20% { opacity: 1; } to { transform: translate(256px, 250px) scale(.62) rotate(-40deg); } }
+@keyframes bv-r2 { from { transform: translate(256px, 250px) scale(.62) rotate(0); opacity: 0; } 20% { opacity: 1; } to { transform: translate(256px, 250px) scale(.62) rotate(40deg); } }
+@keyframes bv-clase { 0% { fill: #34587A; opacity: 1; } 20% { fill: #20252B; } 40% { fill: #EFE9DC; } 60% { fill: #4B2A6B; } 80% { fill: #0E7C7B; } 100% { opacity: 0; } }
+@keyframes bv-brillo { from { transform: translateX(-260px); } to { transform: translateX(760px); } }
+@keyframes bv-estrella { from { transform: scale(0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes bv-nombre { 0% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes bv-aparece { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* 3. Rango que se siente: el marco de watts late mientras vas fuera de rango */
