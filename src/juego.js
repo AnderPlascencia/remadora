@@ -1,6 +1,8 @@
+// @ts-check
 // Héroe: tu personaje crece con tus entrenamientos reales.
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
+/** @import { Capitulo, Hazana, OpcionesAtributos, OpcionesJuego, OpcionesRivales } from '../tipos/datos' */
 import { VIKINGO_PALADA_DESDE, sendaEn, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad, mejoraPct, SOLO_TU_DESDE } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
@@ -251,6 +253,7 @@ const REL_LIBRE = 0.8; // fantasma.simular rema el Remo libre al 80 % de su FTP
 // n rivales de clases distintas: el primero es siempre el de la semana. Su FTP sale del tuyo y la dificultad;
 // en Remo libre con historial (ritmo = ritmoLibre), de tu ritmo real. Ya no llevan rango: su puesto de tripulación
 // (que sale de su FTP) dice cómo reman.
+/** @param {number} n @param {OpcionesRivales} [op] */
 export function rivalesPara(n, { miClase = null, nivel = 1, ftp = 150, peso = 0, factor = 1, dificultad = 'costa', lunes, semilla = '', ritmo = null } = {}) {
   const semana = rivalDeLaSemana(lunes, miClase);
   const r = azar(`n${lunes}${semilla}`);
@@ -576,11 +579,13 @@ export const CONSTANCIA = {
 // reglas de antes (solo la prueba, en la misma sesión que completa los requisitos), así nadie pierde un capítulo.
 // xp: la nominal (se paga a la mitad desde el 29 de octubre, como todo); xpAntes: la de un jefe vencido con las reglas viejas.
 // El requisito de racha de «Mar abierto»: días seguidos cumpliendo el plan (también los descansos respetados).
+/** @type {[string, number]} */
 export const REQ_MAR_ABIERTO = ['racha', 4];
 export { SAGAS } from './sagas.js';
 export { MAESTRIA_MAX, SESIONES_MAESTRIA, conClaseNueva, claseEn } from './maestria.js';
 export const capituloDe = (i, clase) => capituloDeClase(CAPITULOS, i, clase);
 // La historia y el jefe de cada clase salen de sagas.js (etapa 6): ver capituloDe.
+/** @type {Capitulo[]} */
 export const CAPITULOS = [
   { nombre: 'El despertar', historia: 'Tu bote despierta en un muelle olvidado. Para zarpar, demuestra que puedes remar.', nivel: 10,
     req: [['sesiones', 2], ['km', 3]], jefe: { nombre: 'El Guardián del muelle', tipo: 'p500', texto: 'Completa la «Prueba 500 m»' }, monedas: 100, objeto: 'casco-cuernos-oro', xp: 1200, xpAntes: 150 },
@@ -661,10 +666,11 @@ export const HAZANAS_CLASE = [
   ['samurai', 'El camino de la forma', 'minutos técnicos', 400, (g) => g.tecMin],
   ['polinesio', 'Navegante del océano', 'km', 750, (g) => g.kmTotal],
   ['romano', 'Pax romana', 'semanas del plan cumplidas', 10, (g) => g.semanasPlan],
-].map(([clase, nombre, unidad, meta, valor]) => ({
+].map((/** @type {[string, string, string, number, (g: any) => number]} */ [clase, nombre, unidad, meta, valor]) => ({
   id: hazanaDeClase(clase), clase, nombre, unidad, meta, valor, xp: 1000, monedas: 300, desde: COLECCION_DESDE,
   texto: `${miles(meta)} ${unidad} en total: vela legendaria y mascarón dorado de ${clase === 'samurai' ? 'samurái' : clase}`,
 }));
+/** @type {Hazana[]} */
 export const HAZANAS = [
   { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20 },
   { id: 'mision1', nombre: 'Primera misión', texto: 'Completa tu primera misión', meta: 1, valor: (g) => g.misiones, xp: 50, monedas: 20 },
@@ -686,18 +692,18 @@ export const HAZANAS = [
   { id: 'km100', nombre: 'Cien kilómetros', texto: '100 km en total', meta: 100, valor: (g) => g.kmTotal, xp: 600, monedas: 300, objeto: 'bote-dorado' },
   { id: 'nivel25', nombre: 'Héroe de nivel 25', texto: 'Llega al nivel 25', meta: 25, valor: (g) => g.nivel, monedas: 300, objeto: 'aura-dorada' },
   // Metas largas (etapa 9): escalones para meses y años de remo. XP nominal (desde el 29 de octubre se paga la mitad).
-  ...[[250, 'Doscientos cincuenta kilómetros', 600, 150], [500, 'Quinientos kilómetros', 800, 200], [1000, 'Mil kilómetros', 1200, 300], [2500, 'La vuelta al Mediterráneo', 2000, 500]]
+  ...(/** @type {[number, string, number, number][]} */ ([[250, 'Doscientos cincuenta kilómetros', 600, 150], [500, 'Quinientos kilómetros', 800, 200], [1000, 'Mil kilómetros', 1200, 300], [2500, 'La vuelta al Mediterráneo', 2000, 500]]))
     .map(([meta, nombre, xp, monedas]) => ({ id: `km${meta}`, nombre, texto: `${miles(meta)} km en total`, meta, valor: (g) => g.kmTotal, xp, monedas })),
-  ...[[50, 'Cincuenta entrenamientos', 600, 150], [100, 'Cien entrenamientos', 900, 250], [250, 'Doscientos cincuenta entrenamientos', 1500, 400], [500, 'Quinientos entrenamientos', 2500, 600]]
+  ...(/** @type {[number, string, number, number][]} */ ([[50, 'Cincuenta entrenamientos', 600, 150], [100, 'Cien entrenamientos', 900, 250], [250, 'Doscientos cincuenta entrenamientos', 1500, 400], [500, 'Quinientos entrenamientos', 2500, 600]]))
     .map(([meta, nombre, xp, monedas]) => ({ id: `ses${meta}`, nombre, texto: `Completa ${meta} sesiones`, meta, valor: (g) => g.sesiones, xp, monedas })),
-  ...[[40, 600, 200], [60, 900, 300], [80, 1500, 500]]
+  ...(/** @type {[number, number, number][]} */ ([[40, 600, 200], [60, 900, 300], [80, 1500, 500]]))
     .map(([meta, xp, monedas]) => ({ id: `nivel${meta}`, nombre: `Héroe de nivel ${meta}`, texto: `Llega al nivel ${meta}`, meta, valor: (g) => g.nivel, xp, monedas })),
-  ...[[10, 'Diez semanas al remo', 500, 150], [20, 'Veinte semanas al remo', 900, 300]]
+  ...(/** @type {[number, string, number, number][]} */ ([[10, 'Diez semanas al remo', 500, 150], [20, 'Veinte semanas al remo', 900, 300]]))
     .map(([meta, nombre, xp, monedas]) => ({ id: `semanas${meta}`, nombre, texto: `Rema al menos una vez por semana ${meta} semanas seguidas`, meta, valor: (g) => g.semanasMax, xp, monedas })),
   // Hazañas de clase (etapa 15): dan la vela legendaria y el mascarón dorado de esa clase. Cuenta todo tu historial,
   // pero se cobran desde COLECCION_DESDE (quien ya las cumplía las cobra en su siguiente sesión).
   ...HAZANAS_CLASE,
-  ...[[10, 'Más fuerte', 400, 100], [25, 'Mucho más fuerte', 800, 200], [50, 'Otro remero', 1200, 300]]
+  ...(/** @type {[number, string, number, number][]} */ ([[10, 'Más fuerte', 400, 100], [25, 'Mucho más fuerte', 800, 200], [50, 'Otro remero', 1200, 300]]))
     .map(([meta, nombre, xp, monedas]) => ({ id: `ftp${meta}`, nombre, texto: `Sube tu FTP ${meta} W desde tu primera sesión con FTP`, meta, valor: (g) => g.ftpMejora, xp, monedas })),
 ];
 
@@ -841,6 +847,7 @@ function gananciaSesion(s, m, ctx) {
   if (nueva) return gananciaCarga(s, m, ctx, at, carga);
   // XP base: 1 por cada 10 m remados.
   const base = Math.floor(m.metros / XP_POR_METROS);
+  /** @type {[string, number][]} */
   const detalle = [['Distancia', base]];
   // Bonos ordinarios entre 25 y 150 XP, sin multiplicadores de toda la sesión.
   if (completo) detalle.push(['Entrenamiento completo', 50]);
@@ -862,12 +869,13 @@ function gananciaSesion(s, m, ctx) {
     detalle.push(...xpTalentos(ctx.clase, gr, datosTalento(s, m, ctx)));
   }
   const f = factorXp(s.fecha);
-  const detalleXp = f === 1 ? detalle : detalle.map(([k, v]) => [k, Math.round(v * f)]);
+  const detalleXp = f === 1 ? detalle : detalle.map(([k, v]) => /** @type {[string, number]} */ ([k, Math.round(v * f)]));
   return { xp: detalleXp.reduce((a, [, v]) => a + v, 0), xpBase: detalle.reduce((a, [, v]) => a + v, 0), detalle: detalleXp, atributos: at, carga, datosTal: datosTalento(s, m, ctx) };
 }
 
 // Lo que no cambia con las reglas de carga: fantasmas, racha, Estandarte y talentos (con el factor de XP lenta).
 function bonosDeJuego(s, m, ctx) {
+  /** @type {[string, number][]} */
   const detalle = [];
   if (m.ganados) {
     const vencidos = (s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : [])).filter((r) => r.diferencia > 0).slice(0, 3);
@@ -882,7 +890,7 @@ function bonosDeJuego(s, m, ctx) {
   if (esAtento(s)) detalle.push(['Atento al entrenador', XP_ATENTO]);
   if (ctx.clase) detalle.push(...xpTalentos(ctx.clase, ctx.grados || {}, datosTalento(s, m, ctx)));
   const f = factorXp(s.fecha);
-  return detalle.map(([k, v]) => [k, Math.round(v * f)]);
+  return detalle.map(([k, v]) => /** @type {[string, number]} */ ([k, Math.round(v * f)]));
 }
 
 export const XP_RECORD = 40;
@@ -892,6 +900,7 @@ export const XP_RECORD_TOPE = 120;
 // récord de «Sesión más larga» (ctx.records ya no lo cuenta).
 function gananciaCarga(s, m, ctx, at, carga) {
   const P = XC.XP_PLAN;
+  /** @type {[string, number][]} */
   const detalle = [['Carga del entrenamiento', XC.xpBaseCarga(ctx.cargaAntes || 0, carga, s.fecha)]];
   const delDia = XC.esDelDia(s) && !ctx.planPagado;
   const cumple = delDia ? XC.cumplimientoPlan(s) : null;
@@ -925,6 +934,7 @@ export const fijarMetaSemana = (km) => { metaSemanaJuego = km > 0 ? km : 10; };
 
 // ---------- Estado completo del juego ----------
 // per = { clase, nombre, arbol: { clase: { slot: [fechas] } }, inventario: { id: n }, gastado, equipo }
+/** @param {any[]} sesiones @param {OpcionesJuego} [op] */
 export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), calendario = calendarioPlan, metaSemanaKm = metaSemanaJuego } = {}) {
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
   const cal = calendario || {};
@@ -1399,6 +1409,7 @@ function contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio, sinPulso, rach
 
 // Puntos de atributo de una sesión suelta (con el 15 % del favorito de tu clase), sin decimales recortados.
 // ctx = { racha, mppPromedio, cargaAyer, descansoATiempo } como en estadoJuego.
+/** @param {any} s @param {OpcionesAtributos} [op] */
 export function atributosDeSesion(s, { ftp = 0, clase = null, ctx = {} } = {}) {
   const m = medidas(s, ftp);
   const { atributos } = gananciaSesion(s, m, { racha: ctx.racha || 0, mppPromedio: ctx.mppPromedio || 0, cargaAyer: ctx.cargaAyer || 0, descansoATiempo: !!ctx.descansoATiempo });
@@ -1408,6 +1419,7 @@ export function atributosDeSesion(s, { ftp = 0, clase = null, ctx = {} } = {}) {
 export const factorAtributo = (clave, clase) => (claseDe(clase)?.favorito === clave ? 1.15 : 1);
 
 // Títulos por atributo: «Iniciado de la fuerza» a los 50 puntos… hasta «Prodigio de la fuerza».
+/** @type {[number, string][]} */
 export const TITULOS_ATRIBUTO = [[50, 'Iniciado'], [150, 'Diestro'], [400, 'Experto'], [1000, 'Virtuoso'], [2500, 'Prodigio']];
 const DE_ATRIBUTO = { fuerza: 'de la fuerza', agilidad: 'de la agilidad', resistencia: 'de la resistencia', recuperacion: 'de la recuperación', tecnica: 'de la técnica', voluntad: 'de la voluntad', gasto: 'del gasto' };
 export function tituloAtributo(clave, valor) {

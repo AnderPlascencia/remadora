@@ -14,6 +14,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+          cache: npm
+      - run: npm ci
+      # Tipos sin compilar (etapa 22): db.js, historial.js, respaldo.js y juego.js llevan // @ts-check.
+      - run: npm run tipos
       # Las pruebas unitarias con cobertura: el resumen sale en la página del trabajo y el lcov como artefacto.
       - run: npm run test:cobertura
       - run: node tools/cobertura-resumen.mjs lcov.info

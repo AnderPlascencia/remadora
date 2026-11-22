@@ -9,7 +9,6 @@ import { configurarCantidad, configurarVoz, hablar } from '../voz.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
 import * as Pf from '../perfil.js';
-import * as R from '../respaldo.js';
 import { VERSION } from '../version.js';
 import { olvidarTokens } from '../grafica.js';
 import { $, COLOR_ZONA, ajustes, citaGuardada, color, descargar, escaparHtml, fcRef, ftp, ico, perfil, toast } from '../ui.js';
@@ -349,7 +348,9 @@ export function pintarZonas() {
 const selNivel = $('#sel-nivel-prueba');
 
 // ---------- Respaldo ----------
+// respaldo.js se carga al guardar o restaurar, no al arrancar (etapa 22: deja sitio en la primera carga).
 export async function guardarRespaldo() {
+  const R = await import('../respaldo.js');
   const datos = R.armarRespaldo({
     version: VERSION,
     sesiones: await H.sesiones(),
@@ -380,6 +381,7 @@ export async function guardarRespaldo() {
 async function restaurarRespaldo(archivo) {
   let datos;
   try { datos = JSON.parse(await archivo.text()); } catch { toast('Ese archivo no es un respaldo válido'); return; }
+  const R = await import('../respaldo.js');
   if (!R.esRespaldo(datos)) { toast('Ese archivo no es un respaldo de Rower'); return; }
   const conv = R.convertir(datos);
   if (conv.error) {

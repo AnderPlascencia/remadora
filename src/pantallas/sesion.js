@@ -47,6 +47,11 @@ const banda = new BandaCardiaca();
 export const actual = { watts: 0, spm: 0, split: 0, distancia: null, nivel: null, fc: 0 };
 export const vivo = { watts: [], spm: [] };
 let ultimoDato = 0;
+// Tramos sin datos de la remadora (más de 3 s): [desde, hasta]. Al ponerse al día tras una suspensión, los segundos
+// que caen en un tramo así cuentan sin remar aunque el dato de ahora sea fresco (etapa 22: si no, el primer dato
+// al despertar «remaba» los 10 minutos que el teléfono estuvo dormido).
+const huecos = [];
+const SIN_DATOS_MS = 3000;
 
 // Al arrancar la app (en orden, desde app.js).
 export function arrancarSesion1() {
@@ -87,7 +92,12 @@ export function arrancarSesion1() {
   });
   remadora.addEventListener('datos', (e) => {
     const d = e.detail;
-    ultimoDato = Date.now();
+    const ahora = Date.now();
+    if (ultimoDato && ahora - ultimoDato > SIN_DATOS_MS) {
+      huecos.push([ultimoDato + SIN_DATOS_MS, ahora]);
+      if (huecos.length > 20) huecos.shift();
+    }
+    ultimoDato = ahora;
     datoRecibido();
     if (d.tipo === 'remada') { actual.spm = d.spm; actual.split = d.split; }
     if (d.tipo === 'metricas') {
@@ -344,7 +354,29 @@ async function rachaConHoy() {
 
 // reanudar: la copia de una sesión que quedó a medias (al recuperar, «Seguir»). Se sigue en la misma sesión,
 // con su entrenamiento, su plan y lo ya remado, sin fantasmas (no se guardan en la copia).
+// Dos pestañas (etapa 22): mientras remas, esta pestaña tiene el candado «remadora-sesion». Otra pestaña con la app
+// abierta ve la copia de la sesión en curso pero no la ofrece para guardar ni descartar, ni empieza otra encima.
+const CANDADO = 'remadora-sesion';
+let candado = null; // { soltar, suelto }
+function tomarCandado() {
+  if (candado || !navigator.locks?.request) return;
+  const c = { soltar: null, suelto: false };
+  candado = c;
+  navigator.locks.request(CANDADO, () => (c.suelto ? undefined : new Promise((ok) => { c.soltar = ok; }))).catch(() => {});
+}
+function soltarCandado() {
+  if (!candado) return;
+  candado.suelto = true;
+  candado.soltar?.();
+  candado = null;
+}
+export async function sesionEnOtraPestana() {
+  if (candado || !navigator.locks?.query) return false;
+  try { return (await navigator.locks.query()).held.some((l) => l.name === CANDADO); } catch { return false; }
+}
+
 async function iniciarSesion(reanudar = null) {
+  if (await sesionEnOtraPestana()) { toast('Ya estás remando en otra pestaña de la app: termina ahí o ciérrala'); return; }
   estado.primerDia = false;
   document.querySelectorAll('.consejo').forEach((x) => x.remove());
   estado.entrenamientoActivo = reanudar ? reanudar.ent : await obtenerEnt($('#sel-entrenamiento').value);
@@ -366,6 +398,7 @@ async function iniciarSesion(reanudar = null) {
   // El diagnóstico (latencia, cuadros por segundo, Bluetooth) se cuenta por sesión.
   if (!reanudar) { reiniciarDiagnostico(); remadora.reiniciarEstadisticas(); }
   Hab.anotar('sesionInicio', { reanudada: !!reanudar, ent: estado.entrenamientoActivo?.nombre || null });
+  tomarCandado();
   estado.sesion = {
     inicio: Date.now(),
     tipoPlan: Cap.tipoPlan(estado.entrenamientoActivo),
@@ -490,6 +523,7 @@ async function detenerSesion() {
     if (abierta && abierta.fin == null) abierta.fin = s.fin;
   }
   estado.sesion = null;
+  soltarCandado();
   estado.entrenamientoActivo = null;
   estado.versionCorta = null; // la versión corta vale para una sesión
   actualizarBotones();
@@ -559,6 +593,7 @@ async function leerSesionEnCurso() {
 export async function ofrecerRecuperar() {
   const s = await leerSesionEnCurso();
   if (!s || estado.sesion) return;
+  if (await sesionEnOtraPestana()) { toast('Hay una sesión en curso en otra pestaña de la app'); return; }
   if (!Array.isArray(s.muestras) || s.muestras.length < 10) { await borrarSesionEnCurso(); return; }
   // Ya está guardada (se guardó pero no se alcanzó a borrar la copia): no se ofrece dos veces.
   if (await yaGuardada(s)) { await borrarSesionEnCurso(); return; }
@@ -777,8 +812,14 @@ function tic() {
   const n = segundosDelReloj();
   if (!n) return;
   if (n > 2 && estado.sesion) agregarLog(`reloj: ${n} s sin tic (app en segundo plano); se ponen al día`);
+  const ahora = Date.now();
+  const dato = { watts: actual.watts, spm: actual.spm };
   for (let i = 0; i < n; i++) {
-    if (Date.now() - ultimoDato > 3000) { actual.watts = 0; actual.spm = 0; }
+    // El momento de este segundo: con varios pendientes, los primeros son de antes.
+    const ts = ahora - (n - 1 - i) * 1000;
+    if (ahora - ultimoDato > SIN_DATOS_MS) { actual.watts = 0; actual.spm = 0; }
+    else if (huecos.some(([a, b]) => ts > a && ts < b)) { actual.watts = 0; actual.spm = 0; }
+    else Object.assign(actual, dato);
     estado.tVivo += 1;
     for (const [k, v] of [['watts', actual.watts], ['spm', actual.spm]]) {
       vivo[k].push([estado.tVivo, v]);
