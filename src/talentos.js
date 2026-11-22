@@ -22,7 +22,7 @@ export const CLASES_TALENTO = {
   // media habitual), que es lo que mide Fuerza, en vez de contar paladas. gP y textoP: lo de antes, para las sesiones
   // anteriores a VIKINGO_PALADA_DESDE (que siguen contando paladas, con g0 antes de la etapa 12).
   vikingo: {
-    cualidad: 'Fuerza', bote: 'drakkar', lema: 'Cada palada es un hachazo: sus mejoras premian la palada larga y potente.',
+    cualidad: 'Fuerza', bote: 'drakkar', lema: 'Premia cada palada más larga que tu media.',
     talentos: {
       m1: { nombre: 'Golpe de hacha', tipo: 'carrera', g: [100, 80, 60], texto: (g) => `Cada ${g} paladas recibes 1 palada extra.` },
       m2: { nombre: 'Brazos de hacha', tipo: 'xp', g: [3, 6, 9], gP: [3, 5, 7], g0: [1, 2, 3], texto: (g) => `+${g} XP por cada kilómetro si tu palada media es al menos tan larga como la habitual.` },
@@ -32,7 +32,7 @@ export const CLASES_TALENTO = {
     },
   },
   pirata: {
-    cualidad: 'Hurto', bote: 'balandra', lema: 'Les roba metros y botín a los fantasmas.',
+    cualidad: 'Hurto', bote: 'balandra', lema: 'Premia robar metros y botín a los fantasmas.',
     talentos: {
       m1: { nombre: 'Bolsa ligera', tipo: 'xp', g: [8, 16, 24], g0: [10, 20, 30], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3).` },
       m2: { nombre: 'Robar el viento', tipo: 'carrera', g: [30, 25, 20], texto: (g) => `Mientras vas detrás de un fantasma, cada ${g} paladas recibes 1 palada extra.` },
@@ -42,7 +42,7 @@ export const CLASES_TALENTO = {
     },
   },
   samurai: {
-    cualidad: 'Técnica', bote: 'kobaya', lema: 'La forma perfecta: remar sin interrupciones y rematar con precisión.',
+    cualidad: 'Técnica', bote: 'kobaya', lema: 'Premia remar sin pausas y cumplir tu plan.',
     talentos: {
       m1: { nombre: 'Corte limpio', tipo: 'carrera', g: [40, 35, 30], texto: (g) => `Cada ${g} paladas seguidas sin detenerte recibes 1 palada extra.` },
       m2: { nombre: 'Kata', tipo: 'xp', g: [25, 50, 75], g0: [15, 30, 45], texto: (g) => `+${g} XP si remas toda la sesión sin pausas (10 min o más).` },
@@ -52,7 +52,7 @@ export const CLASES_TALENTO = {
     },
   },
   polinesio: {
-    cualidad: 'Resistencia', bote: 'canoa', lema: 'El océano entero es su camino: sus mejoras crecen con los metros y los minutos.',
+    cualidad: 'Resistencia', bote: 'canoa', lema: 'Cuanto más larga la sesión, más premio.',
     talentos: {
       m1: { nombre: 'Estrella guía', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP en sesiones de 30 min o más.` },
       m2: { nombre: 'Lectura del oleaje', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `Cada 250 m avanzas ${g} m más.` },
@@ -62,7 +62,7 @@ export const CLASES_TALENTO = {
     },
   },
   romano: {
-    cualidad: 'Constancia', bote: 'trirreme', lema: 'No se rinde nunca: sus mejoras premian volver cada día y remar sin parar.',
+    cualidad: 'Constancia', bote: 'trirreme', lema: 'Premia volver cada día y completar tu semana.',
     talentos: {
       m1: { nombre: 'Semana de la flota', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP desde tu tercera sesión de la semana.` },
       m2: { nombre: 'Hortator', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `Cada minuto remado sin detenerte avanzas ${g} m más.` },
