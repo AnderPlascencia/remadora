@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.96.1 · 2026-11-22
+
+El vikingo sigue la historia de Ragnar Lothbrok.
+
+- Sus 9 rangos van de granjero con hoz y trenza a saqueador, explorador tatuado, jefe, conde y rey con manto de oso negro.
+
 ## 0.96.0 · 2026-11-22
 
 Tarjetas para compartir tu semana y tu mes.
