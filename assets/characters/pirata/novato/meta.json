@@ -7,22 +7,22 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 0.6994
+      "escala": 1.0854
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "pirata_novato_source.jpg",
-    "generador": "Gemini (imagen aportada por Ander)",
-    "prompt": "sin indicar",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos",
+    "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#pirata",
     "origen": {
-      "ancho": 896,
-      "alto": 1200,
+      "ancho": 576,
+      "alto": 768,
       "caja": {
-        "x0": 144,
+        "x0": 113,
         "y0": 40,
-        "x1": 835,
-        "y1": 1144
+        "x1": 413,
+        "y1": 751
       }
     },
     "licencia": "según los términos del generador"

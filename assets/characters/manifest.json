@@ -826,7 +826,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 332148,
+      "bytes": 290915,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -841,7 +841,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6994
+          "escala": 1.0854
         }
       }
     },
@@ -858,7 +858,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 65265,
+      "bytes": 77751,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -870,7 +870,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6994
+          "escala": 1.0854
         }
       }
     },
@@ -884,7 +884,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 500628,
+      "bytes": 88550,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -899,7 +899,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6994
+          "escala": 1.0854
         }
       }
     },
@@ -916,7 +916,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 356751,
+      "bytes": 310845,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -931,7 +931,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0793
         }
       }
     },
@@ -948,7 +948,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 66953,
+      "bytes": 79464,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -960,7 +960,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0793
         }
       }
     },
@@ -974,7 +974,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 520856,
+      "bytes": 98492,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -989,7 +989,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0793
         }
       }
     },
@@ -1006,7 +1006,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 364929,
+      "bytes": 334989,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1021,7 +1021,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0915
         }
       }
     },
@@ -1038,7 +1038,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 69401,
+      "bytes": 80146,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1050,7 +1050,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0915
         }
       }
     },
@@ -1064,7 +1064,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 535222,
+      "bytes": 104136,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1079,7 +1079,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0915
         }
       }
     },
@@ -1096,7 +1096,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 391422,
+      "bytes": 343403,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1111,7 +1111,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0931
         }
       }
     },
@@ -1128,7 +1128,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 73770,
+      "bytes": 80215,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1140,7 +1140,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0931
         }
       }
     },
@@ -1154,7 +1154,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 502019,
+      "bytes": 105855,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1169,7 +1169,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6987
+          "escala": 1.0931
         }
       }
     },
@@ -1186,7 +1186,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 436475,
+      "bytes": 343150,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1201,7 +1201,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7019
+          "escala": 1.0854
         }
       }
     },
@@ -1218,7 +1218,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 92440,
+      "bytes": 79523,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1230,7 +1230,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7019
+          "escala": 1.0854
         }
       }
     },
@@ -1244,7 +1244,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 596591,
+      "bytes": 105959,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1259,7 +1259,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7019
+          "escala": 1.0854
         }
       }
     },
@@ -1276,7 +1276,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 460745,
+      "bytes": 360069,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1291,7 +1291,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7019
+          "escala": 1.0824
         }
       }
     },
@@ -1308,7 +1308,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 109210,
+      "bytes": 80569,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1320,7 +1320,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7019
+          "escala": 1.0824
         }
       }
     },
@@ -1334,7 +1334,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 612204,
+      "bytes": 108425,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1349,7 +1349,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7019
+          "escala": 1.0824
         }
       }
     },
@@ -1366,7 +1366,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 479264,
+      "bytes": 364872,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1381,7 +1381,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6994
+          "escala": 1.0824
         }
       }
     },
@@ -1398,7 +1398,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 103156,
+      "bytes": 79467,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1410,7 +1410,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6994
+          "escala": 1.0824
         }
       }
     },
@@ -1424,7 +1424,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 640221,
+      "bytes": 109207,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1439,7 +1439,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6994
+          "escala": 1.0824
         }
       }
     },
@@ -1456,7 +1456,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 575695,
+      "bytes": 380360,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1471,7 +1471,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7013
+          "escala": 1.09
         }
       }
     },
@@ -1488,7 +1488,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 108454,
+      "bytes": 85530,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1500,7 +1500,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7013
+          "escala": 1.09
         }
       }
     },
@@ -1514,7 +1514,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 673921,
+      "bytes": 110441,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1529,7 +1529,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.7013
+          "escala": 1.09
         }
       }
     },
@@ -1546,7 +1546,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 821366,
+      "bytes": 382536,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1561,7 +1561,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6888
+          "escala": 1.0704
         }
       }
     },
@@ -1578,7 +1578,7 @@
       },
       "formato": "png",
       "transparencia": true,
-      "bytes": 119919,
+      "bytes": 70487,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1590,7 +1590,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6888
+          "escala": 1.0704
         }
       }
     },
@@ -1604,7 +1604,7 @@
       "dimensiones": null,
       "formato": "jpg",
       "transparencia": true,
-      "bytes": 850188,
+      "bytes": 115804,
       "fotogramas": 1,
       "animaciones": [],
       "duracionFotogramaMs": null,
@@ -1619,7 +1619,7 @@
         "motor": "Chromium canvas (croma, recorte, escala)",
         "parametros": {
           "croma": true,
-          "escala": 0.6888
+          "escala": 1.0704
         }
       }
     },

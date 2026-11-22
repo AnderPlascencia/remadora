@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.91.1 · 2026-11-21
+
+El pirata, rehecho con la misma progresión que el resto.
+
+- Novato nuevo al estilo de los demás héroes (grumete descalzo con pañuelo rojo y cabilla de madera) y rangos 2 a 9 generados a partir de él, para que conserve la cara hasta el señor pirata con casaca granate, charreteras y pluma.
+- Generadas con Open Generative AI en modo local (stable-diffusion.cpp con Z-Image Turbo) e importadas con `tools/ingest-character.mjs`.
+
 ## 0.91.0 · 2026-11-21
 
 Un solo motor para tus tiempos estimados, y tu meta a la vista.
