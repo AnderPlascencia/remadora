@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.95.0 · 2026-11-22
+
+Tus marcas se miden contra ti, no contra otra máquina.
+
+- **⚖ Sin tiempos de Concept2.** Los watts de la RW200 salen de su propia calibración, así que un «2000 m en menos de 8:00» no significa lo mismo que en un Concept2. Desde el 24 de noviembre de 2026, el aura de hielo se gana con el logro «Más rápido que al empezar»: bajar un 5 % tu primer 2000 m (200 monedas, como antes).
+- **Insignias nuevas:** «Más rápido que al empezar» (3 % menos que tu primer 2000 m) y «Otro remero en 2000 m» (6 %).
+- **Lo ganado se queda.** «Bajo 8 minutos» y «Bajo 7 minutos» se retiran, pero quien ya las tiene por un 2000 m de antes del corte las conserva, con su aura. Si no las tienes, ya no salen en la lista.
+
 ## 0.94.0 · 2026-11-22
 
 Logo nuevo: el escudo de las clases.

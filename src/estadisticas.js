@@ -413,9 +413,17 @@ export const INSIGNIAS = [
   { clave: 'racha7', nombre: 'Semana perfecta', detalle: 'Completa una semana entera de tu plan' },
   { clave: 'fantasma', nombre: 'Cazafantasmas', detalle: 'Ganarle a un fantasma' },
   { clave: 'avanzado', nombre: 'Rival avanzado', detalle: 'Ganarle al fantasma avanzado' },
-  { clave: 'sub8', nombre: 'Bajo 8 minutos', detalle: '2000 m en menos de 8:00' },
-  { clave: 'sub7', nombre: 'Bajo 7 minutos', detalle: '2000 m en menos de 7:00' },
+  { clave: 'mejor3', nombre: 'Más rápido que al empezar', detalle: 'Baja un 3 % tu primer 2000 m' },
+  { clave: 'mejor6', nombre: 'Otro remero en 2000 m', detalle: 'Baja un 6 % tu primer 2000 m' },
+  // Retiradas (etapa 18): eran tiempos fijos de Concept2 y la RW200 mide otros watts. Solo las gana una sesión de antes
+  // de SOLO_TU_DESDE y solo se ven si ya las tienes.
+  { clave: 'sub8', nombre: 'Bajo 8 minutos', detalle: '2000 m en menos de 8:00', retirada: true },
+  { clave: 'sub7', nombre: 'Bajo 7 minutos', detalle: '2000 m en menos de 7:00', retirada: true },
 ];
+// Desde este día las marcas se miden contra ti mismo (tu primer 2000 m), no contra tiempos de Concept2.
+export const SOLO_TU_DESDE = '2026-11-24';
+// Cuánto bajaste tu primer 2000 m, en % (0 si aún no hay dos). primero: tu primer 2000 m; mejor: el mejor hasta hoy.
+export const mejoraPct = (primero, mejor) => (primero > 0 && mejor > 0 ? Math.max(0, ((primero - mejor) / primero) * 100) : 0);
 
 // «Semana perfecta» era 7 días seguidos remando (empujaba a no descansar); desde UNA_RACHA_DESDE es completar una
 // semana entera del plan (primeraSemanaPlan: la fecha en que se cobró la primera, de estadoJuego().racha). Las que
@@ -426,6 +434,8 @@ export function insignias(sesiones, { primeraSemanaPlan = null } = {}) {
   const ganadas = {};
   let total = 0;
   const dias = new Set();
+  let primer2k = null;
+  let mejor2k = null;
   const marca = (clave, s) => { if (!ganadas[clave]) ganadas[clave] = s.fecha; };
   orden.forEach((s, i) => {
     total += s.distancia || 0;
@@ -440,15 +450,22 @@ export function insignias(sesiones, { primeraSemanaPlan = null } = {}) {
     if (rivales.some((r) => r.diferencia > 0)) marca('fantasma', s);
     if (rivales.some((r) => r.nivel === 'avanzado' && r.diferencia > 0)) marca('avanzado', s);
     const t2k = s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null;
-    if (t2k && t2k < 480) marca('sub8', s);
-    if (t2k && t2k < 420) marca('sub7', s);
+    const antes = claveDia(s.fecha) < SOLO_TU_DESDE;
+    if (antes && t2k && t2k < 480) marca('sub8', s);
+    if (antes && t2k && t2k < 420) marca('sub7', s);
+    if (t2k) {
+      primer2k ??= t2k;
+      mejor2k = Math.min(mejor2k ?? t2k, t2k);
+      if (!antes && mejoraPct(primer2k, mejor2k) >= 3) marca('mejor3', s);
+      if (!antes && mejoraPct(primer2k, mejor2k) >= 6) marca('mejor6', s);
+    }
     dias.add(claveDia(s.fecha));
     let n = 0;
     for (let d = new Date(`${claveDia(s.fecha)}T12:00`); dias.has(claveDia(d.getTime())); d = new Date(d.getTime() - 864e5)) n++;
     if (n >= 7 && claveDia(s.fecha) < UNA_RACHA_DESDE) marca('racha7', s);
   });
   if (primeraSemanaPlan != null && !ganadas.racha7) ganadas.racha7 = primeraSemanaPlan;
-  return INSIGNIAS.map((x) => ({ ...x, ganada: !!ganadas[x.clave], fecha: ganadas[x.clave] ?? null }));
+  return INSIGNIAS.filter((x) => !x.retirada || ganadas[x.clave]).map(({ retirada, ...x }) => ({ ...x, ganada: !!ganadas[x.clave], fecha: ganadas[x.clave] ?? null }));
 }
 
 // Recomendación del día según la frescura (condición − fatiga).

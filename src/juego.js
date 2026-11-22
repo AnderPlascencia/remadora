@@ -2,7 +2,7 @@
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
 import { VIKINGO_PALADA_DESDE, sendaEn, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
-import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad } from './estadisticas.js';
+import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad, mejoraPct, SOLO_TU_DESDE } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
 import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
@@ -675,7 +675,10 @@ export const HAZANAS = [
   { id: 'ses25', nombre: 'Veinticinco entrenamientos', texto: 'Completa 25 sesiones', meta: 25, valor: (g) => g.sesiones, xp: 500, monedas: 150 },
   // Antes pedía 14 días seguidos, imposible remando de 1 a 4 veces por semana; quien ya los tenía la conserva.
   { id: 'racha14', nombre: 'Dos meses sin fallar', texto: 'Rema al menos una vez por semana 8 semanas seguidas', meta: 8, valor: (g) => Math.max(g.semanasMax, g.rachaMax >= 14 ? 8 : 0), monedas: 250, objeto: 'capa-leyenda' },
-  { id: 'sub8', nombre: 'Bajo 8 minutos', texto: '2000 m en menos de 8:00', meta: 1, valor: (g) => (g.mejor2000 && g.mejor2000 < 480 ? 1 : 0), monedas: 200, objeto: 'aura-hielo' },
+  // ⚖ Etapa 18: «Bajo 8 minutos» era un tiempo de Concept2 y la RW200 mide otros watts. Desde SOLO_TU_DESDE el aura de
+  // hielo se gana bajando un 5 % tu primer 2000 m; «Bajo 8 minutos» solo lo gana un 2000 m de antes, y quien lo tiene lo conserva.
+  { id: 'sub8', nombre: 'Bajo 8 minutos', texto: '2000 m en menos de 8:00', meta: 1, valor: (g) => (g.mejor2000Antes && g.mejor2000Antes < 480 ? 1 : 0), monedas: 200, objeto: 'aura-hielo', oculto: true },
+  { id: 'mejora2k', nombre: 'Más rápido que al empezar', texto: 'Baja un 5 % tu primer 2000 m', meta: 5, valor: (g) => mejoraPct(g.primer2000, g.mejor2000), monedas: 200, objeto: 'aura-hielo', desde: SOLO_TU_DESDE },
   // Retirado en la etapa 9 (repetía el nombre del rango): solo lo gana una sesión con las reglas de antes, y quien lo tiene lo conserva.
   { id: 'nivel10', nombre: 'Nivel 10', texto: 'Llega al nivel 10', meta: 10, valor: (g) => g.nivelAntiguo, xp: 250, monedas: 100, oculto: true },
   // Desde v0.44.1 cada clase cuenta solo en una carrera distinta (antes una carrera de 3 rivales daba 3 clases); quien ya lo tenía lo conserva.
@@ -1053,7 +1056,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   };
   let mppSuma = 0;
   let mppN = 0;
-  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0 };
+  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, mejor2000Antes: null, primer2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0 };
   // Inicio del día y del lunes (ms) para ajustar las misiones a tu ritmo de las semanas anteriores.
   const inicioDia = (ms) => new Date(ms).setHours(0, 0, 0, 0);
   const inicioLunes = (lunes) => new Date(`${lunes}T00:00`).getTime();
@@ -1247,7 +1250,11 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     if (m.clasesVencidas.length) g.carrerasGanadas.push(m.clasesVencidas);
     g.minMax = Math.max(g.minMax, m.min);
     g.rachaMax = Math.max(g.rachaMax, racha);
-    if (m.t2000) g.mejor2000 = g.mejor2000 == null ? m.t2000 : Math.min(g.mejor2000, m.t2000);
+    if (m.t2000) {
+      g.primer2000 ??= m.t2000;
+      g.mejor2000 = g.mejor2000 == null ? m.t2000 : Math.min(g.mejor2000, m.t2000);
+      if (hoy < SOLO_TU_DESDE) g.mejor2000Antes = g.mejor2000;
+    }
     if (s.ftp > 0) {
       g.ftpInicial ??= s.ftp;
       g.ftpMejora = Math.max(g.ftpMejora, s.ftp - g.ftpInicial);
