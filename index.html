@@ -476,6 +476,7 @@
         <button data-periodo="mes" aria-pressed="false">Meses</button>
       </div>
       <canvas id="grafica-periodos" class="grafica baja" role="img" aria-label="Kilómetros por periodo"></canvas>
+      <button type="button" id="btn-compartir-periodo" class="boton"><svg class="ico" aria-hidden="true"><use href="#i-descarga"/></svg><span>Compartir mi semana</span></button>
 
       <details class="seccion solo-avanzado" data-seccion="forma">
       <summary><h2>Forma</h2><span id="forma-resumen" class="seccion-resumen"></span></summary>
@@ -955,6 +956,10 @@
     <div class="fin-caja compartir-caja">
       <h3 id="compartir-titulo">Compartir imagen</h3>
       <div class="compartir-vista"><img id="compartir-img" alt="Vista previa de la imagen de tu sesión"></div>
+      <div id="compartir-cual" class="chips" role="radiogroup" aria-label="Periodo" hidden>
+        <button type="button" class="chip" role="radio" data-cual="actual" aria-checked="false">Esta semana</button>
+        <button type="button" class="chip" role="radio" data-cual="anterior" aria-checked="false">La semana pasada</button>
+      </div>
       <div id="compartir-formatos" class="chips" role="radiogroup" aria-label="Formato">
         <button type="button" class="chip" role="radio" data-formato="9:16" aria-checked="false">Historia 9:16</button>
         <button type="button" class="chip" role="radio" data-formato="4:5" aria-checked="true">Vertical 4:5</button>

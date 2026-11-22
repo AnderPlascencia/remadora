@@ -402,3 +402,380 @@ export async function tarjetaSesion(contenido, { formato = '4:5', fecha = '', pu
   ctx.textAlign = 'left';
   return new Promise((ok) => c.toBlob(ok, 'image/png'));
 }
+
+// ---------- Tarjetas de la semana y del mes (etapa 31) ----------
+// Semana: «Tablero» (sin paisaje: los km, la gráfica de 8 semanas y 4 fichas). Mes: «Póster» (paisaje y héroe,
+// como la de la sesión, con lo que mejoró). contenido = contenidoPeriodo() de tarjeta-periodo.js.
+
+// Iconos de los logros: trazos simples que se leen a 20 px.
+const ICONOS = {
+  sube: (c, x, y, r) => { c.beginPath(); c.moveTo(x - r, y + r * 0.55); c.lineTo(x, y - r * 0.75); c.lineTo(x + r, y + r * 0.55); c.closePath(); c.fill(); },
+  baja: (c, x, y, r) => { c.beginPath(); c.moveTo(x - r, y - r * 0.55); c.lineTo(x, y + r * 0.75); c.lineTo(x + r, y - r * 0.55); c.closePath(); c.fill(); },
+  estrella: (c, x, y, r) => { c.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 - Math.PI / 2; const k = i % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * k, y + Math.sin(a) * k); } c.closePath(); c.fill(); },
+  llama: (c, x, y, r) => { c.beginPath(); c.moveTo(x, y - r * 1.15); c.bezierCurveTo(x + r * 1.2, y - r * 0.2, x + r * 0.95, y + r, x, y + r); c.bezierCurveTo(x - r * 0.95, y + r, x - r * 1.1, y + r * 0.1, x - r * 0.35, y - r * 0.45); c.bezierCurveTo(x - r * 0.25, y - r * 0.05, x - r * 0.05, y, x, y - r * 1.15); c.fill(); },
+  escudo: (c, x, y, r) => { c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + r * 0.9, y - r * 0.6); c.quadraticCurveTo(x + r * 0.85, y + r * 0.6, x, y + r * 1.05); c.quadraticCurveTo(x - r * 0.85, y + r * 0.6, x - r * 0.9, y - r * 0.6); c.closePath(); c.fill(); },
+  trofeo: (c, x, y, r) => { c.beginPath(); c.moveTo(x - r * 0.8, y - r); c.lineTo(x + r * 0.8, y - r); c.quadraticCurveTo(x + r * 0.8, y + r * 0.15, x + r * 0.15, y + r * 0.3); c.lineTo(x + r * 0.15, y + r * 0.65); c.lineTo(x + r * 0.55, y + r * 0.65); c.lineTo(x + r * 0.55, y + r); c.lineTo(x - r * 0.55, y + r); c.lineTo(x - r * 0.55, y + r * 0.65); c.lineTo(x - r * 0.15, y + r * 0.65); c.lineTo(x - r * 0.15, y + r * 0.3); c.quadraticCurveTo(x - r * 0.8, y + r * 0.15, x - r * 0.8, y - r); c.fill(); },
+  check: (c, x, y, r) => { c.save(); c.strokeStyle = c.fillStyle; c.lineWidth = r * 0.42; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(x - r * 0.8, y); c.lineTo(x - r * 0.2, y + r * 0.6); c.lineTo(x + r * 0.85, y - r * 0.6); c.stroke(); c.restore(); },
+};
+
+// Chips de logros en filas: círculo de color (latón esfuerzo, turquesa juego) con su icono y el texto.
+function chipsLogros(ctx, x, y, ancho, logros, filas = 2, h = 48) {
+  let cx = x;
+  let cy = y;
+  let fila = 1;
+  for (const l of logros) {
+    ctx.font = TXT(600)(22);
+    const w = Math.min(ancho, ctx.measureText(l.texto).width + h + 30);
+    if (cx > x && cx + w > x + ancho) { if (fila >= filas) continue; cx = x; cy += h + 12; fila++; }
+    ctx.fillStyle = 'rgba(237,241,242,0.06)';
+    ctx.strokeStyle = 'rgba(237,241,242,0.14)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, w, h, h / 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = l.juego ? T.xp : T.lat;
+    ctx.beginPath();
+    ctx.arc(cx + h / 2, cy + h / 2, h / 2 - 7, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = T.fondo;
+    (ICONOS[l.icono] || ICONOS.estrella)(ctx, cx + h / 2, cy + h / 2, h * 0.2);
+    ctx.fillStyle = T.texto;
+    ctx.textBaseline = 'middle';
+    cabe(ctx, l.texto, cx + h + 6, cy + h / 2 + 1, w - h - 24, TXT(600), 22, 16);
+    ctx.textBaseline = 'alphabetic';
+    cx += w + 12;
+  }
+  return cy + h;
+}
+
+// Los km grandes en latón con su unidad. Devuelve el ancho.
+function kmGrandes(ctx, x, base, texto, tam, max) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = T.lat;
+  const w = cabe(ctx, texto, x, base, max, NUM(700), tam, tam * 0.6);
+  const t = parseInt(ctx.font.match(/(\d+)px/)[1], 10);
+  ctx.font = NUM(700)(t * 0.42);
+  ctx.fillText('km', x + w + 12, base);
+  const w2 = ctx.measureText('km').width;
+  ctx.restore();
+  return w + 12 + w2;
+}
+
+// El cambio contra el periodo anterior: pastilla verde si subió y el dato de antes en gris. Devuelve el alto usado.
+function cambioPeriodo(ctx, C, x, y, ancho, h = 48) {
+  let dx = 0;
+  if (C.cambio) dx = pastilla(ctx, x, y, h, C.cambio, NUM(700)(h * 0.78), T.ok, T.fondo, 16) + 22;
+  ctx.fillStyle = T.suave;
+  if (C.antes) cabe(ctx, C.antes, x + dx, y + h / 2 + 10, ancho - dx, TXT(600), 26, 18);
+}
+
+function barrasPeriodo(ctx, x, y, w, h, barras, prom, fondoHalo) {
+  const n = barras.length;
+  const gap = n > 6 ? 18 : 28;
+  const bw = (w - gap * (n - 1)) / n;
+  const max = Math.max(1, ...barras.map((b) => b[1]), prom || 0) * 1.05;
+  if (prom) {
+    const py = y + h - (prom / max) * h;
+    ctx.setLineDash([10, 8]);
+    ctx.strokeStyle = T.tenue;
+    ctx.lineWidth = 2;
+    linea(ctx, x, py, x + w, py);
+    ctx.setLineDash([]);
+  }
+  barras.forEach(([e, v], i) => {
+    const bx = x + i * (bw + gap);
+    const ultima = i === n - 1;
+    const bh = v > 0 ? Math.max(10, (v / max) * h) : 6;
+    ctx.fillStyle = v > 0 ? (ultima ? T.lat : T.barra) : T.linea;
+    ctx.beginPath();
+    ctx.roundRect(bx, y + h - bh, bw, bh, [8, 8, 2, 2]);
+    ctx.fill();
+    ctx.textAlign = 'center';
+    if (v > 0) {
+      const tv = v.toLocaleString('es-MX', { minimumFractionDigits: v >= 100 ? 0 : 1, maximumFractionDigits: v >= 100 ? 0 : 1 });
+      ctx.font = NUM(700)(28);
+      ctx.save();
+      ctx.strokeStyle = fondoHalo;
+      ctx.lineWidth = 10;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(tv, bx + bw / 2, y + h - bh - 10);
+      ctx.restore();
+      ctx.fillStyle = ultima ? T.lat : T.suave;
+      ctx.fillText(tv, bx + bw / 2, y + h - bh - 10);
+    }
+    ctx.fillStyle = ultima ? T.texto : T.tenue;
+    cabe(ctx, e, bx + bw / 2, y + h + 32, bw + gap - 4, TXT(600), 20, 14);
+    ctx.textAlign = 'left';
+  });
+}
+
+function piePeriodo(ctx, W, y) {
+  ctx.strokeStyle = T.linea;
+  ctx.lineWidth = 2;
+  linea(ctx, M, y - 40, W - M, y - 40);
+  ctx.fillStyle = T.tenue;
+  ctx.font = TXT(500)(22);
+  ctx.fillText('Remado en Rower', M, y);
+  ctx.textAlign = 'right';
+  ctx.fillText('NordicTrack RW200', W - M, y);
+  ctx.textAlign = 'left';
+}
+
+// Una ficha: valor grande, unidad, rótulo y, si mejoró, el cambio en verde arriba a la derecha.
+function ficha(ctx, x, y, w, h, [v, u, e, d]) {
+  ctx.fillStyle = '#121D24';
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, 24);
+  ctx.fill();
+  let dw = 0;
+  if (d) {
+    ctx.font = NUM(700)(30);
+    dw = ctx.measureText(d).width + 40;
+    ctx.fillStyle = 'rgba(34,197,94,0.16)';
+    ctx.beginPath();
+    ctx.roundRect(x + w - dw - 20, y + 22, dw, 42, 21);
+    ctx.fill();
+    ctx.fillStyle = T.okT;
+    ICONOS[d.startsWith('−') ? 'baja' : 'sube'](ctx, x + w - dw - 2, y + 43, 8);
+    ctx.fillText(d, x + w - dw + 12, y + 54);
+  }
+  ctx.fillStyle = T.texto;
+  const vw = cabe(ctx, v, x + 28, y + h * 0.53, w - 56 - dw - (u ? 70 : 0), NUM(700), 56, 36);
+  if (u) { ctx.fillStyle = T.suave; ctx.font = NUM(600)(28); ctx.fillText(u, x + 28 + vw + 8, y + h * 0.53); }
+  ctx.fillStyle = T.suave;
+  cabe(ctx, e, x + 28, y + h * 0.53 + 36, w - 56, TXT(600), 22, 16);
+}
+
+async function lienzo(W, H) {
+  try { await Promise.all([document.fonts?.load('700 100px "Barlow Condensed"'), document.fonts?.load('600 40px "Barlow Condensed"')]); } catch { /* sin la letra, system-ui */ }
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = T.fondo;
+  ctx.fillRect(0, 0, W, H);
+  return { c, ctx };
+}
+
+// Semana: «Tablero».
+async function tarjetaSemana(C, fmt) {
+  const [W, H] = FORMATOS[fmt];
+  const alto = fmt === '9:16';
+  const cuadrado = fmt === '1:1';
+  const top = alto ? 228 : cuadrado ? 52 : 56;
+  const pieY = alto ? 1690 : cuadrado ? 1032 : 1294;
+  const { c, ctx } = await lienzo(W, H);
+  const [marca, retrato] = await Promise.all([cargarImagen('assets/marca/rower-marca.svg'), C.heroe?.retrato ? cargarImagen(C.heroe.retrato) : null]);
+  ctx.fillStyle = degradado(ctx, top - 56, top + 470, [[0, 'rgba(233,162,59,0.16)'], [1, 'rgba(233,162,59,0)']]);
+  ctx.fillRect(0, 0, W, top + 470);
+  if (marca) ctx.drawImage(marca, M, top, (marca.width / marca.height) * 46, 46);
+  ctx.fillStyle = T.texto;
+  cabe(ctx, C.rango, M, top + 86, W - 2 * M - 140, TXT(600), 24, 18);
+  if (retrato) {
+    const rx = W - M - 104;
+    const ry = top - 6;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(rx + 52, ry + 52, 52, 0, 7);
+    ctx.clip();
+    ctx.drawImage(retrato, rx, ry, 104, 104);
+    ctx.restore();
+    ctx.strokeStyle = T.lat;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(rx + 52, ry + 52, 52, 0, 7);
+    ctx.stroke();
+    if (C.heroe.nivel) {
+      const t = `Nv ${C.heroe.nivel}`;
+      ctx.font = NUM(700)(24);
+      pastilla(ctx, rx + 52 - (ctx.measureText(t).width + 24) / 2, ry + 88, 32, t, NUM(700)(24), T.lat, T.fondo, 12);
+    }
+  }
+  let y = top + 176;
+  ctx.fillStyle = T.lat;
+  ctx.font = TXT(800)(22);
+  ctx.fillText(C.kicker || 'RESUMEN DE LA SEMANA', M, y);
+  y += 178;
+  const kw = kmGrandes(ctx, M, y, C.km, 190, 520);
+  // A la derecha de los km: el cambio y, debajo, el dato de antes y el plan.
+  const xd = M + kw + 30;
+  const ad = W - M - xd;
+  if (C.cambio) pastilla(ctx, xd, y - 110, 52, C.cambio, NUM(700)(40), T.ok, T.fondo, 16);
+  ctx.fillStyle = T.suave;
+  if (C.antes) cabe(ctx, C.antes, xd, y - 18, ad, TXT(600), 24, 16);
+  ctx.fillStyle = T.tenue;
+  cabe(ctx, C.estado, xd, y + 14, ad, TXT(500), 22, 16);
+  if (C.equivalencia) { y += 60; ctx.fillStyle = T.suave; cabe(ctx, C.equivalencia.texto, M, y, W - 2 * M, TXT(600), 28, 20); }
+
+  // Gráfica de las últimas 8 semanas, con el promedio de las 4 anteriores.
+  const hy = y + (alto ? 64 : 50);
+  const hh = alto ? 420 : cuadrado ? 240 : 300;
+  ctx.fillStyle = '#121D24';
+  ctx.beginPath();
+  ctx.roundRect(M - 24, hy, W - 2 * M + 48, hh, 28);
+  ctx.fill();
+  ctx.fillStyle = T.suave;
+  ctx.font = TXT(600)(24);
+  ctx.fillText(C.historia.titulo, M, hy + 48);
+  if (C.historia.promTexto) { ctx.fillStyle = T.tenue; ctx.textAlign = 'right'; cabe(ctx, `- - ${C.historia.promTexto}`, W - M, hy + 48, 520, TXT(500), 22, 16); ctx.textAlign = 'left'; }
+  barrasPeriodo(ctx, M, hy + 100, W - 2 * M, hh - 160, C.historia.barras, C.historia.prom, '#121D24');
+  y = hy + hh + (alto ? 40 : 28);
+
+  // Fichas: 2×2 (en el cuadrado, una fila de 3 sin recuadro).
+  if (cuadrado) {
+    y += 72;
+    secundarios(ctx, M, y, W - 2 * M, C.fichas.slice(0, 3), 52);
+    y += 70;
+  } else {
+    const fh = alto ? 170 : 128;
+    const fw = (W - 2 * M - 16) / 2;
+    C.fichas.slice(0, 4).forEach((f, i) => ficha(ctx, M + (i % 2) * (fw + 16), y + Math.floor(i / 2) * (fh + 16), fw, fh, f));
+    y += Math.ceil(Math.min(4, C.fichas.length) / 2) * (fh + 16) + (alto ? 28 : 14);
+  }
+  if (C.logros.length) chipsLogros(ctx, M, y, W - 2 * M, C.logros, cuadrado ? 1 : 2);
+  piePeriodo(ctx, W, pieY);
+  return new Promise((ok) => c.toBlob(ok, 'image/png'));
+}
+
+// Mes: «Póster».
+async function tarjetaMes(C, fmt) {
+  const [W, H] = FORMATOS[fmt];
+  const alto = fmt === '9:16';
+  const cuadrado = fmt === '1:1';
+  const D = { '4:5': { B: 600, top: 56, pie: 1294, num: 210, hH: 460 }, '9:16': { B: 860, top: 228, pie: 1690, num: 230, hH: 500 }, '1:1': { B: 540, top: 52, pie: 1032, num: 190, hH: 420 } }[fmt];
+  const { c, ctx } = await lienzo(W, H);
+  const [marca, fondo, figura] = await Promise.all([
+    cargarImagen('assets/marca/rower-marca.svg'),
+    C.paisaje?.src ? cargarImagen(C.paisaje.src) : null,
+    C.heroe?.src ? cargarImagen(C.heroe.src) : null,
+  ]);
+  if (fondo) pintarPaisaje(ctx, fondo, W, D.B, C.paisaje);
+  ctx.fillStyle = degradado(ctx, 0, D.top + 190, [[0, 'rgba(11,18,23,0.8)'], [1, 'rgba(11,18,23,0)']]);
+  ctx.fillRect(0, 0, W, D.top + 190);
+  ctx.fillStyle = degradado(ctx, D.B * 0.42, D.B, [[0, 'rgba(11,18,23,0)'], [0.6, 'rgba(11,18,23,0.7)'], [1, T.fondo]]);
+  ctx.fillRect(0, D.B * 0.42, W, D.B * 0.58 + 1);
+  if (marca) ctx.drawImage(marca, M, D.top, (marca.width / marca.height) * 46, 46);
+  ctx.fillStyle = T.texto;
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = 10;
+  cabe(ctx, C.rango, M, D.top + 86, W - 2 * M, TXT(600), 24, 18);
+  ctx.shadowBlur = 0;
+
+  // Pies del héroe y base de los km sobre el horizonte del paisaje (como en la de la sesión).
+  const pie = D.B - 80;
+  let limite = W - M;
+  if (figura) {
+    const h = D.hH;
+    const w = (360 / 420) * h;
+    const xH = W - w * 0.9 - 14;
+    const cx = xH + w / 2;
+    ctx.save();
+    ctx.translate(cx, pie - 8);
+    ctx.scale(1, 0.16);
+    const sombra = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.3);
+    sombra.addColorStop(0, 'rgba(0,0,0,0.65)');
+    sombra.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sombra;
+    ctx.beginPath();
+    ctx.arc(0, 0, w * 0.3, 0, 7);
+    ctx.fill();
+    ctx.restore();
+    ctx.drawImage(figura, xH, pie - h * 0.976, w, h);
+    if (C.heroe.xp > 0) {
+      const t = `+${C.heroe.xp.toLocaleString('es-MX')} XP`;
+      ctx.font = NUM(700)(34);
+      pastilla(ctx, cx - w * 0.24 - (ctx.measureText(t).width + 32) + 20, pie - h * 0.62, 52, t, NUM(700)(34), T.xp, T.fondo, 18);
+    }
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = T.texto;
+    if (C.heroe.nombre) cabe(ctx, C.heroe.nombre, cx, pie + 34, w * 0.9, TXT(700), 26, 18);
+    ctx.fillStyle = T.suave;
+    if (C.heroe.linea) cabe(ctx, C.heroe.linea, cx, pie + 60, Math.min(w * 1.1, W - cx - 8) * 2 - 16, TXT(600), 20, 16);
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'left';
+    limite = xH + w * 0.2 - 20;
+  }
+  if (C.kicker) pastilla(ctx, M, pie - D.num * 0.78 - 72, 48, C.kicker, TXT(800)(20), T.lat, T.fondo, 18);
+  kmGrandes(ctx, M - 6, pie, C.km, D.num, limite - M - D.num * 0.5);
+  let y = pie + 28;
+  cambioPeriodo(ctx, C, M, y, (figura ? limite + 40 : W - M) - M);
+  y += 48 + (cuadrado ? 56 : 70);
+  ctx.fillStyle = T.lat;
+  ICONOS.check(ctx, M + 12, y - 11, 12);
+  cabe(ctx, C.estado, M + 36, y, W - 2 * M - 36, TXT(600), 30, 22);
+  if (C.equivalencia) {
+    y += cuadrado ? 64 : 73;
+    ctx.fillStyle = T.lat;
+    ctx.fillRect(M, y - 30, 6, cuadrado ? 40 : 70);
+    ctx.fillStyle = T.texto;
+    cabe(ctx, C.equivalencia.texto, M + 28, y, W - 2 * M - 28, TXT(600), 32, 22);
+    if (!cuadrado) { ctx.fillStyle = T.tenue; cabe(ctx, C.equivalencia.detalle, M + 28, y + 34, W - 2 * M - 28, TXT(500), 24, 18); y += 34; }
+  }
+  const avances = C.avances.slice(0, 3);
+  // En el cuadrado: lo que mejoró si hay; si no, los datos.
+  const conDatos = !cuadrado || !avances.length;
+  if (conDatos) { y += alto ? 140 : 106; secundarios(ctx, M, y, W - 2 * M, C.fichas.slice(0, 3), 58); deltasSecundarios(ctx, M, y, W - 2 * M, C.fichas.slice(0, 3)); y += 72; }
+  if (avances.length) {
+    y += cuadrado ? 90 : alto ? 90 : 60;
+    ctx.fillStyle = T.suave;
+    ctx.font = TXT(600)(24);
+    ctx.fillText('Lo que mejoró este mes', M, y);
+    avances.forEach(([n, a, b, d], i) => {
+      const yy = y + 50 + i * (alto ? 60 : 52);
+      ctx.fillStyle = T.texto;
+      cabe(ctx, n, M, yy, 380, TXT(600), 28, 20);
+      ctx.font = NUM(700)(30);
+      const pw = ctx.measureText(d).width + 32;
+      pastilla(ctx, W - M - pw, yy - 30, 38, d, NUM(700)(30), T.ok, T.fondo, 16);
+      const xb = W - M - 130;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = T.texto;
+      ctx.font = NUM(700)(40);
+      ctx.fillText(b, xb, yy + 2);
+      const bw = ctx.measureText(b).width;
+      ctx.fillStyle = T.tenue;
+      ctx.font = TXT(600)(24);
+      ctx.fillText('→', xb - bw - 14, yy - 1);
+      ctx.font = NUM(600)(36);
+      ctx.fillText(a, xb - bw - 52, yy + 2);
+      ctx.textAlign = 'left';
+    });
+    y += 50 + (avances.length - 1) * (alto ? 60 : 52) + 8;
+  } else if (!cuadrado && C.historia) {
+    // Sin mejoras que contar: los km de los últimos 6 meses.
+    y += 60;
+    ctx.fillStyle = T.suave;
+    ctx.font = TXT(600)(24);
+    ctx.fillText(C.historia.titulo, M, y);
+    barrasPeriodo(ctx, M, y + 60, W - 2 * M, alto ? 160 : 80, C.historia.barras, null, T.fondo);
+    y += 60 + (alto ? 160 : 80) + 32;
+  }
+  // Los logros en una fila (dos en la historia), si caben antes del pie.
+  if (C.logros.length && y + 20 + 48 <= D.pie - 56) chipsLogros(ctx, M, y + 20, W - 2 * M, C.logros, alto && y + 128 <= D.pie - 56 ? 2 : 1);
+  piePeriodo(ctx, W, D.pie);
+  return new Promise((ok) => c.toBlob(ok, 'image/png'));
+}
+
+// Debajo de cada dato del mes, su cambio en verde (solo si mejoró).
+function deltasSecundarios(ctx, x, y, w, items) {
+  const a = w / items.length;
+  items.forEach(([, , , d], i) => {
+    if (!d) return;
+    const px = x + i * a + (i ? 28 : 0);
+    ctx.fillStyle = T.okT;
+    ctx.font = TXT(700)(22);
+    ICONOS[d.startsWith('−') ? 'baja' : 'sube'](ctx, px + 9, y + 64, 8);
+    ctx.fillText(d, px + 24, y + 72);
+  });
+}
+
+// opciones = { formato }. Devuelve un PNG (Blob).
+export async function tarjetaPeriodo(contenido, { formato = '4:5' } = {}) {
+  const fmt = FORMATOS[formato] ? formato : '4:5';
+  return contenido.periodo === 'mes' ? tarjetaMes(contenido, fmt) : tarjetaSemana(contenido, fmt);
+}

@@ -16,6 +16,7 @@ import { avanzado, guardarRespaldo } from './ajustes.js';
 import { estadoHeroe, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
 import { abrirSesion } from './detalle.js';
 import { leerPrograma } from './programa.js';
+import { abrirCompartirPeriodo } from './planes.js';
 
 // ---------- Progreso ----------
 let periodo = 'semana';
@@ -30,7 +31,10 @@ export function arrancarProgreso() {
       x.setAttribute('aria-pressed', x === b);
     });
     pintarPeriodos();
+    $('#btn-compartir-periodo span').textContent = periodo === 'mes' ? 'Compartir mi mes' : 'Compartir mi semana';
   }));
+  // Tarjeta de la semana o del mes para compartir (etapa 31).
+  $('#btn-compartir-periodo').addEventListener('click', () => abrirCompartirPeriodo(periodo));
   document.querySelectorAll('#seg-tendencia button').forEach((b) => b.addEventListener('click', () => {
     estado.tendencia = b.dataset.tend;
     document.querySelectorAll('#seg-tendencia button').forEach((x) => {
