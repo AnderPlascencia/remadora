@@ -6,11 +6,12 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test pruebas/*.test.mjs",
-    "test:cobertura": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info pruebas/*.test.mjs",
+    "test": "node tools/huellas.mjs --local && node --test pruebas/*.test.mjs",
+    "test:cobertura": "node tools/huellas.mjs --local && node --test --experimental-test-coverage --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info pruebas/*.test.mjs",
     "test:e2e": "playwright test",
     "test:todo": "npm test && npm run test:e2e",
-    "publicar": "node tools/publicar.mjs"
+    "publicar": "node tools/publicar.mjs",
+    "huellas": "node tools/huellas.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.97.0 · 2026-11-22
+
+La app abre más rápido y las actualizaciones bajan solo lo que cambió.
+
+- **Abre al instante.** Una vez instalada, la app abre con el código de su versión guardado en el teléfono, aunque la red esté lenta o caída. Mientras la usas, mira en segundo plano si hay una versión nueva y la deja lista para la próxima vez que la abras.
+- **Primera carga más rápida.** La página pide todos sus módulos a la vez en lugar de irlos descubriendo uno por uno: con internet lento (400 ms de latencia), de 3.9 s a 3.1 s hasta que la página está lista.
+- **Actualizaciones ligeras.** Cada archivo lleva una huella de su contenido (huellas.json). Al actualizar, la app copia lo que no cambió y solo baja lo distinto: una versión sin arte nuevo pasa de bajar unos 3.5 MB a unos pocos KB más el código que cambió. Las imágenes, voces y videos ya no se borran con cada versión.
+- **Para quien desarrolla:** `npm test` regenera huellas.json y la lista de precarga de index.html (`npm run huellas` hace solo eso). En el CI, una prueba comprueba que se subieron al día.
+
 ## 0.96.1 · 2026-11-22
 
 El vikingo sigue la historia de Ragnar Lothbrok.

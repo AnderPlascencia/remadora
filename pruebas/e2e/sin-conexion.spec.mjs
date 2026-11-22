@@ -12,7 +12,8 @@ test('sin conexión la app abre desde la caché y una sesión se guarda igual', 
     await navigator.serviceWorker.ready;
   }, v);
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 30_000 }).toBe(true);
-  expect(await page.evaluate(() => caches.keys())).toEqual([version]);
+  // El código, en la caché de su versión; imágenes y voces, en una sin versión que sobrevive a las actualizaciones.
+  expect((await page.evaluate(() => caches.keys())).sort()).toEqual(['recursos-remadora', version]);
   const guardados = await page.evaluate(async (v) => (await (await caches.open(v)).keys()).map((r) => new URL(r.url).pathname), version);
   for (const f of ['/', '/src/app.js', '/src/estilos.css', '/src/carrera.js', '/manifest.webmanifest']) expect(guardados).toContain(f);
   // Los vídeos de la vista realista son de una clase: no se precargan al instalar.

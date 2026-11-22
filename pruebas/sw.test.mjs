@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { createHash } from 'node:crypto';
 
 // Corre sw.js con un navegador de mentira: caches, fetch y los eventos del service worker.
 const codigo = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
@@ -20,7 +21,8 @@ function montar({ red = () => respuesta(200), pantallas = null } = {}) {
       match: async (p) => m.get(clave(p)),
       add: async (p) => { const r = await ctx.fetch(p); if (!r.ok) throw new Error('mal'); m.set(clave(p), r); },
       addAll: async (ps) => { for (const p of ps) await abrir(n).add(p); },
-      keys: async () => [...m.keys()],
+      keys: async () => [...m.keys()].map((url) => ({ url })),
+      delete: async (p) => m.delete(clave(p)),
     };
   };
   const oyentes = {};
@@ -28,7 +30,8 @@ function montar({ red = () => respuesta(200), pantallas = null } = {}) {
   const ctx = {
     URL,
     console,
-    Request: class { constructor(u) { this.url = new URL(u, ORIGEN).href; this.method = 'GET'; } },
+    crypto,
+    Request: class { constructor(u) { this.url = new URL(typeof u === 'string' ? u : u.url, ORIGEN).href; this.method = 'GET'; } },
     fetch: async (p) => { const url = new URL(typeof p === 'string' ? p : p.url, ORIGEN).href; pedidas.push(url); return red(url); },
     caches: {
       open: async (n) => abrir(n),
@@ -64,18 +67,24 @@ function montar({ red = () => respuesta(200), pantallas = null } = {}) {
     return r;
   };
   const guardado = async (url) => (await ctx.caches.open('remadora-9.9.9')).match(url);
-  return { disparar, guardado, almacenes, pedidas, activaciones };
+  const recurso = async (url) => (await ctx.caches.open('recursos-remadora')).match(url);
+  return { disparar, guardado, recurso, almacenes, pedidas, activaciones, ctx };
 }
 
 function respuesta(status, cuerpo = 'x') {
-  return { status, ok: status >= 200 && status < 300, cuerpo, clone() { return this; } };
+  return {
+    status, ok: status >= 200 && status < 300, cuerpo, clone() { return this; },
+    arrayBuffer: async () => new TextEncoder().encode(String(cuerpo)).buffer,
+    json: async () => JSON.parse(cuerpo),
+  };
 }
-const pedir = (url) => ({ request: { method: 'GET', url: new URL(url, ORIGEN).href } });
+const huella = (t) => createHash('sha256').update(String(t)).digest('hex').slice(0, 16);
+const pedir = (url, mode) => ({ request: { method: 'GET', url: new URL(url, ORIGEN).href, mode } });
 
 test('la caché lleva la versión de la URL con que se registró sw.js', async () => {
   const sw = montar();
   await sw.disparar('install', {});
-  assert.deepEqual([...sw.almacenes.keys()], ['remadora-9.9.9']);
+  assert.deepEqual([...sw.almacenes.keys()].sort(), ['recursos-remadora', 'remadora-9.9.9'], 'código con versión; imágenes y voces, sin ella');
 });
 
 test('al instalar no se precargan los vídeos de ninguna clase', async () => {
@@ -91,8 +100,8 @@ test('los vídeos de tu clase se guardan cuando la app lo pide, y los de otra cl
   await sw.disparar('message', { data: { tipo: 'precargar', clase: 'pirata' } });
   assert.ok(!sw.pedidas.some((u) => u.endsWith('.mp4')));
   await sw.disparar('message', { data: { tipo: 'precargar', clase: 'vikingo' } });
-  assert.ok(await sw.guardado('assets/carrera/remo_vikingo.mp4'));
-  assert.ok(await sw.guardado('assets/carrera/remo_vikingo_v.mp4'));
+  assert.ok(await sw.recurso('assets/carrera/remo_vikingo.mp4'));
+  assert.ok(await sw.recurso('assets/carrera/remo_vikingo_v.mp4'));
 });
 
 test('solo se guardan respuestas completas: ni 404 ni trozos de vídeo (206)', async () => {
@@ -106,14 +115,65 @@ test('solo se guardan respuestas completas: ni 404 ni trozos de vídeo (206)', a
   assert.ok(await sw.guardado('src/app.js'));
 });
 
-test('assets/ va con caché primero; el código, con red primero', async () => {
+test('assets/ y el código, con caché primero: el código de una versión no se mezcla con el de otra', async () => {
   let version = 1;
   const sw = montar({ red: () => respuesta(200, `v${version}`) });
   assert.equal((await sw.disparar('fetch', pedir('assets/heroes/pirata_novato.webp'))).cuerpo, 'v1');
   assert.equal((await sw.disparar('fetch', pedir('src/app.js'))).cuerpo, 'v1');
   version = 2;
   assert.equal((await sw.disparar('fetch', pedir('assets/heroes/pirata_novato.webp'))).cuerpo, 'v1');
-  assert.equal((await sw.disparar('fetch', pedir('src/app.js'))).cuerpo, 'v2');
+  assert.equal((await sw.disparar('fetch', pedir('src/app.js'))).cuerpo, 'v1');
+  // La consulta de la versión nueva (con «?…») siempre va a la red y no se guarda.
+  assert.equal((await sw.disparar('fetch', pedir('src/version.js?comprobar=1'))).cuerpo, 'v2');
+  assert.equal(await sw.guardado('src/version.js?comprobar=1'), undefined);
+  // La página abierta desde un atajo (?atajo=hoy) es la misma página guardada.
+  await sw.disparar('fetch', pedir('./', 'navigate'));
+  assert.equal((await sw.disparar('fetch', pedir('./?atajo=hoy', 'navigate'))).cuerpo, 'v2');
+});
+
+test('una versión nueva sin arte nuevo solo baja lo que cambió (huellas.json)', async () => {
+  // El servidor: cada archivo con su contenido; huellas.json con la huella de cada uno.
+  const contenido = (u) => (u.endsWith('src/version.js') ? 'version-2' : `contenido de ${u.replace(ORIGEN, '')}`);
+  const sw = montar({
+    red: (u) => {
+      const ruta = u.replace(ORIGEN, '');
+      if (ruta === 'huellas.json') {
+        const h = {};
+        for (const r of ['index.html', 'src/app.js', 'src/version.js', 'assets/heroes/vikingo_novato.webp', 'assets/carrera/canon.webp']) h[r] = huella(contenido(ORIGEN + r));
+        return respuesta(200, JSON.stringify(h));
+      }
+      return respuesta(200, contenido(u));
+    },
+  });
+  // Lo que ya estaba: la versión anterior (código) y los recursos; version.js y un paisaje comprado, con otro contenido.
+  const vieja = await sw.ctx.caches.open('remadora-9.9.8');
+  for (const r of ['./', 'src/app.js']) await vieja.put(r, respuesta(200, contenido(ORIGEN + (r === './' ? '' : r))));
+  await vieja.put('./', respuesta(200, contenido(`${ORIGEN}index.html`)));
+  await vieja.put('src/version.js', respuesta(200, 'version-1'));
+  const rec = await sw.ctx.caches.open('recursos-remadora');
+  await rec.put('assets/heroes/vikingo_novato.webp', respuesta(200, contenido(`${ORIGEN}assets/heroes/vikingo_novato.webp`)));
+  await rec.put('assets/carrera/canon.webp', respuesta(200, 'paisaje viejo'));
+  await rec.put('assets/carrera/quitado.webp', respuesta(200, 'ya no existe'));
+
+  await sw.disparar('install', {});
+  const bajadas = sw.pedidas.map((u) => u.replace(ORIGEN, ''));
+  assert.ok(bajadas.includes('huellas.json'));
+  assert.ok(bajadas.includes('src/version.js'), 'lo que cambió se baja');
+  for (const r of ['', 'src/app.js', 'assets/heroes/vikingo_novato.webp']) assert.ok(!bajadas.includes(r), `${r || './'} no cambió: se copia`);
+  assert.equal((await sw.guardado('src/app.js')).cuerpo, 'contenido de src/app.js');
+  assert.equal((await sw.guardado('src/version.js')).cuerpo, 'version-2');
+  assert.ok(await sw.guardado('./'));
+  assert.equal(await sw.recurso('assets/carrera/canon.webp'), undefined, 'el paisaje que cambió se vuelve a bajar al pedirlo');
+  assert.equal(await sw.recurso('assets/carrera/quitado.webp'), undefined, 'lo que ya no existe se borra');
+  assert.ok(await sw.recurso('assets/heroes/vikingo_novato.webp'));
+});
+
+test('sin huellas.json (sin red o un servidor viejo) se baja todo, como antes', async () => {
+  const sw = montar({ red: (u) => (u.endsWith('huellas.json') ? respuesta(404) : respuesta(200, 'x')) });
+  await sw.disparar('install', {});
+  assert.ok(sw.pedidas.some((u) => u.endsWith('src/app.js')));
+  assert.ok(sw.pedidas.some((u) => u.endsWith('assets/heroes/vikingo_novato.webp')));
+  assert.ok(await sw.guardado('src/app.js'));
 });
 
 test('sin conexión, el código sale de la caché', async () => {
@@ -144,8 +204,8 @@ test('los paisajes comprados se guardan cuando la app lo pide, y solo imágenes 
   await sw.disparar('message', { data: { tipo: 'precargar', clase: null, archivos: [
     'assets/carrera/canon.webp', 'assets/carrera/canon_orilla.webp', 'src/app.js', '../secreto.webp', 'https://otro.sitio/x.webp', 42,
   ] } });
-  assert.ok(await sw.guardado('assets/carrera/canon.webp'));
-  assert.ok(await sw.guardado('assets/carrera/canon_orilla.webp'));
+  assert.ok(await sw.recurso('assets/carrera/canon.webp'));
+  assert.ok(await sw.recurso('assets/carrera/canon_orilla.webp'));
   assert.deepEqual(sw.pedidas.map((u) => u.replace(ORIGEN, '')), ['assets/carrera/canon.webp', 'assets/carrera/canon_orilla.webp']);
 });
 
