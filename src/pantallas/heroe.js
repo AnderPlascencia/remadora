@@ -150,6 +150,7 @@ export function arrancarHeroe() {
   });
 
   $('#tienda-paisajes').addEventListener('click', async (e) => {
+    if (await previa(e)) return;
     const b = e.target.closest('[data-paisaje]');
     if (!b) return;
     const id = b.dataset.paisaje;
@@ -171,6 +172,7 @@ export function arrancarHeroe() {
   });
   // Colección del bote de tu clase: velas, mascarón y palas; y las velas de color, que valen para cualquier bote.
   $('#tienda-velas').addEventListener('click', async (e) => {
+    if (await previa(e)) return;
     const b = e.target.closest('[data-pieza]');
     if (!b) return;
     const id = b.dataset.pieza;
@@ -685,6 +687,12 @@ export async function aplicarEquipo() {
   usarEquipo(equipoActual(per, h));
 }
 
+// «Vista previa» de un paisaje o una pieza: su código se baja solo al tocarla.
+async function previa(e) {
+  const b = e.target.closest('[data-previa]');
+  if (b) (await import('./previa.js')).desdeTienda(b, await estadoHeroe(), equipoActual);
+  return !!b;
+}
 // Muestra de la pieza: su ilustración (piezas de jefe) o sus dos colores
 const muestraDe = (x) => (x.imagen
   ? `<img class="velas-muestra ilustrada" src="${x.imagen}" alt="" loading="lazy" width="56" height="36">`
@@ -715,8 +723,9 @@ function pintarColeccion(h, per) {
           : `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" ${h.monedas < precio ? 'disabled' : ''}>${h.monedas < precio ? `Te faltan ${miles(precio - h.monedas)}` : 'Comprar'}</button>`;
     const etiqueta = tiene ? (precio && !x.como?.gratis ? 'Comprado' : 'Ganado') : precio ? `${icoMoneda}${miles(precio)}` : '';
     const ventaja = CB.ventajaTexto(CB.PIEZAS[x.id] || x, x.id);
+    const ver = enUso ? '' : `<button type="button" class="boton chico" data-previa="${x.id}" data-tipo="${tipo}">${ico('i-play')}Vista previa</button>`;
     return `<div class="objeto velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}">${muestraDe(x)}<b>${x.nombre}</b><small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}
-      <span class="monedas">${x.como?.gratis ? 'Gratis' : etiqueta}</span>${boton}</div>`;
+      <span class="monedas">${x.como?.gratis ? 'Gratis' : etiqueta}</span>${boton}${ver}</div>`;
   };
   const faltaDe = (x) => (x.como.nivel ? `Llega al nivel ${x.como.nivel}` : x.como.hazana ? `Cumple «${hz?.nombre || 'la hazaña de clase'}»` : x.como.jefe ? `Vence al jefe del capítulo ${x.como.jefe}` : '');
   const propias = CB.piezasDe(clase.clave, ctx).map((x) => {
@@ -747,7 +756,8 @@ function pintarTienda(h, per) {
       : tiene ? `<button type="button" class="boton chico" data-paisaje="${id}">Usar</button>`
         : `<button type="button" class="boton chico" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
     return `<div class="objeto paisaje${id === elegido ? ' activo' : ''}"><img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"${x.filtro ? ` style="filter:${x.filtro}"` : ''}><b>${x.nombre}</b><small>${x.texto}</small>
-      <span class="monedas">${x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis'}</span>${boton}</div>`;
+      <span class="monedas">${x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis'}</span>${boton}
+      ${id === elegido ? '' : `<button type="button" class="boton chico" data-previa="${id}">${ico('i-play')}Vista previa</button>`}</div>`;
   }).join('');
   pintarColeccion(h, per);
   const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);

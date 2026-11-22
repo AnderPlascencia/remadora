@@ -92,3 +92,42 @@ test('comprar la bahía glaciar la deja puesta y la carrera la pinta en 2D y 3D,
   await page.waitForTimeout(600);
   expect(await pintada()).toBeGreaterThan(0.9);
 });
+
+test('la vista previa muestra un paisaje y una vela en una carrera de muestra y al cerrar vuelve lo que tenías', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto('./');
+  await completarBienvenida(page, { reloj: false });
+  await page.evaluate(() => {
+    const per = JSON.parse(localStorage.getItem('personaje') || '{}');
+    localStorage.setItem('personaje', JSON.stringify({ ...per, clase: 'polinesio', nombre: 'Prueba', tiendaVentajas: true }));
+  });
+  await page.reload();
+  await abrirTienda(page);
+  // El paisaje en uso no la necesita; los demás sí, aunque no los tengas.
+  await expect(page.locator('#tienda-paisajes .objeto.activo [data-previa]')).toHaveCount(0);
+  await page.locator('#tienda-paisajes [data-previa="laguna"]').click();
+  const hoja = page.locator('.hoja-fondo.previa');
+  await expect(hoja.locator('h2')).toHaveText('Vista previa: Laguna tropical');
+  const lienzo = hoja.locator('canvas');
+  await page.waitForTimeout(2500);
+  await lienzo.screenshot({ path: test.info().outputPath('previa-laguna-3d.png') });
+  await lienzo.click();
+  await page.waitForTimeout(1500);
+  await lienzo.screenshot({ path: test.info().outputPath('previa-laguna-2d.png') });
+  await hoja.locator('[data-cerrar]').click();
+  await expect(hoja).toHaveCount(0);
+  // Nada se compró ni cambió de paisaje
+  const per = await page.evaluate(() => JSON.parse(localStorage.getItem('personaje')));
+  expect(per.paisajes || []).toEqual([]);
+  await expect(page.locator('#tienda-paisajes .objeto.activo')).toContainText('Fiordo');
+
+  // Una vela de color, puesta solo mientras dura la vista previa
+  await page.locator('#tienda-velas .objeto').filter({ hasText: 'Velas de oro' }).locator('[data-previa]').click();
+  await expect(hoja.locator('h2')).toHaveText('Vista previa: Velas de oro');
+  expect(await page.evaluate(async () => (await import('./src/carrera.js')).equipoEnUso().vela)).toBe('oro');
+  await page.waitForTimeout(2500);
+  await lienzo.screenshot({ path: test.info().outputPath('previa-velas-3d.png') });
+  await page.keyboard.press('Escape');
+  await expect(hoja).toHaveCount(0);
+  expect(await page.evaluate(async () => (await import('./src/carrera.js')).equipoEnUso().vela)).not.toBe('oro');
+});

@@ -645,6 +645,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .tienda { grid-template-columns: repeat(2, 1fr); margin: 10px 0; }
 .objeto { background: var(--panel); border: 2px solid var(--rareza); border-radius: var(--r-medio); padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
 .objeto svg { background: radial-gradient(circle at 50% 35%, #1D3442, #071015); border-radius: var(--r-chico); }
+.objeto .boton svg { background: none; } /* el icono de «Vista previa» no lleva el fondo de las ilustraciones */
 .objeto b { font-size: var(--t-xs); line-height: 1.2; }
 .objeto small { font-size: var(--t-xs); color: var(--rareza); font-weight: 700; }
 .objeto .boton { margin-top: 4px; width: 100%; }
