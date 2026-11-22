@@ -1707,12 +1707,10 @@ details.mas-detalle[hidden] { display: none; }
   .inicio-numeros { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-.consejo { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; margin: 4px 0 12px; padding: 12px 14px; border-radius: var(--radio); border: 1px solid var(--borde); border-left: 4px solid var(--info); background: var(--panel); animation: subir .25s ease-out; }
-.consejo > .ico { color: var(--info); width: 26px; height: 26px; margin-top: 2px; }
-.consejo-texto { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-s); color: var(--texto-suave); line-height: 1.4; }
-.consejo-texto b { color: var(--texto); font-size: var(--t-m); }
-.consejo-botones { grid-column: 2; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.consejo .enlace-boton { border: 0; background: transparent; min-height: 40px; padding: 0 4px; color: var(--texto-suave); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+.consejo { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; padding: 6px 6px 6px 12px; border-radius: var(--radio); border: 1px solid var(--borde); border-left: 4px solid var(--info); background: var(--panel); animation: subir .25s ease-out; }
+.consejo > .ico { color: var(--info); width: 22px; height: 22px; }
+.consejo-texto { flex: 1; font-size: var(--t-s); color: var(--texto-suave); line-height: 1.35; }
+.consejo .boton.icono { flex: none; min-width: 44px; min-height: 44px; padding: 0; font-weight: 700; font-size: var(--t-m); }
 
 .guia-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .guia-chips .chip { flex: 0 0 auto; }
@@ -1729,10 +1727,6 @@ details.mas-detalle[hidden] { display: none; }
 .lista-perfil { margin: 0 0 8px; padding-left: 20px; color: var(--texto-tenue); font-size: var(--t-s); display: grid; gap: 4px; }
 .aviso.perfil-plan { display: flex; gap: 10px; align-items: center; justify-content: space-between; text-align: left; }
 .perfil-plan .boton { flex: none; }
-@media (min-width: 640px) {
-  .consejo { grid-template-columns: auto 1fr auto; align-items: center; }
-  .consejo-botones { grid-column: 3; }
-}
 
 /* ---------- v0.40: puestos de la tripulación ---------- */
 .trip-caja { margin: 12px 0; padding: 12px 14px; border-radius: var(--radio); background: var(--panel); border: 1px solid var(--borde); }

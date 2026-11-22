@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.105.0 · 2026-11-23
+
+Menos texto arriba de cada pestaña y Misiones más corta.
+
+- **Consejo de la primera visita en una línea.** La tarjeta con título, resumen y los botones «Cómo funciona» y «Entendido» pasa a ser una sola línea con un «?» que abre la guía y una × que la oculta. Ocupa unos 56 px en lugar de unos 140.
+- **Cabecera del héroe más clara.** Debajo de la barra dice «Nivel 21 en ≈ 2 sesiones · 597 / 1.590 XP», en lugar de una frase de dos líneas con el total de XP.
+- **Misiones: lo importante primero.** El capítulo y su jefe van arriba, sin la frase del desbloqueo repetida. De los logros se ven los 3 más cercanos y el resto queda plegado. La subpestaña pasa de unas 8,6 pantallas a unas 3.
+
 ## 0.104.0 · 2026-11-23
 
 Historial que escala (primera parte).
