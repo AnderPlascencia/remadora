@@ -23,8 +23,10 @@ while (pendientes.length) {
   if (vistos.has(f)) continue;
   vistos.add(f);
   const texto = leer(f);
-  assert.ok(!/\bimport\(/.test(texto), `${f} usa import() dinámico: la prueba no lo puede seguir`);
+  // Un import() con la ruta escrita se sigue igual (lo que se carga al abrir algo, como la tarjeta para compartir).
+  assert.ok(!/\bimport\((?!'\.{1,2}\/[\w./-]+\.js'\))/.test(texto), `${f} usa import() con una ruta calculada: la prueba no lo puede seguir`);
   for (const [, dep] of texto.matchAll(/^import[^'"]*['"](\.{1,2}\/[\w./-]+\.js)['"]/gm)) pendientes.push(posix.join(posix.dirname(f), dep));
+  for (const [, dep] of texto.matchAll(/\bimport\('(\.{1,2}\/[\w./-]+\.js)'\)/g)) pendientes.push(posix.join(posix.dirname(f), dep));
 }
 for (const f of vistos) assert.ok(archivos.includes(f), `${f} no está en la caché de sw.js`);
 for (const f of archivos) assert.ok(existsSync(new URL(`../${f}`, import.meta.url)), `sw.js guarda ${f}, que no existe`);

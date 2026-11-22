@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.93.0 · 2026-11-22
+
+Una tarjeta para compartir que se entiende sin saber de remo.
+
+- **Diseño nuevo.** Arriba, el paisaje de su héroe con la figura de pie sobre el agua, su XP al hombro y el dato grande sobre el horizonte. Abajo: qué entrenamiento fue, qué tan duro, si se completó y por qué importa.
+- **Qué tan duro, en palabras.** Un medidor de 5 barras junto al título: Suave, Firme, Fuerte, Muy fuerte o A tope, por la intensidad frente a su FTP (o por el esfuerzo que marcó si no hay FTP).
+- **El dato grande según la sesión.** En una prueba, el tiempo con la marca anterior tachada, cuánto bajó y lo que falta para la meta del plan, más los parciales de 500 m. En intervalos, el % del tiempo en el ritmo del plan y cuántas series quedaron dentro. En VO₂, los minutos muy fuertes. En la prueba de FTP, el FTP nuevo con el anterior tachado. En técnica, los metros por palada. En fondo y remo libre, la distancia y lo que sea cierto: su mejor marca, sus mejores 20 min del mes o su remo libre más largo del mes. Si quedó a medias, los minutos remados con lo que faltaba, sin ✓ ni podio.
+- **En tercera persona.** La tarjeta la ven otros: «a 18 m de Kaito», «42 m delante de Haakon el Rojo». El podio de la carrera va en el formato de historia (9:16).
+- **Honesta.** Nada de comparaciones con otras máquinas ni la potencia máxima de una palada como récord. Las calorías, si se encienden, dicen «kcal estimadas».
+- **Carga más ligera.** La tarjeta y su pintor se cargan al abrir «Compartir imagen», no al arrancar la app.
+
 ## 0.92.1 · 2026-11-21
 
 Los héroes nuevos llegan seguro al actualizar.
