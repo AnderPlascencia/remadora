@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.101.1 · 2026-11-22
+
+Vista previa en la tienda y más paisaje en la vista aérea 2D.
+
+- **Vista previa de paisajes y piezas del bote.** Cada paisaje y cada vela, mascarón o pala que no traes puesta tiene un botón «Vista previa»: abre una carrera de muestra con tu personaje y tres rivales, ya con ese paisaje o esa pieza, en 3D y en 2D al tocarla. Al cerrarla vuelve lo que tenías y no se gasta nada.
+
+- **Orillas más anchas en la vista 2D vertical** (en horizontal crecen poco para no achicar los botes): ahora se ven los árboles, cabañas, palmeras, el fare y las rocas de la costa pintada, no solo una franja de arena o piedra.
+- **Agua pintada en el canal 2D del fiordo**, con la misma mano que la vista 3D.
+- Las texturas del fiordo se igualaron de brillo para que no se noten las uniones.
+
 ## 0.101.0 · 2026-11-22
 
 La imagen compartida, en el momento justo.

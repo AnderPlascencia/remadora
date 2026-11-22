@@ -32,7 +32,7 @@ test('la colección del vikingo: lo bloqueado dice qué falta y lo comprado qued
   await expect(barra).toHaveAttribute('aria-valuemax', '75000');
   await expect(barra).toHaveAttribute('aria-valuetext', /de 75.000 paladas/);
 
-  await fichas.filter({ hasText: 'Círculo de runas' }).locator('button').click();
+  await fichas.filter({ hasText: 'Círculo de runas' }).locator('[data-pieza]').click();
   await expect.poll(() => page.evaluate(() => window.__avisos.at(-1))).toContain('Círculo de runas');
   await expect(page.locator('#tienda-velas .objeto.activo').filter({ hasText: 'Círculo de runas' })).toHaveCount(1);
   await page.reload();
@@ -50,7 +50,7 @@ test('una vela de color comprada antes de la colección sigue puesta', async ({ 
   await conClase(page, 'romano', { velas: ['oro'], vela: 'oro' });
   await abrirTienda(page);
   await expect(page.locator('#tienda-velas .objeto.activo')).toContainText('Velas de oro');
-  await expect(page.locator('#tienda-velas .objeto').filter({ hasText: 'Púrpura imperial' }).locator('button')).toHaveText('Usar');
+  await expect(page.locator('#tienda-velas .objeto').filter({ hasText: 'Púrpura imperial' }).locator('[data-pieza]')).toHaveText('Usar');
 });
 
 // Etapa 6.2: vencer al jefe del capítulo 1 da la pieza de tu clase (además de la insignia).
@@ -74,10 +74,10 @@ test('vencer al jefe del capítulo 1 da la bandera de tu clase', async ({ page }
   await conClase(page, 'pirata');
   await abrirTienda(page);
   const bandera = page.locator('#tienda-velas .objeto').filter({ hasText: 'Gallardete de la fragata' });
-  await expect(bandera.locator('button')).toHaveText('Usar');
+  await expect(bandera.locator('[data-pieza]')).toHaveText('Usar');
   await expect(bandera.locator('img.ilustrada')).toBeVisible();
   await expect(page.locator('#tienda-velas .objeto').filter({ hasText: 'Vela del huracán' }).locator('.bloqueada')).toHaveText('Vence al jefe del capítulo 3');
-  await bandera.locator('button').click();
+  await bandera.locator('[data-pieza]').click();
   await expect(page.locator('#tienda-velas .objeto.activo').filter({ hasText: 'Gallardete de la fragata' })).toHaveCount(1);
   await page.locator('#tienda-velas').screenshot({ path: test.info().outputPath('premio-jefe.png') });
 });
