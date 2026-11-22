@@ -169,13 +169,15 @@ export async function crearRivales(ent, { vista = false } = {}) {
     const base = ftp() || estimarFtp(await sesiones()) || 150;
     deClase = J.rivalesPara(nClase, { miClase: per.clase, nivel: h.nivel, ftp: base, peso: ajustes.num('peso', 75), factor: Pf.factorClasificacion(ajustes.leer('sexo', '')), dificultad: dificultadActual(), lunes: J.lunesDe(Date.now()), semilla: new Date().toDateString(), ritmo: ent ? null : J.ritmoLibre(await sesiones()) });
   }
+  // Con tu CP y W′ medidos, los rivales reparten el esfuerzo según tu curva (etapa 18).
+  const pc = nClase && ent?.objetivo?.metrica === 'distancia' ? E.perfilDe(await sesiones(), { peso: ajustes.num('peso', 0) }) : null;
   for (const clave of elegidos) {
     let r = null;
     if (clave === 'clase') {
       const d = deClase.shift();
       // Con un FTP estimado (sin prueba), las metas cortas no pasan del 115 %: un FTP de más daría un rival imposible.
       const tope = !ftp() || ajustes.si('ftpEstimado', false) ? 1.15 : null;
-      r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase, perfil: d.perfil, tope }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, dificultad: d.dificultad, clasificacion: d.clasificacion };
+      r = { ...F.simular(ent, { ftp: d.ftp, estilo: d.clase, perfil: d.perfil, tope, pc }, ftp()), nombre: d.nombre, clase: d.clase, rango: d.rango, dificultad: d.dificultad, clasificacion: d.clasificacion };
     }
     if (r) lista.push({ ...r, clave, color: COLORES_RIVAL[lista.length] });
   }

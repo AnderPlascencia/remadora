@@ -44,6 +44,23 @@ export const UNA_RACHA_DESDE = '2026-11-22';
 export const esUnaRacha = (fecha) => claveDia(fecha) >= UNA_RACHA_DESDE;
 // No perder a quien falla (etapa 14): escudos de racha y sesión de regreso, desde este día (lo anterior no cambia).
 export const NO_PERDER_DESDE = '2026-11-23';
+// Mejora real (etapa 18, A4): bajar un 2 % tu mejor 2000 m o 5000 m, o subir un 2 % los watts de tu prueba de FTP,
+// paga un premio grande (XP_MEJORA_REAL tal cual, sin el factor de XP lenta), uno al mes como mucho. Solo cuenta desde MEJORA_REAL_DESDE: las sesiones de antes no cambian.
+export const MEJORA_REAL_DESDE = '2026-11-24';
+export const MEJORA_REAL_PCT = 0.02;
+export const XP_MEJORA_REAL = 250;
+export const MONEDAS_MEJORA_REAL = 50;
+const MEJORA_TIEMPOS = [['t2000', '2000 m'], ['t5000', '5000 m']];
+// previos: { t2000, t5000, prueba } antes de esta sesión. Devuelve el texto del logro o null.
+export function mejoraReal(s, previos) {
+  for (const [k, nombre] of MEJORA_TIEMPOS) {
+    const antes = previos[k];
+    const v = s.muestras?.length ? mejorTiempo(s.muestras, Number(k.slice(1))) : null;
+    if (antes > 0 && v > 0 && v <= antes * (1 - MEJORA_REAL_PCT)) return `Mejora real: ${nombre} un ${Math.round((1 - v / antes) * 100)} % más rápido`;
+  }
+  if (previos.prueba > 0 && s.pruebaWatts >= previos.prueba * (1 + MEJORA_REAL_PCT)) return `Mejora real: tu prueba de FTP un ${Math.round((s.pruebaWatts / previos.prueba - 1) * 100)} % más fuerte`;
+  return null;
+}
 export const ESCUDOS_MAX = 2;
 export const REGRESO_DIAS = 10; // días sin remar para que las 3 primeras sesiones sean «de regreso»
 export const REGRESO_SESIONES = 3;
@@ -1057,6 +1074,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   // Piezas de bote ganadas a los jefes (etapa 6.2): la de la clase con la que remabas al vencerlo.
   const piezasJefe = new Set();
   const hazanas = new Set();
+  let mejorPrueba = null; // watts de tu mejor prueba de FTP hasta la sesión anterior
+  let mesMejora = null; // mes (aaaa-mm) del último premio por mejora real
 
   // Los premios que antes eran ropa dan ahora una insignia y 50 monedas más.
   const lograr = (fecha, tipo, texto, m0, obj, xpExtra = 0) => {
@@ -1110,6 +1129,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     if (hoy >= RACHA_PLAN_DESDE) racha = rachaPlan(hoy, dias);
     else for (let d = s.fecha; dias.has(claveDia(d)); d -= 864e5) racha++;
     const m = medidas(s, ftp);
+    const previos = { t2000: mejores.t2000, t5000: mejores.t5000, prueba: mejorPrueba };
+    if (s.pruebaWatts > 0) mejorPrueba = Math.max(mejorPrueba || 0, s.pruebaWatts);
     let records = 0;
     if (s.muestras?.length) {
       for (const r of RECORDS) {
@@ -1144,6 +1165,10 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     xpSesion = 0;
     jefeSesion = null;
     xp += gan.xp;
+    if (hoy >= MEJORA_REAL_DESDE && mesMejora !== hoy.slice(0, 7)) {
+      const texto = mejoraReal(s, previos);
+      if (texto) { mesMejora = hoy.slice(0, 7); lograr(s.fecha, 'mejora', texto, MONEDAS_MEJORA_REAL, null, XP_MEJORA_REAL / factorXp(s.fecha)); }
+    }
     const ganancias = {};
     const atrSesion = {};
     for (const [k, v] of Object.entries(gan.atributos)) {

@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.92.0 · 2026-11-22
+
+Premio por mejorar de verdad, y rivales que reman con tu curva.
+
+- **⚖ Mejora real.** Bajar un 2 % tu mejor 2000 m o 5000 m, o subir un 2 % los watts de tu prueba de FTP, da 250 XP y 50 monedas, uno al mes como mucho. Cuenta desde el 24 de noviembre de 2026: la XP de las sesiones anteriores no cambia.
+- **Rivales con tu curva.** Con tu CP y W′ medidos, los rivales de una meta de distancia reparten el esfuerzo con el mismo motor que da tus tiempos estimados: aprietan un poco más en las distancias donde tu curva dice que rindes más, y un poco menos donde rindes menos. El 5000 m sigue igual y la curva nunca se aparta más de un 5 % de potencia de la de siempre (menos de un 2 % en tiempo), así que la dificultad no cambia de golpe. Sin CP medida, todo sigue como antes.
+
 ## 0.91.1 · 2026-11-21
 
 El pirata, rehecho con la misma progresión que el resto.
