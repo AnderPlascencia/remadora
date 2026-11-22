@@ -18,7 +18,7 @@ import { avanzado, cerrarTripulacion } from './ajustes.js';
 import { cerrarModoRemo, vistaPrevia } from './vivo.js';
 import { cerrarFin, paraPerfil } from './sesion.js';
 import { pintarHistorial } from './progreso.js';
-import { chipsAtr, estadoHeroe, opcConsejos, previsionDe, srcHeroe } from './heroe.js';
+import { chipsAtr, estadoHeroe, hitoSesion, opcConsejos, previsionDe, srcHeroe } from './heroe.js';
 import { PAISAJES, paisajeElegido } from '../carrera.js';
 import { esDePlan, guardarPrograma, leerPrograma, pintarPrograma } from './programa.js';
 import { cerrarGuia } from './ayuda.js';
@@ -693,6 +693,7 @@ export function arrancarPlanes2() {
 
 // ---------- Compartir imagen ----------
 let compartir = null; // { s, opciones, ctx, blob, url, turno }
+const hitoSeguro = async (s, previas) => { try { return await hitoSesion(s, previas); } catch { return null; } };
 async function abrirCompartir(s) {
   if (!s) return;
   // La tarjeta y su pintor se cargan aquí, no al arrancar la app.
@@ -716,7 +717,7 @@ async function abrirCompartir(s) {
     ctx: {
       ftp: ftp(), records: E.nuevosRecords(s, previas), marcas: E.calcularRecords(previas), previas,
       meta: programa?.meta || null, semanaPlan: programa ? Tj.semanaDelPlan(programa, s.fecha) : null,
-      rivales: s.rivales || (s.rival ? [s.rival] : []), heroe, paisaje,
+      rivales: s.rivales || (s.rival ? [s.rival] : []), heroe, paisaje, hito: await hitoSeguro(s, previas),
     },
   };
   $('#compartir-heroe').checked = true;

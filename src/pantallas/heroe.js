@@ -24,6 +24,8 @@ import { corto } from './sesion.js';
 import { cerrarHoja, llenarSelectorEntrenamientos, obtenerEnt } from './planes.js';
 import { HABILIDADES, habilidadDe, RESERVA } from '../habilidades.js';
 import { proximo } from '../programa.js';
+import * as E from '../estadisticas.js';
+import { leerPrograma } from './programa.js';
 
 // ---------- Héroe ----------
 export function leerPersonaje() {
@@ -779,6 +781,26 @@ function juegoConSesion(previas, s, per) {
   const h = J.estadoJuego([...previas.filter((x) => x.fecha !== s.fecha), s], { ftp: ftp(), per });
   juegoResumen = { previas, s, clave, h };
   return h;
+}
+
+// El hito de la sesión (etapa 21): jefe, plan o semana completos, rango, récord o fantasma por poco; null si no hubo.
+// hitos.js se carga aquí, al terminar una sesión, y no al arrancar la app.
+export async function hitoSesion(s, previas = []) {
+  const Hi = await import('../hitos.js');
+  const per = leerPersonaje();
+  const g = juegoConSesion(previas, s, per).porSesion.get(s.fecha);
+  const premio = g?.jefe ? (g.jefe.pieza ? `${CB.PIEZAS[g.jefe.pieza].nombre} para su bote` : O.objeto(g.jefe.objeto)?.nombre ? `insignia ${O.objeto(g.jefe.objeto).nombre}` : '') : '';
+  const sube = g && per.clase && J.rangoDe(g.nivelDespues).id !== J.rangoDe(g.nivelAntes).id;
+  const prog = leerPrograma();
+  const { plan, semana } = Hi.hitosDelPlan(prog, previas, s);
+  return Hi.hitoDe({
+    jefe: g?.jefe ? { nombre: g.jefe.nombre, premio } : null,
+    rango: sube ? { nombre: J.nombreRango(g.nivelDespues, per.clase) } : null,
+    plan: plan ? { ...plan, nombre: prog.nombre || '' } : null,
+    semana,
+    records: E.nuevosRecords(s, previas),
+    rivales: s.rivales || (s.rival ? [s.rival] : []),
+  });
 }
 
 // XP, monedas y logros que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel o venciste a un jefe.

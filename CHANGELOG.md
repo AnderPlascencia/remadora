@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.101.0 · 2026-11-22
+
+La imagen compartida, en el momento justo.
+
+- **Compártelo tras un hito.** Si la sesión venció a un jefe, terminó tu plan, subió tu rango, completó una semana del plan, rompió un récord o le ganó a un fantasma por 25 m o menos, el resumen lo dice arriba con un botón para compartir. Las sesiones normales siguen con el botón de siempre, sin insistir.
+- **Una plantilla por hito.** La imagen lleva el sello del momento («¡JEFE VENCIDO!», «PLAN COMPLETO», «NUEVO RANGO», «SEMANA COMPLETA», «POR UN PELO») y su frase: el jefe con la pieza ganada para el bote, el plan con sus semanas en una tira, el fantasma con los metros de diferencia. El récord conserva la suya, con la marca anterior tachada.
+
 ## 0.100.0 · 2026-11-22
 
 La laguna tropical, repintada con el estilo de los héroes.

@@ -287,6 +287,22 @@ export async function tarjetaSesion(contenido, { formato = '4:5', fecha = '', pu
   if (C.intensidad) medidor(ctx, M + tw + 24, y - 22, C.intensidad);
   const estado = [C.estado?.texto, C.semanaPlan].filter(Boolean).join(' · ');
   if (estado) { y += 52; ctx.fillStyle = C.estado?.completo ? T.lat : T.suave; cabe(ctx, estado, M, y, W - 2 * M, TXT(600), 30, 22); }
+  // Plan completo: sus semanas en una tira, en latón lo hecho de cada una.
+  if (C.tira?.length) {
+    y += 30;
+    const n = C.tira.length;
+    const gap = 10;
+    const bw = Math.min(90, (W - 2 * M - gap * (n - 1)) / n);
+    C.tira.forEach((f, i) => {
+      const x = M + i * (bw + gap);
+      ctx.fillStyle = T.vacio;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, 16, 8);
+      ctx.fill();
+      if (f > 0) { ctx.fillStyle = T.lat; ctx.beginPath(); ctx.roundRect(x, y, Math.max(16, bw * f), 16, 8); ctx.fill(); }
+    });
+    y += 16;
+  }
 
   // Por qué importa: barra de latón y hasta 2 líneas.
   if (C.contexto) {

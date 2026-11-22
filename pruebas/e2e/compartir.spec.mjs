@@ -69,3 +69,21 @@ test('compartir mi semana y mi mes desde Progreso', async ({ page }) => {
   // La de la sesión vuelve a enseñar el pulso y no el selector de periodo.
   await expect(dlg.locator('#compartir-cual')).toBeHidden();
 });
+
+// Etapa 21: tras un hito (aquí, un récord de distancia) el resumen ofrece compartir arriba; una sesión normal no insiste.
+test('el resumen ofrece compartir arriba solo tras un hito', async ({ page }) => {
+  await abrirApp(page);
+  await completarBienvenida(page);
+  await esperarAviso(page, /^Tu plan está listo/);
+  await remar(page, 30_000);
+  await terminar(page);
+  await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
+  await expect(page.locator('#hoja-hito')).toBeHidden();
+  await page.locator('#hoja-cerrar').click();
+  await remar(page, 90_000);
+  await terminar(page);
+  await expect(page.locator('#hoja-hito')).toBeVisible();
+  await expect(page.locator('#hoja-hito-texto')).toHaveText(/Compárte(lo|la)$/);
+  await page.locator('#btn-hito-compartir').click();
+  await expect(page.locator('#compartir-dialogo')).toBeVisible();
+});
