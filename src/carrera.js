@@ -135,6 +135,9 @@ Object.assign(PAISAJES, {
     nombre: 'Cañón del desierto',
     texto: 'Mesetas rojas, saguaros y casas de adobe junto al río.',
     precio: 700,
+    agua: { src: 'assets/carrera/canon_agua3d.webp', m: 9 },
+    suelo3d: { src: 'assets/carrera/canon_suelo.webp', m: 8 },
+    aguaTextura3d: { src: 'assets/carrera/canon_agua3d.webp', m: 10 },
     orilla: {
       piezas: {
         saguaro_alto: { x: 0, y: 0, w: 238, h: 651, pie: [0.5, 0.987], m: 10.18 },
@@ -155,7 +158,7 @@ Object.assign(PAISAJES, {
       espejo: (s, r) => s > 0 && r > 0.5
     },
     colores: {
-      tierra2d: '#B8693A', agua2d: ['#3E7A78', '#2A5A5C'], cielo3d: ['#9DB6D6', '#D9DCDD'], agua3d: ['#4E6E7A', '#22404A'],
+      tierra2d: '#B8693A', agua2d: ['#3E7A68', '#2A5A4C'], cielo3d: ['#9DB6D6', '#D9DCDD'], agua3d: ['#4E7A66', '#22443A'],
       reflejo: '210,195,170', arena3d: '#D9A878', tierra3d: '#A85A30', bruma: 230
     }
   }),
