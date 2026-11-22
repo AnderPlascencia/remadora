@@ -635,6 +635,13 @@ export function arrancarPlanes2() {
   });
   // Compartir imagen (etapa 15): primero la vista previa, con el formato y lo que se enseña a tu elección.
   $('#btn-compartir-img').addEventListener('click', () => abrirCompartir(estado.sesionAbierta));
+  $('#compartir-cual').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cual]');
+    if (!b || compartir?.tipo !== 'periodo') return;
+    compartir.inicio = b.dataset.cual === 'actual' ? compartir.actual : compartir.anterior;
+    compartir.anotado = false;
+    pintarCompartir();
+  });
   $('#compartir-formatos').addEventListener('click', (e) => {
     const b = e.target.closest('[data-formato]');
     if (!b || !compartir) return;
@@ -659,7 +666,8 @@ export function arrancarPlanes2() {
     boton.disabled = true;
     try {
       const archivo = new File([listo.blob], listo.nombre, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Mi sesión en Rower' });
+      const titulo = compartir?.tipo === 'periodo' ? (compartir.periodo === 'mes' ? 'Mi mes en Rower' : 'Mi semana en Rower') : 'Mi sesión en Rower';
+      if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: titulo });
       else descargar(listo.nombre, listo.blob, 'image/png');
       anotarCompartir('compartir');
     } catch (err) {
@@ -719,21 +727,65 @@ async function abrirCompartir(s) {
   $('#compartir-dialogo').hidden = false;
   pintarCompartir();
 }
+// Tarjeta de la semana o del mes (etapa 31): la misma vista previa, con «esta / la anterior» en vez de pulso.
+export async function abrirCompartirPeriodo(periodo) {
+  let Tp;
+  try { Tp = await import('../tarjeta-periodo.js'); } catch { toast('No se pudo crear la imagen'); return; }
+  const sesiones = await H.sesiones();
+  if (!sesiones.length) { toast('Rema una sesión y aquí podrás compartir tu avance'); return; }
+  let heroe = null;
+  let paisaje = null;
+  let juego = null;
+  let primeraSemanaPlan = null;
+  try {
+    const { per, h } = await estadoHeroe();
+    juego = h;
+    primeraSemanaPlan = h.racha?.primeraSemanaPlan ?? null;
+    const clase = J.claseDe(per.clase);
+    if (clase) heroe = { nombre: per.nombre || clase.nombre, linea: `${J.tituloDe(h.nivel, per.clase)} · nivel ${h.nivel}`, nivel: h.nivel, src: srcHeroe(clase.clave, h.nivel), retrato: srcHeroe(clase.clave, h.nivel, true) };
+    const p = PAISAJES[paisajeElegido(per)];
+    if (p?.panorama) paisaje = { src: p.panorama.src, horizonte: p.panorama.horizonte, filtro: p.filtro || null };
+  } catch { /* sin héroe */ }
+  const programa = leerPrograma();
+  const actual = E.inicioPeriodo(Date.now(), periodo);
+  const anterior = Tp.periodoAnterior(actual, periodo);
+  compartir = {
+    tipo: 'periodo', periodo, Tp, sesiones, actual, anterior,
+    inicio: Tp.periodoSugerido(sesiones, periodo),
+    opciones: { formato: '4:5', heroe: true, kcal: true }, blob: null, url: null, turno: 0,
+    ctx: { juego, primeraSemanaPlan, heroe, paisaje, ftp: ftp(), estados: programa?.dias?.length ? P.estadoDias(programa, sesiones) : null },
+  };
+  const cual = $('#compartir-cual');
+  cual.hidden = false;
+  cual.querySelector('[data-cual="actual"]').textContent = periodo === 'mes' ? 'Este mes' : 'Esta semana';
+  cual.querySelector('[data-cual="anterior"]').textContent = periodo === 'mes' ? 'El mes pasado' : 'La semana pasada';
+  $('#compartir-heroe').checked = true;
+  $('#compartir-heroe').closest('label').hidden = !heroe;
+  $('#compartir-pulso').closest('label').hidden = true;
+  $('#compartir-kcal').checked = true;
+  $('#compartir-img').alt = periodo === 'mes' ? 'Vista previa de la imagen de tu mes' : 'Vista previa de la imagen de tu semana';
+  $('#compartir-dialogo').hidden = false;
+  pintarCompartir();
+}
+
 // Rehace la imagen con lo elegido; si cambias algo mientras se pinta, gana lo último.
 async function pintarCompartir() {
   const c = compartir;
   if (!c) return null;
   for (const b of document.querySelectorAll('#compartir-formatos [data-formato]')) b.setAttribute('aria-checked', String(b.dataset.formato === c.opciones.formato));
+  if (c.tipo === 'periodo') for (const b of document.querySelectorAll('#compartir-cual [data-cual]')) b.setAttribute('aria-checked', String((b.dataset.cual === 'actual' ? c.actual : c.anterior) === c.inicio));
   const turno = ++c.turno;
   c.blob = null;
   c.listo = (async () => {
     const s = c.s;
-    const { tarjetaSesion } = await import('../tarjeta-imagen.js');
-    const blob = await tarjetaSesion(c.Tj.contenidoTarjeta(s, c.opciones, c.ctx), {
-      formato: c.opciones.formato,
-      fecha: new Date(s.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-      puntos: (s.muestras || []).map((x) => [x.t, x.w]),
-    });
+    const { tarjetaSesion, tarjetaPeriodo } = await import('../tarjeta-imagen.js');
+    const blob = c.tipo === 'periodo'
+      ? await tarjetaPeriodo(c.Tp.contenidoPeriodo(c.sesiones, c.periodo, c.inicio, c.opciones, c.ctx), { formato: c.opciones.formato })
+      : await tarjetaSesion(c.Tj.contenidoTarjeta(s, c.opciones, c.ctx), {
+        formato: c.opciones.formato,
+        fecha: new Date(s.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        puntos: (s.muestras || []).map((x) => [x.t, x.w]),
+      });
     if (turno !== c.turno || compartir !== c) return null;
     if (c.url) URL.revokeObjectURL(c.url);
     c.blob = blob;
@@ -750,17 +802,21 @@ async function imagenCompartir() {
   if (!c) return null;
   const blob = c.blob || await c.listo;
   if (!blob || compartir !== c) return null;
-  return { blob, nombre: `rower-${marcaFecha(c.s.fecha)}-${c.opciones.formato.replace(':', 'x')}.png` };
+  const marca = c.tipo === 'periodo' ? `${c.periodo}-${marcaFecha(c.inicio)}` : marcaFecha(c.s.fecha);
+  return { blob, nombre: `rower-${marca}-${c.opciones.formato.replace(':', 'x')}.png` };
 }
 // Una vez por vista previa, para que guardar y luego compartir no cuente doble en la tasa de compartir.
 function anotarCompartir(como) {
   if (!compartir || compartir.anotado) return;
   compartir.anotado = true;
-  Hab.anotar('compartir', { sesion: compartir.s.fecha, formato: compartir.opciones.formato, como });
+  if (compartir.tipo === 'periodo') Hab.anotar('compartir', { periodo: compartir.periodo, inicio: compartir.inicio, formato: compartir.opciones.formato, como });
+  else Hab.anotar('compartir', { sesion: compartir.s.fecha, formato: compartir.opciones.formato, como });
 }
 export function cerrarCompartir() {
   if (compartir?.url) URL.revokeObjectURL(compartir.url);
   compartir = null;
+  $('#compartir-cual').hidden = true;
+  $('#compartir-img').alt = 'Vista previa de la imagen de tu sesión';
   $('#compartir-img').removeAttribute('src');
   $('#compartir-dialogo').hidden = true;
 }

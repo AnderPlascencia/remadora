@@ -322,6 +322,7 @@ export function contenidoTarjeta(s, opciones = {}, ctx = {}) {
 // no en la de la sesión: «La misma distancia que una carrera olímpica de remo»,
 // «Como cruzar 3 veces el puente Golden Gate» o, si nada cuadra, campos de fútbol. Medidas públicas, redondeadas.
 export const DISTANCIAS = [
+  { m: 82000, de: 'el Canal de Panamá', cruzar: 'recorrer el Canal de Panamá' },
   { m: 42195, de: 'un maratón', cruzar: 'correr un maratón' },
   { m: 33000, de: 'el Canal de la Mancha (Dover–Calais)', cruzar: 'cruzar el Canal de la Mancha' },
   { m: 21097, de: 'un medio maratón', cruzar: 'correr un medio maratón' },
