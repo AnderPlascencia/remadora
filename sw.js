@@ -15,7 +15,8 @@ const HEROES = CLASES.flatMap((c) => RANGOS.flatMap((r) => [`assets/heroes/${c}_
 // los rivales. Cada paisaje comprado (~70-200 KB) se descarga al comprarlo y al abrir la app, con el mensaje
 // «precargar» (ver precargarRecursos en src/pantallas/heroe.js); sin él se dibujan las formas sencillas.
 const MINIATURAS = ['fiordo', 'laguna', 'canon', 'otono', 'cerezos', 'glaciar', 'mediterraneo'].map((p) => `assets/carrera/${p}_mini.webp`);
-const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp', ...MINIATURAS,
+const PAISAJE = ['assets/carrera/fiordo.webp', 'assets/carrera/orilla.webp', 'assets/carrera/costa.webp',
+  'assets/carrera/fiordo_suelo.webp', 'assets/carrera/fiordo_agua.webp', ...MINIATURAS,
   'assets/carrera/rival_vikingo.webp'];
 // Los vídeos de la vista realista (~1,2 MB) son de una clase: no se precargan al instalar. La app los pide con un
 // mensaje «precargar» cuando tu héroe es de esa clase (ver src/app.js).

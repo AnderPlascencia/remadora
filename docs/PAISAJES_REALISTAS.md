@@ -159,3 +159,20 @@ Photorealistic top-down orthographic photo of very clear shallow tropical lagoon
 Photorealistic top-down orthographic photo of a thin irregular line of white sea foam where gentle waves wash onto white sand, the foam line running horizontally across the whole image, lacy bubbles and thin wet sand film, isolated on a plain solid flat black background (#000000) above and below the foam, no sand texture outside the foam. Seamless horizontally tileable. No text, no watermark.
 ```
 (Genera 3 versiones con la misma frase para la animación.)
+
+# Fiordo pintado (0.98.0)
+
+Desde la 0.98.0 el fiordo se pinta con el mismo motor y estilo que los héroes: stable-diffusion.cpp con Z-Image Turbo
+(Q8_0), en CPU, ~25 min por imagen. Los guiones están en `tools/paisaje-pintado/`:
+
+| Guion | Qué hace |
+|---|---|
+| `gen.sh` | Genera el panorama (1344×448), la costa 2D (1024×320) y una lámina de piezas sobre magenta (768×768) |
+| `gen2.sh` | Genera las texturas de suelo y agua (512×512) |
+| `panorama.py` | Hace el panorama repetible, lo lleva a 4096×449 y le copia la transparencia bajo el horizonte del original |
+| `costa.py` | Recorta la orilla, la hace repetible y la lleva a 1536×345 |
+| `piezas.py` | Quita el magenta, separa las piezas y monta el atlas de orilla con los mismos recortes, pies y alturas |
+| `texturas.py` | Hace las texturas repetibles en los dos ejes y las deja a 256×256 |
+
+Prefijo de estilo de todas: `Semi-realistic detailed digital painting, realistic proportions, painterly rendering,
+crisp dark outline, high quality fantasy RPG art.` Para los demás paisajes se cambia solo la escena.
