@@ -44,9 +44,9 @@ test('un respaldo de 0.54 con velas de color pasa a otro teléfono con sus velas
   await expect(b.locator('#tienda-velas .objeto.activo')).toContainText('Velas de oro');
   await expect(b.locator('#heroe-monedas')).toHaveText(monedasA);
   // Elegir la vela de la colección y volver a la de oro no pierde ninguna de las dos.
-  await b.locator('#tienda-velas .objeto').filter({ hasText: 'Púrpura imperial' }).locator('button').click();
+  await b.locator('#tienda-velas .objeto').filter({ hasText: 'Púrpura imperial' }).locator('[data-pieza]').click();
   await expect(b.locator('#tienda-velas .objeto.activo')).toContainText('Púrpura imperial');
-  await b.locator('#tienda-velas .objeto').filter({ hasText: 'Velas de oro' }).locator('button').click();
+  await b.locator('#tienda-velas .objeto').filter({ hasText: 'Velas de oro' }).locator('[data-pieza]').click();
   await expect(b.locator('#tienda-velas .objeto.activo')).toContainText('Velas de oro');
   expect((await b.evaluate(() => JSON.parse(localStorage.getItem('personaje')))).velas).toEqual(['oro', 'carmesi']);
 });

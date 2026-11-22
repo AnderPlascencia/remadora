@@ -523,6 +523,8 @@ export function crearCarrera(canvas) {
       arrancar();
     },
     detener() { this.estado = null; this.yoVista = null; this.vistos = null; this.centro = null; this.ventanaLista = false; this.charcos = []; this.alejar = 0; this.costa = null; },
+    // Para lienzos de un rato (la vista previa de la tienda): deja de dibujarse y sale de la lista para siempre.
+    soltar() { this.detener(); carreras.delete(this); },
   };
   carreras.add(c);
   // Fuera de la pantalla (al bajar en Entrenar) no se dibuja; al volver a verse, la animación sigue.
