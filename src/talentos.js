@@ -202,6 +202,7 @@ export function motivoBloqueo(slot, { nivel, libres }, arbol, clase) {
 // antes (sesión anterior a la etapa 12), kmSemana (con esta sesión), metaSemanaKm, palada (vikingo de palada larga),
 // mppMedia (tus metros por palada habituales) }.
 // Devuelve [[nombre, xp], …]. Todo lo de la sesión suma como mucho TOPE_TALENTOS_XP; el Triunfo romano va aparte.
+/** @returns {[string, number][]} */
 export function xpTalentos(clase, grados, d) {
   const senda = d.senda === 'b' ? 'b' : 'a';
   const v = (slot) => valorDe(clase, slot, grados?.[slot] || 0, !!d.antes, !d.palada, senda);

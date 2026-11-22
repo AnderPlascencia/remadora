@@ -1,3 +1,4 @@
+// @ts-check
 // Almacenamiento local (IndexedDB): sesiones remadas, entrenamientos creados y el estado de la app
 // (la sesión en curso y la versión de los datos).
 //
@@ -12,6 +13,7 @@ const VERSION_BD = 3;
 let dbPromesa = null;
 
 // La app escucha estos avisos para decírselos a la persona (ver app.js).
+/** @type {(motivo: string) => void} */
 let avisar = () => {};
 export function alAvisar(fn) { avisar = fn; }
 

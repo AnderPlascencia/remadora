@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.102.0 · 2026-11-22
+
+Datos seguros antes de migrar.
+
+- **Dos pestañas, una sola sesión.** Si la app está abierta en dos pestañas mientras remas, la otra ya no ofrece guardar ni descartar la sesión que sigue en curso, ni deja empezar otra encima. Si la pestaña donde remabas se cierra, la otra sí ofrece guardar lo remado, una sola vez.
+- **Pruebas de caos.** Ahora se prueba que la sesión se guarda entera cuando el reloj salta 10 minutos hacia adelante (teléfono suspendido) o una hora hacia atrás (cambio de horario), cuando Chrome congela la pestaña y con dos pestañas abiertas. Se suman a las de disco lleno, transacción abortada y temporizador frenado.
+- **Respaldos de versiones viejas.** Un respaldo con el formato de la v0.44 y otro con el de la v0.80 se restauran en cada versión nueva, y se comprueba que den los mismos totales, marcas, XP, nivel y monedas.
+- **Revisión de tipos.** Los módulos de datos (base de datos, historial, respaldo y juego) se revisan con TypeScript sin compilar en cada cambio. Hoy no tienen ningún error.
+
 ## 0.101.0 · 2026-11-22
 
 La imagen compartida, en el momento justo.

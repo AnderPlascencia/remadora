@@ -1,3 +1,4 @@
+// @ts-check
 // Historial de sesiones: la única puerta a las sesiones guardadas.
 // En la base, cada sesión va sin sus muestras («sesiones») y las muestras van aparte («muestras», misma clave).
 // Aquí se juntan y se guardan en memoria: la lista se lee una vez y se vuelve a leer solo después de guardar,

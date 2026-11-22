@@ -1,0 +1,37 @@
+{
+  "v0.44": {
+    "sesiones": 12,
+    "metros": 23086,
+    "reparadas": 1,
+    "records": {
+      "dist": 2740,
+      "t2000": 510,
+      "t500": 124,
+      "w1": 194,
+      "w5": 181,
+      "wmax": 198
+    },
+    "xp": 6748,
+    "nivel": 21,
+    "monedas": 989,
+    "clase": "vikingo"
+  },
+  "v0.80": {
+    "sesiones": 15,
+    "metros": 51704,
+    "reparadas": 0,
+    "records": {
+      "dist": 4862,
+      "t2000": 499,
+      "t500": 124,
+      "w1": 194,
+      "w20": 168,
+      "w5": 181,
+      "wmax": 198
+    },
+    "xp": 10973,
+    "nivel": 28,
+    "monedas": 2002,
+    "clase": "samurai"
+  }
+}

@@ -1,3 +1,4 @@
+// @ts-check
 // Respaldo en archivo: qué se guarda y cómo se combina al restaurar, sin tocar la pantalla ni la base de datos.
 //
 // Formatos:

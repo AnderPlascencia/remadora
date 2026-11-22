@@ -1,0 +1,15 @@
+{
+  "//": "Revisión de tipos sin compilar (etapa 22): solo los archivos con // @ts-check; los demás se leen para conocer sus tipos.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "target": "es2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "files": ["src/db.js", "src/historial.js", "src/respaldo.js", "src/juego.js"]
+}
