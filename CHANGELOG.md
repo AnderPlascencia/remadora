@@ -10,6 +10,11 @@ La laguna tropical, repintada con el estilo de los héroes.
 - **Arena y agua turquesa pintadas en la vista 3D**, en perspectiva y moviéndose con la carrera, con bruma lejana del color del pie de las islas. Las variantes (atardecer, luna llena, dorada) las tiñen igual.
 - **Sin cortes en el agua.** Las franjas de la textura ahora empiezan justo donde acaba la anterior y son más finas; también se nota en el fiordo.
 - Al comprar un paisaje se descargan también sus texturas de suelo y agua para verlo sin conexión.
+## 0.99.1 · 2026-11-22
+
+El pirata sigue la historia de Barbanegra.
+
+- Sus rangos van de marinero raso a corsario y capitán con pistolas, y termina como leyenda canosa con la barba trenzada y humo de mechas bajo el sombrero.
 
 ## 0.99.0 · 2026-11-22
 
