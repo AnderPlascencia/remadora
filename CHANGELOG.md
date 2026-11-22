@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.103.0 · 2026-11-22
+
+El camino de tu clase, en una sola vista.
+
+- **Camino.** Talentos y Rangos se juntan en la nueva subpestaña Camino, la primera del Héroe. Es una línea del nivel 1 al 90 con lo que trae cada rango: el título de tu clase, las mejoras de talento que se abren, la vela o el mascarón que ganas por nivel y el jefe de cada capítulo. El jefe lleva candado hasta su nivel y espadas cuando ya puedes vencerlo.
+- **Siguiente hito.** Arriba se ve lo próximo que ganas y cuántas sesiones faltan a tu ritmo.
+- **La senda, una decisión clara.** Antes del nivel 20 ya se ven las dos sendas de tu clase. Al llegar, la tarjeta te pide elegir y te recuerda que cambiar es gratis.
+- **Menos texto.** Cada clase dice en una línea qué premia. Los números de cada talento siguen en «Talentos y senda», que se abre solo al tocar «Repartir».
+- Corregido: las mejoras 1 y 2 decían «desde el nivel 1», pero el primer punto de talento llega en el nivel 3.
+
 ## 0.102.1 · 2026-11-22
 
 El Cañón del desierto, repintado con el estilo de los héroes.

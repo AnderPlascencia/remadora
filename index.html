@@ -428,13 +428,12 @@
         </div>
         <div id="heroe-avisos" class="heroe-avisos"></div>
         <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
-          <button type="button" role="tab" data-hp="ficha" class="activa" aria-selected="true">Ficha</button>
-          <button type="button" role="tab" data-hp="talentos">Talentos</button>
-          <button type="button" role="tab" data-hp="niveles">Rangos</button>
+          <button type="button" role="tab" data-hp="camino" class="activa" aria-selected="true">Camino</button>
           <button type="button" role="tab" data-hp="misiones">Misiones</button>
           <button type="button" role="tab" data-hp="tienda">Tienda</button>
+          <button type="button" role="tab" data-hp="ficha">Ficha</button>
         </div>
-        <div id="hp-ficha" class="hp">
+        <div id="hp-ficha" class="hp" hidden>
           <div id="ficha-figura" class="armario-vista" role="button" tabindex="0" aria-label="Oír a tu héroe" title="Toca para oír a tu héroe"></div>
           <div id="heroe-maestria" class="heroe-maestria"></div>
           <div id="ficha-talentos-caja">
@@ -456,19 +455,18 @@
           <ul id="heroe-sesiones" class="lista heroe-sesiones"></ul>
           <div class="fila-botones"><button id="btn-cambiar-clase" class="boton">Cambiar de clase</button></div>
         </div>
-        <div id="hp-talentos" class="hp" hidden>
-          <p id="talentos-libres" class="aviso suave-aviso"></p>
-          <p id="talentos-canje" class="aviso suave-aviso" hidden></p>
-          <div id="arbol" class="arbol"></div>
-        </div>
-        <div id="hp-niveles" class="hp" hidden>
-          <p class="ayuda">Desliza para ver cada rango, del nivel 1 al 90, y cómo cambia tu héroe.</p>
-          <div class="niveles-nav">
-            <button type="button" class="boton icono" data-niv="-1" aria-label="Rango anterior">‹</button>
-            <div id="niveles-puntos" class="niveles-puntos" aria-label="Rangos"></div>
-            <button type="button" class="boton icono" data-niv="1" aria-label="Rango siguiente">›</button>
-          </div>
-          <div id="niveles-carrusel" class="niveles-carrusel" tabindex="0" aria-label="Rangos del héroe"></div>
+        <div id="hp-camino" class="hp">
+          <div id="camino-siguiente" class="camino-sig"></div>
+          <p id="camino-ident" class="camino-ident"></p>
+          <details id="camino-talentos" class="seccion">
+            <summary><h2>Talentos y senda</h2><span id="camino-talentos-resumen" class="seccion-resumen"></span></summary>
+            <p id="talentos-libres" class="aviso suave-aviso"></p>
+            <p id="talentos-canje" class="aviso suave-aviso" hidden></p>
+            <div id="arbol" class="arbol"></div>
+          </details>
+          <h2>Tu camino</h2>
+          <ol id="camino-linea" class="camino-linea" aria-label="Camino de tu clase, del nivel 1 al 90"></ol>
+          <p class="camino-nota">Talentos, habilidad y bote solo dan XP y metros frente a los fantasmas: tus métricas, récords y pruebas no cambian.</p>
         </div>
         <div id="hp-misiones" class="hp" hidden>
           <h2>Hoy</h2>
