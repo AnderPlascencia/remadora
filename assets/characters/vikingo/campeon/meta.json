@@ -7,22 +7,22 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 0.6975
+      "escala": 1.1216
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "vikingo_campeon_source.jpg",
-    "generador": "Ilustración aportada por Ander (nivel 6)",
-    "prompt": "sin indicar",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el novato",
+    "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#vikingo",
     "origen": {
-      "ancho": 896,
-      "alto": 1200,
+      "ancho": 576,
+      "alto": 768,
       "caja": {
-        "x0": 130,
-        "y0": 41,
-        "x1": 650,
-        "y1": 1148
+        "x0": 64,
+        "y0": 44,
+        "x1": 469,
+        "y1": 732
       }
     },
     "licencia": "según los términos del generador"

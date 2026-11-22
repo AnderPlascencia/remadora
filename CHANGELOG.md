@@ -10,6 +10,13 @@ Un solo motor para tus tiempos estimados, y tu meta a la vista.
 - **Con un rango honesto.** Cada tiempo estimado lleva su rango, por ejemplo «7:38 (entre 7:27 y 7:49)». El rango se ensancha si la app falló más de la cuenta en tus marcas anteriores.
 - **Tu meta en Hoy.** Con un plan hacia una meta, Hoy muestra tu tiempo estimado frente a la meta: «Tus 2 km estimados: 7:58 → meta 7:50 (te faltan 8 s)».
 - Por encima de 30 min, el motor tiene en cuenta que la potencia cae un poco más (modelo Omni-PD).
+## 0.90.1 · 2026-11-21
+
+Ilustraciones nuevas para el romano, el samurái y el vikingo.
+
+- El romano y el samurái estrenan los 9 rangos con ilustración semirrealista pintada, en la línea del polinesio: de recluta con escudo de mimbre a legado con coraza dorada, y de campesino con palo de madera a señor con kabuto de media luna.
+- El vikingo conserva su novato y renueva los rangos 2 a 9, generados a partir de él para que no cambie la cara: del gorro de cuero al casco de anteojeras con capa de lobo.
+- Generadas con Open Generative AI en modo local (stable-diffusion.cpp con Z-Image Turbo) e importadas con `tools/ingest-character.mjs`.
 
 ## 0.90.0 · 2026-11-21
 
