@@ -70,6 +70,8 @@ export const PAISAJES = {
     costa: 'assets/carrera/laguna_costa.webp',
     // Agua de la vista 2D: textura cenital que se repite (m = metros que cubre) y espuma junto a la orilla
     agua: { src: 'assets/carrera/laguna_agua.webp', m: 9 },
+    suelo3d: { src: 'assets/carrera/laguna_suelo.webp', m: 8 },
+    aguaTextura3d: { src: 'assets/carrera/laguna_agua3d.webp', m: 10 },
     espuma: 'assets/carrera/laguna_espuma.webp',
     orilla: {
       src: 'assets/carrera/laguna_orilla.webp',
@@ -325,10 +327,10 @@ function franjas3d(ctx, P, camZ, tex, metros, lado, ancho, alto, cx, fx) {
   const th = tex.naturalHeight || tex.height;
   ctx.fillStyle = pat;
   let z0 = camZ + 1.2;
-  // Solo hasta 140 m: más lejos la bruma lo tapa y basta el color de fondo. Franjas cada vez más largas (×1,5).
+  // Solo hasta 140 m: más lejos la bruma lo tapa y basta el color de fondo. Franjas cada vez más largas (×1,3).
   const hasta = camZ + 140;
   while (z0 < hasta) {
-    const z1 = Math.min(hasta, camZ + (z0 - camZ) * 1.5 + 0.6);
+    const z1 = Math.min(hasta, camZ + (z0 - camZ) * 1.3 + 0.4);
     const a = P(0, z0);
     const b = P(0, z1);
     if (!a || !b) break;
@@ -336,7 +338,8 @@ function franjas3d(ctx, P, camZ, tex, metros, lado, ancho, alto, cx, fx) {
     const m = P(0, zm);
     const sx = (fx / m.d) * (metros / tw);
     const sy = -((a.y - b.y) / (z1 - z0)) * (metros / th);
-    pat.setTransform(new DOMMatrix([sx, 0, 0, sy, cx, m.y - sy * ((zm / metros) * th)]));
+    // Anclada en el borde cercano: así cada franja empieza justo donde acabó la anterior y no se ven cortes.
+    pat.setTransform(new DOMMatrix([sx, 0, 0, sy, cx, a.y - sy * ((z0 / metros) * th)]));
     ctx.beginPath();
     if (lado) {
       const ia = P(lado.borde, z0);
