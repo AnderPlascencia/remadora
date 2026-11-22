@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.94.0 · 2026-11-22
+
+Logo nuevo: el escudo de las clases.
+
+- **Ícono y marca.** El sello del amanecer deja su lugar a un escudo azul noche con borde ámbar, dos remos cruzados y tres estrellas de rango. La palabra ROWER pasa a la letra Cinzel. Los colores son los de siempre.
+- **Apertura.** Al abrir la app, el escudo cae, se cruzan los remos y el blasón pasa por los colores del vikingo, el pirata, el samurái, el romano y el polinesio con su nombre debajo. Luego se queda azul y ámbar, lo recorre un destello y se encienden las estrellas. Dura unos 2.5 s y, con «reducir movimiento», no se muestra.
+- La tarjeta para compartir usa la marca nueva sin cambios en su código.
+
 ## 0.93.0 · 2026-11-22
 
 Una tarjeta para compartir que se entiende sin saber de remo.
