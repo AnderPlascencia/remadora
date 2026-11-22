@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.99.1 · 2026-11-22
+
+El pirata sigue la historia de Barbanegra.
+
+- Sus rangos van de marinero raso a corsario y capitán con pistolas, y termina como leyenda canosa con la barba trenzada y humo de mechas bajo el sombrero.
+
 ## 0.99.0 · 2026-11-22
 
 Bienvenida en 3 toques y primera semana guiada.

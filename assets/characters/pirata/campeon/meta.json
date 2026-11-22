@@ -7,22 +7,22 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 1.0824
+      "escala": 1.0885
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "pirata_campeon_source.jpg",
-    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el novato",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el veterano",
     "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#pirata",
     "origen": {
       "ancho": 576,
       "alto": 768,
       "caja": {
-        "x0": 31,
-        "y0": 40,
-        "x1": 445,
-        "y1": 753
+        "x0": 34,
+        "y0": 45,
+        "x1": 428,
+        "y1": 754
       }
     },
     "licencia": "según los términos del generador"

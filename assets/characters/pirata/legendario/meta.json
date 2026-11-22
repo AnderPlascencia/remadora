@@ -7,22 +7,22 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 1.0704
+      "escala": 1.0263
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "pirata_legendario_source.jpg",
-    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el novato",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el maestro",
     "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#pirata",
     "origen": {
       "ancho": 576,
       "alto": 768,
       "caja": {
-        "x0": 27,
-        "y0": 32,
-        "x1": 447,
-        "y1": 753
+        "x0": 19,
+        "y0": 2,
+        "x1": 455,
+        "y1": 754
       }
     },
     "licencia": "según los términos del generador"
