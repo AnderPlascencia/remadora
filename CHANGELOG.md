@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.92.1 · 2026-11-21
+
+Los héroes nuevos llegan seguro al actualizar.
+
+- Al instalar una versión nueva, la app descarga de nuevo las ilustraciones de los héroes y los paisajes en lugar de reutilizar la copia que guardaba el navegador, que podía ser la anterior.
+
 ## 0.92.0 · 2026-11-22
 
 Premio por mejorar de verdad, y rivales que reman con tu curva.
