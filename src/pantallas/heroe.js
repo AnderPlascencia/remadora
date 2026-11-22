@@ -798,7 +798,9 @@ export function pintarXpSesion(s, previas, resumen) {
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
   // Vencer a un jefe es un hito: tarjeta propia con su insignia, antes que todo lo demás.
   const jefe = g.jefe ? `<div class="jefe-vencido" role="status">${ico('i-trofeo')}<div><b>¡Jefe vencido!</b><span>${escaparHtml(g.jefe.nombre)} cae y terminas el capítulo ${g.jefe.capitulo} de ${J.CAPITULOS.length}.</span><small>Insignia ${escaparHtml(O.objeto(g.jefe.objeto)?.nombre || '')}${g.jefe.pieza ? ` y ${escaparHtml(CB.PIEZAS[g.jefe.pieza].nombre)} para tu bote` : ''}</small></div></div>` : '';
-  caja.innerHTML = `${jefe}<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
+  // Sin héroe (la bienvenida ya no lo pide, etapa 20): elegirlo es lo primero del resumen, con la XP ya ganada.
+  const eleccion = clase ? '' : `<div class="xp-heroe"><p><b>Elige tu héroe</b> y se queda con esta experiencia:</p><div class="clases-mini">${J.CLASES.map((c) => `<button type="button" data-clase-rapida="${c.clave}"><img src="${srcHeroe(c.clave, 1, true)}" width="48" height="48" alt=""><span>${c.nombre}</span></button>`).join('')}</div></div>`;
+  caja.innerHTML = `${jefe}${eleccion}<span class="xp-total">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas grande">${icoMoneda}+${miles(monedas)}</span>
     ${subio ? `<span class="subio">¡${clase ? clase.nombre : 'Tu héroe'} sube a nivel ${g.nivelDespues}!${ascenso ? ` Ahora es ${J.nombreRango(g.nivelDespues, per.clase)}.` : ''}</span>` : ''}
     ${puntos > 0 && clase && h.talentosPorRepartir > 0 ? `<span class="subio-talento">+${puntos} ${puntos === 1 ? 'punto' : 'puntos'} de talento <button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></span>` : ''}
     <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div style="width:${h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100}%"></div></div>
@@ -808,8 +810,7 @@ export function pintarXpSesion(s, previas, resumen) {
     ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(['jefe', 'hazana', 'mejora'].includes(l.tipo) ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · insignia <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="recompensa">${l.xp ? `<span class="xp">+${miles(l.xp)} XP</span>` : ''}<span class="monedas">${icoMoneda}${l.monedas}</span></span></div>`).join('')}
     <div class="chips-ganancia">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div>
     <ul>${g.detalle.map(([t, v]) => `<li><span>${t}</span><span>+${miles(v)}</span></li>`).join('')}</ul>
-    ${J.usaCarga(s) ? `<p class="suave xp-mitad">La XP sale de la carga del entrenamiento (con tope diario) y de cumplir tu plan. ${J.esUnaRacha(s.fecha) ? 'Fantasmas y talentos' : 'Fantasmas, racha y talentos'} siguen a la mitad.</p>` : J.factorXp(s.fecha) < 1 ? '<p class="suave xp-mitad">Desde el 29 de octubre todo da la mitad de XP: estas cifras ya lo incluyen.</p>' : ''}</details>
-    ${clase ? '' : `<div class="xp-heroe"><p>Elige tu héroe y quédate con esta experiencia:</p><div class="clases-mini">${J.CLASES.map((c) => `<button type="button" data-clase-rapida="${c.clave}"><img src="${srcHeroe(c.clave, 1, true)}" width="48" height="48" alt=""><span>${c.nombre}</span></button>`).join('')}</div></div>`}`;
+    ${J.usaCarga(s) ? `<p class="suave xp-mitad">La XP sale de la carga del entrenamiento (con tope diario) y de cumplir tu plan. ${J.esUnaRacha(s.fecha) ? 'Fantasmas y talentos' : 'Fantasmas, racha y talentos'} siguen a la mitad.</p>` : J.factorXp(s.fecha) < 1 ? '<p class="suave xp-mitad">Desde el 29 de octubre todo da la mitad de XP: estas cifras ya lo incluyen.</p>' : ''}</details>`;
   if (resumen) {
     const total = g.xp + g.xpExtra;
     contarHasta(caja.querySelector('.xp-total'), total, (v) => `+${miles(v)} XP`);

@@ -1687,6 +1687,24 @@ details.mas-detalle[hidden] { display: none; }
 .inicio-numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; margin-top: 8px; }
 .inicio-numeros .campo small { color: var(--texto-tenue); font-weight: 500; }
 .inicio-nota { color: var(--primario-claro); font-weight: 600; font-size: var(--t-s); min-height: 1.4em; margin: 8px 0 0; }
+/* Bienvenida en 3 toques (etapa 20): el saludo va con la pregunta del objetivo; en Conectar, el plan elegido en una línea */
+.inicio-hola { padding: 4px 0 6px; border-bottom: 1px solid var(--borde); margin-bottom: 4px; }
+.inicio-hola[hidden] { display: none; }
+.inicio-hola .ayuda { margin: 0; }
+.inicio-plan-resumen { margin: 8px 0 0; padding: 10px 14px; border-radius: var(--r-medio); background: var(--panel); border: 1px solid var(--borde); color: var(--texto-suave); font-size: var(--t-s); }
+.inicio-plan-resumen[hidden] { display: none; }
+.inicio-plan-resumen b { color: var(--texto); }
+.hoja-perfil { margin: 12px 0; padding: 12px 14px; border-radius: var(--r-medio); background: var(--panel); border: 1px solid var(--borde); }
+.hoja-perfil[hidden] { display: none; }
+.hoja-perfil p { margin: 0 0 8px; color: var(--texto-suave); font-size: var(--t-s); }
+.hoja-perfil p b { color: var(--texto); }
+.hoja-perfil-campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
+.xp-heroe:first-child p { margin-top: 0; }
+.hoy-semana1 { display: flex; align-items: center; gap: 10px; margin: 6px 0 0; font-size: var(--t-s); font-weight: 700; color: var(--primario-claro); }
+.hoy-semana1[hidden] { display: none; }
+.s1-puntos { display: inline-flex; gap: 4px; }
+.s1-puntos i { width: 18px; height: 6px; border-radius: var(--r-chico); background: var(--borde); }
+.s1-puntos i.hecho { background: var(--primario-claro); }
 @media (orientation: landscape) and (max-height: 520px) {
   .inicio-como { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inicio-numeros { grid-template-columns: repeat(4, minmax(0, 1fr)); }

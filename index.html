@@ -137,6 +137,7 @@
         </div>
         <b id="hoy-nombre" class="hoy-nombre">Remo libre</b>
         <span id="hoy-resumen" class="hoy-resumen"></span>
+        <p id="hoy-semana1" class="hoy-semana1" hidden></p>
         <p id="hoy-porque" class="hoy-porque" hidden></p>
         <p id="hoy-cuerpo" class="hoy-cuerpo" hidden></p>
         <p id="hoy-ajuste" class="hoy-ajuste" hidden></p>
@@ -839,6 +840,14 @@
       <div id="hoja-xp" class="hoja-xp" hidden></div>
       <div id="hoja-atr" class="hoja-atr" hidden></div>
       <div id="hoja-ftp" class="aviso exito" hidden></div>
+      <div id="hoja-tu-perfil" class="hoja-perfil" hidden>
+        <p><b>Tu edad y tu peso</b> afinan tus calorías y tu pulso máximo desde la próxima sesión.</p>
+        <div class="hoja-perfil-campos">
+          <label class="campo">Edad <input id="hp-edad" type="number" min="10" max="99" inputmode="numeric" placeholder="35"></label>
+          <label class="campo">Peso (kg) <input id="hp-peso" type="number" min="30" max="200" inputmode="numeric" placeholder="75"></label>
+        </div>
+        <div class="fila-botones"><button type="button" id="hp-guardar" class="boton primario chico">Guardar</button><button type="button" id="hp-no" class="enlace-boton">Ahora no</button></div>
+      </div>
       <div id="hoja-esfuerzo" class="esfuerzo">
         <h2 id="hoja-esfuerzo-titulo">¿Qué tan duro se sintió?</h2>
         <div id="rpe-auto" class="rpe-auto" hidden></div>
@@ -879,7 +888,7 @@
     </div>
   </div>
 
-  <!-- PRIMER INICIO: qué es la app, héroe, objetivo, perfil y conexión -->
+  <!-- PRIMER INICIO: objetivo y conexión (3 toques hasta remar); al repetirla, también héroe y perfil -->
   <div id="inicio" class="inicio" role="dialog" aria-modal="true" aria-labelledby="inicio-titulo" hidden>
     <div class="inicio-cabecera">
       <div id="inicio-puntos" class="inicio-puntos" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
@@ -888,7 +897,7 @@
     <div class="inicio-cuerpo">
       <section class="inicio-paso" data-paso="1">
         <img class="inicio-logo" src="assets/marca/rower-logo.svg" alt="" width="56" height="56">
-        <h2 id="inicio-titulo">Hola, soy Rower</h2>
+        <h2>Hola, soy Rower</h2>
         <p class="ayuda">Convierto tu remadora RW200 en entrenador y juego. Así funciono:</p>
         <ol class="inicio-como">
           <li><svg class="ico" aria-hidden="true"><use href="#i-remo"/></svg><span><b>Rema y mira tus números</b>Watts, ritmo, golpes y pulso en vivo; a pantalla completa con Modo remo.</span></li>
@@ -896,7 +905,7 @@
           <li><svg class="ico" aria-hidden="true"><use href="#i-heroe"/></svg><span><b>Haz crecer a tu héroe</b>XP, atributos, misiones, jefes y monedas para la tienda.</span></li>
           <li><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg><span><b>Mira cómo mejoras</b>Récords, kilómetros y tu forma en Progreso.</span></li>
         </ol>
-        <p class="ayuda">Son 4 preguntas rápidas para dejarlo a tu medida. Todo se puede cambiar después en Ajustes.</p>
+        <p class="ayuda">Repasa tu héroe, tu objetivo y tu perfil. Todo se puede cambiar después en Ajustes.</p>
       </section>
       <section class="inicio-paso" data-paso="2" hidden>
         <h2>Elige tu héroe</h2>
@@ -905,6 +914,10 @@
         <label class="campo">Nombre <small>(opcional)</small><input id="inicio-nombre" maxlength="20" autocomplete="off" placeholder="Ander el Implacable"></label>
       </section>
       <section class="inicio-paso" data-paso="3" hidden>
+        <div id="inicio-hola" class="inicio-hola">
+          <img class="inicio-logo" src="assets/marca/rower-logo.svg" alt="" width="48" height="48">
+          <div><h2 id="inicio-titulo">Hola, soy Rower</h2><p class="ayuda">Convierto tu remadora RW200 en entrenador y juego. Tu héroe lo eliges al terminar tu primera sesión.</p></div>
+        </div>
         <h2>¿Qué quieres lograr?</h2>
         <p id="inicio-obj-ayuda" class="ayuda">Con tu respuesta armo un plan de 6 semanas. Lo puedes cambiar cuando quieras en Planes.</p>
         <div id="inicio-objetivos" class="opciones-grandes" role="radiogroup" aria-label="Objetivo"></div>
@@ -931,6 +944,7 @@
         <p id="inicio-perfil-nota" class="inicio-nota" aria-live="polite"></p>
       </section>
       <section class="inicio-paso" data-paso="5" hidden>
+        <p id="inicio-plan-resumen" class="inicio-plan-resumen" hidden><span></span> <button type="button" id="inicio-cambiar" class="enlace-boton">Cambiar</button></p>
         <h2>Conecta tu remadora</h2>
         <p id="inicio-bt-texto" class="ayuda">Enciende la consola de la RW200, toca Conectar y elígela en la lista que muestra el teléfono.</p>
         <div class="inicio-conectar">
