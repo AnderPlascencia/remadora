@@ -7,21 +7,21 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 1.0689
+      "escala": 1.0793
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "romano_legendario_source.jpg",
-    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el novato",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el maestro",
     "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#romano",
     "origen": {
       "ancho": 576,
       "alto": 768,
       "caja": {
-        "x0": 21,
-        "y0": 26,
-        "x1": 512,
+        "x0": 17,
+        "y0": 33,
+        "x1": 553,
         "y1": 748
       }
     },
