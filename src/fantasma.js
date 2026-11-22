@@ -2,7 +2,7 @@
 // Cada fantasma tiene un FTP de referencia y rema cada intervalo a la intensidad relativa que
 // pide el plan, con variaciones naturales de ritmo y cansancio en los tramos fuertes y largos.
 import * as Ent from './entrenamientos.js';
-import { distanciaEn } from './estadisticas.js';
+import { distanciaEn, potenciaEn, tiempoPara } from './estadisticas.js';
 
 export const NIVELES = {
   principiante: { nombre: 'Principiante', ftp: 110, spm: 22, fatiga: 0.08, variacion: 0.035 },
@@ -41,7 +41,23 @@ export const ESTILOS = {
 // la distancia, así 2001 m no pide de golpe menos que 2000 m. tope: con un FTP estimado (sin prueba) lo corto
 // se queda en el 115 %, para que un FTP inflado no dé un rival imposible.
 export const REL_DISTANCIA = [[500, 1.35], [1000, 1.25], [2000, 1.12], [5000, 1.0], [10000, 0.92], [21097, 0.85]];
-export function relDistancia(metros, tope = null) {
+// pc: tu CP y W′ medidos (etapa 18). Con ellos la forma de la curva es la tuya: la potencia que aguantas en esa
+// distancia frente a la de 5000 m, según el mismo motor que da tus tiempos estimados. El 5000 m sigue al 100 % y
+// la curva tuya no se aparta más de un REL_MARGEN de la tabla, para que la dificultad no cambie de golpe.
+export const REL_MARGEN = 0.05;
+export function relPropia(metros, pc) {
+  if (!pc?.cp || pc.estimada) return null;
+  const t = tiempoPara(metros, pc);
+  const t5 = tiempoPara(5000, pc);
+  return t && t5 ? potenciaEn(t, pc) / potenciaEn(t5, pc) : null;
+}
+export function relDistancia(metros, tope = null, pc = null) {
+  const base = relTabla(metros);
+  const propia = relPropia(metros, pc);
+  const rel = propia ? Math.min(base * (1 + REL_MARGEN), Math.max(base * (1 - REL_MARGEN), propia)) : base;
+  return tope ? Math.min(tope, rel) : rel;
+}
+function relTabla(metros) {
   const P = REL_DISTANCIA;
   let rel;
   if (!(metros > P[0][0])) rel = P[0][1];
@@ -52,7 +68,7 @@ export function relDistancia(metros, tope = null) {
     const [d1, r1] = P[i];
     rel = r0 + ((r1 - r0) * Math.log(metros / d0)) / Math.log(d1 / d0);
   }
-  return tope ? Math.min(tope, rel) : rel;
+  return rel;
 }
 
 // Perfil del fantasma: un nivel por nombre o uno a la medida { ftp, nombre, estilo? }.
@@ -64,7 +80,7 @@ function perfil(nivel) {
   const estilo = ESTILOS[nivel.estilo] || null;
   // El samurái apenas varía; el pirata, mucho.
   const variacion = nivel.estilo === 'samurai' ? cercano.variacion / 2 : nivel.estilo === 'pirata' ? cercano.variacion * 1.6 : cercano.variacion;
-  return { ...cercano, variacion, clave: 'personalizado', nombre: nivel.nombre || `${ftp} W`, ftp, estilo, tope: nivel.tope || null };
+  return { ...cercano, variacion, clave: 'personalizado', nombre: nivel.nombre || `${ftp} W`, ftp, estilo, tope: nivel.tope || null, pc: nivel.pc || null };
 }
 
 // Sesión simulada: { nivel, nombre, muestras: [{ t, dist, w, spm }] }.
@@ -111,7 +127,7 @@ export function simular(ent, nivel, ftpUsuario = 0) {
       cortes.push(t);
     }
   } else if (ent?.objetivo) {
-    const rel = ent.objetivo.metrica === 'distancia' ? relDistancia(ent.objetivo.valor, p.tope) : 0.9;
+    const rel = ent.objetivo.metrica === 'distancia' ? relDistancia(ent.objetivo.valor, p.tope, p.pc) : 0.9;
     const v = velocidad(p.ftp * rel);
     const { metrica, valor } = ent.objetivo;
     if (metrica === 'distancia') remar(rel, (_, d) => d >= valor, valor / v, true);
