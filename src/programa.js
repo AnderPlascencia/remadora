@@ -1,6 +1,7 @@
 // Programas de varias semanas: una lista de días con el entrenamiento que toca.
 // programa = { nombre, inicio: 'AAAA-MM-DD', dias: [{ fecha: 'AAAA-MM-DD', ent: nombre del entrenamiento }] }
-import { claveDia, mejorTiempo } from './estadisticas.js';
+import { claveDia, mejorTiempo, potenciaCriticaMax, tiempoPara } from './estadisticas.js';
+
 import { formatoMmss as mm, PRUEBAS, esBloqueTrabajo, ACTIVACION, predecir, DISTANCIAS_PREDICCION } from './entrenamientos.js';
 import { tipoPlan, SPLIT_CAL_META } from './capacidades.js';
 
@@ -175,6 +176,10 @@ export function sugerirMeta(sesiones, distancia, semanas = 8, ahora = Date.now()
   const partida = (lista) => {
     const real = marcas(lista, distancia);
     if (real.length) return { t: Math.min(...real.map((x) => x.t)), real: true, desde: distancia };
+    // Etapa 18: sin marca en esa distancia, el motor único (tu curva potencia–duración); la ley de Paul, de respaldo.
+    const pc = potenciaCriticaMax(lista);
+    const tm = pc ? tiempoPara(distancia, pc) : null;
+    if (tm) return { t: tm, real: false, desde: null, modelo: true };
     const otras = DISTANCIAS_PREDICCION.filter((d) => d !== distancia)
       .map((d) => ({ d, m: marcas(lista, d) })).filter((x) => x.m.length)
       .sort((a, b) => Math.abs(Math.log2(a.d / distancia)) - Math.abs(Math.log2(b.d / distancia)));

@@ -9,7 +9,7 @@ import * as V from '../ventajas.js';
 import * as Cap from '../capacidades.js';
 import * as Pr from '../prediccion.js';
 import {
-  $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fcRef, fechaCorta, formatoMeta, ftp, ico, miles, toast,
+  $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fcRef, fechaCorta, formatoMeta, ftp, ico, miles, perfil, toast,
 } from '../ui.js';
 import { estado } from '../estado.js';
 import { fcMaxDeEdad } from '../pulso.js';
@@ -93,19 +93,22 @@ function tablaPrediccion(s) {
     ? s.predicciones.map((p) => `<p class="ayuda prediccion-error">${escaparHtml(Pr.textoPrediccion(p, formatoTiempo))}</p>`).join('') : '';
   return acierto + tablaPrediccionPaul(s);
 }
+// Etapa 18: tus tiempos estimados con el motor único (estadisticas.js), con lo remado hasta esta sesión y un rango.
 function tablaPrediccionPaul(s) {
-  const base = [2000, 5000, 1000, 500].map((d) => [d, E.mejorTiempo(s.muestras || [], d)]).find(([, t]) => t);
-  const [metros, seg] = base || [];
-  if (!metros) return '';
+  const hasta = [...(estado.cacheSesiones || []).filter((x) => x.fecha < s.fecha && x.id !== s.id), s];
+  const op = { peso: perfil().peso, ahora: s.fecha + 1, error: Pr.resumenPredicciones(hasta)?.mape ?? null };
+  const pc = E.perfilDe(hasta, op);
+  const est = (d) => E.estimar(hasta, d, { ...op, pc });
+  const dist = (d) => (d === 21097 ? 'Medio maratón' : d >= 1000 ? `${d / 1000} km` : `${d} m`);
   if (!avanzado()) {
-    const d = [5000, 2000, 10000].find((x) => x !== metros);
-    return `<p class="prediccion-corta">A este ritmo, tus ${d >= 1000 ? `${d / 1000} km` : `${d} m`} rondarían <b>${formatoTiempo(Ent.predecir(metros, seg, d))}</b>.</p>`;
+    const d = [2000, 5000].find((x) => est(x));
+    const e = d && est(d);
+    return e ? `<p class="prediccion-corta">Tus ${dist(d)} estimados: <b>${formatoTiempo(e.t)}</b> (entre ${formatoTiempo(e.bajo)} y ${formatoTiempo(e.alto)}).</p>` : '';
   }
-  const filas = Ent.DISTANCIAS_PREDICCION.filter((d) => d !== metros).map((d) => {
-    const t = Ent.predecir(metros, seg, d);
-    return `<tr><td>${d === 21097 ? 'Medio maratón' : `${d} m`}</td><td>${formatoTiempo(t)}</td><td>${formatoSplit(Math.round((t * 500) / d))}</td></tr>`;
-  }).join('');
-  return `<div class="prediccion"><h2>Predicción con este esfuerzo</h2><p class="ayuda">A partir de ${miles(metros)} m en ${formatoTiempo(seg)}.</p>
+  const filas = Ent.DISTANCIAS_PREDICCION.map((d) => [d, est(d)]).filter(([, e]) => e).map(([d, e]) => `<tr><td>${dist(d)}</td><td>${formatoTiempo(e.t)}<small class="rango-pred"> ${formatoTiempo(e.bajo)}–${formatoTiempo(e.alto)}</small></td><td>${formatoSplit(Math.round((e.t * 500) / d))}</td></tr>`).join('');
+  if (!filas) return '';
+  const de = pc ? `Con tu curva de potencia: CP ${pc.cp} W y W′ ${(pc.wPrima / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} kJ${pc.estimada ? ' (estimada)' : ''}. Donde ya tienes marca de los últimos 90 días, manda tu marca.` : 'Con tus marcas de los últimos 90 días (ley de Paul).';
+  return `<div class="prediccion"><h2>Tus tiempos estimados</h2><p class="ayuda">${de}</p>
     <table><thead><tr><th>Distancia</th><th>Tiempo</th><th>Split</th></tr></thead><tbody>${filas}</tbody></table></div>`;
 }
 

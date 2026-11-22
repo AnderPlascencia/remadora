@@ -1,6 +1,6 @@
 // Cálculos de seguimiento: récords, comparación con la sesión anterior y progreso por periodo.
 // Una muestra de sesión es { t, w, spm, split, dist, nivel, fc } con t en segundos activos.
-import { enRango, esBloqueTrabajo } from './entrenamientos.js';
+import { DISTANCIAS_PREDICCION, enRango, esBloqueTrabajo, predecir as predecirPaul } from './entrenamientos.js';
 import { fcMax5De, pctDePulso, refPulso } from './pulso.js';
 
 // Resúmenes por sesión: récords y curva de potencia se piden muchas veces sobre las mismas muestras.
@@ -1023,4 +1023,62 @@ export function distribucionIntensidad(sesiones, ftp, dias = 7, ahora = Date.now
   const total = seg[0] + seg[1] + seg[2];
   if (!total) return null;
   return { suave: Math.round((100 * seg[0]) / total), medio: Math.round((100 * seg[1]) / total), fuerte: Math.round((100 * seg[2]) / total), segundos: total };
+}
+
+// ---------- Un solo motor de predicción (etapa 18, REN-P8 y REN-P10) ----------
+// Tu curva potencia–duración (CP y W′ con esfuerzos máximos, etapa 17) y la fórmula de la distancia dan el tiempo en
+// cualquier distancia, con un rango honesto. Lo usan Detalle, el asistente de metas, Hoy y el registro de
+// predicciones; la ley de Paul queda de respaldo. (Vive aquí y no en un módulo propio para no sumar otro archivo a
+// la primera carga.)
+export const VENTANA_DIAS = 90;
+// Omni-PD: por encima de 30 min la potencia cae un poco más de lo que dice CP + W′/t (fatiga, combustible).
+export const T_LARGO = 1800;
+export const CAIDA = 0.06; // A = 6 % de la CP por cada e-veces que se alarga el tiempo
+// Ancho del rango (±) según de dónde sale el tiempo: una marca tuya reciente, el modelo o la ley de Paul.
+export const MARGEN = { marca: 0.01, modelo: 0.025, estimada: 0.04, paul: 0.05 };
+
+export function potenciaEn(t, pc) {
+  const p = pc.cp + pc.wPrima / t;
+  return t > T_LARGO ? p - CAIDA * pc.cp * Math.log(t / T_LARGO) : p;
+}
+// Tiempo (s) para recorrer `metros` a la mejor potencia que aguantas ese tiempo: la distancia crece con t, así que
+// basta una bisección.
+export function tiempoPara(metros, pc) {
+  if (!pc?.cp || !(metros > 0)) return null;
+  let lo = 10;
+  let hi = 6 * 3600;
+  if (metrosPorWatts(potenciaEn(hi, pc)) * hi < metros) return null;
+  for (let i = 0; i < 60; i++) {
+    const m = (lo + hi) / 2;
+    if (metrosPorWatts(potenciaEn(m, pc)) * m >= metros) hi = m; else lo = m;
+  }
+  return Math.round(hi);
+}
+
+const recientesMotor = (sesiones, ahora) => (sesiones || []).filter((s) => s.fecha < ahora && s.fecha > ahora - VENTANA_DIAS * 864e5 && s.muestras?.length);
+export const perfilDe = (sesiones, { peso = 0, ahora = Date.now() } = {}) => potenciaCriticaMax(recientesMotor(sesiones, ahora), { peso });
+
+// Tu tiempo estimado en `metros`: { t, bajo, alto, fuente, desde }. Manda tu marca real de los últimos 90 días
+// (nunca más optimista que lo que ya remaste); si no la hay, el modelo; sin modelo, la ley de Paul desde la distancia
+// más cercana que hayas remado. `error` (MAPE de tus predicciones registradas) ensancha el rango si el modelo falla.
+export function estimar(sesiones, metros, { peso = 0, ahora = Date.now(), error = null, pc = undefined } = {}) {
+  const lista = recientesMotor(sesiones, ahora);
+  const marcas = (d) => lista.map((s) => mejorTiempo(s.muestras, d)).filter((x) => x > 0);
+  const real = marcas(metros);
+  const perfil = pc === undefined ? potenciaCriticaMax(lista, { peso }) : pc;
+  let res = null;
+  if (real.length) res = { t: Math.min(...real), fuente: 'marca', desde: metros };
+  else if (perfil) {
+    const t = tiempoPara(metros, perfil);
+    if (t) res = { t, fuente: perfil.estimada ? 'estimada' : 'modelo', desde: null };
+  }
+  if (!res) {
+    const otras = DISTANCIAS_PREDICCION.filter((d) => d !== metros).map((d) => ({ d, m: marcas(d) })).filter((x) => x.m.length)
+      .sort((a, b) => Math.abs(Math.log2(a.d / metros)) - Math.abs(Math.log2(b.d / metros)));
+    if (!otras.length) return null;
+    const { d, m } = otras[0];
+    res = { t: predecirPaul(d, Math.min(...m), metros), fuente: 'paul', desde: d };
+  }
+  const margen = Math.max(MARGEN[res.fuente], error ? (error * 1.3) / 100 : 0);
+  return { ...res, bajo: Math.round(res.t * (1 - margen)), alto: Math.round(res.t * (1 + margen)) };
 }
