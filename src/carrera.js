@@ -33,6 +33,8 @@ export const PAISAJES = {
     panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 379 },
     costa: 'assets/carrera/costa.webp',
     // Texturas pintadas del suelo de las orillas y del agua de la vista 3D (m = metros que cubre cada repetición)
+    // El agua pintada también da textura al canal de la vista 2D
+    agua: { src: 'assets/carrera/fiordo_agua.webp', m: 9 },
     suelo3d: { src: 'assets/carrera/fiordo_suelo.webp', m: 8 },
     aguaTextura3d: { src: 'assets/carrera/fiordo_agua.webp', m: 10 },
     orilla: {
@@ -1064,7 +1066,9 @@ function avisos(c, { ctx, ancho, alto }, { eventos }, arriba) {
 // ---------- 2D: vista desde arriba, la cámara sigue tu bote ----------
 function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = [], sprint }, arriba) {
   const n = botes.length;
-  const orilla = Math.min(30, alto * 0.07);
+  // Orillas anchas: dejan ver los árboles, casas y rocas de la costa pintada, no solo la franja junto al agua.
+  // En horizontal la mitad: ahí manda la carrera y los botes conservan casi su alto de carril.
+  const orilla = ancho > alto ? Math.min(36, alto * 0.085) : Math.min(72, alto * 0.15);
   const abajo = 18;
   const carril = Math.min(90, (alto - arriba - abajo - 2 * orilla) / n);
   const pista = carril * n;
@@ -1105,7 +1109,7 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     c.costa.dist = yo.dist;
     const tira = (y, h, volteada) => {
       // Escala mínima fija: con poca tierra se ve solo la franja junto al agua, sin encoger el bosque.
-      const k = Math.max(0.45, h / costa.naturalHeight);
+      const k = Math.max(0.25, h / costa.naturalHeight);
       const w = costa.naturalWidth * k;
       const sh = Math.min(costa.naturalHeight, h / k);
       const x0 = -(((c.costa.px % w) + w) % w);
