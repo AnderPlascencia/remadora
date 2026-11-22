@@ -33,7 +33,6 @@ export const PAISAJES = {
     panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 379 },
     costa: 'assets/carrera/costa.webp',
     // Texturas pintadas del suelo de las orillas y del agua de la vista 3D (m = metros que cubre cada repetición)
-    // El agua pintada también da textura al canal de la vista 2D
     agua: { src: 'assets/carrera/fiordo_agua.webp', m: 9 },
     suelo3d: { src: 'assets/carrera/fiordo_suelo.webp', m: 8 },
     aguaTextura3d: { src: 'assets/carrera/fiordo_agua.webp', m: 10 },
@@ -523,7 +522,7 @@ export function crearCarrera(canvas) {
       arrancar();
     },
     detener() { this.estado = null; this.yoVista = null; this.vistos = null; this.centro = null; this.ventanaLista = false; this.charcos = []; this.alejar = 0; this.costa = null; },
-    // Para lienzos de un rato (la vista previa de la tienda): deja de dibujarse y sale de la lista para siempre.
+    // Para lienzos de un rato (vista previa de la tienda)
     soltar() { this.detener(); carreras.delete(this); },
   };
   carreras.add(c);
@@ -1068,8 +1067,7 @@ function avisos(c, { ctx, ancho, alto }, { eventos }, arriba) {
 // ---------- 2D: vista desde arriba, la cámara sigue tu bote ----------
 function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = [], sprint }, arriba) {
   const n = botes.length;
-  // Orillas anchas: dejan ver los árboles, casas y rocas de la costa pintada, no solo la franja junto al agua.
-  // En horizontal la mitad: ahí manda la carrera y los botes conservan casi su alto de carril.
+  // Orillas anchas que dejan ver la costa pintada; en horizontal, la mitad para no achicar los carriles.
   const orilla = ancho > alto ? Math.min(36, alto * 0.085) : Math.min(72, alto * 0.15);
   const abajo = 18;
   const carril = Math.min(90, (alto - arriba - abajo - 2 * orilla) / n);

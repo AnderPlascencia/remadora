@@ -1,5 +1,5 @@
 // Héroe y tienda: personaje, nivel, atributos, árbol, tienda y paisajes.
-import { COLORES_RIVAL, PAISAJES, VELAS, crearCarrera, equipoEnUso, srcRemero, srcRemeroSolo, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarEquipo } from '../carrera.js';
+import { PAISAJES, VELAS, srcRemero, srcRemeroSolo, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarEquipo } from '../carrera.js';
 import * as CB from '../coleccion-bote.js';
 import * as H from '../historial.js';
 import * as db from '../db.js';
@@ -150,13 +150,7 @@ export function arrancarHeroe() {
   });
 
   $('#tienda-paisajes').addEventListener('click', async (e) => {
-    const ver = e.target.closest('[data-previa]');
-    if (ver) {
-      const id = ver.dataset.previa;
-      const { per, h } = await estadoHeroe();
-      abrirPrevia(per, h, { titulo: PAISAJES[id].nombre, paisaje: id, modo: '3d' });
-      return;
-    }
+    if (await previa(e)) return;
     const b = e.target.closest('[data-paisaje]');
     if (!b) return;
     const id = b.dataset.paisaje;
@@ -178,16 +172,7 @@ export function arrancarHeroe() {
   });
   // Colección del bote de tu clase: velas, mascarón y palas; y las velas de color, que valen para cualquier bote.
   $('#tienda-velas').addEventListener('click', async (e) => {
-    const ver = e.target.closest('[data-previa]');
-    if (ver) {
-      const { per, h } = await estadoHeroe();
-      const equipo = equipoActual(per, h);
-      if (!equipo) return;
-      const id = ver.dataset.previa;
-      const x = CB.PIEZAS[id] || VELAS[id];
-      abrirPrevia(per, h, { titulo: x.nombre, equipo: { ...equipo, [ver.dataset.tipo]: id }, modo: '3d' });
-      return;
-    }
+    if (await previa(e)) return;
     const b = e.target.closest('[data-pieza]');
     if (!b) return;
     const id = b.dataset.pieza;
@@ -702,6 +687,12 @@ export async function aplicarEquipo() {
   usarEquipo(equipoActual(per, h));
 }
 
+// «Vista previa» de un paisaje o una pieza: su código se baja solo al tocarla.
+async function previa(e) {
+  const b = e.target.closest('[data-previa]');
+  if (b) (await import('./previa.js')).desdeTienda(b, await estadoHeroe(), equipoActual);
+  return !!b;
+}
 // Muestra de la pieza: su ilustración (piezas de jefe) o sus dos colores
 const muestraDe = (x) => (x.imagen
   ? `<img class="velas-muestra ilustrada" src="${x.imagen}" alt="" loading="lazy" width="56" height="36">`
@@ -732,7 +723,6 @@ function pintarColeccion(h, per) {
           : `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" ${h.monedas < precio ? 'disabled' : ''}>${h.monedas < precio ? `Te faltan ${miles(precio - h.monedas)}` : 'Comprar'}</button>`;
     const etiqueta = tiene ? (precio && !x.como?.gratis ? 'Comprado' : 'Ganado') : precio ? `${icoMoneda}${miles(precio)}` : '';
     const ventaja = CB.ventajaTexto(CB.PIEZAS[x.id] || x, x.id);
-    // Vista previa en todo lo que aún no llevas puesto: lo que llevas ya se ve en tus carreras.
     const ver = enUso ? '' : `<button type="button" class="boton chico" data-previa="${x.id}" data-tipo="${tipo}">${ico('i-play')}Vista previa</button>`;
     return `<div class="objeto velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}">${muestraDe(x)}<b>${x.nombre}</b><small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}
       <span class="monedas">${x.como?.gratis ? 'Gratis' : etiqueta}</span>${boton}${ver}</div>`;
@@ -980,68 +970,4 @@ export async function pintarPodio(s) {
     <div class="podio-escena">${orden}</div>
     ${filas.slice(3).map((f, i) => `<p class="podio-resto">${i + 4}º ${escaparHtml(f.nombre)} · ${dato(f)}</p>`).join('')}
     ${xp ? `<p class="podio-xp">+${xp} XP por fantasmas vencidos</p>` : ''}`;
-}
-
-// ---------- Vista previa de la tienda ----------
-// Una carrera de muestra en una hoja: tu bote con la pieza puesta, o el paisaje elegido, contra tres rivales de las
-// otras clases. Usa el mismo dibujo de la carrera (crearCarrera), así que se ve igual que en Entrenar. Al cerrar
-// vuelven tu paisaje y tu equipo. Tocar la carrera alterna 2D y 3D.
-let previa = null;
-function cerrarPrevia() {
-  if (!previa) return;
-  const p = previa;
-  previa = null;
-  clearInterval(p.reloj);
-  p.carrera.soltar();
-  p.fondo.remove();
-  document.removeEventListener('keydown', p.tecla);
-  usarPaisaje(p.antes.paisaje);
-  usarEquipo(p.antes.equipo);
-  p.origen?.focus?.();
-}
-export function abrirPrevia(per, h, { titulo, paisaje = null, equipo = null, modo = '3d' }) {
-  cerrarPrevia();
-  const clase = J.claseDe(per.clase)?.clave || 'vikingo';
-  const rango = J.rangoDe(h.nivel).id;
-  const antes = { paisaje: paisajeElegido(per), equipo: equipoEnUso() };
-  usarPaisaje(paisaje || antes.paisaje);
-  if (equipo) usarEquipo(equipo);
-  const fondo = document.createElement('div');
-  fondo.className = 'hoja-fondo previa';
-  fondo.innerHTML = `<div class="hoja" role="dialog" aria-modal="true" aria-labelledby="previa-titulo">
-    <div class="hoja-cabecera"><h2 id="previa-titulo"></h2><button type="button" class="boton icono" data-cerrar aria-label="Cerrar">${ico('i-cerrar')}</button></div>
-    <p class="ayuda">Así se vería en tu carrera. Toca la carrera para cambiar entre 2D y 3D.</p>
-    <canvas class="grafica carrera" role="img" aria-label="Vista previa de la carrera"></canvas></div>`;
-  fondo.querySelector('h2').textContent = `Vista previa: ${titulo}`;
-  document.body.append(fondo);
-  const lienzo = fondo.querySelector('canvas');
-  const carrera = crearCarrera(lienzo);
-  carrera.modo = modo;
-  // Tres rivales de las otras clases a ritmos parecidos al tuyo: a paso parejo para que se vean bien los botes.
-  const rivales = J.CLASES.filter((c) => c.clave !== clase).slice(0, 3).map((c, i) => {
-    const v = [4.05, 4.3, 4.15][i];
-    const muestras = Array.from({ length: 121 }, (_, k) => ({ t: k * 5, dist: v * k * 5 }));
-    return { nombre: c.nombre, color: COLORES_RIVAL[i % COLORES_RIVAL.length], muestras, spmEn: () => 26, clase: c.clave, retrato: srcRetratoRango(c.clave, rango) };
-  });
-  let t = 20;
-  const estadoEn = (s) => ({
-    t: s, pausa: false, yo: { dist: 4.2 * s, v: 4.2, spm: 26 }, rivales, referencias: [], meta: null,
-    cabecera: ['Vista previa', ''], tono: '', yoClase: clase, yoRetrato: srcHeroe(clase, h.nivel, true),
-  });
-  carrera.actualizar(estadoEn(t));
-  const reloj = setInterval(() => {
-    t = t >= 580 ? 20 : t + 1;
-    carrera.actualizar(estadoEn(t));
-  }, 1000);
-  lienzo.addEventListener('click', () => {
-    carrera.modo = carrera.modo === '2d' ? '3d' : '2d';
-    carrera.actualizar(carrera.estado);
-  });
-  const tecla = (e) => { if (e.key === 'Escape') cerrarPrevia(); };
-  document.addEventListener('keydown', tecla);
-  fondo.addEventListener('click', (e) => {
-    if (e.target === fondo || e.target.closest('[data-cerrar]')) cerrarPrevia();
-  });
-  previa = { fondo, carrera, reloj, tecla, antes, origen: document.activeElement };
-  fondo.querySelector('[data-cerrar]').focus();
 }
