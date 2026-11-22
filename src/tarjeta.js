@@ -291,12 +291,21 @@ export function podioDe(rivales, nombre = 'Su héroe') {
 
 // Todo lo que va en la tarjeta. opciones: { pulso, kcal, heroe }.
 // ctx: { ftp, records (nuevosRecords, con anterior), marcas (calcularRecords de las previas), previas, meta: { distancia, segundos },
-// semanaPlan, rivales: [{ nombre, diferencia }], heroe: { nombre, linea, src, xp }, paisaje: { src, horizonte, filtro } }.
+// semanaPlan, rivales: [{ nombre, diferencia }], heroe: { nombre, linea, src, xp }, paisaje: { src, horizonte, filtro },
+// hito: hitoDe() de hitos.js }.
 export function contenidoTarjeta(s, opciones = {}, ctx = {}) {
   const o = { ...OPCIONES_DEFECTO, ...opciones };
   const f = s.ftp || ctx.ftp || 0;
   const prota = protagonista(s, ctx);
-  const { tipo, contexto, ...dato } = prota;
+  const { tipo, ...dato } = prota;
+  let { contexto } = prota;
+  // Plantilla por hito (etapa 21): el jefe, el plan, el rango, la semana o el fantasma por poco ponen su sello y su frase
+  // delante. El récord ya tiene la suya (el dato grande con el anterior tachado).
+  const hito = ctx.hito && ctx.hito.clave !== 'record' ? ctx.hito : null;
+  if (hito) {
+    dato.kicker = hito.kicker;
+    if (hito.texto) contexto = [hito.texto, contexto].filter(Boolean).join(' · ');
+  }
   const secundarios = secundariosDe(s, tipo, f);
   if (o.pulso && s.fcProm) secundarios.push([String(s.fcProm), 'lpm', 'Pulso prom']);
   if (o.kcal && s.kcal) secundarios.push([miles(s.kcal), 'kcal', 'kcal estimadas']);
@@ -315,6 +324,8 @@ export function contenidoTarjeta(s, opciones = {}, ctx = {}) {
     podio: tipo === 'cortada' ? null : podioDe(ctx.rivales, ctx.heroe?.nombre),
     heroe: o.heroe ? ctx.heroe || null : null,
     paisaje: ctx.paisaje || null,
+    hito: ctx.hito?.clave || null,
+    tira: hito?.tira || null,
   };
 }
 

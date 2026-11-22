@@ -17,7 +17,7 @@ import * as Pf from '../perfil.js';
 import { aplicarEdad, avanzado, pintarPerfil } from './ajustes.js';
 import { guardarFtp } from './preparar.js';
 import { formatoRecord } from './progreso.js';
-import { leerPersonaje, pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
+import { hitoSesion, leerPersonaje, pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
 
 // ---------- Resumen / detalle de sesión ----------
 // Escala CR10: los cinco botones grandes caen en 2, 4, 6, 8 y 10 con el mismo nombre.
@@ -61,6 +61,8 @@ function pintarRpe() {
 // Al arrancar la app (en orden, desde app.js).
 export function arrancarDetalle() {
   arrancarPerfilPorPartes();
+  // El hito de la sesión abre la misma imagen para compartir, ya con su plantilla.
+  $('#btn-hito-compartir').addEventListener('click', () => $('#btn-compartir-img').click());
   $('#in-notas').addEventListener('change', async () => {
     if (!estado.sesionAbierta) return;
     estado.sesionAbierta.notas = $('#in-notas').value.trim();
@@ -165,6 +167,15 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   const gano = !s.carreraSinTerminar && (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.diferencia > 0);
   pintarPodio(s);
   const subio = pintarXpSesion(s, previas, resumen);
+  // Compártelo en el momento justo (etapa 21): tras un hito, el botón sale arriba; las sesiones normales no insisten.
+  $('#hoja-hito').hidden = true;
+  if (resumen) {
+    hitoSesion(s, previas).then((hito) => {
+      if (!hito || estado.sesionAbierta !== s) return;
+      $('#hoja-hito-texto').textContent = hito.boton;
+      $('#hoja-hito').hidden = false;
+    }).catch(() => { /* sin hito */ });
+  }
   pintarAtrSesion(s, previas, resumen);
   if (resumen && (recs.length || medallas.length || gano || subio)) setTimeout(confeti, 250);
 
