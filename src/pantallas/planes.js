@@ -6,8 +6,6 @@ import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
-import { tarjetaSesion } from '../efectos.js';
-import * as Tj from '../tarjeta.js';
 import * as J from '../juego.js';
 import * as B from '../base.js';
 import * as C from '../consejos.js';
@@ -19,8 +17,9 @@ import { irA, vistaActiva } from '../navegacion.js';
 import { avanzado, cerrarTripulacion } from './ajustes.js';
 import { cerrarModoRemo, vistaPrevia } from './vivo.js';
 import { cerrarFin, paraPerfil } from './sesion.js';
-import { formatoRecord, pintarHistorial } from './progreso.js';
-import { chipsAtr, estadoHeroe, opcConsejos, previsionDe } from './heroe.js';
+import { pintarHistorial } from './progreso.js';
+import { chipsAtr, estadoHeroe, opcConsejos, previsionDe, srcHeroe } from './heroe.js';
+import { PAISAJES, paisajeElegido } from '../carrera.js';
 import { esDePlan, guardarPrograma, leerPrograma, pintarPrograma } from './programa.js';
 import { cerrarGuia } from './ayuda.js';
 import * as Hab from '../habito.js';
@@ -688,18 +687,29 @@ export function arrancarPlanes2() {
 let compartir = null; // { s, opciones, ctx, blob, url, turno }
 async function abrirCompartir(s) {
   if (!s) return;
-  const rivales = s.rivales || (s.rival ? [s.rival] : []);
-  const records = E.nuevosRecords(s, (estado.cacheSesiones || []).filter((x) => x.id !== s.id && x.fecha < s.fecha));
-  const extra = records.length ? `Récord: ${records[0].nombre} ${formatoRecord(records[0], records[0].valor)}`
-    : rivales.length ? rivales.map((r) => `${r.diferencia > 0 ? '+' : ''}${r.diferencia} m vs. ${r.nombre.replace(/^Fantasma /, '')}`).join(' · ') : '';
+  // La tarjeta y su pintor se cargan aquí, no al arrancar la app.
+  let Tj;
+  try { Tj = await import('../tarjeta.js'); } catch { toast('No se pudo crear la imagen'); return; }
+  const previas = (estado.cacheSesiones || []).filter((x) => x.id !== s.id && x.fecha < s.fecha);
+  const programa = s.delPrograma ? leerPrograma() : null;
   let heroe = null;
+  let paisaje = null;
   try {
     const { per, h } = await estadoHeroe();
-    if (per.clase) heroe = `${per.nombre || 'Tu héroe'} · ${J.tituloDe(h.nivel, per.clase)} · nivel ${h.nivel}`;
+    const g = h.porSesion.get(s.fecha);
+    const nivel = g?.nivelDespues || h.nivel;
+    const clase = J.claseDe(per.clase);
+    if (clase) heroe = { nombre: per.nombre || clase.nombre, linea: `${J.tituloDe(nivel, per.clase)} · nivel ${nivel}`, src: srcHeroe(clase.clave, nivel), xp: g ? g.xp + (g.xpExtra || 0) : 0 };
+    const p = PAISAJES[paisajeElegido(per)];
+    if (p?.panorama) paisaje = { src: p.panorama.src, horizonte: p.panorama.horizonte, filtro: p.filtro || null };
   } catch { /* sin héroe */ }
   compartir = {
-    s, opciones: { ...Tj.OPCIONES_DEFECTO }, blob: null, url: null, turno: 0,
-    ctx: { records, extra, heroe, semanaPlan: s.delPrograma ? Tj.semanaDelPlan(leerPrograma(), s.fecha) : null },
+    s, Tj, opciones: { ...Tj.OPCIONES_DEFECTO }, blob: null, url: null, turno: 0,
+    ctx: {
+      ftp: ftp(), records: E.nuevosRecords(s, previas), marcas: E.calcularRecords(previas), previas,
+      meta: programa?.meta || null, semanaPlan: programa ? Tj.semanaDelPlan(programa, s.fecha) : null,
+      rivales: s.rivales || (s.rival ? [s.rival] : []), heroe, paisaje,
+    },
   };
   $('#compartir-heroe').checked = true;
   $('#compartir-heroe').closest('label').hidden = !heroe;
@@ -718,7 +728,8 @@ async function pintarCompartir() {
   c.blob = null;
   c.listo = (async () => {
     const s = c.s;
-    const blob = await tarjetaSesion(Tj.contenidoTarjeta(s, c.opciones, c.ctx), {
+    const { tarjetaSesion } = await import('../tarjeta-imagen.js');
+    const blob = await tarjetaSesion(c.Tj.contenidoTarjeta(s, c.opciones, c.ctx), {
       formato: c.opciones.formato,
       fecha: new Date(s.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
       puntos: (s.muestras || []).map((x) => [x.t, x.w]),
