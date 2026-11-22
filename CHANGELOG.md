@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.102.1 · 2026-11-22
+
+El Cañón del desierto, repintado con el estilo de los héroes.
+
+- **Cañón pintado.** Mesetas rojas sobre un río verde, saguaros, mezquites, casas de adobe, rocas rojas, salvia y biznagas pintados con el mismo motor y la misma mano que los retratos, el fiordo y la laguna.
+- **Tierra roja y agua verde pintadas en la vista 3D**, con bruma lejana del color de las mesetas; también hay agua pintada en el canal de la vista 2D.
+- Miniatura nueva en la tienda.
+
 ## 0.102.0 · 2026-11-22
 
 Datos seguros antes de migrar.
