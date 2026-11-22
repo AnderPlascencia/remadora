@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.99.0 · 2026-11-22
+
+Bienvenida en 3 toques y primera semana guiada.
+
+- **De abrir la app a remar en 3 toques.** La primera vez solo pregunta tu objetivo. Los días (según cuántos remas) y la hora (19:00) ya vienen puestos y se ven en una línea en el paso de conectar, con «Cambiar» por si quieres otros. Luego Conectar (o el modo demo) y Empezar. Antes eran unos 10 toques.
+- **El héroe se elige al terminar tu primera sesión.** Es lo primero del resumen y se queda con la experiencia que acabas de ganar.
+- **Perfil por partes.** En el resumen de tus primeras 3 sesiones, si faltan, solo se piden tu edad y tu peso, que afinan tus calorías y tu pulso máximo. «Ahora no» no vuelve a preguntar; el resto sigue en Ajustes › Tu perfil.
+- **«Tu primera semana · 1 de 3».** En la tarjeta Hoy, durante los primeros 7 días del plan, cuántas sesiones de esa semana llevas.
+- Repetir la bienvenida desde Ajustes sigue repasando héroe, objetivo y perfil.
+
 ## 0.98.0 · 2026-11-22
 
 El fiordo, repintado con el mismo estilo que los héroes.

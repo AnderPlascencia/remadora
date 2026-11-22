@@ -64,3 +64,9 @@ export function ctxPlanDePerfil(p, { sinHistorial = true } = {}) {
   if (p.minutos > 0) ctx.minutosMax = p.minutos;
   return ctx;
 }
+
+// Perfil por partes (etapa 20): tras tus primeras sesiones, el resumen pide edad y peso si faltan.
+export const POR_PARTES_SESIONES = 3;
+export function pedirEnResumen({ resumen, previas = 0, edad = 0, peso = 0, descartado = false }) {
+  return !!resumen && !descartado && previas < POR_PARTES_SESIONES && (!edad || !peso);
+}

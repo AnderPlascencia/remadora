@@ -13,7 +13,8 @@ import {
 } from '../ui.js';
 import { estado } from '../estado.js';
 import { fcMaxDeEdad } from '../pulso.js';
-import { avanzado } from './ajustes.js';
+import * as Pf from '../perfil.js';
+import { aplicarEdad, avanzado, pintarPerfil } from './ajustes.js';
 import { guardarFtp } from './preparar.js';
 import { formatoRecord } from './progreso.js';
 import { leerPersonaje, pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
@@ -59,6 +60,7 @@ function pintarRpe() {
 
 // Al arrancar la app (en orden, desde app.js).
 export function arrancarDetalle() {
+  arrancarPerfilPorPartes();
   $('#in-notas').addEventListener('change', async () => {
     if (!estado.sesionAbierta) return;
     estado.sesionAbierta.notas = $('#in-notas').value.trim();
@@ -112,6 +114,35 @@ function tablaPrediccionPaul(s) {
     <table><thead><tr><th>Distancia</th><th>Tiempo</th><th>Split</th></tr></thead><tbody>${filas}</tbody></table></div>`;
 }
 
+// Perfil por partes (etapa 20): la bienvenida ya no lo pide; tras tus primeras sesiones, solo edad y peso, que es lo
+// que cambia tus calorías y tu pulso máximo. «Ahora no» no vuelve a preguntar; el resto queda en Ajustes › Tu perfil.
+function pintarPerfilPorPartes(resumen, previas) {
+  const p = perfil();
+  const caja = $('#hoja-tu-perfil');
+  caja.hidden = !Pf.pedirEnResumen({ resumen, previas: previas.length, edad: p.edad, peso: p.peso, descartado: ajustes.si('perfilPorPartesNo', false) });
+  if (caja.hidden) return;
+  $('#hp-edad').value = p.edad || '';
+  $('#hp-peso').value = p.peso || '';
+}
+function numeroCampo(el) {
+  const v = Number(el.value);
+  return el.value.trim() !== '' && Number.isFinite(v) && v >= Number(el.min) && v <= Number(el.max) ? Math.round(v) : null;
+}
+function arrancarPerfilPorPartes() {
+  $('#hp-guardar').addEventListener('click', () => {
+    const edad = numeroCampo($('#hp-edad'));
+    const peso = numeroCampo($('#hp-peso'));
+    if (edad == null && peso == null) { toast('Escribe tu edad o tu peso'); return; }
+    if (edad != null) ajustes.escribir('edad', String(edad));
+    if (peso != null) ajustes.escribir('peso', String(peso));
+    aplicarEdad();
+    pintarPerfil();
+    $('#hoja-tu-perfil').hidden = true;
+    toast('Guardado en tu perfil');
+  });
+  $('#hp-no').addEventListener('click', () => { ajustes.escribir('perfilPorPartesNo', '1'); $('#hoja-tu-perfil').hidden = true; });
+}
+
 export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null } = {}) {
   estado.sesionAbierta = s;
   const hoja = $('#hoja');
@@ -160,6 +191,7 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   }
 
   pintarCapacidadSesion(s);
+  pintarPerfilPorPartes(resumen, previas);
 
   const tec = E.tecnica(s);
   const carga = E.cargaDe(s, ftp(), E.factorSrpe([...previas, s], ftp()));

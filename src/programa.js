@@ -72,6 +72,19 @@ export function estadoDias(programa, sesiones, ahora = Date.now()) {
 
 // Lo que queda de la semana de una fecha: las sesiones del plan de esa semana, las que faltan (en el orden del plan)
 // y los días que quedan contando hoy.
+// «Tu primera semana · 1 de 3» (etapa 20): las sesiones de los primeros 7 días del plan y cuántas llevas. La que toca es
+// la siguiente a las hechas. null fuera de esa semana o sin plan.
+export function primeraSemana(programa, sesiones, ahora = Date.now()) {
+  if (!programa?.inicio || !programa.dias?.length) return null;
+  const fin = claveDia(aFecha(programa.inicio).getTime() + 7 * DIA);
+  const hoy = claveDia(ahora);
+  if (hoy < programa.inicio || hoy >= fin) return null;
+  const semana = estadoDias(programa, sesiones, ahora).filter((d) => d.fecha < fin && !d.movido);
+  if (!semana.length) return null;
+  const hechas = semana.filter((d) => d.estado === 'hecho').length;
+  return { total: semana.length, hechas, actual: Math.min(semana.length, hechas + 1), completa: hechas >= semana.length };
+}
+
 export function semanaFlexible(programa, sesiones, ahora = Date.now()) {
   const hoy = claveDia(ahora);
   const lunes = lunesDe(hoy);

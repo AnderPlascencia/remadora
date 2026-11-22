@@ -488,6 +488,13 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   $('#hoy-porque').hidden = !porque;
   $('#hoy-porque').textContent = porque;
   $('#btn-ver-plan').hidden = !prog || !dia || !['plan', 'hecho', 'recuperar', 'descanso'].includes(dia.fuente);
+  // La primera semana guiada (etapa 20): cuántas llevas de las de tus primeros 7 días.
+  const s1 = P.primeraSemana(prog, sesiones);
+  $('#hoy-semana1').hidden = !s1;
+  if (s1) {
+    const puntos = Array.from({ length: s1.total }, (_, i) => `<i class="${i < s1.hechas ? 'hecho' : ''}"></i>`).join('');
+    $('#hoy-semana1').innerHTML = `<span>${s1.completa ? `Primera semana completa · ${s1.total} de ${s1.total} ✓` : `Tu primera semana · ${s1.actual} de ${s1.total}`}</span><span class="s1-puntos" aria-hidden="true">${puntos}</span>`;
+  }
   // Lo que la adaptación cambió hoy, y si tus rangos del plan van más bajos o más altos.
   const avisosHoy = (prog?.avisos || []).filter((x) => x.dia === E.claveDia(Date.now())).map((x) => x.texto);
   const factor = prog?.factor && prog.factor !== 1 ? Math.round((prog.factor - 1) * 100) : 0;

@@ -85,3 +85,10 @@ export function citasDelPlan(programa, { hora = HORA_DEFECTO, ahora = Date.now()
   const hoy = clave(ahora);
   return (programa?.dias || []).filter((d) => d.fecha >= hoy && d.ent).map((d) => ({ fecha: d.fecha, hora: horaValida(hora), ent: d.ent, min: duracion(d.ent) }));
 }
+
+// «3 días por semana (lunes, miércoles y sábado), a las 19:00»: lo que viene puesto y se cambia en Ajustes.
+export function textoDiasPlan(dias, hora = HORA_DEFECTO) {
+  const nombres = (DIAS_PLAN[dias] || []).map((d) => DIAS_NOMBRE[d]);
+  const lista = nombres.length > 1 ? `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}` : nombres[0] || '';
+  return `${dias} ${dias === 1 ? 'día' : 'días'} por semana${lista ? ` (${lista})` : ''}, a las ${hora}`;
+}
