@@ -95,6 +95,9 @@ test('una transacción abortada sin error (disco lleno) termina en error en vez 
 
 test('con el temporizador frenado en segundo plano, la sesión no pierde tiempo ni metros', async ({ page }) => {
   await remar(page, 20_000);
+  // La sesión se guarda cada 10 s con una escritura asíncrona: con la máquina cargada (CI) la de los 20 s puede
+  // llegar después de leerla. Se espera a que esté guardada para no comparar contra una copia vieja.
+  await expect.poll(async () => (await enCurso(page))?.t).toBeGreaterThanOrEqual(20);
   const antes = await enCurso(page);
   // Chrome frena el temporizador: pasan 60 s sin ningún tic, pero los datos siguen llegando.
   await page.evaluate(() => { window.__frenado = true; });
