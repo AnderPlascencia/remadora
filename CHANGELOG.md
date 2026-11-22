@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.100.1 · 2026-11-22
+
+El romano sigue la historia de Julio César.
+
+- Sus rangos van de recluta con corona de roble a tribuno, general con capa roja y dictador canoso con laurel de oro y capa púrpura.
+
 ## 0.100.0 · 2026-11-22
 
 La laguna tropical, repintada con el estilo de los héroes.

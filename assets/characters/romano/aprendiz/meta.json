@@ -7,7 +7,7 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 1.0915
+      "escala": 1.0931
     }
   },
   "fuente": {
@@ -19,8 +19,8 @@
       "ancho": 576,
       "alto": 768,
       "caja": {
-        "x0": 19,
-        "y0": 35,
+        "x0": 15,
+        "y0": 36,
         "x1": 476,
         "y1": 742
       }
