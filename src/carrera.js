@@ -678,16 +678,21 @@ const REMEROS = {
 };
 const PIEL = '#E2B48C';
 
-// Remero, barca y remos realistas de cada clase, renderizados en Blender (tools/blender/remo_agua: remo_agua.py
-// --paso 24 --sprite --remo-corto --clase C, cámara carrera3d o cenital, y atlas_carrera.py). Un atlas por clase y
-// vista con una palada entera: el fotograma sale de la fase. ancla es el escálamo a ras de agua; ppm, píxeles por metro
-// del render en ese punto. Se descargan al pintar el primer bote de esa clase; mientras, se dibuja el bote vectorial.
+// Remero, barca y remos de cada clase (0.122.0). El casco está pintado con el mismo motor que los héroes y el remero
+// con sus remos sale de Blender (tools/blender/remo_agua: remo_agua.py --paso 24 --sprite --remo-corto --capa
+// sin_barca --clase C, cámaras cenital y carrera3d; componer_botes.py los junta y atlas_carrera.py / atlas_capas.py
+// los empaquetan). El remero va a REMERO_K de la escala del casco para que quepa con las rodillas dentro de la borda.
+// Un atlas por clase y vista con una palada entera: el fotograma sale de la fase. ancla es el escálamo a ras de agua;
+// ppm, píxeles por metro del casco en ese punto. Se descargan al pintar el primer bote de esa clase; mientras, se
+// dibuja el bote vectorial.
 export const REMEROS_ATLAS = {
-  '3d': { w: 208, h: 127, cols: 4, n: 24, ancla: [104.0, 77.2], ppm: 53.25 },
-  '2d': { w: 231, h: 163, cols: 4, n: 24, ancla: [93.2, 80.0], ppm: 39.0 },
-  // Remero solo de la vista 3D (atlas_capas.py): su celda, a la misma escala, empieza en `origen` dentro de la de la barca
-  remero3d: { w: 52, h: 86, cols: 6, n: 24, origen: [72.8, 0.0] },
+  '3d': { w: 170, h: 125, cols: 4, n: 24, ancla: [85.3, 79.9], ppm: 63.9 },
+  '2d': { w: 266, h: 123, cols: 3, n: 24, ancla: [87.1, 61.5], ppm: 45.0 },
+  // Remero con sus remos de la vista 3D (atlas_capas.py): su celda, a la misma escala, empieza en `origen` dentro de
+  // la de la barca, que en la 3D solo lleva el casco
+  remero3d: { w: 170, h: 75, cols: 3, n: 24, origen: [0.0, 15.3] },
 };
+const REMERO_K = { '2d': 0.76, '3d': 0.74 };
 // La barca de Blender mide 5,4 m: de la popa al escálamo 1,89 m y del escálamo a la proa 3,51 m.
 const BARCA_REAL = { largo: 5.4, proa: 3.51 };
 export const srcRemero = (vista, clase) => `assets/carrera/remero${vista}_${clase}.webp`;
@@ -709,16 +714,16 @@ function celdaRemero(vista, b) {
 }
 
 // Punta de cada pala en cada fotograma del atlas (las mismas para las cinco clases): [x, y, ángulo] en píxeles de la
-// celda, con el ángulo del remo hacia la punta. Medido sobre los atlas con la madera más alejada del eje
+// celda de la barca, con el ángulo del remo hacia la punta. Medido sobre los atlas con la madera más alejada del eje
 // (tools/blender/remo_agua/palas_atlas.py). Sirve para pintar encima las palas de tu colección.
-export const PALAS_ATLAS = {"3d":[[[30.0,63.0,3.09],[177.0,61.0,-0.24]],[[37.0,63.0,3.14],[172.0,62.0,-0.17]],[[41.0,64.0,3.14],[169.0,63.0,-0.05]],[[39.0,65.0,3.14],[170.0,65.0,0.03]],[[34.0,67.0,3.14],[175.0,66.0,-0.03]],[[30.0,69.0,3.01],[179.0,68.0,0.01]],[[25.0,70.0,3.09],[182.0,70.0,0.01]],[[21.0,72.0,3.1],[183.0,72.0,0.05]],[[14.0,76.0,2.99],[187.0,75.0,0.08]],[[12.0,82.0,2.85],[193.0,81.0,0.26]],[[24.0,85.0,2.61],[187.0,86.0,0.54]],[[22.0,83.0,2.81],[189.0,86.0,0.5]],[[11.0,82.0,2.92],[196.0,82.0,0.27]],[[10.0,80.0,2.86],[197.0,79.0,0.2]],[[9.0,78.0,2.94],[197.0,78.0,0.21]],[[9.0,76.0,2.98],[197.0,77.0,0.23]],[[9.0,74.0,3.0],[197.0,75.0,0.19]],[[9.0,74.0,2.88],[197.0,75.0,0.29]],[[10.0,73.0,2.86],[196.0,73.0,0.23]],[[11.0,71.0,2.94],[195.0,72.0,0.25]],[[13.0,70.0,2.92],[194.0,71.0,0.28]],[[16.0,68.0,3.0],[191.0,68.0,0.18]],[[19.0,66.0,3.05],[188.0,65.0,0.09]],[[24.0,63.0,-3.07],[183.0,62.0,-0.18]]],"2d":[[[117.0,26.0,-1.57],[120.0,135.0,0.79]],[[118.0,30.0,-1.57],[122.0,132.0,0.71]],[[114.0,34.0,-1.57],[117.0,127.0,0.68]],[[113.0,32.0,-1.57],[115.0,129.0,0.76]],[[97.0,45.0,-0.94],[110.0,130.0,0.91]],[[106.0,27.0,-1.06],[106.0,132.0,1.09]],[[102.0,25.0,-1.21],[102.0,133.0,1.24]],[[98.0,24.0,-1.36],[98.0,134.0,1.41]],[[93.0,23.0,-1.57],[94.0,135.0,1.49]],[[82.0,16.0,-1.89],[83.0,142.0,1.88]],[[74.0,22.0,-2.2],[72.0,139.0,2.26]],[[76.0,22.0,-2.08],[76.0,139.0,2.0]],[[80.0,13.0,-1.64],[78.0,145.0,1.91]],[[82.0,12.0,-1.72],[84.0,147.0,1.62]],[[82.0,12.0,-1.88],[84.0,147.0,1.79]],[[86.0,11.0,-1.74],[85.0,147.0,1.91]],[[87.0,11.0,-1.9],[94.0,148.0,1.34]],[[91.0,11.0,-1.81],[92.0,147.0,1.8]],[[94.0,11.0,-1.78],[95.0,147.0,1.75]],[[98.0,11.0,-1.61],[99.0,147.0,1.59]],[[101.0,12.0,-1.6],[102.0,146.0,1.54]],[[106.0,13.0,-1.47],[106.0,145.0,1.47]],[[111.0,16.0,-1.26],[111.0,143.0,1.16]],[[116.0,19.0,-0.98],[116.0,140.0,0.99]]]};
+export const PALAS_ATLAS = {"3d":[[[20.0,67.3,-3.05],[150.0,65.3,-0.23]],[[26.0,67.3,3.14],[145.0,66.3,-0.08]],[[29.0,68.3,3.14],[143.0,67.3,-0.04]],[[27.0,69.3,3.14],[144.0,68.3,-0.02]],[[24.0,70.3,3.14],[148.0,70.3,0.05]],[[19.0,72.3,3.04],[151.0,71.3,0.02]],[[15.0,73.3,3.09],[154.0,73.3,0.06]],[[12.0,75.3,3.05],[156.0,75.3,0.08]],[[6.0,78.3,3.04],[159.0,78.3,0.14]],[[5.0,83.3,2.92],[164.0,83.3,0.28]],[[13.0,87.3,2.62],[160.0,88.3,0.53]],[[13.0,86.3,2.66],[161.0,86.3,0.37]],[[3.0,84.3,2.87],[167.0,84.3,0.31]],[[1.0,82.3,2.88],[168.0,82.3,0.29]],[[1.0,80.3,2.95],[168.0,81.3,0.28]],[[1.0,79.3,2.92],[168.0,79.3,0.2]],[[1.0,77.3,2.95],[168.0,78.3,0.22]],[[1.0,77.3,2.86],[168.0,78.3,0.32]],[[2.0,75.3,2.94],[167.0,76.3,0.25]],[[3.0,74.3,2.94],[166.0,75.3,0.25]],[[4.0,73.3,2.94],[165.0,74.3,0.27]],[[7.0,72.3,2.93],[163.0,72.3,0.22]],[[12.0,69.3,3.08],[159.0,68.3,0.01]],[[15.0,67.3,-2.96],[155.0,66.3,-0.19]]],"2d":[[[109.0,14.0,-1.57],[111.0,111.0,0.81]],[[109.0,18.0,-1.57],[112.0,107.0,0.71]],[[107.0,20.0,-0.68],[108.0,103.0,0.68]],[[104.0,20.0,-1.57],[104.0,103.0,0.79]],[[91.0,30.0,-2.89],[102.0,106.0,0.92]],[[92.0,26.0,-2.9],[98.0,107.0,1.09]],[[95.0,14.0,-1.19],[95.0,108.0,1.21]],[[92.0,12.0,-1.33],[92.0,110.0,1.36]],[[87.0,12.0,-1.57],[88.0,110.0,1.48]],[[77.0,5.0,-1.89],[78.0,117.0,1.88]],[[70.0,11.0,-2.22],[69.0,114.0,2.19]],[[71.0,11.0,-2.17],[69.0,114.0,2.2]],[[75.0,3.0,-1.74],[75.0,119.0,1.79]],[[78.0,2.0,-1.69],[77.0,120.0,1.85]],[[77.0,2.0,-1.91],[81.0,121.0,1.6]],[[82.0,1.0,-1.62],[82.0,121.0,1.7]],[[82.0,1.0,-1.85],[83.0,121.0,1.84]],[[85.0,1.0,-1.81],[87.0,121.0,1.7]],[[88.0,1.0,-1.74],[89.0,121.0,1.7]],[[91.0,1.0,-1.64],[92.0,121.0,1.6]],[[94.0,2.0,-1.59],[95.0,120.0,1.5]],[[98.0,3.0,-1.51],[99.0,119.0,1.41]],[[103.0,5.0,-1.31],[103.0,117.0,1.15]],[[107.0,8.0,-1.57],[107.0,114.0,0.97]]]};
 // Largo y ancho de la pala (m): la del remo corto de remo_agua.py
 const PALA_REAL = { largo: 0.34, ancho: 0.15 };
 // Pinta las palas de tu colección sobre las del atlas: tela de la pala con el filo del color de su marca.
 // (ox, oy) es dónde cae la esquina de la celda y (kx, ky) los píxeles de pantalla por píxel del atlas.
 function palasReal(ctx, vista, f, palas, ox, oy, kx, ky) {
   const A = REMEROS_ATLAS[vista];
-  const L = PALA_REAL.largo * A.ppm, W = PALA_REAL.ancho * A.ppm;
+  const L = PALA_REAL.largo * A.ppm * REMERO_K[vista], W = PALA_REAL.ancho * A.ppm * REMERO_K[vista];
   ctx.save();
   ctx.fillStyle = palas.tela;
   ctx.strokeStyle = palas.marca;
@@ -1490,10 +1495,10 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
   let ancho = Math.max(7, largo * 0.09);
   if (b.clase === 'pirata' || b.clase === 'romano') ancho *= 1.25;
   // Barca, remero y remos realistas vistos desde arriba, con la misma escala a lo largo y a lo ancho: como mucho el
-  // largo del bote y que los remos (1,9 m desde el eje) no pasen del 60 % del carril (remo es el 40 %). La proa sigue
-  // en x; el casco mide 1 m de manga.
+  // largo del bote y que los remos (1,9 m desde el eje en Blender, a la escala del remero) no pasen del 60 % del carril
+  // (remo es el 40 %). La proa sigue en x; el casco mide 1 m de manga.
   const real = celdaRemero('2d', b);
-  const kx = real ? Math.min(largo / BARCA_REAL.largo, (remo * 1.5) / 1.9) / real.A.ppm : 0;
+  const kx = real ? Math.min(largo / BARCA_REAL.largo, (remo * 1.5) / (1.9 * REMERO_K['2d'])) / real.A.ppm : 0;
   const ky = kx;
   if (real) {
     largo = BARCA_REAL.largo * kx * real.A.ppm;
@@ -1521,8 +1526,8 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
     ctx.shadowColor = '#FDE047';
     ctx.shadowBlur = sinMovimiento ? 14 : 12 + 8 * Math.sin(t * 10);
   }
-  // Canoa polinesia: flotador lateral unido con dos varas
-  if (b.clase === 'polinesio') {
+  // Canoa polinesia: flotador lateral unido con dos varas (el casco pintado ya trae su forma)
+  if (b.clase === 'polinesio' && !real) {
     ctx.strokeStyle = '#E7D3A8';
     ctx.lineWidth = 1.5;
     const yAma = y - ancho * 2.6;
@@ -1531,7 +1536,7 @@ function bote2d(ctx, x, y, largo, remo, b, ppm, t) {
     ctx.beginPath(); ctx.ellipse(x - largo * 0.5, yAma, largo * 0.32, ancho * 0.32, 0, 0, Math.PI * 2); ctx.fill();
   }
   // Trirreme: espolón de bronce en la proa
-  if (b.clase === 'romano') {
+  if (b.clase === 'romano' && !real) {
     ctx.fillStyle = '#B45309';
     ctx.beginPath(); ctx.moveTo(x + largo * 0.1, y); ctx.lineTo(x - 2, y - ancho * 0.35); ctx.lineTo(x - 2, y + ancho * 0.35); ctx.fill();
   }
@@ -2477,8 +2482,8 @@ function bote3d(ctx, P, b, t) {
   }
   if (real) {
     if (b.yo) aro3d(ctx, P, b.x, centro, largo);
-    remero3d(ctx, P, b, real, t);
-    velaReal3d(ctx, P, { ...b, dist: centro }, largo, t);
+    // La vela va entre el casco y el remero: el mástil está a proa, por detrás de él visto desde la popa
+    remero3d(ctx, P, b, real, t, () => velaReal3d(ctx, P, { ...b, dist: centro }, largo, t));
     marcaRival3d(ctx, P, b);
     return;
   }
@@ -2613,31 +2618,6 @@ function telaDe(deco, t, clase) {
   return e.c;
 }
 
-// Dibuja la tela en tiras verticales que ondean: la onda corre hacia atrás y va más rápida cuanto más rápido vas.
-// (x, y) es la esquina de arriba a la izquierda; con `tumbada` la tela se pinta en horizontal (vista desde arriba,
-// ondeando hacia la izquierda, que es la popa).
-function telaOndeante(ctx, src, x, y, w, h, t, v, tumbada = false) {
-  const N = 12;
-  const f = 3 + Math.min(6, (v || 0) * 1.4);
-  const amp = sinMovimiento ? 0 : (tumbada ? h : w) * 0.035;
-  for (let i = 0; i < N; i++) {
-    const o = Math.sin(t * f - i * 0.7) * amp * (i / N + 0.3);
-    const luz = sinMovimiento ? 0 : Math.cos(t * f - i * 0.7) * 0.035;
-    if (tumbada) {
-      // i = 0 junto al mástil (a la derecha de la tela) y la punta libre a la izquierda
-      const sx = TELA_W - (i + 1) * TELA_W / N;
-      const dx = x + w - (i + 1) * w / N;
-      ctx.drawImage(src, sx, 0, TELA_W / N + 0.5, TELA_H, dx - 0.3, y + o, w / N + 0.6, h);
-      if (luz) { ctx.fillStyle = luz > 0 ? `rgba(255,255,255,${luz})` : `rgba(0,0,0,${-luz})`; ctx.fillRect(dx, y + o, w / N + 0.3, h); }
-    } else {
-      const sx = i * TELA_W / N;
-      const dx = x + i * w / N;
-      ctx.drawImage(src, sx, 0, TELA_W / N + 0.5, TELA_H, dx - 0.3, y + o, w / N + 0.6, h);
-      if (luz) { ctx.fillStyle = luz > 0 ? `rgba(255,255,255,${luz})` : `rgba(0,0,0,${-luz})`; ctx.fillRect(dx, y + o, w / N + 0.3, h); }
-    }
-  }
-}
-
 // Aro blanco discontinuo sobre el agua alrededor de tu bote: se reconoce sin depender del color
 function aro3d(ctx, P, x, z, largo) {
   const pts = [];
@@ -2656,34 +2636,94 @@ function aro3d(ctx, P, x, z, largo) {
 
 // Vela cuadrada con el emblema en un mástil a proa. En tu bote es algo más pequeña, opaca y va a un lado para no
 // tapar a tu remero; en los rivales cercanos se aclara un poco para que se vea la pista.
+// Pinta la tela deformada sobre una malla de n × m celdas: punto(u, v) da en pantalla el punto de la tela (u de un
+// lado al otro, v de la verga al pie) y luz(u, v) cuánto se aclara (>1) u oscurece (<1) cada celda. Cada celda es un
+// paralelogramo con su trozo de textura, así no hace falta recortar triángulos.
+function telaMalla(ctx, src, punto, n, m, luz) {
+  const P = [];
+  for (let j = 0; j <= m; j++) for (let i = 0; i <= n; i++) P.push(punto(i / n, j / m));
+  if (P.some((q) => !q)) return;
+  const sw = src.width / n, sh = src.height / m;
+  for (let j = 0; j < m; j++) {
+    for (let i = 0; i < n; i++) {
+      const a = P[j * (n + 1) + i], b = P[j * (n + 1) + i + 1], c = P[(j + 1) * (n + 1) + i];
+      ctx.save();
+      ctx.transform((b[0] - a[0]) / sw, (b[1] - a[1]) / sw, (c[0] - a[0]) / sh, (c[1] - a[1]) / sh, a[0], a[1]);
+      // un pelo más grande que la celda para que no se vean costuras entre ellas
+      ctx.drawImage(src, i * sw, j * sh, sw, sh, 0, 0, sw * 1.06, sh * 1.06);
+      const k = luz((i + 0.5) / n, (j + 0.5) / m) - 1;
+      if (Math.abs(k) > 0.02) {
+        ctx.fillStyle = k > 0 ? `rgba(255,255,255,${Math.min(0.5, k)})` : `rgba(0,0,0,${Math.min(0.6, -k)})`;
+        ctx.fillRect(0, 0, sw * 1.06, sh * 1.06);
+      }
+      ctx.restore();
+    }
+  }
+}
+// Gallardete en el tope del mástil (x, y): ondea en la dirección `ang` (radianes en pantalla) con el color de la marca
+function gallardete(ctx, x, y, largo, ang, deco, fase) {
+  const o = Math.sin(fase * 2) * largo * 0.1;
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(ang);
+  ctx.fillStyle = deco.marca || '#B91C1C';
+  ctx.strokeStyle = 'rgba(2,6,23,0.6)';
+  ctx.lineWidth = Math.max(0.6, largo * 0.03);
+  ctx.beginPath();
+  ctx.moveTo(0, -largo * 0.12);
+  ctx.quadraticCurveTo(largo * 0.5, -largo * 0.2 + o, largo, -largo * 0.25 + o);
+  ctx.lineTo(largo * 0.78, -largo * 0.08 + o * 0.7);
+  ctx.lineTo(largo, largo * 0.06 + o);
+  ctx.quadraticCurveTo(largo * 0.5, largo * 0.02 + o * 0.5, 0, largo * 0.08);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+// Vela de verdad (0.122.0): mástil a 1,79 m a proa del escálamo, verga braceada unos 14° y la tela inflada hacia proa
+// con el viento de popa (vista desde atrás se ve su cara cóncava, más oscura en el centro). El gallardete del tope
+// ondea hacia delante y a estribor, como la vela. Medidas en metros, iguales para ti y para los rivales.
+const VELA = { ancho: 1.55, verga: 2.45, pie: 1.2, panza: 0.55, tope: 2.75, mastil: 1.79 };
+const BRACEO = Math.sin(0.245), BRACEO_C = Math.cos(0.245);
 function velaReal3d(ctx, P, b, largo, t) {
   const deco = decoDe(b);
   if (!deco) return;
-  const zP = b.dist + largo * 0.5 - 1.2;
-  const dx = b.yo ? 1.15 : 0;
-  const w = b.yo ? 1.6 : 1.8;
-  const [h0, h1] = b.yo ? [0.85, 2.3] : [1.0, 2.6];
-  const base = P(b.x + dx, zP, 0.15);
-  const tope = P(b.x + dx, zP, h1 + 0.2);
-  const a = P(b.x + dx - w / 2, zP, h1);
-  const c = P(b.x + dx + w / 2, zP, h0);
-  if (!base || !tope || !a || !c) return;
+  // b.dist es el centro de la barca; el escálamo queda (proa - largo / 2) por detrás
+  const zE = b.dist - (BARCA_REAL.proa - largo / 2);
+  const zM = zE + VELA.mastil;
+  const base = P(b.x, zM, 0.35);
+  const tope = P(b.x, zM, VELA.tope);
+  if (!base || !tope) return;
   const cerca = P(b.x, b.dist);
   const lejania = b.yo || !cerca ? 1 : Math.max(0, Math.min(1, (cerca.d - 10) / 10));
+  const fase = sinMovimiento ? 0 : t * (2 + Math.min(4, (b.v || 0)));
   ctx.save();
-  ctx.globalAlpha = b.yo ? 1 : 0.55 + 0.4 * lejania;
-  // Mástil y verga
-  ctx.strokeStyle = '#6B4423';
-  ctx.lineWidth = Math.max(1.2, base.s * 0.05);
+  ctx.globalAlpha = b.yo ? 1 : 0.6 + 0.4 * lejania;
+  const punto = (u, v) => {
+    const cv = Math.sin(Math.PI * Math.min(1, v * 0.85 + 0.15));
+    const x = (u - 0.5) * VELA.ancho * (1 - 0.1 * v) * (1 - 0.07 * cv);
+    const prof = VELA.panza * Math.sin(Math.PI * u) * cv + 0.03 * Math.sin(fase + u * 5 + v * 3) + 0.22 * v;
+    const q = P(b.x + x * BRACEO_C - prof * BRACEO * 0.3, zM + 0.08 + prof + x * BRACEO, VELA.verga - (VELA.verga - VELA.pie) * v - 0.12 * Math.sin(Math.PI * u) * v * v);
+    return q ? [q.x, q.y] : null;
+  };
+  const luz = (u, v) => 1.05 - 0.38 * Math.sin(Math.PI * u) * Math.sin(Math.PI * Math.min(1, v * 0.85 + 0.15)) + 0.22 * (u - 0.5);
+  // Mástil, escotas a la borda y tela
+  const grosor = Math.max(1.2, base.s * 0.06);
+  ctx.strokeStyle = '#5C3A1C';
+  ctx.lineWidth = grosor;
   ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(tope.x, tope.y); ctx.stroke();
-  const sesgo = (tope.x - base.x) / (tope.y - base.y || -1);
-  ctx.beginPath(); ctx.moveTo(a.x + sesgo * (a.y - c.y) - 2, a.y); ctx.lineTo(c.x + sesgo * (a.y - c.y) + 2, a.y); ctx.stroke();
-  // Tela con el emblema, inclinada como el mástil
+  const n = Math.max(3, Math.min(9, Math.round(tope.s * 0.25)));
   const src = telaDe(deco, t, b.clase);
-  if (src) {
-    ctx.transform(1, 0, sesgo, 1, -sesgo * c.y, 0);
-    telaOndeante(ctx, src, a.x, a.y, c.x - a.x, c.y - a.y, t + b.dist * 0.3, b.v);
+  if (src) telaMalla(ctx, src, punto, n, Math.max(3, Math.round(n * 0.75)), luz);
+  ctx.strokeStyle = 'rgba(40,26,14,0.8)';
+  ctx.lineWidth = Math.max(0.6, grosor * 0.3);
+  for (const u of [0, 1]) {
+    const a = punto(u, 1), q = P(b.x + (u - 0.5) * 0.75, zE + 0.9, 0.45);
+    if (a && q) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(q.x, q.y); ctx.stroke(); }
   }
+  // Verga por delante de la tela (desde popa se ve por su cara de atrás) y gallardete
+  const v0 = punto(-0.04, 0), v1 = punto(1.04, 0);
+  ctx.strokeStyle = '#4A2E16';
+  ctx.lineWidth = grosor * 0.9;
+  if (v0 && v1) { ctx.beginPath(); ctx.moveTo(v0[0], v0[1]); ctx.lineTo(v1[0], v1[1]); ctx.stroke(); }
+  gallardete(ctx, tope.x, tope.y, Math.max(6, tope.s * 0.5), 0, deco, fase);
   ctx.restore();
   // Mascarón de tu colección en la proa
   if (deco.proa) {
@@ -2763,12 +2803,13 @@ function iconoPieza(ctx, x, cx, cy, lado, t) {
   ctx.drawImage(im, cx - im.naturalWidth * k / 2, cy - im.naturalHeight * k / 2, im.naturalWidth * k, im.naturalHeight * k);
 }
 
-// En 2D (vista cenital) la vela se ve tumbada, ondeando por detrás de la popa, con el emblema a la vista.
+// En 2D (vista cenital) la vela se ve desde arriba: la verga cruza el bote en el mástil, a 1,79 m a proa del escálamo,
+// y la tela cae hacia proa inflada por el viento de popa, con su sombra en el agua. Mide lo mismo para todos.
 function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   const src = telaDe(deco, t, b.clase);
-  const mastil = x - largo * 0.93;
-  const w = (b.yo ? 2 : 1.0) * pxm;
-  const h = w * TELA_H / TELA_W;
+  const mastil = x - largo * (BARCA_REAL.proa / BARCA_REAL.largo) + VELA.mastil * pxm;
+  const W = 1.6 * pxm, Hs = 1.33 * pxm;
+  const fase = sinMovimiento ? 0 : t * (2 + Math.min(4, (b.v || 0)));
   if (b.yo) {
     // Aro discontinuo alrededor de tu bote (debajo de la vela, para que no la tache)
     ctx.save();
@@ -2776,14 +2817,27 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
     ctx.beginPath(); ctx.ellipse(x - largo * 0.5, y, largo * 0.6, Math.max(ancho * 1.6, pxm * 0.7), 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  ctx.beginPath(); ctx.ellipse(mastil + Hs * 0.55, y, Hs * 0.5, W * 0.52, 0, 0, Math.PI * 2); ctx.fill();
   if (src) {
-    ctx.save();
-    ctx.globalAlpha = 0.95;
-    telaOndeante(ctx, src, mastil - w, y - h / 2, w, h, t + x * 0.01, b.v, true);
-    ctx.restore();
+    const punto = (u, v) => [
+      mastil + v * Hs * 0.55 + 0.28 * Hs * Math.sin(Math.PI * u) * (Math.pow(v, 0.6) + 0.15) + 0.015 * Hs * Math.sin(fase + u * 6 + v * 3),
+      y + W * (u - 0.5) * (1 - 0.12 * v),
+    ];
+    const luz = (u, v) => 0.74 + 0.38 * Math.sin(Math.PI * u) * (0.6 + 0.4 * v) - 0.08 * v;
+    const n = Math.max(3, Math.min(8, Math.round(pxm * 0.12)));
+    ctx.globalAlpha = b.yo ? 1 : 0.95;
+    telaMalla(ctx, src, punto, n, Math.max(3, Math.round(n * 0.75)), luz);
+    ctx.globalAlpha = 1;
   }
-  ctx.fillStyle = '#6B4423';
+  ctx.strokeStyle = '#4A2E16';
+  ctx.lineWidth = Math.max(1.2, pxm * 0.05);
+  ctx.beginPath(); ctx.moveTo(mastil, y - W * 0.53); ctx.lineTo(mastil, y + W * 0.53); ctx.stroke();
+  gallardete(ctx, mastil, y, Math.max(6, pxm * 0.35), 0.35, deco, fase);
+  ctx.fillStyle = '#3C2410';
   ctx.beginPath(); ctx.arc(mastil, y, Math.max(1.5, pxm * 0.06), 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
   if (b.yo) {
     if (deco.proa) iconoPieza(ctx, deco.proa, x - pxm * 0.15, y, Math.max(10, pxm * 0.55), t);
     // Bandera de popa, tumbada como la vela (vista desde arriba): asta en la borda, junto a la popa, y la tela
@@ -2803,7 +2857,7 @@ function velaReal2d(ctx, x, y, largo, ancho, b, deco, t, pxm) {
   }
 }
 
-function remero3d(ctx, P, b, { im, A, f, sx, sy, solo }, t) {
+function remero3d(ctx, P, b, { im, A, f, sx, sy, solo }, t, entre) {
   const q = P(b.x, b.dist - 0.4, 0);
   const q1 = P(b.x + 1, b.dist - 0.4, 0);
   if (!q || !q1) return;
@@ -2815,7 +2869,7 @@ function remero3d(ctx, P, b, { im, A, f, sx, sy, solo }, t) {
     ctx.shadowBlur = sinMovimiento ? 18 : 16 + 10 * Math.sin(t * 10);
   }
   // El atlas está renderizado con la cámara justo detrás del bote. En las calles laterales se inclina hacia el punto de
-  // fuga: las líneas a lo largo del bote siguen la perspectiva y las horizontales (remos) se quedan horizontales.
+  // fuga: las líneas a lo largo del casco siguen la perspectiva y las horizontales se quedan horizontales.
   const pa = P(b.x, b.dist + 1.6, 0);
   const pb = P(b.x, b.dist - 2.4, 0);
   const sesgo = INCLINA_CALLE * (pa && pb && Math.abs(pa.y - pb.y) > 0.5 ? (pa.x - pb.x) / (pa.y - pb.y) : 0);
@@ -2823,24 +2877,31 @@ function remero3d(ctx, P, b, { im, A, f, sx, sy, solo }, t) {
   ctx.transform(1, 0, sesgo, 1, -sesgo * q.y, 0);
   const ox = q.x - A.ancla[0] * kx, oy = q.y - A.ancla[1] * ky;
   ctx.drawImage(im, sx, sy, A.w, A.h, ox, oy, A.w * kx, A.h * ky);
-  const palas = b.yo ? decoDe(b)?.palas : null;
-  if (palas) palasReal(ctx, '3d', f, palas, ox, oy, kx, ky);
   ctx.restore();
+  if (entre) {
+    ctx.shadowBlur = 0;
+    entre();
+    ctx.globalAlpha = b.yo ? 1 : 0.92;
+    if (b.brillo) ctx.shadowBlur = sinMovimiento ? 18 : 16 + 10 * Math.sin(t * 10);
+  }
   // El remero va recto encima, sin el sesgo, para que no se vea aplastado ni estirado en las calles de los extremos.
   // El sesgo deja quieta la línea de los escálamos (q.y), así que el remero sigue sentado en su sitio.
   if (solo) {
     const R = REMEROS_ATLAS.remero3d;
     const k = sesgo * (oy + (R.origen[1] + R.h * 0.75) * ky - q.y);
     ctx.drawImage(solo, (f % R.cols) * R.w, Math.floor(f / R.cols) * R.h, R.w, R.h, ox + R.origen[0] * kx + k, oy + R.origen[1] * ky, R.w * kx, R.h * ky);
+    // Los remos van con el remero: las palas de tu colección, encima y sin el sesgo
+    const palas = b.yo ? decoDe(b)?.palas : null;
+    if (palas) palasReal(ctx, '3d', f, palas, ox + k, oy, kx, ky);
   }
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 }
 
-// Marca del color del rival sobre su bote (las diferencias van en la tabla de la esquina)
+// Marca del color del rival sobre su bote, por encima del tope del mástil (las diferencias van en la tabla de la esquina)
 function marcaRival3d(ctx, P, b) {
   if (!b.yo) {
-    const q = P(b.x, b.dist, 1.9);
+    const q = P(b.x, b.dist, VELA.tope + 0.45);
     if (q) {
       const m = Math.max(4, Math.min(7, q.s * 0.25));
       ctx.fillStyle = b.color;

@@ -15,6 +15,8 @@ VISTAS = {'carrera3d': '3d', 'cenital': '2d'}
 bloque = {}
 for cam, vista in VISTAS.items():
     dirs = [os.path.join(ent, f'{cam}_{c}') for c in CLASES]
+    if not os.path.isdir(dirs[0]):
+        continue   # desde la 0.122.0 la vista 3D sale de atlas_capas.py (casco y remero en capas)
     meta = json.load(open(os.path.join(dirs[0], 'carrera.json')))
     ims = {}
     for c, d in zip(CLASES, dirs):
