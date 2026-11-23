@@ -128,6 +128,44 @@ test('la carrera y la gráfica en vivo no pintan a más densidad que su tope', a
   expect(await densidad('#grafica-vivo')).toBeLessThanOrEqual(Math.min(pantalla, 2) + 0.01);
 });
 
+test('con «Ahorro de batería» y en pausa la carrera 2D baja a 30 cuadros por segundo', async ({ page }) => {
+  test.setTimeout(90_000);
+  await contarPintadas(page);
+  await page.goto('./');
+  await completarBienvenida(page, { reloj: false });
+  await page.locator('#btn-grabar').click();
+  const carrera = page.locator('#carrera');
+  await expect(carrera).toBeVisible();
+  await carrera.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1_000);
+  const normal = await pintadasPorSegundo(page, 'carrera');
+  // En pausa: 30 como mucho.
+  await page.locator('#btn-pausa').click();
+  await page.waitForTimeout(500);
+  const enPausa = await pintadasPorSegundo(page, 'carrera');
+  expect(enPausa, `en pausa: ${enPausa} cuadros/s`).toBeLessThanOrEqual(30 * 1.1 + 1);
+  await page.locator('#btn-pausa').click();
+  // Con el ahorro (Ajustes), también remando, y la densidad queda en 1,5 como mucho.
+  await page.evaluate(async () => { const c = await import('./src/carrera.js'); c.fijarAhorro(true); });
+  await page.waitForTimeout(500);
+  const conAhorro = await pintadasPorSegundo(page, 'carrera');
+  expect(conAhorro, `con ahorro: ${conAhorro} cuadros/s`).toBeLessThanOrEqual(30 * 1.1 + 1);
+  const d = await page.evaluate(() => { const c = document.querySelector('#carrera'); return c.width / c.clientWidth; });
+  expect(d).toBeLessThanOrEqual(1.51);
+  console.log('carrera 2D en cuadros/s:', JSON.stringify({ normal, enPausa, conAhorro, densidad: d }));
+});
+
+test('«Ahorro de batería» se guarda en Ajustes y se aplica al volver a abrir', async ({ page }) => {
+  await page.goto('./');
+  await completarBienvenida(page, { reloj: false });
+  await page.locator('#tab-ajustes').click();
+  await page.locator('[data-seccion="apariencia"] > summary').click();
+  await page.locator('#in-ahorro').check();
+  expect(await page.evaluate(() => localStorage.getItem('ahorroBateria'))).toBe('1');
+  await page.reload();
+  expect(await page.evaluate(async () => (await import('./src/carrera.js')).fpsTope('2d'))).toBe(30);
+});
+
 test('la carrera no se pinta cuando queda fuera de la pantalla', async ({ page }) => {
   await contarPintadas(page);
   await page.goto('./');
