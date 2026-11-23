@@ -235,13 +235,26 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now(), { previo = null 
   if (efecto) { clave = peor(clave, efecto.clave); motivos.push(efecto.motivo); }
   if (hrv?.baja) { clave = peor(clave, 'cargado'); motivos.push(`Tu variabilidad del pulso bajó (${hrv.hoy} ms, lo normal en ti es ${hrv.base})`); }
   const semana = dias.slice(-7).reduce((a, d) => a + d.carga, 0);
+  // Monotonía (Foster): carga media de los 7 días entre su desviación. Remar casi igual todos los días, sin días
+  // suaves ni de descanso, cansa más de lo que suma: con más de 2 y 5 días o más con carga, el próximo suave es descanso.
+  const monotonia = monotoniaDe(dias.slice(-7).map((d) => d.carga));
+  if (monotonia) { clave = peor(clave, 'cargado'); motivos.push('Tu semana fue muy pareja, sin días de descanso: hoy toca descansar o remar muy suave'); }
   const seguro = ratio != null ? { min: Math.round(cond * 7 * 0.8), max: Math.round(cond * 7 * 1.3) } : null;
   const reparto = E.distribucionIntensidad(sesiones, ftp, 7, ahora);
   return {
     clave, ...ESTADOS_CUERPO[clave], horas, ratio: ratio == null ? null : Math.round(ratio * 100) / 100,
     condicion: Math.round(cond), fatiga: Math.round(fat), frescura: Math.round(fres),
-    semana: Math.round(semana), seguro, reparto, motivos, rmssd: hrv,
+    semana: Math.round(semana), seguro, reparto, motivos, rmssd: hrv, monotonia,
   };
+}
+
+// Monotonía de 7 cargas diarias (con los días sin remar en 0), o null si no pasa de 2 o hay menos de 5 días con carga.
+export function monotoniaDe(cargas) {
+  if (cargas.length < 7 || cargas.filter((c) => c > 0).length < 5) return null;
+  const m = cargas.reduce((a, c) => a + c, 0) / cargas.length;
+  const sd = Math.sqrt(cargas.reduce((a, c) => a + (c - m) ** 2, 0) / cargas.length);
+  const v = sd ? m / sd : Infinity;
+  return v > 2 ? Math.round(Math.min(v, 9) * 10) / 10 : null;
 }
 
 // Texto corto de recuperación: «Listo para entrenar» o «Recuperado en unas 20 h» / «en 2 días».

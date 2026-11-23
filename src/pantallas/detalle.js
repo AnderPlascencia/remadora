@@ -231,6 +231,9 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   }
   $('#hoja-stats').innerHTML = stats.map(([k, v]) => `<div class="metrica"><span class="etq">${escaparHtml(k)}</span><span class="valor">${v}</span></div>`).join('');
   requestAnimationFrame(() => $('#hoja-stats').querySelectorAll('.valor').forEach((el) => ajustarTexto(el)));
+  const piernas = E.piernasCansadas(s);
+  $('#hoja-piernas').hidden = !piernas;
+  if (piernas) $('#hoja-piernas').textContent = `Piernas cansadas: entre el minuto ${Math.round(piernas.ini / 60)} y el ${Math.round(piernas.fin / 60)} sostuviste los watts subiendo la cadencia, pero cada palada movió un ${piernas.caida} % menos. Si se repite, toca más descanso o fondos más largos y suaves.`;
 
   pintarRpe();
   $('#in-notas').value = s.notas || '';

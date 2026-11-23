@@ -14,7 +14,7 @@ import * as A from '../adaptacion.js';
 import * as Pf from '../perfil.js';
 import * as Ci from '../cita.js';
 import { $, COLOR_ZONA, ajustes, citaGuardada, escaparHtml, ftp, ico, miles, perfil, previoHoy, toast } from '../ui.js';
-import { PREGUNTAS_PREVIAS } from '../pulso.js';
+import { PREGUNTAS_PREVIAS, ZONAS_DOLOR } from '../pulso.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { asistente, estimarFtp, guardarFtp, leerMmss, libreConFantasmas } from './preparar.js';
@@ -615,23 +615,39 @@ function pintarAntes(sesiones) {
   caja.hidden = !!estado.sesion || yaRemo;
   if (caja.hidden) return;
   const r = previoHoy() || {};
-  const completo = r.sueno && r.dolor && !estado.antesAbierto;
+  const conDolor = r.dolor === 'leve' || r.dolor === 'si';
+  const completo = r.sueno && r.dolor && (!conDolor || r.zona) && !estado.antesAbierto;
   $('#antes-preguntas').hidden = completo;
   $('#antes-plegado').hidden = !completo;
   if (completo) {
     const sueno = { bien: 'Dormiste bien', regular: 'Dormiste regular', mal: 'Dormiste mal' }[r.sueno];
-    const dolor = { no: 'sin dolor', leve: 'molestia leve', si: 'con dolor o malestar' }[r.dolor];
+    const zona = conDolor && r.zona !== 'otra' ? ` en ${(ZONAS_DOLOR.find(([k]) => k === r.zona)?.[1] || '').toLowerCase()}` : '';
+    const dolor = { no: 'sin dolor', leve: 'molestia leve', si: 'con dolor o malestar' }[r.dolor] + zona;
     $('#antes-plegado span').textContent = `${sueno} · ${dolor}`;
     return;
   }
-  $('#antes-preguntas').innerHTML = Object.entries(PREGUNTAS_PREVIAS).map(([clave, q]) => `<div class="antes-pregunta" role="group" aria-label="${q.texto}">
+  // Con dolor o molestia, también dónde (etapa 27): cambia el consejo y, si se repite, la semana.
+  const preguntas = Object.entries(PREGUNTAS_PREVIAS);
+  if (conDolor) preguntas.push(['zona', { texto: '¿Dónde?', opciones: ZONAS_DOLOR }]);
+  $('#antes-preguntas').innerHTML = preguntas.map(([clave, q]) => `<div class="antes-pregunta" role="group" aria-label="${q.texto}">
       <span>${q.texto}</span><div class="antes-chips">${q.opciones.map(([v, t]) => `<button type="button" class="chip" data-antes="${clave}" data-valor="${v}" aria-pressed="${r[clave] === v}">${t}</button>`).join('')}</div></div>`).join('');
 }
 async function responderAntes(clave, valor) {
   const hoy = E.claveDia(Date.now());
-  const r = { ...(previoHoy() || {}), dia: hoy, [clave]: valor };
+  const { dolores: _, ...antes } = previoHoy() || {};
+  const r = { ...antes, dia: hoy, [clave]: valor };
+  if (r.dolor === 'no') delete r.zona;
   ajustes.escribir('antesDeRemar', JSON.stringify(r));
-  if (r.sueno && r.dolor) estado.antesAbierto = false;
+  if (r.dolor) {
+    // Registro de las últimas 4 semanas, una entrada por día: así una molestia que se repite ajusta la semana.
+    let dolores = [];
+    try { dolores = JSON.parse(ajustes.leer('dolores', '[]')) || []; } catch { /* vacío */ }
+    const desde = E.claveDia(Date.now() - 28 * 864e5);
+    dolores = dolores.filter((d) => d.dia !== hoy && d.dia > desde);
+    dolores.push({ dia: hoy, dolor: r.dolor, ...(r.zona ? { zona: r.zona } : {}) });
+    ajustes.escribir('dolores', JSON.stringify(dolores));
+  }
+  if (r.sueno && r.dolor && (r.dolor === 'no' || r.zona)) estado.antesAbierto = false;
   await revisarPlanAuto();
   pintarHoy();
 }

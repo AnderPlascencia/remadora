@@ -25,13 +25,19 @@ export const ftp = () => ajustes.num('ftp', 0);
 export const fcMaxima = () => ajustes.num('fcMax', 0);
 // Referencia de pulso para las zonas: el máximo y, si lo diste, el pulso en reposo (zonas con reserva de pulso).
 export const fcRef = () => ({ max: fcMaxima(), reposo: ajustes.num('fcReposo', 0) });
-// Lo que respondiste hoy antes de remar ({ sueno, dolor }), o null si no es de hoy.
+// Lo que respondiste hoy antes de remar ({ sueno, dolor, zona }), o null si no es de hoy. Si hubo molestias en los
+// últimos 7 días, también trae dolores ([{ dia, dolor, zona }], etapa 27) aunque hoy no hayas respondido.
 export function previoHoy(ahora = new Date()) {
-  try {
-    const r = JSON.parse(ajustes.leer('antesDeRemar', 'null'));
-    const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
-    return r && r.dia === hoy ? r : null;
-  } catch { return null; }
+  const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+  let r = null;
+  try { r = JSON.parse(ajustes.leer('antesDeRemar', 'null')); } catch { /* sin respuesta */ }
+  const deHoy = r && r.dia === hoy ? r : null;
+  let dolores = [];
+  try { dolores = JSON.parse(ajustes.leer('dolores', '[]')) || []; } catch { /* sin registro */ }
+  const desde = ahora.getTime() - 7 * 864e5;
+  const recientes = dolores.filter((d) => d.dolor !== 'no' && new Date(`${d.dia}T12:00`).getTime() > desde);
+  if (!recientes.length) return deHoy;
+  return { ...(deHoy || {}), dolores: recientes };
 }
 // Tu perfil (Ajustes › Tu perfil y la bienvenida). minutos: null si no lo has elegido, 0 = sin límite.
 export function perfil() {

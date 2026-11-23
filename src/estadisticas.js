@@ -386,6 +386,32 @@ export function tecnica(s) {
   };
 }
 
+// Piernas cansadas (etapa 27): dentro de un bloque de trabajo de 4 min o más (o el cuerpo de un remo libre de
+// 20 min), el trabajo por palada del último tercio cae un 10 % o más frente al primero mientras los watts se
+// sostienen (bajan menos de un 5 %): se mantuvo la potencia subiendo la cadencia porque las piernas empujan menos.
+// Devuelve { ini, fin (s), caida (%) } del tramo con más caída, o null.
+export function piernasCansadas(s) {
+  const m = s?.muestras;
+  if (!m?.length) return null;
+  const tramos = [];
+  if (s.bloques?.length) {
+    let t = 0;
+    for (const b of s.bloques) { const ini = t; t += b.duracion || 0; if (esBloqueTrabajo(b) && b.metrica && (b.duracion || 0) >= 240) tramos.push([ini, t]); }
+  } else if ((s.duracion || 0) >= 1200) tramos.push([300, m.at(-1).t]);
+  let peor = null;
+  for (const [ini, fin] of tramos) {
+    const dentro = m.filter((x) => x.t > ini && x.t <= fin && x.w > 0 && x.spm > 0);
+    if (dentro.length < 180) continue;
+    const tercio = Math.floor(dentro.length / 3);
+    const parte = (l) => ({ w: media(l.map((x) => x.w)), j: media(l.map((x) => (x.w * 60) / x.spm)) });
+    const a = parte(dentro.slice(0, tercio));
+    const b = parte(dentro.slice(-tercio));
+    const caida = Math.round((100 * (a.j - b.j)) / a.j);
+    if (caida >= 10 && b.w >= a.w * 0.95 && (!peor || caida > peor.caida)) peor = { ini, fin, caida };
+  }
+  return peor;
+}
+
 // ---------- Fantasma ----------
 
 // Distancia de una sesión guardada en el segundo t (interpolada). Si ya terminó, su distancia final.
