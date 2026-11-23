@@ -7,22 +7,22 @@
     "motor": "Chromium canvas (croma, recorte, escala)",
     "parametros": {
       "croma": true,
-      "escala": 1.1119
+      "escala": 1.1103
     }
   },
   "fuente": {
     "tipo": "imagen generada externamente",
     "archivo": "polinesio_elite_source.jpg",
-    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), img2img desde el novato, 576x768, 8 pasos, semilla 23",
+    "generador": "Open Generative AI, modo local (stable-diffusion.cpp + Z-Image Turbo Q8_0), 576x768, 8 pasos, img2img desde el novato",
     "prompt": "docs/CHARACTER_PROGRESSION_MATRIX.md#polinesio",
     "origen": {
       "ancho": 576,
       "alto": 768,
       "caja": {
-        "x0": 91,
-        "y0": 49,
-        "x1": 444,
-        "y1": 743
+        "x0": 103,
+        "y0": 42,
+        "x1": 448,
+        "y1": 737
       }
     },
     "licencia": "según los términos del generador"
