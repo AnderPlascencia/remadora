@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.121.1 · 2026-11-23
+
+Orillas más naturales en la vista 2D.
+
+- **La costa, encima del agua.** Las rocas, la espuma, las flores y las ramas que sobresalen de la orilla se ven sobre el canal, y junto a la orilla el agua se aclara un poco, como un bajío.
+- **La orilla de abajo, derecha.** Cada paisaje tiene su propia orilla de abajo, con los árboles, las casas y el iglú de pie mirando al agua (antes era la de arriba volteada).
+- **Sin agua en los extremos.** La franja de tierra de los bordes ya no muestra pedazos de agua en la Bahía glaciar ni en la Costa mediterránea.
+
 ## 0.121.0 · 2026-11-23
 
 Los días suaves se reman suaves (decisiones de Ander).
