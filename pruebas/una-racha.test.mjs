@@ -55,7 +55,7 @@ const cal = { '2026-11-23': 'A', '2026-11-24': '', '2026-11-25': 'B', '2026-11-2
   assert.equal(h.racha.primeraSemanaPlan, lista[3].fecha);
   const ins = E.insignias(lista, { primeraSemanaPlan: h.racha.primeraSemanaPlan });
   assert.ok(ins.find((x) => x.clave === 'racha7').ganada);
-  assert.equal(E.INSIGNIAS.find((x) => x.clave === 'racha7').detalle, 'Completa una semana entera de tu plan');
+  assert.equal(E.INSIGNIAS.find((x) => x.clave === 'racha7').detalle, 'Cumple todas las sesiones de una semana de tu plan (cuenta al cerrar la semana)');
   // 7 días seguidos remando ya no la dan…
   const siete = Array.from({ length: 7 }, (_, i) => ses(`2026-12-0${i + 1}`, 20, 0.6));
   assert.ok(!E.insignias(siete).find((x) => x.clave === 'racha7').ganada);
