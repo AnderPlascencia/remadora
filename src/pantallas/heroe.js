@@ -12,7 +12,7 @@ import * as V from '../ventajas.js';
 import * as B from '../base.js';
 import * as C from '../consejos.js';
 import {
-  $, ajustes, cargarVista, citaGuardada, contarHasta, descargar, escaparHtml, fechaCorta, formatoMeta, ftp, ico, miles, perfil, sinMovimiento, toast, vibrar,
+  $, ajustes, cargarVista, citaGuardada, contarHasta, descargar, escaparHtml, fechaCorta, formatoMeta, ftp, ico, miles, perfil, pestanasConTeclado, sinMovimiento, toast, vibrar,
 } from '../ui.js';
 import * as Ci from '../cita.js';
 import { estado } from '../estado.js';
@@ -86,6 +86,7 @@ export function arrancarHeroe() {
     guardarPersonaje({ clase: null, claseHist });
     pintarHeroe();
   });
+  pestanasConTeclado($('.heroe-tabs'));
   document.querySelector('.heroe-tabs').addEventListener('click', (e) => {
     const b = e.target.closest('[data-hp]');
     if (!b) return;

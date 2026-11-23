@@ -1,5 +1,5 @@
 // Navegación entre pestañas y ayudas emergentes.
-import { $, toast } from './ui.js';
+import { $, marcarPestanas, pestanasConTeclado, toast } from './ui.js';
 import { pintarClasificacion, pintarPerfil } from './pantallas/ajustes.js';
 import { dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
 import { lineasLog, pintarDiagnostico } from './registro.js';
@@ -16,6 +16,7 @@ export function irA(vista) {
     b.classList.toggle('activa', activa);
     b.setAttribute('aria-selected', activa);
   });
+  marcarPestanas($('.nav-pestanas'));
   document.querySelectorAll('.vista').forEach((v) => v.classList.toggle('activa', v.id === `vista-${vista}`));
   window.scrollTo(0, 0);
   if (vista === 'historial') pintarHistorial();
@@ -30,6 +31,8 @@ export function irA(vista) {
 // Al arrancar la app (en orden, desde app.js).
 export function arrancarNavegacion() {
   document.querySelectorAll('.nav-inferior button').forEach((b) => b.addEventListener('click', () => irA(b.dataset.vista)));
+  pestanasConTeclado($('.nav-pestanas'));
+  marcarPestanas($('.nav-pestanas'));
   document.addEventListener('click', (e) => {
     const q = e.target.closest('.ayuda-q');
     if (!q) return;
