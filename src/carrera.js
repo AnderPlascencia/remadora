@@ -1106,7 +1106,8 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
 
   // Orillas: si sobra alto, la tierra llena el espacio en vez de dejar franjas vacías.
   const tierraArriba = Math.max(orilla, y0 - arriba);
-  const tierraAbajo = Math.max(orilla, alto - abajo - (y0 + pista));
+  // La tierra de abajo llega hasta el borde del lienzo: las marcas de metros van encima del paisaje, sin franja lisa.
+  const tierraAbajo = Math.max(orilla, alto - (y0 + pista));
   ctx.fillStyle = paisaje.colores.tierra2d;
   ctx.fillRect(0, y0 - tierraArriba, ancho, tierraArriba);
   ctx.fillRect(0, y0 + pista, ancho, alto - (y0 + pista));
@@ -1211,27 +1212,37 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     }
   }
 
-  // Marcas de distancia
+  // Marcas de distancia: una estaca en la orilla de abajo con su placa, sobre el paisaje (sin franja ni línea lisa).
   const paso = [10, 25, 50, 100, 250, 500, 1000].find((q) => ventana / q <= 6) || 2000;
-  ctx.font = '12px system-ui, sans-serif';
+  ctx.font = '600 11px system-ui, sans-serif';
   ctx.textAlign = 'center';
+  const orillaY = y0 + pista;
   for (let m = Math.ceil(M(0) / paso) * paso; m <= M(ancho); m += paso) {
     if (m < 0) continue;
     const x = X(m);
-    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    // Corchera tenue a lo ancho del agua: puntos que alternan claro y oscuro, se ven sobre cualquier agua.
+    for (let y = y0 + 4, i = 0; y < orillaY - 2; y += 7, i++) {
+      ctx.fillStyle = i % 2 ? 'rgba(15,23,42,0.28)' : 'rgba(255,255,255,0.32)';
+      ctx.fillRect(x - 1, y, 2, 3);
+    }
+    const etq = `${Math.abs(m).toLocaleString('es-MX')} m`; // abs: sin «-0 m»
+    const w = ctx.measureText(etq).width + 10;
+    // Junto al borde la placa se corre hacia dentro; la estaca sigue marcando el metro exacto.
+    const px = Math.min(ancho - w / 2 - 2, Math.max(w / 2 + 2, x));
+    if (x < -w || x > ancho + w) continue;
+    const py = Math.min(alto - 10, orillaY + Math.max(12, (alto - orillaY) * 0.45));
+    ctx.strokeStyle = 'rgba(92,64,38,0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, orillaY + 1); ctx.lineTo(x, py - 8); ctx.stroke();
+    ctx.fillStyle = 'rgba(15,23,42,0.62)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(px - w / 2, py - 8, w, 16, 5) : ctx.rect(px - w / 2, py - 8, w, 16);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + pista); ctx.stroke();
-    // La etiqueta que no cabe entera en el borde no se escribe (antes salía cortada).
-    const etq = `${m.toLocaleString('es-MX')} m`;
-    const medio = ctx.measureText(etq).width / 2;
-    if (x - medio < 2 || x + medio > ancho - 2) continue;
-    // Con borde oscuro: se lee igual sobre la nieve del glaciar que sobre la tierra oscura del fiordo
-    ctx.strokeStyle = 'rgba(15,23,42,0.7)';
-    ctx.lineWidth = 3;
-    ctx.lineJoin = 'round';
-    ctx.strokeText(etq, x, alto - 4);
-    ctx.fillStyle = '#E2E8F0';
-    ctx.fillText(etq, x, alto - 4);
+    ctx.stroke();
+    ctx.fillStyle = '#F1F5F9';
+    ctx.fillText(etq, px, py + 4);
   }
 
   // Meta
@@ -1943,12 +1954,17 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     const a = P(minX - 2, m);
     const b = P(maxX + 2, m);
     if (!a || !b) continue;
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.lineWidth = Math.max(1, a.s * 0.02);
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    // Etiquetas solo mientras no se amontonan cerca del horizonte; se pintan al final, encima de todo.
+    // Corchera a lo ancho: flotadores que alternan claro y oscuro (se leen sobre cualquier agua, no es una raya lisa).
+    const nf = Math.max(6, Math.min(28, Math.round((b.x - a.x) / Math.max(5, a.s * 0.18))));
+    const rf = Math.max(0.8, a.s * 0.028);
+    for (let i = 0; i <= nf; i++) {
+      ctx.fillStyle = i % 2 ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.55)';
+      ctx.fillRect(a.x + ((b.x - a.x) * i) / nf - rf, a.y + ((b.y - a.y) * i) / nf - rf * 0.6, rf * 2, rf * 1.2);
+    }
+    // Etiquetas solo mientras no se amontonan cerca del horizonte; van en una estaca de la orilla derecha.
     if (ultimaEtq - b.y >= 16 && b.x + 50 < ancho) {
-      marcas.push({ txt: `${m} m`, x: b.x + 6, y: b.y + 4 });
+      const poste = P(maxX + 2, m, 1.1);
+      marcas.push({ txt: `${m} m`, x: b.x + 6, y: (poste ? poste.y : b.y) + 4, pie: b, poste });
       ultimaEtq = b.y;
     }
   }
@@ -2136,6 +2152,11 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     if (ultimaY - k.y < 20) continue;
     ultimaY = k.y;
     const w = ctx.measureText(k.txt).width + 10;
+    if (k.poste) {
+      ctx.strokeStyle = 'rgba(92,64,38,0.9)';
+      ctx.lineWidth = Math.max(1.5, k.pie.s * 0.05);
+      ctx.beginPath(); ctx.moveTo(k.pie.x + 2, k.pie.y); ctx.lineTo(k.x - 3, k.y - 4); ctx.stroke();
+    }
     ctx.fillStyle = 'rgba(2,6,23,0.6)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(k.x - 5, k.y - 12, w, 16, 8) : ctx.rect(k.x - 5, k.y - 12, w, 16);
