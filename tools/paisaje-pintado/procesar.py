@@ -11,7 +11,7 @@ MAPA={'laguna':'palmera_alta A0 palmera_curva A1 palmera_baja A2 fare A3 arbusto
 'otono':'pino A0 arce_rojo A1 arce_naranja A2 abedul A3 cabana A4 roca_grande A5 roca B0 helechos B1 canoa B2',
 'cerezos':'cerezo A0 pino A1 bambu A2 torii A3 cerezo_chico A4 linterna A5 roca_grande B0 roca B1 iris B2',
 'glaciar':'tempano_alto A0 abeto A1 abeto_bajo A2 tempano A3 iglu A4 roca_grande A5 roca B0 pinguinos B1 hielo B2',
-'mediterraneo':'cipres_alto A0 pinonero A1 cipres A2 olivo A3 casa A4 buganvilla A5 roca_grande B0 roca B1 barca B2 lavanda B3'}[k].split()
+'mediterraneo':'cipres_alto A0 pinonero A1 cipres A2 olivo A3 casa A4 buganvilla A5 roca_grande B0 roca B1 barca B2 romero B5'}[k].split()
 MAPA=dict(zip(MAPA[::2],MAPA[1::2]))
 REJ={0:(128,260),1:(384,260),2:(640,260),3:(128,640),4:(384,640),5:(640,640)}
 PUNTOS={n:(v[0],)+REJ[int(v[1])] for n,v in MAPA.items()}
@@ -42,7 +42,7 @@ ci=Image.fromarray(sin_costura_h(c,120).astype(np.uint8)); ci.resize((1536,round
 # piezas
 RGBA={}
 # Hojas cuyo fondo se parece a las piezas (cerezos rosas sobre fondo rosa): el fondo se toma por relleno desde el borde.
-RELLENO={('cerezos','A')}
+RELLENO={('cerezos','A'),('mediterraneo','A')}
 def objetos(path, hoja=''):
   im=np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
   bg=np.median(np.concatenate([im[:8].reshape(-1,3),im[-8:].reshape(-1,3),im[:,:8].reshape(-1,3),im[:,-8:].reshape(-1,3)]),axis=0)
