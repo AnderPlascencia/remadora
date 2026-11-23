@@ -32,6 +32,7 @@ export const PAISAJES = {
     miniatura: 'assets/carrera/fiordo_mini.webp',
     panorama: { src: 'assets/carrera/fiordo.webp', horizonte: 379 },
     costa: 'assets/carrera/costa.webp',
+    costaAbajo: 'assets/carrera/costa_abajo.webp',
     // Texturas pintadas del suelo de las orillas y del agua de la vista 3D (m = metros que cubre cada repetición)
     agua: { src: 'assets/carrera/fiordo_agua.webp', m: 9 },
     suelo3d: { src: 'assets/carrera/fiordo_suelo.webp', m: 8 },
@@ -69,6 +70,7 @@ export const PAISAJES = {
     miniatura: 'assets/carrera/laguna_mini.webp',
     panorama: { src: 'assets/carrera/laguna.webp', horizonte: 388 },
     costa: 'assets/carrera/laguna_costa.webp',
+    costaAbajo: 'assets/carrera/laguna_costa_abajo.webp',
     // Agua de la vista 2D: textura cenital que se repite (m = metros que cubre) y espuma junto a la orilla
     agua: { src: 'assets/carrera/laguna_agua.webp', m: 9 },
     suelo3d: { src: 'assets/carrera/laguna_suelo.webp', m: 8 },
@@ -123,6 +125,9 @@ Object.assign(PAISAJES, {
 });
 // Colección de paisajes propios (v0.54.0): cinco escenarios con su panorama, su orilla 3D y su costa 2D, renderizados
 // en Blender con tools/blender/paisaje/coleccion (objetos.py, temas.py, panorama.py, orilla.py y costa.py).
+// Las costas 2D (tools/paisaje-pintado/orilla2d.py) tienen la línea de costa recta a esta altura; lo de más es lo que
+// sobresale sobre el agua, con el agua pintada ya transparente.
+const COSTA_LINEA = 0.82;
 const propio = (id, x) => ({
   ...(x.pintado && {
     agua: { src: `assets/carrera/${id}_agua3d.webp`, m: 9 },
@@ -133,6 +138,7 @@ const propio = (id, x) => ({
   miniatura: `assets/carrera/${id}_mini.webp`,
   panorama: { src: `assets/carrera/${id}.webp`, horizonte: 204 },
   costa: `assets/carrera/${id}_costa.webp`,
+  costaAbajo: `assets/carrera/${id}_costa_abajo.webp`,
   orilla: { src: `assets/carrera/${id}_orilla.webp`, ...x.orilla },
 });
 Object.assign(PAISAJES, {
@@ -1118,20 +1124,6 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     if (!c.costa || sinMovimiento) c.costa = { px: yo.dist * ppm, dist: yo.dist };
     c.costa.px += (yo.dist - c.costa.dist) * ppm;
     c.costa.dist = yo.dist;
-    const tira = (y, h, volteada) => {
-      // Escala mínima fija: con poca tierra se ve solo la franja junto al agua, sin encoger el bosque.
-      const k = Math.max(0.25, h / costa.naturalHeight);
-      const w = costa.naturalWidth * k;
-      const sh = Math.min(costa.naturalHeight, h / k);
-      const x0 = -(((c.costa.px % w) + w) % w);
-      ctx.save();
-      ctx.translate(0, y);
-      if (volteada) ctx.scale(1, -1);
-      conFiltro(ctx, costa, (im) => { for (let x = x0; x < ancho; x += w) ctx.drawImage(im, 0, costa.naturalHeight - sh, costa.naturalWidth, sh, x, -h, w + 0.5, h); });
-      ctx.restore();
-    };
-    tira(y0, tierraArriba, false);
-    tira(y0 + pista, tierraAbajo, true);
   } else {
     ctx.fillStyle = '#C2A878';
     ctx.fillRect(0, y0 - 3, ancho, 3);
@@ -1146,12 +1138,15 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     }
   }
 
-  // Agua
+  // Agua. Con costa pintada el agua entra un poco bajo la orilla: la línea de costa no es recta y deja ver ensenadas.
+  const bahia = costa ? Math.min(tierraArriba, tierraAbajo) * 0.3 : 0;
+  const ya = y0 - bahia;
+  const hAgua = pista + 2 * bahia;
   const grad = ctx.createLinearGradient(0, y0, 0, y0 + pista);
   grad.addColorStop(0, paisaje.colores.agua2d[0]);
   grad.addColorStop(1, paisaje.colores.agua2d[1]);
   ctx.fillStyle = grad;
-  ctx.fillRect(0, y0, ancho, pista);
+  ctx.fillRect(0, ya, ancho, hAgua);
   // Agua con textura (laguna): fondo de arena y cáusticas que avanzan con el mundo, con el degradado encima para
   // dar profundidad, y la espuma donde el agua toca la arena.
   const texAgua = paisaje.agua && imagen(paisaje.agua.src);
@@ -1160,14 +1155,52 @@ function pintar2d(c, { ctx, ancho, alto }, { botes, dt, t, ritmo, referencias = 
     const lado = texAgua.naturalWidth * k;
     const x0 = -((((yo.dist + c.centro) * ppm) % lado) + lado) % lado;
     ctx.save();
-    ctx.beginPath(); ctx.rect(0, y0, ancho, pista); ctx.clip();
+    ctx.beginPath(); ctx.rect(0, ya, ancho, hAgua); ctx.clip();
     conFiltro(ctx, texAgua, (im) => {
-      for (let x = x0; x < ancho; x += lado) for (let y = y0; y < y0 + pista; y += lado) ctx.drawImage(im, x, y, lado + 0.5, lado + 0.5);
+      for (let x = x0; x < ancho; x += lado) for (let y = ya; y < ya + hAgua; y += lado) ctx.drawImage(im, x, y, lado + 0.5, lado + 0.5);
     });
     ctx.globalAlpha = 0.45;
     ctx.fillStyle = grad;
-    ctx.fillRect(0, y0, ancho, pista);
+    ctx.fillRect(0, ya, ancho, hAgua);
     ctx.restore();
+  }
+  if (costa) {
+    // Bajío: junto a la orilla el agua se aclara poco a poco, como cuando hay poco fondo.
+    const g = Math.max(8, Math.min(26, pista * 0.09));
+    for (const [y, dir] of [[y0, 1], [y0 + pista, -1]]) {
+      const b = ctx.createLinearGradient(0, y, 0, y + g * dir);
+      b.addColorStop(0, 'rgba(214,236,232,0.34)');
+      b.addColorStop(1, 'rgba(214,236,232,0)');
+      ctx.fillStyle = b;
+      ctx.fillRect(0, dir > 0 ? y - bahia : y - g, ancho, g + bahia);
+    }
+    // Las costas pintadas, encima del agua: rocas, espuma y plantas que sobresalen quedan sobre ella. La línea de
+    // costa está al 82 % del alto (arriba) o al 18 % (abajo); la de abajo es su propia imagen, con todo derecho.
+    const abajo = paisaje.costaAbajo && imagen(paisaje.costaAbajo);
+    const tira = (im, borde, tierra, haciaAbajo) => {
+      const nh = im.naturalHeight;
+      const k = Math.max(0.25, tierra / (nh * COSTA_LINEA));
+      const w = im.naturalWidth * k;
+      const vuelo = nh * (1 - COSTA_LINEA) * k;
+      const alto = Math.min(nh * k, tierra + vuelo);
+      const sh = alto / k;
+      const x0 = -(((c.costa.px % w) + w) % w);
+      // arriba: se ve la parte de abajo de la imagen; abajo (imagen propia): la de arriba; abajo sin imagen propia: la
+      // de arriba volteada, como antes
+      conFiltro(ctx, im, (img) => {
+        for (let x = x0; x < ancho; x += w) {
+          if (!haciaAbajo) ctx.drawImage(img, 0, nh - sh, im.naturalWidth, sh, x, borde + vuelo - alto, w + 0.5, alto);
+          else if (abajo) ctx.drawImage(img, 0, 0, im.naturalWidth, sh, x, borde - vuelo, w + 0.5, alto);
+          else {
+            ctx.save(); ctx.translate(0, borde - vuelo + alto); ctx.scale(1, -1);
+            ctx.drawImage(img, 0, nh - sh, im.naturalWidth, sh, x, 0, w + 0.5, alto);
+            ctx.restore();
+          }
+        }
+      });
+    };
+    tira(costa, y0, tierraArriba, false);
+    tira(abajo || costa, y0 + pista, tierraAbajo, true);
   }
   const espuma = paisaje.espuma && imagen(paisaje.espuma);
   if (espuma && costa) {
