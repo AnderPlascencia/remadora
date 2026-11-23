@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.119.0 · 2026-11-23
+
+Por dentro: el archivo de la sesión, partido en tres.
+
+- **Nada cambia al remar.** `pantallas/sesion.js` pasaba de 1400 líneas y era el archivo en el que más chocaban los cambios. Ahora queda en tres: la conexión y el ciclo de la sesión (`sesion.js`), guardar y recuperar (`sesion-guardar.js`), y la voz y los avisos de la carrera (`sesion-voz.js`).
+
 ## 0.118.0 · 2026-11-23
 
 El resumen y Progreso empiezan por tu plan.
