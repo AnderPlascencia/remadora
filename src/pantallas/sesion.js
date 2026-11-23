@@ -745,7 +745,8 @@ async function guardarSesionTerminada(s, ent, { recuperada = false } = {}) {
   if (!recuperada) guardarRegistroSesion(registro.fecha, registro.diagnostico);
   let previas = null;
   try {
-    previas = (await H.sesiones()).filter((x) => x.id !== registro.id);
+    // Sin muestras: el resumen, los récords y el juego leen el resumen guardado de cada sesión (etapa 23).
+    previas = (await H.sinMuestras()).filter((x) => x.id !== registro.id);
   } catch (e) {
     agregarLog(`sesión guardada, pero no se pudo leer el historial: ${e?.name || ''} ${e?.message || e}`);
   }

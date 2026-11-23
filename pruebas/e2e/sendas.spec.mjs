@@ -108,8 +108,8 @@ test('el camino del vikingo: siguiente hito, rangos, piezas y jefes, y la senda 
   });
   await page.reload();
   await page.locator('#tab-heroe').click();
-  const nivel = Number(await page.locator('#heroe-nivel').textContent());
-  expect(nivel).toBeGreaterThanOrEqual(20);
+  // El héroe se pinta cuando llega su código y se resumen las sesiones nuevas: se espera a que suba el nivel.
+  await expect.poll(async () => Number(await page.locator('#heroe-nivel').textContent())).toBeGreaterThanOrEqual(20);
   await expect(page.locator('#camino-siguiente h3')).toHaveText('Elige tu senda');
   await expect(page.locator('#camino-siguiente')).toContainText('Puedes cambiar gratis');
   await expect(linea.locator('.hito').filter({ hasText: 'Remero de banco' })).toContainText('⚔ Jefe: El draugr del muelle · por vencer');

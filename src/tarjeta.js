@@ -3,7 +3,7 @@
 // protagonista según el tipo de sesión, una línea de contexto y pocos datos más. En tercera persona: la ven otros.
 // Sin DOM: lo pinta tarjeta-imagen.js. Las dos se cargan al abrir «Compartir imagen».
 import { formatoSplit, formatoTiempo } from './protocolo.js';
-import { factorIntensidad, mejorPotencia, parciales, resumenIntervalos, rpeSentido, wattsFiables } from './estadisticas.js';
+import { factorIntensidad, mejorPotencia, mejorPotenciaDe, nMuestras, parciales, resumenIntervalos, rpeSentido, wattsFiables } from './estadisticas.js';
 import { esBloqueTrabajo, rangoWatts } from './entrenamientos.js';
 import { tipoSesion } from './capacidades.js';
 
@@ -216,9 +216,9 @@ export function protagonista(s, ctx = {}) {
   let logro = real ? `su mejor ${real.nombre.replace(/^Mejor /, '').replace(/^Potencia /, '').toLowerCase()}: ${valorRecord(real)}` : null;
   const delMes = previas.filter((x) => mismoMes(x.fecha, s.fecha));
   if (!logro && s.duracion >= 1200 && s.muestras?.length) {
-    const comparables = delMes.filter((x) => (x.duracion || 0) >= 1200 && x.muestras?.length);
+    const comparables = delMes.filter((x) => (x.duracion || 0) >= 1200 && nMuestras(x));
     const w20 = mejorPotencia(s.muestras, 1200);
-    if (comparables.length >= 3 && w20 > Math.max(...comparables.map((x) => mejorPotencia(x.muestras, 1200) || 0))) logro = 'sus mejores 20 min del mes';
+    if (comparables.length >= 3 && w20 > Math.max(...comparables.map((x) => mejorPotenciaDe(x, 1200) || 0))) logro = 'sus mejores 20 min del mes';
   }
   if (!logro && !s.entrenamiento) {
     const libres = delMes.filter((x) => !x.entrenamiento);

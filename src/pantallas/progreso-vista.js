@@ -11,12 +11,10 @@ import * as Cap from '../capacidades.js';
 import * as Hab from '../habito.js';
 import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles, perfil } from '../ui.js';
 import { estado } from '../estado.js';
-import { irA } from '../navegacion.js';
-import { avanzado, guardarRespaldo } from './ajustes.js';
+import { avanzado } from './ajustes.js';
 import { estadoHeroe, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
 import { abrirSesion } from './detalle.js';
 import { leerPrograma } from './programa.js';
-import { abrirCompartirPeriodo } from './planes.js';
 
 import { formatoRecord, pintarAvisoRespaldo, vp } from './progreso.js';
 
@@ -270,7 +268,8 @@ function pintarHeroeProgreso(lista) {
 }
 
 export async function pintarHistorial() {
-  const lista = (await H.sesiones()).sort((a, b) => b.fecha - a.fecha);
+  // Sin muestras (etapa 23): las de una sesión se leen al abrir su detalle.
+  const lista = [...(await H.sinMuestras())].sort((a, b) => b.fecha - a.fecha);
   estado.cacheSesiones = lista;
   $('#progreso-vacio').hidden = lista.length > 0;
   $('#progreso-contenido').hidden = !lista.length;
@@ -359,7 +358,7 @@ export async function pintarHistorial() {
     li.querySelector('.titulo').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · ${s.entrenamiento || 'Remo libre'}`;
     if (E.rpeDe(s)) li.querySelector('.titulo').insertAdjacentHTML('beforeend', `<span class="rpe-chip solo-avanzado">Esfuerzo ${E.rpeDe(s)}</span>`);
     li.querySelector('.suave').textContent = `${formatoTiempo(s.duracion)} · ${miles(s.distancia)} m · ${s.wattsProm} W · ${formatoSplit(s.splitProm)} /500 m${s.tiempoMeta != null ? ` · meta en ${formatoMeta(s.tiempoMeta)}` : ''}${s.notas ? ` · “${s.notas.slice(0, 40)}${s.notas.length > 40 ? '…' : ''}”` : ''}`;
-    li.querySelector('button').addEventListener('click', () => abrirSesion(s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
+    li.querySelector('button').addEventListener('click', async () => abrirSesion((await H.obtener(s.id).catch(() => null)) || s, { previas: lista.filter((x) => x.id !== s.id && x.fecha < s.fecha) }));
     ul.append(li);
   }
   if (enfocada) ul.querySelector(`[data-sesion="${enfocada}"]`)?.focus({ preventScroll: true });

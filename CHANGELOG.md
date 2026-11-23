@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.106.1 · 2026-11-23
+
+Revisión de las etapas 20 a 23: el resumen al terminar y Progreso ya no cargan todas tus sesiones segundo a segundo, y Héroe y Progreso abren bien justo después de una actualización.
+
+- **Resumen al terminar más rápido.** Al guardar una sesión, los récords, la XP, las insignias y la tarjeta se calculan con el resumen guardado de cada sesión anterior, no con todas sus muestras. Con 600 sesiones el cálculo del juego baja de más de 1 s a unos 50 ms y el teléfono no tiene que cargar cientos de MB en memoria justo al terminar.
+- **Progreso y las referencias también.** La lista del historial, las capacidades (incluida tu base aeróbica, los watts a 150 lpm) y el motor semanal leen el resumen. Las muestras de una sesión se cargan solo al abrir su detalle o al usarla como referencia en la carrera.
+- El resumen de cada sesión guarda ahora los watts por pulso. Las sesiones guardadas se resumen otra vez una sola vez, sin que tengas que hacer nada.
+- **Sin mezclas de versiones.** Si la app se actualizó mientras la tenías abierta y luego entras por primera vez a Héroe o Progreso, se recarga sola para abrir la versión nueva completa, salvo que estés remando: en ese caso espera a que termines.
+- **Aviso si no carga.** Si la pestaña no se puede descargar (por ejemplo, sin conexión antes de que quedara guardada), ves un aviso en vez de una pantalla en blanco.
+
 ## 0.106.0 · 2026-11-23
 
 La app abre con menos peso.

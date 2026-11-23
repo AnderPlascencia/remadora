@@ -189,11 +189,13 @@ const COLOR_REFERENCIA = '#FACC15';
 export async function crearReferencias(ent, { vista = false } = {}) {
   const refs = referenciasElegidas();
   if (!refs.length) return [];
-  const sesiones = await H.sesiones();
+  // Se elige con la lista sin muestras y solo se leen las muestras de la elegida.
+  const sesiones = await H.sinMuestras();
   const lista = [];
   for (const clave of refs) {
     const nombre = clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior';
-    const s = E.elegirRival(sesiones, ent?.nombre, clave);
+    const elegida = E.elegirRival(sesiones, ent?.nombre, clave);
+    const s = elegida && (await H.obtener(elegida.id).catch(() => null));
     if (s) lista.push({ ...s, clave, nombre, etiqueta: clave === 'mejor' ? 'Mejor' : 'Anterior', discontinua: clave === 'mejor', color: COLOR_REFERENCIA });
     else if (vista) lista.push({ falta: true, clave, nombre, muestras: [], color: COLOR_REFERENCIA });
     else toast(`Aún no hay ${clave === 'mejor' ? 'una marca' : 'una sesión anterior'} de este entrenamiento para la referencia`);

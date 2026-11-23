@@ -1,34 +1,21 @@
 // Pantalla del héroe: ficha, camino (talentos y rangos), misiones, colección y tienda. Se carga al abrir la pestaña
 // Héroe (ver pintarHeroe en heroe.js); lo que usan otras pantallas se queda en heroe.js.
-import { PAISAJES, VELAS, srcRemero, srcRemeroSolo, comprarPaisaje, comprarVelas, paisajeElegido, tienePaisaje, tieneVelas, usarPaisaje, usarEquipo } from '../carrera.js';
+import { PAISAJES, VELAS, paisajeElegido, tienePaisaje, tieneVelas, usarEquipo } from '../carrera.js';
 import * as CB from '../coleccion-bote.js';
 import * as H from '../historial.js';
-import * as db from '../db.js';
-import { hablar } from '../voz.js';
-import { fraseGrabadaAlAzar } from '../voces-clase.js';
-import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
 import * as O from '../objetos.js';
 import * as V from '../ventajas.js';
 import * as B from '../base.js';
-import * as C from '../consejos.js';
 import {
-  $, ajustes, citaGuardada, contarHasta, descargar, escaparHtml, fechaCorta, formatoMeta, ftp, ico, miles, perfil, sinMovimiento, toast, vibrar,
+  $, ajustes, escaparHtml, fechaCorta, ftp, ico, miles, toast, 
 } from '../ui.js';
-import * as Ci from '../cita.js';
 import { estado } from '../estado.js';
-import { irA } from '../navegacion.js';
 import { pintarClasificacion } from './ajustes.js';
-import { estimarFtp, pintarChips, srcRetratoRango } from './preparar.js';
-import { pintarModoEnt, retratoPropio, vistaPrevia } from './vivo.js';
-import { corto } from './sesion.js';
-import { cerrarHoja, llenarSelectorEntrenamientos, obtenerEnt } from './planes.js';
+import { estimarFtp } from './preparar.js';
 import { HABILIDADES, habilidadDe, RESERVA } from '../habilidades.js';
-import { proximo } from '../programa.js';
-import * as E from '../estadisticas.js';
-import { leerPrograma } from './programa.js';
 
-import { ctxColeccion, emblema, enSesiones, equipoActual, icoMoneda, inventario, leerPersonaje, nombreAtributo, opcConsejos, pintarLineaNivel, previa, previsionDe, srcHeroe, vh } from './heroe.js';
+import { ctxColeccion, emblema, enSesiones, equipoActual, icoMoneda, leerPersonaje, nombreAtributo, opcConsejos, pintarLineaNivel, previsionDe, srcHeroe, vh } from './heroe.js';
 
 function figuraHeroe(per, nivel, ancho) {
   const c = J.claseDe(per.clase);

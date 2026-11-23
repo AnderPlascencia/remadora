@@ -13,6 +13,9 @@ import * as P from '../src/programa.js';
 import * as Pr from '../src/prediccion.js';
 import { recuperacionComparada } from '../src/adaptacion.js';
 import * as Tp from '../src/tarjeta-periodo.js';
+import * as Cap from '../src/capacidades.js';
+import * as Tj from '../src/tarjeta.js';
+import * as Hab from '../src/habito.js';
 import { RESPALDOS_VIEJOS } from './datos/respaldos-viejos.mjs';
 
 const DIA = 864e5;
@@ -151,6 +154,42 @@ test('con todo el historial: estado del juego (XP, nivel, monedas, misiones), r�
     const inicio = E.inicioPeriodo(todas[40].fecha, periodo);
     assert.deepEqual(Tp.contenidoPeriodo(ligeras, periodo, inicio, { kcal: true }, { ftp: 165 }), Tp.contenidoPeriodo(todas, periodo, inicio, { kcal: true }, { ftp: 165 }), periodo);
   }
+});
+
+// Progreso y el resumen al terminar también leen la lista sin muestras: todo lo que pintan debe dar lo mismo.
+test('Progreso y el resumen de la sesión: capacidades, curvas, constancia, insignias y tarjeta dan lo mismo', () => {
+  const opc = { ftp: 165, peso: 75, fcMax: 190, ahora: AHORA };
+  assert.ok(Cap.capacidades(todas, opc).find((c) => c.clave === 'base').valor > 0, 'hay watts a 150 lpm que comparar');
+  const fallos = [];
+  const igual = (f, txt) => { try { assert.deepEqual(f(ligeras), f(todas), txt); } catch (e) { fallos.push(txt); } };
+  igual((l) => Cap.capacidades(l, opc), 'capacidades');
+  igual((l) => Cap.historialCapacidades(l, opc), 'historial de capacidades');
+  igual((l) => Cap.estadoCuerpo(l, 165, AHORA), 'estado del cuerpo');
+  igual((l) => Cap.curvasComparadas(l, AHORA), 'curvas comparadas');
+  igual((l) => Cap.motorSemanal(l, 150, 8, AHORA), 'motor');
+  igual((l) => Cap.gastoSemanal(l, 8, AHORA), 'gasto');
+  igual((l) => E.potenciaCriticaMax(l.filter((s) => s.fecha > AHORA - 400 * DIA), { peso: 75 }), 'potencia crítica');
+  // Las predicciones se guardan con cada sesión al terminarla; el resumen solo las lee.
+  const conPred = Pr.backtest(todas);
+  assert.deepEqual(E.resumenPredicciones(conPred.map(sinM)), E.resumenPredicciones(conPred), 'predicciones');
+  for (const periodo of ['semana', 'mes']) igual((l) => E.resumenPeriodos(l, periodo, 8, AHORA), periodo);
+  igual((l) => E.rachaSemanas(l, AHORA), 'racha');
+  igual((l) => E.ratioCarga(l, 165, AHORA), 'ratio de carga');
+  igual((l) => E.insignias(l), 'insignias');
+  igual((l) => E.ftpEstimadoDe(l), 'FTP estimado');
+  igual((l) => E.factorSrpe(l, 165), 'factor sRPE');
+  igual((l) => Hab.resumenHabito({ sesiones: l, eventos: [], programa: null, ftp: 165, ahora: AHORA }), 'constancia');
+  // Al terminar: la sesión nueva trae sus muestras y las anteriores van sin ellas.
+  for (let k = 30; k < todas.length; k += 7) {
+    const s = todas[k];
+    const antes = (l) => l.slice(0, k);
+    igual((l) => E.nuevosRecords(s, antes(l)), `récords ${k}`);
+    igual((l) => E.compararConAnterior(s, antes(l)), `anterior ${k}`);
+    igual((l) => Pr.registrarPredicciones(s, antes(l)), `predicciones ${k}`);
+    const ctx = (l) => ({ ftp: 165, records: E.nuevosRecords(s, antes(l)), marcas: E.calcularRecords(antes(l)), previas: antes(l) });
+    igual((l) => Tj.contenidoTarjeta(s, {}, ctx(l)), `tarjeta ${k}`);
+  }
+  assert.deepEqual(fallos, []);
 });
 
 test('600 sesiones: la lista sin muestras pesa una fracción', () => {

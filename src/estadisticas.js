@@ -406,7 +406,7 @@ export function distanciaEn(muestras, t) {
 
 // Sesión rival para el mismo entrenamiento: la anterior o la mejor.
 export function elegirRival(sesiones, nombre, modo) {
-  const mismas = sesiones.filter((s) => (s.entrenamiento || null) === (nombre || null) && s.muestras?.length);
+  const mismas = sesiones.filter((s) => (s.entrenamiento || null) === (nombre || null) && nMuestras(s));
   if (!mismas.length || !modo) return null;
   if (modo === 'anterior') return mismas.sort((a, b) => b.fecha - a.fecha)[0];
   const conMeta = mismas.filter((s) => s.tiempoMeta != null);
@@ -953,6 +953,21 @@ export function pulsoAWatts(muestras, watts, margen = 10) {
 export function wattsAPulso(muestras, fc, margen = 3) {
   const m = conPulso(muestras).filter((x) => Math.abs(x.fc - fc) <= margen);
   return m.length >= 120 ? Math.round(media(m.map((x) => x.w))) : null;
+}
+// Lo que mira wattsAPulso, por pulso: [[lpm, segundos, suma de vatios]] (va en el resumen de la sesión).
+export function pulsoW(muestras) {
+  const h = new Map();
+  for (const x of conPulso(muestras)) { const a = h.get(x.fc) || [x.fc, 0, 0]; a[1]++; a[2] += x.w; h.set(x.fc, a); }
+  return [...h.values()];
+}
+// wattsAPulso de varias sesiones juntas, con sus muestras o con su resumen.
+export function wattsAPulsoDe(sesiones, fc, margen = 3) {
+  let n = 0;
+  let suma = 0;
+  for (const s of sesiones) {
+    for (const [f, c, w] of conM(s) ? pulsoW(s.muestras) : s?.res?.pf || []) if (Math.abs(f - fc) <= margen) { n += c; suma += w; }
+  }
+  return n >= 120 ? Math.round(suma / n) : null;
 }
 
 // Índice de eficiencia: potencia normalizada / pulso medio.
