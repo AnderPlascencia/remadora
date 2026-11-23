@@ -119,7 +119,7 @@
 
   <main>
     <!-- ENTRENAR -->
-    <section id="vista-entrenar" class="vista activa" aria-labelledby="tab-entrenar">
+    <section id="vista-entrenar" role="tabpanel" class="vista activa" aria-labelledby="tab-entrenar">
       <div id="aviso-bt" class="aviso aviso-bt" hidden>
         <span>Este navegador no puede conectar con la remadora: abre la app en Chrome para Android.</span>
         <button type="button" id="btn-demo-aviso" class="boton chico">Probar en modo demo</button>
@@ -265,7 +265,7 @@
     </section>
 
     <!-- PLANES -->
-    <section id="vista-entrenamientos" class="vista" aria-labelledby="tab-entrenamientos">
+    <section id="vista-entrenamientos" role="tabpanel" class="vista" aria-labelledby="tab-entrenamientos">
       <div class="planes-pestanas" aria-label="Secciones de Planes">
         <button type="button" data-pt="entrenamientos" aria-pressed="true">Entrenamientos</button>
         <button type="button" data-pt="programa" aria-pressed="false">Programa</button>
@@ -401,7 +401,7 @@
     </section>
 
     <!-- PROGRESO -->
-    <section id="vista-heroe" class="vista" aria-labelledby="tab-heroe">
+    <section id="vista-heroe" role="tabpanel" class="vista" aria-labelledby="tab-heroe">
       <div id="heroe-crear" class="heroe-crear" hidden>
         <h2>Crea tu héroe</h2>
         <p class="ayuda">Tu héroe crece con cada entrenamiento real. Tu historial ya cuenta: empiezas con el nivel que te ganaste. Elige una clase: su atributo favorito crece un 15 % más rápido.</p>
@@ -427,12 +427,12 @@
         </div>
         <div id="heroe-avisos" class="heroe-avisos"></div>
         <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
-          <button type="button" role="tab" data-hp="camino" class="activa" aria-selected="true">Camino</button>
-          <button type="button" role="tab" data-hp="misiones">Misiones</button>
-          <button type="button" role="tab" data-hp="tienda">Tienda</button>
-          <button type="button" role="tab" data-hp="ficha">Ficha</button>
+          <button type="button" role="tab" id="tab-hp-camino" aria-controls="hp-camino" data-hp="camino" class="activa" aria-selected="true">Camino</button>
+          <button type="button" role="tab" id="tab-hp-misiones" aria-controls="hp-misiones" data-hp="misiones">Misiones</button>
+          <button type="button" role="tab" id="tab-hp-tienda" aria-controls="hp-tienda" data-hp="tienda">Tienda</button>
+          <button type="button" role="tab" id="tab-hp-ficha" aria-controls="hp-ficha" data-hp="ficha">Ficha</button>
         </div>
-        <div id="hp-ficha" class="hp" hidden>
+        <div id="hp-ficha" class="hp" role="tabpanel" aria-labelledby="tab-hp-ficha" hidden>
           <div id="ficha-figura" class="armario-vista" role="button" tabindex="0" aria-label="Oír a tu héroe" title="Toca para oír a tu héroe"></div>
           <div id="heroe-maestria" class="heroe-maestria"></div>
           <div id="ficha-talentos-caja">
@@ -451,7 +451,7 @@
           </details>
           <div class="fila-botones"><button id="btn-cambiar-clase" class="boton">Cambiar de clase</button></div>
         </div>
-        <div id="hp-camino" class="hp">
+        <div id="hp-camino" class="hp" role="tabpanel" aria-labelledby="tab-hp-camino">
           <div id="camino-siguiente" class="camino-sig"></div>
           <p id="camino-ident" class="camino-ident"></p>
           <details id="camino-talentos" class="seccion">
@@ -464,7 +464,7 @@
           <ol id="camino-linea" class="camino-linea" aria-label="Camino de tu clase, del nivel 1 al 90"></ol>
           <p class="camino-nota">Talentos, habilidad y bote solo dan XP y metros frente a los fantasmas: tus métricas, récords y pruebas no cambian.</p>
         </div>
-        <div id="hp-misiones" class="hp" hidden>
+        <div id="hp-misiones" class="hp" role="tabpanel" aria-labelledby="tab-hp-misiones" hidden>
           <div id="mis-capitulo" class="capitulo"></div>
           <h2>Hoy</h2>
           <ul id="mis-diarias" class="lista misiones"></ul>
@@ -473,7 +473,7 @@
           <h2>Logros</h2>
           <ul id="mis-hazanas" class="lista misiones"></ul>
         </div>
-        <div id="hp-tienda" class="hp" hidden>
+        <div id="hp-tienda" class="hp" role="tabpanel" aria-labelledby="tab-hp-tienda" hidden>
           <div class="tienda-cabeza">
             <p id="tienda-info" class="tienda-saldo"></p>
             <div class="segmentado tienda-seg" role="group" aria-label="Sección de la tienda">
@@ -504,7 +504,7 @@
       </div>
     </section>
 
-    <section id="vista-historial" class="vista" aria-labelledby="tab-historial">
+    <section id="vista-historial" role="tabpanel" class="vista" aria-labelledby="tab-historial">
       <div id="progreso-vacio" class="vacio-grande" hidden>
         <svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg>
         <h3>Aquí verás tu progreso</h3>
@@ -616,7 +616,7 @@
     </section>
 
     <!-- AJUSTES -->
-    <section id="vista-ajustes" class="vista" aria-labelledby="tab-ajustes">
+    <section id="vista-ajustes" role="tabpanel" class="vista" aria-labelledby="tab-ajustes">
       <details class="seccion" data-seccion="perfil" open>
       <summary><h2>Tu perfil</h2><span id="perfil-resumen" class="seccion-resumen"></span></summary>
       <div class="fila-dos">
@@ -771,11 +771,11 @@
 
   <nav class="nav-inferior" aria-label="Secciones">
   <div class="nav-pestanas" role="tablist" aria-label="Secciones">
-    <button id="tab-entrenar" role="tab" data-vista="entrenar" class="activa" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="#i-remo"/></svg><span>Entrenar</span></button>
-    <button id="tab-entrenamientos" role="tab" data-vista="entrenamientos" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg><span>Planes</span></button>
-    <button id="tab-heroe" role="tab" data-vista="heroe" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-heroe"/></svg><span>Héroe</span></button>
-    <button id="tab-historial" role="tab" data-vista="historial" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg><span>Progreso</span></button>
-    <button id="tab-ajustes" role="tab" data-vista="ajustes" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg><span>Ajustes</span></button>
+    <button id="tab-entrenar" role="tab" aria-controls="vista-entrenar" data-vista="entrenar" class="activa" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="#i-remo"/></svg><span>Entrenar</span></button>
+    <button id="tab-entrenamientos" role="tab" aria-controls="vista-entrenamientos" data-vista="entrenamientos" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg><span>Planes</span></button>
+    <button id="tab-heroe" role="tab" aria-controls="vista-heroe" data-vista="heroe" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-heroe"/></svg><span>Héroe</span></button>
+    <button id="tab-historial" role="tab" aria-controls="vista-historial" data-vista="historial" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg><span>Progreso</span></button>
+    <button id="tab-ajustes" role="tab" aria-controls="vista-ajustes" data-vista="ajustes" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg><span>Ajustes</span></button>
   </div>
   </nav>
 

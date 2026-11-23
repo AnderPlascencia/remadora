@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.112.0 · 2026-11-23
+
+Accesibilidad que se nota en el teléfono.
+
+- El anillo de foco se ve en los tres temas: dorado en oscuro, marrón oscuro en claro y amarillo en contraste (antes era un naranja translúcido que en claro casi no se veía).
+- Los bordes de los campos, los selects y los chips llegan a 3:1 contra el fondo; el texto de ejemplo de los campos también se lee mejor.
+- Las pestañas de abajo y las del héroe se mueven con las flechas, Inicio y Fin; solo la elegida entra al tabular, cada una dice qué panel abre y las del héroe miden 44 px.
+- Ajustes › Tus días: los siete días caben siempre en una fila, también a 360 px.
+
 ## 0.111.0 · 2026-11-23
 
 La app cuida tu cuerpo un poco más.

@@ -127,6 +127,23 @@ export function toast(texto, ms = 3000, prioridad = 'normal') {
   programarSiguiente();
 }
 
+// Pestañas: ←/→/Inicio/Fin mueven el foco y eligen; solo la elegida entra en el orden de tabulación.
+export function pestanasConTeclado(lista) {
+  lista.addEventListener('keydown', (e) => {
+    const tabs = [...lista.querySelectorAll('[role="tab"]')].filter((t) => !t.hidden);
+    const i = tabs.indexOf(/** @type {HTMLElement} */ (document.activeElement));
+    const j = i < 0 ? null : { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (j == null) return;
+    e.preventDefault();
+    const t = tabs[(j + tabs.length) % tabs.length];
+    t.focus();
+    t.click();
+  });
+}
+export function marcarPestanas(lista) {
+  for (const t of lista.querySelectorAll('[role="tab"]')) t.tabIndex = t.getAttribute('aria-selected') === 'true' ? 0 : -1;
+}
+
 export const fechaCorta = (ms) => new Date(ms).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 
 export const miles = (n) => Math.round(n).toLocaleString('es-MX');
