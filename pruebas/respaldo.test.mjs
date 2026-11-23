@@ -65,3 +65,19 @@ assert.equal(p.sesionesNuevas.length, 1);
 assert.equal(p.invalidas, 2);
 
 console.log('respaldo: ok');
+
+// Etapa 23 (P5): el archivo va comprimido y por trozos, y restaurar lee el comprimido y el JSON de siempre.
+{
+  const { partesJson, archivosRespaldo, leerArchivo } = await import('../src/respaldo.js');
+  const muestras = Array.from({ length: 1800 }, (_, k) => ({ t: k + 1, w: 150 + (k % 40), spm: 22, split: 120, dist: k * 4, nivel: 5, fc: 130 }));
+  const grande = armarRespaldo({ version: '0.108.0', sesiones: Array.from({ length: 30 }, (_, i) => ({ ...sesion, id: i, fecha: i * 1e6, muestras })), entrenamientos: [], programa: { semanas: 6 }, leer, fecha: new Date(0) });
+  assert.deepEqual(JSON.parse(partesJson(grande).join('')), grande);
+  assert.deepEqual(JSON.parse(partesJson({ ...grande, sesiones: [] }).join('')), { ...grande, sesiones: [] });
+  const { comprimido, json } = await archivosRespaldo(grande, 'rower-respaldo-x');
+  assert.equal(comprimido.name, 'rower-respaldo-x.json.gz');
+  assert.equal(json.name, 'rower-respaldo-x.json');
+  assert.ok(comprimido.size * 8 < json.size, `${comprimido.size} B comprimido de ${json.size} B`);
+  assert.deepEqual(await leerArchivo(comprimido), grande);
+  assert.deepEqual(await leerArchivo(json), grande);
+  await assert.rejects(leerArchivo(new Blob(['no es json'])));
+}

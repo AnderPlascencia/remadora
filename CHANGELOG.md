@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.108.0 · 2026-11-23
+
+Respaldos mucho más livianos.
+
+- **El respaldo va comprimido.** Ajustes › Respaldo guarda un archivo `.json.gz` que pesa unas 10 veces menos: con muchas sesiones baja de decenas de MB a unos pocos, así cabe en el correo, en WhatsApp o en tu nube sin problema. Se arma sesión por sesión, sin cargar en memoria un texto gigante.
+- **Restaurar acepta los dos.** Puedes restaurar el respaldo nuevo comprimido y también tus respaldos `.json` de antes.
+
 ## 0.107.1 · 2026-11-23
 
 Revisión de las etapas 20 a 23: el resumen al terminar y Progreso ya no cargan todas tus sesiones segundo a segundo, y Héroe y Progreso abren bien justo después de una actualización.
