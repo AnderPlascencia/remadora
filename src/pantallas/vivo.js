@@ -779,7 +779,8 @@ function pintarBloque(t) {
   const meta = b.metrica ? Ent.textoMeta(b, f, fcRef()) : 'Libre';
   $('#bloque-nombre').textContent = nombre;
   $('#bloque-resta').textContent = resta;
-  $('#bloque-meta').textContent = b.metrica ? `Meta: ${meta}` : 'Libre';
+  // Un bloque de pulso sin edad se rema en watts (Ent.normalizarBloques): se dice por qué, en la vista normal.
+  $('#bloque-meta').textContent = b.metrica ? `Meta: ${meta}${b.deFc ? ' · con tu edad sería por pulso' : ''}` : 'Libre';
   $('#bloque-siguiente').textContent = siguiente ? `Sigue: ${textoSiguiente(siguiente, f)}` : 'Último intervalo';
   $('#bloque-barra').style.width = `${100 * info.fraccion}%`;
   $('#mr-nombre').textContent = nombre;
