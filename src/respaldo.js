@@ -92,3 +92,36 @@ export function planRestaurar(datos, { sesiones, entrenamientos, programa, leer 
 export function listaHumana(cosas) {
   return cosas.join(', ').replace(/, ([^,]*)$/, ' y $1');
 }
+
+// ---------- Archivo comprimido (etapa 23, P5) ----------
+// El respaldo se escribe por trozos (una sesión cada vez, sin armar un texto gigante) y se comprime con gzip:
+// 600 sesiones pasan de unos 65 MB a unos pocos. Restaurar acepta el .json.gz y el .json de siempre.
+export const TIPO_GZ = 'application/gzip';
+
+/** Partes del JSON del respaldo, con las sesiones al final y una por parte. @param {Record<string, any>} datos */
+export function partesJson(datos) {
+  const { sesiones = [], ...resto } = datos;
+  const partes = [`${JSON.stringify(resto).slice(0, -1)},"sesiones":[`];
+  sesiones.forEach((s, i) => partes.push(`${i ? ',' : ''}${JSON.stringify(s)}`));
+  partes.push(']}');
+  return partes;
+}
+
+/**
+ * El archivo del respaldo: { comprimido, json } (comprimido es null si el navegador no comprime).
+ * @param {Record<string, any>} datos @param {string} nombre sin extensión
+ */
+export async function archivosRespaldo(datos, nombre) {
+  const json = new File(partesJson(datos), `${nombre}.json`, { type: 'application/json' });
+  if (typeof CompressionStream !== 'function') return { comprimido: null, json };
+  const gz = await new Response(json.stream().pipeThrough(new CompressionStream('gzip'))).blob();
+  return { comprimido: new File([gz], `${nombre}.json.gz`, { type: TIPO_GZ }), json };
+}
+
+/** Lee un archivo de respaldo, comprimido o no, y devuelve su JSON (lanza si no es JSON). @param {Blob} archivo */
+export async function leerArchivo(archivo) {
+  const cab = new Uint8Array(await archivo.slice(0, 2).arrayBuffer());
+  const gz = cab[0] === 0x1f && cab[1] === 0x8b;
+  const texto = gz ? await new Response(archivo.stream().pipeThrough(new DecompressionStream('gzip'))).text() : await archivo.text();
+  return JSON.parse(texto);
+}

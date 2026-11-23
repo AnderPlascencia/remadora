@@ -359,18 +359,16 @@ export async function guardarRespaldo() {
     leer: (k) => ajustes.leer(k, null),
     eventos: await Hab.leerEventos(),
   });
-  const nombre = `rower-respaldo-${E.claveDia(Date.now())}.json`;
-  const texto = JSON.stringify(datos);
-  const archivo = new File([texto], nombre, { type: 'application/json' });
+  // Comprimido (.json.gz) si el navegador sabe; se comparte si el teléfono lo deja y, si no, se descarga.
+  const { comprimido, json } = await R.archivosRespaldo(datos, `rower-respaldo-${E.claveDia(Date.now())}`);
+  const archivo = comprimido || json;
   try {
-    if (navigator.canShare?.({ files: [archivo] })) {
-      await navigator.share({ files: [archivo], title: 'Respaldo de Rower' });
-    } else {
-      descargar(nombre, texto, 'application/json');
-    }
+    const compartible = [archivo, json].find((f) => navigator.canShare?.({ files: [f] }));
+    if (compartible) await navigator.share({ files: [compartible], title: 'Respaldo de Rower' });
+    else descargar(archivo.name, archivo, archivo.type);
   } catch (err) {
     if (err.name === 'AbortError') return;
-    descargar(nombre, texto, 'application/json');
+    descargar(archivo.name, archivo, archivo.type);
   }
   ajustes.escribir('ultimoRespaldo', Date.now());
   pintarInfoRespaldo();
@@ -380,8 +378,8 @@ export async function guardarRespaldo() {
 
 async function restaurarRespaldo(archivo) {
   let datos;
-  try { datos = JSON.parse(await archivo.text()); } catch { toast('Ese archivo no es un respaldo válido'); return; }
   const R = await import('../respaldo.js');
+  try { datos = await R.leerArchivo(archivo); } catch { toast('Ese archivo no es un respaldo válido'); return; }
   if (!R.esRespaldo(datos)) { toast('Ese archivo no es un respaldo de Rower'); return; }
   const conv = R.convertir(datos);
   if (conv.error) {

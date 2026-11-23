@@ -1,5 +1,6 @@
 // Utilidades compartidas por las pruebas end to end.
 import { readFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 import { test as base, expect } from '@playwright/test';
 
 // Cada página falla la prueba si lanza un error de JavaScript. Los avisos (toast) quedan en window.__avisos
@@ -191,8 +192,11 @@ export async function restaurar(page, archivo) {
 export async function guardarRespaldo(page, ruta) {
   const descarga = page.waitForEvent('download');
   await page.locator('#btn-respaldo').click();
-  await (await descarga).saveAs(ruta);
-  return JSON.parse(await readFile(ruta, 'utf8'));
+  const d = await descarga;
+  await d.saveAs(ruta);
+  // Va comprimido (.json.gz) desde la etapa 23.
+  expect(d.suggestedFilename()).toMatch(/^rower-respaldo-.*\.json\.gz$/);
+  return JSON.parse(gunzipSync(await readFile(ruta)).toString('utf8'));
 }
 
 // Ajustes de localStorage indicados, como texto (null si faltan).
