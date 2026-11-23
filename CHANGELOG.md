@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.122.0 · 2026-11-23
+
+Botes y velas nuevos en la carrera (aprobados por Ander).
+
+- **Cascos pintados con el mismo motor que los héroes.** Cada clase tiene su bote, visto desde arriba en la 2D y desde la popa en la 3D. El vikingo es de roble en tingladillo. El pirata es de madera alquitranada con la borda crema. El samurái es de ciprés claro con la borda negra. El romano es de roble rojizo con la borda dorada y una franja púrpura. El polinesio es de koa, con amarres de cuerda trenzada.
+- **El remero cabe en su bote.** Es más pequeño respecto al casco y sus remos van apoyados en los toletes. Las rodillas se abren hacia la borda al recoger, sin salirse ni esconderse bajo el bote, y los pies apuntan hacia delante.
+- **Velas de verdad.** El mástil va a proa del remero, con su verga, y la vela se infla hacia delante con el viento de popa. En la 3D se ve su cara cóncava, con sus escotas a la borda. La tela es la de tu vela de la colección, o la clásica de tu clase.
+- **Gallardete en el tope.** Ondea hacia delante, como la vela, con el color de la marca de tu vela.
+
 ## 0.121.1 · 2026-11-23
 
 Orillas más naturales en la vista 2D.

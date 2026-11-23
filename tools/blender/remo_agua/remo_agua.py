@@ -21,7 +21,7 @@ ap.add_argument('--muestras', type=int, default=64)
 ap.add_argument('--camara', default='lado', choices=('lado', 'vertical', 'cine', 'popa', 'cerca', 'retrato', 'lateral', 'arriba', 'manos', 'carrera3d', 'cenital'))
 ap.add_argument('--paisaje', default='fiordo')
 ap.add_argument('--sprite', action='store_true', help='solo barca y remero sobre fondo transparente (rivales de la carrera)')
-ap.add_argument('--capa', default='todo', choices=('todo', 'remero', 'barca'),
+ap.add_argument('--capa', default='todo', choices=('todo', 'remero', 'barca', 'remos', 'remero_libre', 'sin_barca'),
                 help='con --sprite: solo el remero (la barca y los remos tapan sin verse) o solo la barca y los remos')
 ap.add_argument('--clase', default='vikingo', choices=('vikingo', 'pirata', 'samurai', 'polinesio', 'romano'),
                 help='ropa del remero y pintura de la barca (clases.py)')
@@ -126,14 +126,28 @@ asiento_z = Z_SUELO + 0.45
 caida = asiento_z - rig.data.bones['root'].head_local.z
 remo0 = rig.data.bones['remo'].head_local.copy()
 bpy.context.view_layer.objects.active = rig
+# Piernas: pies juntos al ancho de la cadera en el reposapiés y rodillas que al recoger se abren hacia las bordas (a cada lado del torso, sin taparse bajo él); un
+# hueso delante de cada pie para que la puntera mire a popa, recta, sin abrirse hacia fuera.
+PIE_X, RODILLA_X = 0.11, 0.30
+bpy.ops.object.mode_set(mode='EDIT')
+_eb = rig.data.edit_bones
+for _s, _l in ((1, 'L'), (-1, 'R')):
+    for _n, _x in (('ik_pie.', PIE_X), ('polo_rodilla.', RODILLA_X)):
+        _b = _eb[_n + _l]; _d = _b.tail - _b.head; _b.head.x = _s * _x; _b.tail = _b.head + _d
+    _p = _eb['ik_pie.' + _l]
+    _m = _eb.new('mira_pie.' + _l); _m.head = _p.head + Vector((0, -0.25, -0.03)); _m.tail = _m.head + Vector((0, 0, 0.05))
+    _m.use_deform = False
 bpy.ops.object.mode_set(mode='POSE')
+for _l in 'LR':
+    _c = PB['foot.' + _l].constraints.new('DAMPED_TRACK'); _c.target = rig; _c.subtarget = 'mira_pie.' + _l; _c.track_axis = 'TRACK_Y'
 restr = []
 for lado in 'LR':
     for hueso, ik, polo in (('lowerleg02.', 'ik_pie.', 'polo_rodilla.'), ('lowerarm02.', 'ik_mano.', 'polo_codo.')):
         c = PB[hueso + lado].constraints.new('IK'); c.target = rig; c.subtarget = ik + lado
         c.pole_target = rig; c.pole_subtarget = polo + lado; c.chain_count = 4
         # el brazo derecho es simétrico al izquierdo: su polo va a +90° (con -90° el codo se metía hacia dentro)
-        c.pole_angle = math.radians(90 if (lado, hueso) == ('R', 'lowerarm02.') else -90)
+        # la pierna izquierda es la simétrica: con -90° su rodilla se metía bajo el torso en vez de abrirse a la borda
+        c.pole_angle = math.radians(90 if (lado, hueso) in (('R', 'lowerarm02.'), ('L', 'lowerleg02.')) else -90)
         restr.append((hueso + lado, c))
 accion = bpy.data.actions.new('rowing_agua_ik')
 rig.animation_data.action = accion
@@ -239,6 +253,9 @@ rig.animation_data.action.name = 'rowing_agua'
 bpy.data.actions.remove(accion)
 for n, c in restr:
     PB[n].constraints.remove(c)
+for _l in 'LR':
+    for _c in list(PB['foot.' + _l].constraints):
+        PB['foot.' + _l].constraints.remove(_c)
 bpy.ops.object.mode_set(mode='OBJECT')
 if os.environ.get('BIO'):
     # Medidas de los brazos en la palada: ángulo del codo, flexión de la muñeca, codo respecto al mango y al tronco
@@ -846,6 +863,17 @@ if A.sprite:
                 continue
             if A.capa == 'barca' and _del_remero(o):
                 o.hide_render = True
+            elif A.capa == 'sin_barca':
+                if not _del_remero(o) and not o.name.startswith(('Remo', 'PuntaPala')):
+                    o.hide_render = True
+            elif A.capa == 'remero_libre':
+                if not _del_remero(o):
+                    o.hide_render = True
+            elif A.capa == 'remos':
+                if _del_remero(o):
+                    o.is_holdout = True
+                elif not o.name.startswith(('Remo', 'PuntaPala')):
+                    o.hide_render = True
             elif A.capa == 'remero' and not _del_remero(o):
                 if o.name == 'Gotas':
                     o.hide_render = True

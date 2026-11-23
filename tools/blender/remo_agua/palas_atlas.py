@@ -2,13 +2,15 @@
 # el bloque PALAS_ATLAS de carrera.js. Uso: python3 tools/blender/remo_agua/palas_atlas.py (desde la raíz del repo)
 import json, numpy as np
 from PIL import Image
-A = {'3d': (208, 127), '2d': (231, 163)}
+# Celdas de REMEROS_ATLAS. Desde la 0.122.0 los remos de la vista 3D van en el atlas del remero (remero3d), así que se
+# miden ahí y se pasan a la celda de la barca sumando su origen.
+A = {'3d': ('remero3d_vikingo_remero', 170, 75, 3, (0.0, 15.3)), '2d': ('remero2d_vikingo', 266, 123, 3, (0.0, 0.0))}
 out = {}
-for vista, (w, h) in A.items():
-    im = np.asarray(Image.open(f'assets/carrera/remero{vista}_vikingo.webp').convert('RGBA')).astype(int)
+for vista, (nombre, w, h, cols, (ox, oy)) in A.items():
+    im = np.asarray(Image.open(f'assets/carrera/{nombre}.webp').convert('RGBA')).astype(int)
     fr = []
     for i in range(24):
-        cx, cy = (i % 4) * w, (i // 4) * h
+        cx, cy = (i % cols) * w, (i // cols) * h
         c = im[cy:cy + h, cx:cx + w]
         r, g, b, a = c[..., 0], c[..., 1], c[..., 2], c[..., 3]
         madera = (a > 180) & (r > g + 15) & (g > b + 5) & (r > 90)
@@ -24,7 +26,7 @@ for vista, (w, h) in A.items():
                 d = np.abs(X - tx)
                 m = (d > 8) & (d < 14)
                 ix, iy = (X[m].mean(), Y[m].mean()) if m.any() else (tx - lado * 10, ty)
-                res.append([round(float(tx), 1), round(float(ty), 1), round(float(np.arctan2(ty - iy, tx - ix)), 2)])
+                res.append([round(float(tx + ox), 1), round(float(ty + oy), 1), round(float(np.arctan2(ty - iy, tx - ix)), 2)])
         else:
             for lado in (-1, 1):
                 sel = ys < h / 2 if lado < 0 else ys >= h / 2
