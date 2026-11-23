@@ -611,7 +611,7 @@ details.seccion[open] { padding-bottom: 8px; }
 .monedas { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--moneda); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .monedas.grande { font-size: var(--t-l); }
 .moneda { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.heroe-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: var(--panel); border-radius: var(--r-medio); padding: 4px; margin: 14px 0 6px; position: sticky; top: 64px; z-index: 5; }
+.heroe-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--panel); border-radius: var(--r-medio); padding: 4px; margin: 14px 0 6px; position: sticky; top: 64px; z-index: 5; }
 .heroe-tabs button { position: relative; min-height: 40px; border: 0; border-radius: var(--r-chico); background: transparent; color: var(--texto-suave); font: inherit; font-size: var(--t-s); font-weight: 700; cursor: pointer; padding: 0 2px; }
 .heroe-tabs button.activa { background: var(--panel-2); color: var(--texto); box-shadow: inset 0 -3px 0 var(--primario); }
 .heroe-tabs button[data-aviso]:not([data-aviso=""])::after { content: attr(data-aviso); position: absolute; top: -4px; right: -2px; min-width: 18px; height: 18px; border-radius: var(--r-chico); background: var(--primario); color: var(--sobre-primario); font-size: var(--t-xs); font-weight: 800; line-height: 18px; text-align: center; }

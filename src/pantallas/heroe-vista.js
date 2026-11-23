@@ -92,7 +92,7 @@ export async function pintarHeroe() {
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
   // El texto cuenta lo mismo que la barra (el avance dentro del nivel); el total va aparte.
   // Una línea: cuándo llega el siguiente nivel y el avance que marca la barra. El total de XP está en la guía («?»).
-  $('#heroe-xp-texto').textContent = h.hasta ? `Nivel ${h.nivel + 1}${ses ? ` en ${ses}` : ''} · ${miles(h.xp - h.desde)} / ${miles(h.hasta - h.desde)} XP` : `${miles(h.xp)} XP · nivel máximo`;
+  $('#heroe-xp-texto').textContent = h.hasta ? `${miles(h.xp - h.desde)} / ${miles(h.hasta - h.desde)} XP${ses ? ` · subes en ${ses}` : ''}` : `${miles(h.xp)} XP · nivel máximo`;
   $('.heroe-xp').setAttribute('aria-valuenow', String(Math.round(pct)));
   pintarAvisosHeroe(h, sesiones);
   for (const b of document.querySelectorAll('.heroe-tabs button')) {
