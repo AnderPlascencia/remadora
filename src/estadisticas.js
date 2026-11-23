@@ -431,10 +431,16 @@ export function distanciaEn(muestras, t) {
 }
 
 // Sesión rival para el mismo entrenamiento: la anterior o la mejor.
-export function elegirRival(sesiones, nombre, modo) {
+// 'pasado' (etapa 32): tu misma sesión de hace 6 a 8 semanas, la más cercana a 7, para ver cuánto mejoraste.
+export const SEMANAS_PASADO = [6, 8];
+export function elegirRival(sesiones, nombre, modo, ahora = Date.now()) {
   const mismas = sesiones.filter((s) => (s.entrenamiento || null) === (nombre || null) && nMuestras(s));
   if (!mismas.length || !modo) return null;
   if (modo === 'anterior') return mismas.sort((a, b) => b.fecha - a.fecha)[0];
+  if (modo === 'pasado') {
+    const sem = (s) => (ahora - s.fecha) / (7 * 864e5);
+    return mismas.filter((s) => sem(s) >= SEMANAS_PASADO[0] && sem(s) <= SEMANAS_PASADO[1]).sort((a, b) => Math.abs(sem(a) - 7) - Math.abs(sem(b) - 7))[0] || null;
+  }
   const conMeta = mismas.filter((s) => s.tiempoMeta != null);
   if (conMeta.length) return conMeta.sort((a, b) => a.tiempoMeta - b.tiempoMeta)[0];
   return mismas.sort((a, b) => b.distancia / b.duracion - a.distancia / a.duracion)[0];

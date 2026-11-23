@@ -32,11 +32,13 @@ function rivalesElegidos() {
   return conRivales() ? ['clase', 'clase', 'clase'] : [];
 }
 // Mi anterior y Mi mejor ya no son rivales: son líneas amarillas de referencia en tu carril.
+const NOMBRE_REF = { anterior: 'Mi anterior', mejor: 'Mi mejor', pasado: 'Yo hace 7 semanas' };
+const listaY = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}` : xs[0] || '');
 function referenciasElegidas() {
   try {
     const guardadas = ajustes.leer('referencias', null);
     const v = JSON.parse(guardadas ?? ajustes.leer('rivales', '[]'));
-    return Array.isArray(v) ? ['anterior', 'mejor'].filter((k) => v.includes(k)) : [];
+    return Array.isArray(v) ? ['anterior', 'mejor', 'pasado'].filter((k) => v.includes(k)) : [];
   } catch { return []; }
 }
 export const hayCarrera = () => !!(estado.sesion && (estado.sesion.rival || estado.sesion.referencias?.length));
@@ -132,7 +134,7 @@ export function pintarChips() {
 function pintarResumenCarrera() {
   const partes = [conRivales() ? `3 fantasmas · ${J.DIFICULTADES[dificultadActual()].nombre}` : 'Sin fantasmas'];
   const refs = referenciasElegidas();
-  if (refs.length) partes.push(refs.map((k) => (k === 'anterior' ? 'Mi anterior' : 'Mi mejor')).join(' y '));
+  if (refs.length) partes.push(listaY(refs.map((k) => NOMBRE_REF[k])));
   const v = $('#sel-ventaja');
   if (!$('#ventaja-campo').hidden && v.value) partes.push(v.selectedOptions[0]?.textContent.split(' (')[0]);
   if (ritmoObjetivo()) partes.push(`ritmo ${formatoSplit(ritmoObjetivo())}`);
@@ -193,12 +195,14 @@ export async function crearReferencias(ent, { vista = false } = {}) {
   const sesiones = await H.sinMuestras();
   const lista = [];
   for (const clave of refs) {
-    const nombre = clave === 'mejor' ? 'Tu mejor marca' : 'Tu sesión anterior';
     const elegida = E.elegirRival(sesiones, ent?.nombre, clave);
     const s = elegida && (await H.obtener(elegida.id).catch(() => null));
-    if (s) lista.push({ ...s, clave, nombre, etiqueta: clave === 'mejor' ? 'Mejor' : 'Anterior', discontinua: clave === 'mejor', color: COLOR_REFERENCIA });
+    const semanas = s ? Math.round((Date.now() - s.fecha) / (7 * 864e5)) : 7;
+    const nombre = clave === 'mejor' ? 'Tu mejor marca' : clave === 'pasado' ? `Tu yo de hace ${semanas} semanas` : 'Tu sesión anterior';
+    const etiqueta = clave === 'mejor' ? 'Mejor' : clave === 'pasado' ? `Hace ${semanas} sem` : 'Anterior';
+    if (s) lista.push({ ...s, clave, nombre, etiqueta, discontinua: clave !== 'anterior', color: COLOR_REFERENCIA });
     else if (vista) lista.push({ falta: true, clave, nombre, muestras: [], color: COLOR_REFERENCIA });
-    else toast(`Aún no hay ${clave === 'mejor' ? 'una marca' : 'una sesión anterior'} de este entrenamiento para la referencia`);
+    else toast(`Aún no hay ${clave === 'mejor' ? 'una marca' : clave === 'pasado' ? 'una sesión de hace 6 a 8 semanas' : 'una sesión anterior'} de este entrenamiento para la referencia`);
   }
   return lista;
 }
