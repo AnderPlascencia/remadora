@@ -15,7 +15,7 @@ import { pintarClasificacion } from './ajustes.js';
 import { estimarFtp } from './preparar.js';
 import { HABILIDADES, habilidadDe, RESERVA } from '../habilidades.js';
 
-import { ctxColeccion, emblema, enSesiones, equipoActual, icoMoneda, leerPersonaje, nombreAtributo, opcConsejos, pintarLineaNivel, previsionDe, srcHeroe, vh } from './heroe.js';
+import { ctxColeccion, emblema, enSesiones, equipoActual, fichaInsignia, icoMoneda, leerPersonaje, nombreAtributo, opcConsejos, pintarLineaNivel, previsionDe, srcHeroe, vh } from './heroe.js';
 
 function figuraHeroe(per, nivel, ancho) {
   const c = J.claseDe(per.clase);
@@ -153,13 +153,7 @@ function pintarFicha(h, per, clase, sesiones) {
   // Héroe nuevo: los 7 atributos en una lista compacta, sin barras vacías ni «sin cambios esta semana».
   $('#heroe-atributos').classList.toggle('vacio', !Object.values(h.atributos).some((v) => v > 0));
   $('#heroe-atributos-nota').textContent = J.TEXTO_ATRIBUTOS;
-  // Los premios de capítulos y logros son insignias.
-  const premios = [...J.CAPITULOS.map((c) => [c.objeto, c.nombre]), ...J.HAZANAS.filter((x) => x.objeto).map((x) => [x.objeto, x.nombre])];
-  const ganadas = premios.filter(([id]) => h.insignias.has(id)).length;
-  $('#insignias-historia-resumen').textContent = `${ganadas} de ${premios.length}`;
-  premios.sort(([a], [b]) => h.insignias.has(b) - h.insignias.has(a));
-  $('#ficha-insignias').innerHTML = premios.map(([id, de]) => `<div class="insignia${h.insignias.has(id) ? '' : ' bloqueada'}"><span class="medalla">${ico('i-trofeo')}</span>
-    <b>${O.objeto(id).nombre}</b><small>${de}</small></div>`).join('');
+  pintarInsigniasHistoria(h, per);
   const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 3);
   $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
     const g = h.porSesion.get(x.fecha);
@@ -175,6 +169,39 @@ function tituloCorto(clave, valor) {
   return `${t.actual ? `${t.actual} · ` : ''}${sig}`;
 }
 // Semana de héroe: la meta de atributo de la semana, una semana sugerida para equilibrarte y el título más cercano.
+// Insignias de la historia: los jefes de los capítulos y los logros con premio. Cada ficha dice qué la gana («Cómo»),
+// cuánto llevas y, si ya es tuya, cuándo la ganaste. Un mismo objeto es una sola ficha (el aura de hielo tiene dos logros).
+function pintarInsigniasHistoria(h, per) {
+  const fechaDe = (obj) => h.logros.find((l) => l.objeto === obj)?.fecha;
+  const fichas = J.CAPITULOS.map((c0, i) => {
+    const c = J.capituloDe(i, per.clase);
+    const ganada = h.insignias.has(c.objeto);
+    const actual = !ganada && i === h.capitulosHechos && h.capitulo;
+    const avance = ganada ? null : actual
+      ? (h.capitulo.listo ? { texto: `¡Ya puedes enfrentarlo! También vale cumplir la sesión clave de tu plan, ganar en Alta mar o cumplir una semana del plan.` }
+        : { texto: `Se abre al cumplir ${h.capitulo.progreso.map((r) => avanceMision({ clave: `cap-${r.clave}`, meta: r.meta, valor: r.valor })).join(' · ')}, o en el nivel ${c.nivel}` })
+      : { texto: `Antes, termina el capítulo ${i}.` };
+    return { objeto: c.objeto, titulo: `Capítulo ${i + 1} · ${c.nombre}`, ganada, pasado: ganada, orden: ganada ? 2 : actual ? 0.5 : 1 + i / 100,
+      como: ganada ? `Venciste a ${c.jefe.nombre}` : `Vence a ${c.jefe.nombre}: ${c.jefe.texto.charAt(0).toLowerCase()}${c.jefe.texto.slice(1)}`, avance };
+  });
+  const porObjeto = new Map();
+  for (const x of h.hazanas.filter((y) => y.objeto)) {
+    const previa = porObjeto.get(x.objeto);
+    // Del mismo objeto: la ganada, o si ninguna, la que aún se puede ganar.
+    if (!previa || (x.hecha && !previa.hecha) || (!previa.hecha && previa.oculto)) porObjeto.set(x.objeto, x);
+  }
+  for (const x of porObjeto.values()) {
+    const ganada = h.insignias.has(x.objeto);
+    fichas.push({ objeto: x.objeto, titulo: x.nombre, ganada, orden: ganada ? 2 : 1 - x.valor / x.meta,
+      como: x.texto, avance: ganada ? null : { texto: avanceMision({ clave: x.id, meta: x.meta, valor: x.valor }), pct: (100 * x.valor) / x.meta } });
+  }
+  fichas.sort((a, b) => a.orden - b.orden);
+  $('#insignias-historia-resumen').textContent = `${fichas.filter((x) => x.ganada).length} de ${fichas.length}`;
+  $('#ficha-insignias').innerHTML = fichas.map((x) => fichaInsignia({
+    nombre: x.titulo, como: x.como, ganada: x.ganada, fecha: fechaDe(x.objeto), avance: x.avance, premio: O.objeto(x.objeto)?.nombre, pasado: x.pasado,
+  })).join('');
+}
+
 function pintarSemanaHeroe(h, sesiones, f) {
   const caja = $('#heroe-semana');
   const mi = h.semanales.find((m) => m.clave === 'atributo');
@@ -371,8 +398,13 @@ const UNIDAD_MISION = {
   'cap-sesiones': 'sesiones', 'cap-km': 'km', 'cap-z2min': 'min', 'cap-z4min': 'min', 'cap-fantasmas': 'fantasmas', 'cap-racha': 'días',
 };
 const unaCifra = (v) => (Math.round(v * 10) / 10).toLocaleString('es-MX');
+// Las metas en escalera (km250, ses100, nivel40, semanas10, ftp25…) sacan la unidad de su clave.
+const UNIDAD_ESCALERA = [[/^km\d/, 'km'], [/^ses\d/, 'sesiones'], [/^semanas\d/, 'semanas'], [/^ftp\d/, 'W'], [/^mejora/, '%']];
+const unidadDe = (clave) => UNIDAD_MISION[clave] || UNIDAD_ESCALERA.find(([re]) => re.test(clave))?.[1];
 function avanceMision(m) {
-  const u = UNIDAD_MISION[m.clave || String(m.id).split(':').pop()];
+  const clave = m.clave || String(m.id).split(':').pop();
+  if (/^nivel\d/.test(clave)) return `Nivel ${m.valor} de ${m.meta}`;
+  const u = m.unidad || unidadDe(clave);
   if (u === 'm') return `${unaCifra(m.valor / 1000)} de ${unaCifra(m.meta / 1000)} km`;
   const valor = m.meta >= 100 ? miles(m.valor) : unaCifra(m.valor);
   return `${valor} de ${miles(m.meta)}${u ? (u === '%' ? ' %' : ` ${u}`) : ''}`;
@@ -396,7 +428,7 @@ function pintarMisiones(h) {
     <ul class="lista misiones">${c.progreso.map((r) => filaMision({ clave: `cap-${r.clave}`, texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
     <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}, ${J.OTRAS_FORMAS_JEFE}${
       c.listo ? ' · ¡ya puedes enfrentarlo!' : ` · se desbloquea al cumplir lo de arriba o en el nivel ${c.nivel}`}</small></div>
-      <span class="premio"><span class="xp">+${miles(c.xp)} XP</span> ${icoMoneda}${c.monedas + J.PREMIO_INSIGNIA} + insignia</span>
+      <span class="premio"><span class="xp">+${miles(c.xp)} XP</span> ${icoMoneda}${c.monedas + J.PREMIO_INSIGNIA} + insignia ${O.objeto(c.objeto)?.nombre || ''}</span>
       ${c.listo ? `<button type="button" class="boton primario jefe-boton" data-preparar="${c.preparar}">Enfrentar: ${NOMBRE_PRUEBA[c.preparar]}</button>` : ''}</div>`
     : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
   // Logros: primero los que te faltan, del más cercano al más lejano; los hechos al final.
@@ -444,11 +476,11 @@ function pintarColeccion(h, per) {
     const ventaja = CB.ventajaTexto(CB.PIEZAS[x.id] || x, x.id);
     const ver = enUso ? '' : `<button type="button" class="boton chico" data-previa="${x.id}" data-tipo="${tipo}">${ico('i-play')}Vista previa</button>`;
     return tarjeta(`velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}`, `${muestraDe(x)}<b>${x.nombre}</b>`, estado, boton,
-      `<small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}${falta ? `<small>${falta.largo}</small>` : ''}${ver}`);
+      `<small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}${falta ? `<small>${falta.largo}</small>` : ''}${!tiene && !falta && precio > h.monedas ? `<small>Te faltan ${icoMoneda}${miles(precio - h.monedas)}</small>` : ''}${ver}`);
   };
   const faltaDe = (x) => (x.como.nivel ? { corto: `Nivel ${x.como.nivel}`, largo: `Llega al nivel ${x.como.nivel}.` }
-    : x.como.hazana ? { corto: 'Hazaña', largo: `Cumple «${hz?.nombre || 'la hazaña de clase'}».` }
-      : x.como.jefe ? { corto: `Jefe ${x.como.jefe}`, largo: `Vence al jefe del capítulo ${x.como.jefe}.` } : null);
+    : x.como.hazana ? { corto: 'Hazaña', largo: hz ? `Cumple la hazaña «${hz.nombre}»: ${miles(hz.meta)} ${hz.unidad} en total. Llevas ${miles(hz.valor)}.` : 'Cumple la hazaña de tu clase.' }
+      : x.como.jefe ? { corto: `Jefe ${x.como.jefe}`, largo: `Vence a ${J.capituloDe(x.como.jefe - 1, per.clase).jefe.nombre}, el jefe del capítulo ${x.como.jefe}.` } : null);
   const propias = CB.piezasDe(clase.clave, ctx).map((x) => {
     const tiene = CB.tienePieza(per, x.id, ctx);
     return ficha(x, x.tipo, tiene, equipo[x.tipo] === x.id, tiene || x.como.precio ? null : faltaDe(x));
@@ -482,7 +514,7 @@ function pintarTienda(h, per) {
   $('#tienda').innerHTML = items.map((x) => tarjeta('ventaja', `<span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b>`,
     `${icoMoneda}${x.precio}${inv[x.id] ? ` <span class="tienes">· tienes ${inv[x.id]}</span>` : ''}`,
     `<button type="button" class="boton chico" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>Comprar</button>`,
-    `<small>${x.texto}</small><button type="button" class="boton chico lote" data-comprar="${x.id}" data-lote ${h.monedas < V.precioLote(x) ? 'disabled' : ''}>${V.LOTE} por ${icoMoneda}${V.precioLote(x)}</button>`)).join('');
+    `<small>${x.texto}</small>${x.precio > h.monedas ? `<small>Te faltan ${icoMoneda}${miles(x.precio - h.monedas)}</small>` : ''}<button type="button" class="boton chico lote" data-comprar="${x.id}" data-lote ${h.monedas < V.precioLote(x) ? 'disabled' : ''}>${V.LOTE} por ${icoMoneda}${V.precioLote(x)}</button>`)).join('');
   const elegido = paisajeElegido(per);
   // Ordenados por precio: la colección se lee como una escalera, del gratis al más caro.
   $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).sort(([, a], [, b]) => a.precio - b.precio).map(([id, x]) => {
@@ -492,7 +524,7 @@ function pintarTienda(h, per) {
         : `<button type="button" class="boton chico" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>Comprar</button>`;
     return tarjeta(`paisaje${id === elegido ? ' activo' : ''}`, `<img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"${x.filtro ? ` style="filter:${x.filtro}"` : ''}><b>${x.nombre}</b>`,
       x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis', boton,
-      `<small>${x.texto}</small>${id === elegido ? '' : `<button type="button" class="boton chico" data-previa="${id}">${ico('i-play')}Vista previa</button>`}`);
+      `<small>${x.texto}</small>${!tiene && x.precio > h.monedas ? `<small>Te faltan ${icoMoneda}${miles(x.precio - h.monedas)}</small>` : ''}${id === elegido ? '' : `<button type="button" class="boton chico" data-previa="${id}">${ico('i-play')}Vista previa</button>`}`);
   }).join('');
   pintarColeccion(h, per);
   const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
