@@ -1,7 +1,9 @@
 // Registro de predicciones y su error (etapa 17, REN-P9): cada vez que remas a tope un 500, 2000, 5000 o 10 000 m,
 // se guarda lo que la app predecía antes de esa sesión. Así cualquier cambio del modelo se puede medir.
-import { mejorPotencia, mejorTiempo, potenciaCriticaMax } from './estadisticas.js';
+import { mejorPotencia, mejorTiempo, mejorTiempoDe, nMuestras, potenciaCriticaMax } from './estadisticas.js';
 import { sugerirMeta } from './programa.js';
+// Lo que pintan el detalle y Progreso vive en estadisticas.js (primera carga); este módulo se carga al terminar una marca.
+export { resumenPredicciones, textoPrediccion } from './estadisticas.js';
 
 export const DISTANCIAS_MARCA = [500, 2000, 5000, 10000];
 const ordenar = (ss) => [...(ss || [])].sort((a, b) => a.fecha - b.fecha);
@@ -25,7 +27,7 @@ export function marcasATope(s, previas = []) {
   for (const d of DISTANCIAS_MARCA) {
     const t = s.muestras?.length ? mejorTiempo(s.muestras, d) : null;
     if (!t) continue;
-    const antes = previas.map((x) => (x.muestras?.length ? mejorTiempo(x.muestras, d) : null)).filter((x) => x > 0);
+    const antes = previas.map((x) => (nMuestras(x) ? mejorTiempoDe(x, d) : null)).filter((x) => x > 0);
     const record = antes.length > 0 && t < Math.min(...antes);
     if ((s.tipoPlan === 'prueba' || record) && aTope(s.muestras, t, pc, s.tipoPlan === 'prueba')) res.push({ d, real: t });
   }
@@ -47,28 +49,8 @@ export function registrarPredicciones(s, previas = []) {
   }).filter(Boolean);
 }
 
-// Error del modelo en lo registrado: MAPE (%), sesgo medio (%) y la última predicción.
-export function resumenPredicciones(sesiones) {
-  const todas = ordenar(sesiones).flatMap((s) => (s.predicciones || []).map((p) => ({ ...p, fecha: s.fecha })));
-  if (!todas.length) return null;
-  const media = (xs) => xs.reduce((a, x) => a + x, 0) / xs.length;
-  return {
-    n: todas.length,
-    mape: Math.round(10 * media(todas.map((p) => Math.abs(p.error)))) / 10,
-    sesgo: Math.round(10 * media(todas.map((p) => p.error))) / 10,
-    ultima: todas.at(-1),
-  };
-}
-
 // Recorre un historial como si cada sesión se acabara de remar: lo que habría quedado registrado.
 export function backtest(sesiones) {
   const orden = ordenar(sesiones);
   return orden.map((s, i) => ({ ...s, predicciones: registrarPredicciones(s, orden.slice(0, i)) }));
-}
-
-// «Tu 2000 m: la app predecía 7:45 y remaste 7:37 (1,7 % de error)».
-export function textoPrediccion(p, formato) {
-  const dist = p.d >= 1000 ? `${p.d / 1000} km` : `${p.d} m`;
-  const err = Math.abs(p.error).toLocaleString('es-MX', { maximumFractionDigits: 1 });
-  return `Tus ${dist}: la app predecía ${formato(p.pred)} y remaste ${formato(p.real)} (${err} % de error).`;
 }

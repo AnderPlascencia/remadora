@@ -158,7 +158,7 @@ export function pintarSelVentaja(sel = rivalesElegidos()) {
 export async function crearRivales(ent, { vista = false } = {}) {
   const lista = [];
   let guardadas = null;
-  const sesiones = async () => (guardadas ??= await H.sesiones());
+  const sesiones = async () => (guardadas ??= await H.sinMuestras());
   const elegidos = rivalesElegidos();
   // Rivales de otras clases: su FTP sale del tuyo y, en Remo libre, de tu ritmo real de las últimas semanas.
   const nClase = elegidos.filter((k) => k === 'clase').length;
@@ -253,7 +253,7 @@ async function pintarPreparar() {
   const elegidos = rivalesElegidos();
   const rivales = elegidos.length ? await crearRivales(ent, { vista: true }) : [];
   const refs = await crearReferencias(ent, { vista: true });
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   if (turno !== preparoTurno || estado.sesion) return;
   $('#rivales-vista').innerHTML = rivales.map(tarjetaRival).join('');
   $('#referencias-vista').innerHTML = refs.map(tarjetaRival).join('');

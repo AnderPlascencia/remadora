@@ -354,7 +354,7 @@ function enSemanas(xp, h) {
 
 export async function estadoHeroe() {
   const per = leerPersonaje();
-  return { per, h: H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per }) };
+  return { per, h: H.estadoJuegoDe(await H.sinMuestras(), { ftp: ftp(), per }) };
 }
 
 // Maestría de la clase (etapa 7): nivel del 1 al 10 y cuántas sesiones faltan para el siguiente.
@@ -382,7 +382,7 @@ export async function pintarHeroe() {
     if (per.nombre && !$('#heroe-nombre').value) $('#heroe-nombre').value = per.nombre;
     // La maestría de cada clase: cambiar no borra lo ganado con las otras.
     if (per.claseHist?.length) {
-      const hm = H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per }).maestria;
+      const hm = H.estadoJuegoDe(await H.sinMuestras(), { ftp: ftp(), per }).maestria;
       for (const b of document.querySelectorAll('#clases [data-clase]')) {
         const m = hm[b.dataset.clase];
         if (m?.nivel) b.insertAdjacentHTML('beforeend', `<small class="maestria-mini">Maestría ${m.nivel} · ${m.nombre}</small>`);
@@ -390,7 +390,7 @@ export async function pintarHeroe() {
     }
     return;
   }
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   const h = H.estadoJuegoDe(sesiones, { ftp: ftp(), per });
   $('#heroe-avatar').innerHTML = `<img src="${srcHeroe(clase.clave, h.nivel, true)}" width="84" height="84" alt="${clase.nombre} ${h.titulo}"><span class="emblema mini">${emblema(clase)}</span>`;
   // Sin nombre, el título es la clase y la línea de abajo no la repite.

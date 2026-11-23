@@ -77,7 +77,7 @@ export function fcMax5s(muestras) {
 }
 // El más alto de todo el historial (usa el guardado en cada sesión; si no está, lo calcula de sus muestras).
 // Las sesiones de antes de la v0.51 sin muestras a mano usan su pico menos 2 lpm (un pico suelto suele pasarse).
-export const fcMax5De = (s) => s.fcMax5 ?? (s.muestras?.length ? fcMax5s(s.muestras) : Math.max(0, Math.min(s.fcMax || 0, 230) - 2));
+export const fcMax5De = (s) => s.fcMax5 ?? (s.muestras?.length ? fcMax5s(s.muestras) : s.res?.n ? s.res.fc5 : Math.max(0, Math.min(s.fcMax || 0, 230) - 2));
 export const fcMaxDeHistorial = (sesiones) => Math.max(0, ...(sesiones || []).map(fcMax5De));
 
 // ---------- Antes de remar: sueño y dolor ----------

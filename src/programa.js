@@ -1,6 +1,6 @@
 // Programas de varias semanas: una lista de días con el entrenamiento que toca.
 // programa = { nombre, inicio: 'AAAA-MM-DD', dias: [{ fecha: 'AAAA-MM-DD', ent: nombre del entrenamiento }] }
-import { claveDia, mejorTiempo, potenciaCriticaMax, tiempoPara } from './estadisticas.js';
+import { claveDia, mejorTiempoDe, nMuestras, potenciaCriticaMax, tiempoPara } from './estadisticas.js';
 
 import { formatoMmss as mm, PRUEBAS, esBloqueTrabajo, ACTIVACION, predecir, DISTANCIAS_PREDICCION } from './entrenamientos.js';
 import { tipoPlan, SPLIT_CAL_META } from './capacidades.js';
@@ -184,8 +184,8 @@ export const mejoraMeta = (nivel, semanas = 8) => (MEJORA_META[nivel] ?? MEJORA_
 export function sugerirMeta(sesiones, distancia, semanas = 8, ahora = Date.now()) {
   const nivel = nivelRemero(sesiones, ahora);
   const mejora = mejoraMeta(nivel, semanas);
-  const con = (sesiones || []).filter((s) => s.fecha <= ahora && s.muestras?.length);
-  const marcas = (lista, d) => lista.map((s) => ({ t: mejorTiempo(s.muestras, d), edad: (ahora - s.fecha) / DIA })).filter((x) => x.t > 0);
+  const con = (sesiones || []).filter((s) => s.fecha <= ahora && nMuestras(s));
+  const marcas = (lista, d) => lista.map((s) => ({ t: mejorTiempoDe(s, d), edad: (ahora - s.fecha) / DIA })).filter((x) => x.t > 0);
   const partida = (lista) => {
     const real = marcas(lista, distancia);
     if (real.length) return { t: Math.min(...real.map((x) => x.t)), real: true, desde: distancia };

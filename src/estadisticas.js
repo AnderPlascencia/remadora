@@ -48,14 +48,28 @@ function calcMejorTiempo(muestras, metros) {
   return mejor;
 }
 
+// Etapa 23: con las muestras si están y, si no, con el resumen guardado (s.res, ver resumen.js).
+const conM = (s) => !!s?.muestras?.length;
+export const nMuestras = (s) => s?.muestras?.length || s?.res?.n || 0;
+export const mejorTiempoDe = (s, metros) => (conM(s) ? mejorTiempo(s.muestras, metros) : s?.res?.t?.[metros] ?? null);
+export const mejorPotenciaDe = (s, segs) => (conM(s) ? mejorPotencia(s.muestras, segs) : s?.res?.w?.[segs] ?? null);
+export function segundosCon(s, cond) {
+  let n = 0;
+  if (conM(s)) { for (const x of s.muestras) if (cond(x.w)) n++; return n; }
+  for (const [w, c] of s?.res?.hw || []) if (cond(w)) n += c;
+  return n;
+}
+export const npDe = (s) => (conM(s) ? potenciaNormalizada(s.muestras) : s?.res?.np ?? 0);
+export const factorIntensidadDe = (s, ftp) => (conM(s) ? factorIntensidad(s.muestras, ftp) : !ftp || nMuestras(s) < 30 ? null : dosDec(npDe(s) / ftp));
+
 // Definición de récords. tipo 'tiempo': menor es mejor; 'valor': mayor es mejor.
 export const RECORDS = [
-  { clave: 't500', nombre: 'Mejor 500 m', tipo: 'tiempo', calc: (s) => mejorTiempo(s.muestras, 500) },
-  { clave: 't2000', nombre: 'Mejor 2000 m', tipo: 'tiempo', calc: (s) => mejorTiempo(s.muestras, 2000) },
-  { clave: 't5000', nombre: 'Mejor 5000 m', tipo: 'tiempo', calc: (s) => mejorTiempo(s.muestras, 5000) },
-  { clave: 'w1', nombre: 'Potencia 1 min', tipo: 'valor', unidad: 'W', calc: (s) => mejorPotencia(s.muestras, 60) },
-  { clave: 'w5', nombre: 'Potencia 5 min', tipo: 'valor', unidad: 'W', calc: (s) => mejorPotencia(s.muestras, 300) },
-  { clave: 'w20', nombre: 'Potencia 20 min', tipo: 'valor', unidad: 'W', calc: (s) => mejorPotencia(s.muestras, 1200) },
+  { clave: 't500', nombre: 'Mejor 500 m', tipo: 'tiempo', calc: (s) => mejorTiempoDe(s, 500) },
+  { clave: 't2000', nombre: 'Mejor 2000 m', tipo: 'tiempo', calc: (s) => mejorTiempoDe(s, 2000) },
+  { clave: 't5000', nombre: 'Mejor 5000 m', tipo: 'tiempo', calc: (s) => mejorTiempoDe(s, 5000) },
+  { clave: 'w1', nombre: 'Potencia 1 min', tipo: 'valor', unidad: 'W', calc: (s) => mejorPotenciaDe(s, 60) },
+  { clave: 'w5', nombre: 'Potencia 5 min', tipo: 'valor', unidad: 'W', calc: (s) => mejorPotenciaDe(s, 300) },
+  { clave: 'w20', nombre: 'Potencia 20 min', tipo: 'valor', unidad: 'W', calc: (s) => mejorPotenciaDe(s, 1200) },
   { clave: 'wmax', nombre: 'Potencia máxima', tipo: 'valor', unidad: 'W', calc: (s) => s.wattsMax || null },
   { clave: 'dist', nombre: 'Sesión más larga', tipo: 'valor', unidad: 'm', calc: (s) => s.distancia || null },
 ];
@@ -256,8 +270,8 @@ export function potenciaNormalizada(muestras) {
 
 // Estrés de la sesión (100 = una hora a tu FTP).
 export function estres(sesion, ftp) {
-  if (!ftp || !sesion.muestras?.length) return null;
-  const np = potenciaNormalizada(sesion.muestras);
+  if (!ftp || !nMuestras(sesion)) return null;
+  const np = npDe(sesion);
   const intensidad = np / ftp;
   return Math.round(((sesion.duracion * np * intensidad) / (ftp * 3600)) * 100);
 }
@@ -271,9 +285,9 @@ export const FACTOR_SRPE_MIN = 0.12;
 export const FACTOR_SRPE_MAX = 0.45;
 // Watts fiables: hay muestras y al menos la mitad tienen watts (una consola que no los manda deja todo en 0).
 export function wattsFiables(s) {
-  const m = s?.muestras;
-  if (!m?.length) return false;
-  return m.filter((x) => x.w > 0).length >= m.length / 2;
+  const n = nMuestras(s);
+  if (!n) return false;
+  return (conM(s) ? s.muestras.filter((x) => x.w > 0).length : s.res.conW) >= n / 2;
 }
 export const srpe = (s) => { const r = rpeDe(s); return r ? (r * (s.duracion || 0)) / 60 : null; };
 export function factorSrpe(sesiones, ftp) {
@@ -288,7 +302,7 @@ export function factorSrpe(sesiones, ftp) {
 // La guardada (s.estres) vale si es mayor que 0 o si no hay muestras para comprobar los watts.
 export function cargaDe(s, ftp, factor = FACTOR_SRPE) {
   if (!s) return { valor: null, fuente: null };
-  if (s.estres > 0 || (s.estres === 0 && !s.muestras?.length && !rpeDe(s))) return { valor: s.estres, fuente: 'potencia' };
+  if (s.estres > 0 || (s.estres === 0 && !nMuestras(s) && !rpeDe(s))) return { valor: s.estres, fuente: 'potencia' };
   const f = s.ftp || ftp;
   if (f && wattsFiables(s)) {
     const v = estres(s, f);
@@ -449,7 +463,7 @@ export function insignias(sesiones, { primeraSemanaPlan = null } = {}) {
     const rivales = s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : []);
     if (rivales.some((r) => r.diferencia > 0)) marca('fantasma', s);
     if (rivales.some((r) => r.nivel === 'avanzado' && r.diferencia > 0)) marca('avanzado', s);
-    const t2k = s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null;
+    const t2k = nMuestras(s) ? mejorTiempoDe(s, 2000) : null;
     const antes = claveDia(s.fecha) < SOLO_TU_DESDE;
     if (antes && t2k && t2k < 480) marca('sub8', s);
     if (antes && t2k && t2k < 420) marca('sub7', s);
@@ -482,7 +496,7 @@ export function recomendacion(sesiones, ftp, ahora = Date.now()) {
 
 // FTP sugerido por una sesión sin prueba formal: 95 % de los mejores 20 min (si duró al menos 20 min).
 export function ftpSugerido(sesion) {
-  const p20 = mejorPotencia(sesion.muestras || [], 1200);
+  const p20 = mejorPotenciaDe(sesion, 1200);
   return p20 ? Math.round(p20 * 0.95) : null;
 }
 
@@ -672,10 +686,10 @@ export const bandasRemo = (ftp) => BANDAS_REMO.map((b) => ({
 // Las de menos de 10 min no cuentan: un 500 m va al 140 % del FTP o más y lo inflaba.
 export function ftpDeSesion(s) {
   if (!s || (s.duracion || 0) < 600) return 0;
-  const m = s.muestras || [];
-  const p20 = m.length ? mejorPotencia(m, 1200) : null;
+  const n = nMuestras(s);
+  const p20 = n ? mejorPotenciaDe(s, 1200) : null;
   if (p20) return p20 * 0.95;
-  const p10 = m.length ? mejorPotencia(m, 600) : null;
+  const p10 = n ? mejorPotenciaDe(s, 600) : null;
   if (p10) return p10 * 0.9;
   return s.wattsProm > 0 ? s.wattsProm * ((s.duracion || 0) >= 1200 ? 0.95 : 0.9) : 0;
 }
@@ -701,9 +715,15 @@ export const DIAS_SIN_DURAS = 21;
 export const DIAS_PAUSA_PROPUESTA = 14;
 // Una sesión dura por potencia: 4 min a tu FTP o más, o 20 min al 88 % (sweet spot) o más.
 export function esDuraPorPotencia(s, ftp) {
-  const m = s?.muestras;
-  if (!(ftp > 0) || !m?.length) return false;
-  return (mejorPotencia(m, 240) || 0) >= ftp || (mejorPotencia(m, 1200) || 0) >= ftp * 0.88;
+  if (!(ftp > 0) || !nMuestras(s)) return false;
+  return (mejorPotenciaDe(s, 240) || 0) >= ftp || (mejorPotenciaDe(s, 1200) || 0) >= ftp * 0.88;
+}
+// Segundos y suma de vatios de las muestras con t en [ini, fin): [n, suma].
+export function sumaEn(muestras, ini, fin) {
+  let n = 0;
+  let suma = 0;
+  for (const x of muestras) if (x.t >= ini && x.t < fin) { n++; suma += x.w; }
+  return [n, suma];
 }
 export function revisarFtp(sesiones, ftp, ahora = Date.now(), { revisado = 0 } = {}) {
   if (!(ftp > 0)) return null;
@@ -720,12 +740,12 @@ export function revisarFtp(sesiones, ftp, ahora = Date.now(), { revisado = 0 } =
     const ratios = cortas.map((s) => {
       let t = 0;
       const r = [];
-      for (const b of s.bloques) {
+      for (const [i, b] of s.bloques.entries()) {
         const ini = t;
         t += b.duracion || 0;
-        if (b.metrica !== 'watts' || b.min < ftp * 0.88 || !s.muestras?.length) continue;
-        const w = s.muestras.filter((x) => x.t >= ini && x.t < t).map((x) => x.w);
-        if (w.length >= 20) r.push(media(w) / ((b.min + b.max) / 2));
+        if (b.metrica !== 'watts' || b.min < ftp * 0.88 || !nMuestras(s)) continue;
+        const [n, suma] = s.muestras?.length ? sumaEn(s.muestras, ini, t) : s.res.bw[i] || [0, 0];
+        if (n >= 20) r.push(suma / n / ((b.min + b.max) / 2));
       }
       return r.length ? media(r) : null;
     }).filter((x) => x != null).sort((a, b) => a - b);
@@ -757,11 +777,14 @@ export function curvaPotencia(muestras) {
   return DURACIONES_CURVA.map((segs) => ({ segs, w: mejorPotencia(muestras || [], segs) })).filter((p) => p.w);
 }
 
+export const curvaDe = (s) => (conM(s) || !s?.res?.n ? curvaPotencia(s?.muestras)
+  : DURACIONES_CURVA.map((segs) => ({ segs, w: s.res.w[segs] ?? null })).filter((p) => p.w));
+
 // Curva con lo mejor de varias sesiones: { segs, w, fecha }.
 export function curvaHistorial(sesiones) {
   const mejor = new Map();
   for (const s of sesiones) {
-    for (const p of curvaPotencia(s.muestras)) {
+    for (const p of curvaDe(s)) {
       if (!mejor.has(p.segs) || p.w > mejor.get(p.segs).w) mejor.set(p.segs, { ...p, fecha: s.fecha });
     }
   }
@@ -811,11 +834,12 @@ function tramoParejo(muestras, segs) {
   const cuartos = [0, 1, 2, 3].map((k) => prom(ini + Math.floor((k * segs) / 4), ini + Math.floor(((k + 1) * segs) / 4)));
   return Math.min(...cuartos) >= Math.max(...cuartos) * 0.85;
 }
+export const maximosDe = (s) => (conM(s) || !s?.res?.n ? esfuerzosMaximos(s?.muestras || []) : s.res.em);
 // Lo mejor de cada duración entre los esfuerzos máximos de varias sesiones: { segs, w, fecha }.
 export function curvaMaximos(sesiones) {
   const mejor = new Map();
   for (const s of sesiones || []) {
-    for (const p of esfuerzosMaximos(s.muestras || [])) {
+    for (const p of maximosDe(s)) {
       if (!mejor.has(p.segs) || p.w > mejor.get(p.segs).w) mejor.set(p.segs, { ...p, fecha: s.fecha });
     }
   }
@@ -995,7 +1019,7 @@ export function rmssd(rr) {
 
 // Días desde la primera sesión con carga hasta `ahora` (0 sin historial).
 export function diasDeHistorial(sesiones, ahora = Date.now()) {
-  const fechas = (sesiones || []).filter((s) => s.fecha <= ahora && (s.estres > 0 || s.muestras?.length || rpeDe(s))).map((s) => s.fecha);
+  const fechas = (sesiones || []).filter((s) => s.fecha <= ahora && (s.estres > 0 || nMuestras(s) || rpeDe(s))).map((s) => s.fecha);
   return fechas.length ? Math.floor((ahora - Math.min(...fechas)) / 864e5) : 0;
 }
 // La condición (42 días) arranca en 0: en las primeras semanas cualquier carga parece «disparada» frente a ella
@@ -1031,11 +1055,9 @@ export function distribucionIntensidad(sesiones, ftp, dias = 7, ahora = Date.now
   for (const s of sesiones) {
     const f = s.ftp || ftp;
     if (!f || s.fecha < desde || s.fecha > ahora) continue;
-    for (const x of s.muestras || []) {
-      if (!(x.w > 0)) continue;
-      const pct = x.w / f;
-      seg[pct <= 0.75 ? 0 : pct <= 0.9 ? 1 : 2]++;
-    }
+    seg[0] += segundosCon(s, (w) => w > 0 && w / f <= 0.75);
+    seg[1] += segundosCon(s, (w) => w > 0 && w / f > 0.75 && w / f <= 0.9);
+    seg[2] += segundosCon(s, (w) => w > 0 && w / f > 0.9);
   }
   const total = seg[0] + seg[1] + seg[2];
   if (!total) return null;
@@ -1072,7 +1094,7 @@ export function tiempoPara(metros, pc) {
   return Math.round(hi);
 }
 
-const recientesMotor = (sesiones, ahora) => (sesiones || []).filter((s) => s.fecha < ahora && s.fecha > ahora - VENTANA_DIAS * 864e5 && s.muestras?.length);
+const recientesMotor = (sesiones, ahora) => (sesiones || []).filter((s) => s.fecha < ahora && s.fecha > ahora - VENTANA_DIAS * 864e5 && nMuestras(s));
 export const perfilDe = (sesiones, { peso = 0, ahora = Date.now() } = {}) => potenciaCriticaMax(recientesMotor(sesiones, ahora), { peso });
 
 // Tu tiempo estimado en `metros`: { t, bajo, alto, fuente, desde }. Manda tu marca real de los últimos 90 días
@@ -1080,7 +1102,7 @@ export const perfilDe = (sesiones, { peso = 0, ahora = Date.now() } = {}) => pot
 // más cercana que hayas remado. `error` (MAPE de tus predicciones registradas) ensancha el rango si el modelo falla.
 export function estimar(sesiones, metros, { peso = 0, ahora = Date.now(), error = null, pc = undefined } = {}) {
   const lista = recientesMotor(sesiones, ahora);
-  const marcas = (d) => lista.map((s) => mejorTiempo(s.muestras, d)).filter((x) => x > 0);
+  const marcas = (d) => lista.map((s) => mejorTiempoDe(s, d)).filter((x) => x > 0);
   const real = marcas(metros);
   const perfil = pc === undefined ? potenciaCriticaMax(lista, { peso }) : pc;
   let res = null;
@@ -1098,4 +1120,25 @@ export function estimar(sesiones, metros, { peso = 0, ahora = Date.now(), error 
   }
   const margen = Math.max(MARGEN[res.fuente], error ? (error * 1.3) / 100 : 0);
   return { ...res, bajo: Math.round(res.t * (1 - margen)), alto: Math.round(res.t * (1 + margen)) };
+}
+
+// ---------- Registro de predicciones (lo que pintan el detalle y Progreso; el resto, en prediccion.js) ----------
+// Error del modelo en lo registrado: MAPE (%), sesgo medio (%) y la última predicción.
+export function resumenPredicciones(sesiones) {
+  const todas = [...(sesiones || [])].sort((a, b) => a.fecha - b.fecha).flatMap((s) => (s.predicciones || []).map((p) => ({ ...p, fecha: s.fecha })));
+  if (!todas.length) return null;
+  const media = (xs) => xs.reduce((a, x) => a + x, 0) / xs.length;
+  return {
+    n: todas.length,
+    mape: Math.round(10 * media(todas.map((p) => Math.abs(p.error)))) / 10,
+    sesgo: Math.round(10 * media(todas.map((p) => p.error))) / 10,
+    ultima: todas.at(-1),
+  };
+}
+
+// «Tu 2000 m: la app predecía 7:45 y remaste 7:37 (1,7 % de error)».
+export function textoPrediccion(p, formato) {
+  const dist = p.d >= 1000 ? `${p.d / 1000} km` : `${p.d} m`;
+  const err = Math.abs(p.error).toLocaleString('es-MX', { maximumFractionDigits: 1 });
+  return `Tus ${dist}: la app predecía ${formato(p.pred)} y remaste ${formato(p.real)} (${err} % de error).`;
 }

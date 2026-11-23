@@ -7,7 +7,6 @@ import { rangoZona2 } from '../pulso.js';
 import * as P from '../programa.js';
 import * as J from '../juego.js';
 import * as Cap from '../capacidades.js';
-import * as Pr from '../prediccion.js';
 import * as Hab from '../habito.js';
 import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles, perfil } from '../ui.js';
 import { estado } from '../estado.js';
@@ -222,7 +221,7 @@ export function pintarCurva() {
     : pc ? `Tu potencia crítica es ${pc.cp} W y tu batería anaeróbica (W′) ${(pc.wPrima / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} kJ${est}. Por encima de ${pc.cp} W la gastas; por debajo se recarga.`
       : 'Cada punto es tu mejor media para esa duración. Con marcas de 3 y 12 min calculo tu potencia crítica.';
   // Etapa 17: cuánto acierta la app tus marcas a tope (en Datos avanzados).
-  const rp = avanzado() ? Pr.resumenPredicciones(estado.cacheSesiones || []) : null;
+  const rp = avanzado() ? E.resumenPredicciones(estado.cacheSesiones || []) : null;
   if (rp) $('#curva-texto').textContent += ` La app predijo ${rp.n === 1 ? 'tu marca' : `tus ${rp.n} marcas a tope`} con un ${rp.mape.toLocaleString('es-MX')} % de error medio.`;
 }
 

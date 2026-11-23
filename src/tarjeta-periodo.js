@@ -5,7 +5,7 @@
 // mejoras solo con marcas reales y comparables, y en tercera persona porque la ven otros.
 // Sin DOM: lo pinta tarjeta-imagen.js. Se carga al abrir «Compartir» en Progreso.
 import { formatoSplit, formatoTiempo } from './protocolo.js';
-import { RECORDS, calcularRecords, ftpSugerido, insignias, inicioPeriodo, mejorTiempo, rachaSemanas } from './estadisticas.js';
+import { RECORDS, calcularRecords, ftpSugerido, insignias, inicioPeriodo, mejorTiempoDe, nMuestras, rachaSemanas } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import { DISTANCIAS, equivalencia } from './tarjeta.js';
 
@@ -92,7 +92,7 @@ export function avancesDelMes(sesiones, inicio, fin, ftp = 0) {
   const del = sesiones.filter((s) => s.fecha >= inicio && s.fecha < fin);
   const out = [];
   // Mejor 2000 m: el tramo más rápido de 2000 m del mes contra el mejor de antes.
-  const t2k = (lista) => Math.min(...lista.filter((s) => (s.distancia || 0) >= 2000 && s.muestras?.length).map((s) => mejorTiempo(s.muestras, 2000) || Infinity));
+  const t2k = (lista) => Math.min(...lista.filter((s) => (s.distancia || 0) >= 2000 && nMuestras(s)).map((s) => mejorTiempoDe(s, 2000) || Infinity));
   const a2 = t2k(antes);
   const b2 = t2k(del);
   if (Number.isFinite(a2) && Number.isFinite(b2) && b2 < a2 - 0.5) out.push(['Mejor 2000 m', formatoTiempo(a2), formatoTiempo(b2), `−${Math.round(a2 - b2)} s`]);
