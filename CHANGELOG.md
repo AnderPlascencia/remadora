@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.105.3 · 2026-11-22
+
+El polinesio sigue la historia de Kupe, el gran navegante.
+
+- Sus rangos van de remero con pala a navegante tatuado con taiaha, capitán con moko y jefe canoso con capa de plumas y pendiente de jade.
+
 ## 0.105.2 · 2026-11-23
 
 El Lago de los cerezos, repintado con el estilo de los héroes.
