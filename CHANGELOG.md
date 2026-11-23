@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.110.0 · 2026-11-23
+
+Héroe más corto y sin contradicciones.
+
+- La cabecera ya no dice dos niveles: debajo de «Nivel 1» la barra dice «0 / 750 XP · subes en ≈ 9 sesiones». Las pestañas del héroe ocupan todo el ancho.
+- Misiones: el nombre y el premio van en una línea y lo que pide, debajo en pequeño. Las misiones de un solo paso ya no llevan una barra con «0 de 1».
+- El jefe del capítulo dice su prueba en una línea; las otras formas de vencerlo están en «Otras formas de vencerlo».
+- Ficha: sin «Últimas sesiones» (ya están en Progreso) ni el párrafo sobre los atributos, que pasa a una nota corta junto al título.
+
 ## 0.109.0 · 2026-11-23
 
 Respaldos mucho más livianos.
