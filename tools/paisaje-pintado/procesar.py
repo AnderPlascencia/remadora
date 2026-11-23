@@ -48,7 +48,7 @@ def objetos(path):
     # Fondo magenta: se mide por lo «magenta» (min(R,B) − G), no por la distancia al color. Así las rocas rojas
     # y el adobe rosado no se toman por fondo (antes salían transparentes a medias y verdosos).
     M=np.minimum(im[...,0],im[...,2])-im[...,1]; bM=min(bg[0],bg[2])-bg[1]
-    alpha=np.clip((0.8*bM-M)/(0.4*bM),0,1)
+    alpha=np.clip((0.6*bM-M)/(0.5*bM),0,1)
   alpha=np.minimum(alpha,cv2.erode(alpha.astype(np.float32),np.ones((3,3),np.uint8)))
   a3=np.clip(alpha,0.05,1)[...,None]
   sp=np.where(alpha[...,None]<1,(im-(1-a3)*bg)/a3,im)
@@ -95,7 +95,7 @@ def sin_costura(im):
 sin_costura(Image.open(G+f'{k}_suelo.png').convert('RGB')).resize((256,256),Image.LANCZOS).save(O+f'{k}_suelo.webp',quality=78)
 CAJA_AGUA={'canon':(120,70,512,430)}.get(k,(0,200,512,512))
 a=Image.open(G+f'{k}_agua.png').convert('RGB').crop(CAJA_AGUA).resize((512,512))
-ag=np.asarray(sin_costura(a)).astype(np.float32); cf={'canon':2.2}.get(k,1.0)
+ag=np.asarray(sin_costura(a)).astype(np.float32); cf={'canon':2.2,'otono':2.4}.get(k,1.0)
 ag=(ag-ag.reshape(-1,3).mean(0))*cf+ag.reshape(-1,3).mean(0)
 Image.fromarray(ag.clip(0,255).astype(np.uint8)).resize((256,256),Image.LANCZOS).save(O+f'{k}_agua3d.webp',quality=78)
 for f in sorted(os.listdir(O)): print(f, os.path.getsize(O+f))
