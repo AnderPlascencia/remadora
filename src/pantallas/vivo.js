@@ -259,7 +259,7 @@ export async function retratoPropio() {
   const per = leerPersonaje();
   const c = per.clase ? J.claseDe(per.clase) : null;
   if (!c) return null;
-  const h = H.estadoJuegoDe(await H.sesiones(), { ftp: ftp(), per });
+  const h = H.estadoJuegoDe(await H.sinMuestras(), { ftp: ftp(), per });
   return srcHeroe(c.clave, h.nivel || 1, true);
 }
 

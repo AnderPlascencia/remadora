@@ -3,6 +3,7 @@
 // En la base, cada sesión va sin sus muestras («sesiones») y las muestras van aparte («muestras», misma clave).
 // Aquí se juntan y se guardan en memoria: la lista se lee una vez y se vuelve a leer solo después de guardar,
 // borrar o restaurar. El estado del juego (XP, nivel, misiones) se calcula una sola vez por versión de la lista.
+// Etapa 23: casi todo usa sinMuestras(), con el resumen de cada sesión (s.res, ver resumen.js).
 import * as db from './db.js';
 import { estadoJuego as calcularJuego } from './juego.js';
 
@@ -29,14 +30,48 @@ export const version = () => generacion;
 
 const porFecha = (t) => t.objectStore('sesiones').index('fecha').getAll();
 
-// Sesiones sin muestras: para contar, buscar por fecha o listar, sin cargar cada segundo remado.
+// Sesiones sin muestras, cada una con su resumen. Como sesiones(), da una lista nueva con las mismas sesiones.
 export function sinMuestras() {
   if (!resumenes) {
     const g = generacion;
-    resumenes = db.tx(['sesiones'], 'readonly', porFecha).then((l) => l.map(({ muestras, ...s }) => s));
+    resumenes = db.tx(['sesiones'], 'readonly', porFecha)
+      .then((l) => completarResumenes(l.map(({ muestras, ...s }) => s), g));
     resumenes.catch(() => { if (g === generacion) resumenes = null; });
   }
-  return resumenes.then((l) => [...l]);
+  return resumenes.then((l) => {
+    const copia = [...l];
+    entregadas.set(copia, generacion);
+    largo = l.length;
+    return copia;
+  });
+}
+
+// Resume las sesiones sin resumen al día (viejas, recién guardadas o restauradas) y lo guarda; si guardarlo falla,
+// la lista sale igual. RESUMEN_V es el de resumen.js (lo comprueba la prueba), que solo se carga si hace falta.
+export const RESUMEN_V = 1;
+async function completarResumenes(lista, g) {
+  const faltan = lista.filter((s) => s.res?.v !== RESUMEN_V);
+  if (!faltan.length) return lista;
+  const { resumir } = await import('./resumen.js');
+  const nuevos = await db.tx(['sesiones', 'muestras'], 'readonly', (t) => {
+    const out = new Map();
+    for (const f of faltan) {
+      const a = t.objectStore('sesiones').get(f.id);
+      const r = t.objectStore('muestras').get(f.id);
+      r.onsuccess = () => out.set(f.id, resumir({ ...f, muestras: a.result?.muestras || r.result }));
+    }
+    return () => out;
+  });
+  if (g === generacion) {
+    db.tx(['sesiones'], 'readwrite', (t) => {
+      const st = t.objectStore('sesiones');
+      for (const [id, res] of nuevos) {
+        const r = st.get(id);
+        r.onsuccess = () => { if (r.result && g === generacion) st.put({ ...r.result, res }); };
+      }
+    }).catch(() => {});
+  }
+  return lista.map((s) => (nuevos.has(s.id) ? { ...s, res: nuevos.get(s.id) } : s));
 }
 
 // Sesiones completas, con sus muestras, de la más vieja a la más nueva. Devuelve una lista nueva cada vez
@@ -78,6 +113,7 @@ export async function obtener(id) {
 // las muestras van aparte con el id que le toca. alTerminar(id) recibe el id.
 export function poner(t, sesion, alTerminar) {
   const { muestras, ...resto } = sesion;
+  if (muestras) delete resto.res;
   const req = t.objectStore('sesiones').put(resto);
   req.onsuccess = () => {
     if (muestras) t.objectStore('muestras').put(muestras, req.result);
@@ -102,7 +138,8 @@ export async function actualizar(id, cambios) {
     return await db.tx(['sesiones'], 'readwrite', (t) => {
       const s = t.objectStore('sesiones');
       const req = s.get(id);
-      req.onsuccess = () => { if (req.result) s.put({ ...req.result, ...cambios }); };
+      const extra = 'bloques' in cambios ? { res: null } : {};
+      req.onsuccess = () => { if (req.result) s.put({ ...req.result, ...cambios, ...extra }); };
       return () => req.result && { ...req.result, ...cambios };
     });
   } finally {

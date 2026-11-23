@@ -7,7 +7,6 @@ import * as E from '../estadisticas.js';
 import { confeti } from '../efectos.js';
 import * as V from '../ventajas.js';
 import * as Cap from '../capacidades.js';
-import * as Pr from '../prediccion.js';
 import {
   $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fcRef, fechaCorta, formatoMeta, ftp, ico, miles, perfil, toast,
 } from '../ui.js';
@@ -94,13 +93,13 @@ function tablaIntervalos(s) {
 function tablaPrediccion(s) {
   // Etapa 17: con una marca a tope, lo que predecía la app y su error (en Datos avanzados).
   const acierto = avanzado() && s.predicciones?.length
-    ? s.predicciones.map((p) => `<p class="ayuda prediccion-error">${escaparHtml(Pr.textoPrediccion(p, formatoTiempo))}</p>`).join('') : '';
+    ? s.predicciones.map((p) => `<p class="ayuda prediccion-error">${escaparHtml(E.textoPrediccion(p, formatoTiempo))}</p>`).join('') : '';
   return acierto + tablaPrediccionPaul(s);
 }
 // Etapa 18: tus tiempos estimados con el motor único (estadisticas.js), con lo remado hasta esta sesión y un rango.
 function tablaPrediccionPaul(s) {
   const hasta = [...(estado.cacheSesiones || []).filter((x) => x.fecha < s.fecha && x.id !== s.id), s];
-  const op = { peso: perfil().peso, ahora: s.fecha + 1, error: Pr.resumenPredicciones(hasta)?.mape ?? null };
+  const op = { peso: perfil().peso, ahora: s.fecha + 1, error: E.resumenPredicciones(hasta)?.mape ?? null };
   const pc = E.perfilDe(hasta, op);
   const est = (d) => E.estimar(hasta, d, { ...op, pc });
   const dist = (d) => (d === 21097 ? 'Medio maratón' : d >= 1000 ? `${d / 1000} km` : `${d} m`);

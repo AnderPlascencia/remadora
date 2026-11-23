@@ -44,18 +44,15 @@ function tramos(s) {
   return out;
 }
 
-// { ventanas, tecnicas, minutos (técnicos, con tope), pct, puntos }.
-export function tecnicaDeSesion(s, ftp = 0) {
-  const vacio = { ventanas: 0, tecnicas: 0, minutos: 0, pct: 0, puntos: 0 };
+// Lo que no depende del FTP (para el resumen de la sesión): mediana de vatios, segundos activos y [media, regular]
+// de cada ventana sin huecos. null sin vatios.
+export function ventanasTecnica(s) {
   const m = s?.muestras;
-  if (!m?.length) return vacio;
-  const f = s.ftp || ftp;
+  if (!m?.length) return null;
   const conPotencia = m.filter((x) => x.w > 0).map((x) => x.w);
-  if (!conPotencia.length) return vacio;
-  const minimo = f ? 0.55 * f : 0.7 * mediana(conPotencia);
+  if (!conPotencia.length) return null;
   const porT = new Map(m.map((x) => [x.t, x]));
-  let ventanas = 0;
-  let tecnicas = 0;
+  const win = [];
   for (const { desde, hasta, b } of tramos(s)) {
     const pedida = cadenciaPedida(b);
     for (let t0 = desde + QUITAR_INICIO_S; t0 + VENTANA_S <= hasta; t0 += VENTANA_S) {
@@ -68,17 +65,31 @@ export function tecnicaDeSesion(s, ftp = 0) {
       if (v.length < VENTANA_S) continue; // hueco o paladas a 0: no se mira
       const w = v.map((x) => x.w);
       const mw = media(w);
-      if (mw < minimo) continue;
-      ventanas++;
       const spm = v.map((x) => x.spm);
       const ms = media(spm);
       const regular = desv(w, mw) / mw <= CV_MAX && desv(spm, ms) <= Math.max(SPM_DESV_MAX, SPM_DESV_REL * ms);
-      if (regular && (!pedida || (ms >= pedida[0] && ms <= pedida[1]))) tecnicas++;
+      win.push([mw, regular && (!pedida || (ms >= pedida[0] && ms <= pedida[1])) ? 1 : 0]);
     }
+  }
+  return { med: mediana(conPotencia), act: m.filter((x) => x.w > 0 || x.spm > 0).length, win };
+}
+
+// { ventanas, tecnicas, minutos (técnicos, con tope), pct, puntos }, con las muestras o con s.res.tec.
+export function tecnicaDeSesion(s, ftp = 0) {
+  const vacio = { ventanas: 0, tecnicas: 0, minutos: 0, pct: 0, puntos: 0 };
+  const d = s?.muestras?.length ? ventanasTecnica(s) : s?.res?.tec;
+  if (!d) return vacio;
+  const f = s.ftp || ftp;
+  const minimo = f ? 0.55 * f : 0.7 * d.med;
+  let ventanas = 0;
+  let tecnicas = 0;
+  for (const [mw, ok] of d.win) {
+    if (mw < minimo) continue;
+    ventanas++;
+    if (ok) tecnicas++;
   }
   const minutos = Math.min(TOPE_MIN, (tecnicas * VENTANA_S) / 60);
   const pct = ventanas ? tecnicas / ventanas : 0;
-  const activos = m.filter((x) => x.w > 0 || x.spm > 0).length;
-  const bono = pct >= BONO_PCT && activos >= 600 ? BONO : 0;
+  const bono = pct >= BONO_PCT && d.act >= 600 ? BONO : 0;
   return { ventanas, tecnicas, minutos, pct, puntos: minutos * PUNTOS_MIN + bono };
 }

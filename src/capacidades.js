@@ -20,20 +20,20 @@ export const TIPOS = {
   prueba: { nombre: 'Prueba', simple: 'Prueba' },
 };
 
-// Segundos remados por encima de una fracción del FTP.
-const segSobre = (m, ftp, frac) => m.filter((x) => x.w > ftp * frac).length;
+// Segundos remados por encima de una fracción del FTP (con las muestras o con el resumen de la sesión).
+const segSobre = (s, ftp, frac) => E.segundosCon(s, (w) => w > ftp * frac);
 
 // Qué capacidad entrenó la sesión, según cuánto tiempo pasó en cada intensidad.
 export function tipoSesion(s, ftp) {
-  const m = s.muestras || [];
+  const n = E.nMuestras(s);
   if (s.pruebaWatts || /^prueba/i.test(s.entrenamiento || '')) return 'prueba';
   if (s.enfoque === 'calorias' || /calor|kcal/i.test(s.entrenamiento || '')) return 'calorias';
   const f = s.ftp || ftp;
-  if (f && m.length) {
+  if (f && n) {
     // Las series de VO₂ (106–120 %) pueden tener algún pico por encima: cuentan como VO₂ si ese tramo domina.
-    if (segSobre(m, f, 1.05) - segSobre(m, f, 1.2) >= 240) return 'vo2';
-    if (segSobre(m, f, 1.2) >= 60 && segSobre(m, f, 1.2) >= m.length * 0.03) return 'sprint';
-    if (segSobre(m, f, 0.9) >= 600) return 'umbral';
+    if (segSobre(s, f, 1.05) - segSobre(s, f, 1.2) >= 240) return 'vo2';
+    if (segSobre(s, f, 1.2) >= 60 && segSobre(s, f, 1.2) >= n * 0.03) return 'sprint';
+    if (segSobre(s, f, 0.9) >= 600) return 'umbral';
   }
   if (s.enfoque === 'tecnica' || /palada|cadencia|técnica|tecnica/i.test(s.entrenamiento || '')) return 'tecnica';
   return 'fondo';
@@ -61,18 +61,18 @@ export function analisisSesion(s, { ftp = 0, fcMax = 0 } = {}) {
     else if (desacople < 5) lectura = 'Motor aeróbico sólido: tu pulso no se despegó de los watts.';
     else lectura = `Tu pulso subió un ${decimal(desacople)} % respecto a los watts: fondos más largos y suaves te harán aguantar mejor.`;
   } else if (tipo === 'umbral') {
-    datos.push({ etq: 'En zona 4 o más', valor: f ? min(segSobre(m, f, 0.9)) : '-', ayuda: 'Minutos por encima del 90 % de tu FTP.' });
+    datos.push({ etq: 'En zona 4 o más', valor: f ? min(segSobre(s, f, 0.9)) : '-', ayuda: 'Minutos por encima del 90 % de tu FTP.' });
     const ifac = s.intensidad ?? E.factorIntensidad(m, f);
     datos.push({ etq: 'Intensidad', valor: ifac != null ? decimal(ifac, 2) : '-', ayuda: 'Potencia normalizada / FTP. 0,85–0,95 es una buena sesión de umbral.' });
     datos.push({ etq: 'En rango', valor: s.pctEnRango != null ? `${s.pctEnRango} %` : '-', ayuda: 'Tiempo dentro de la meta de cada intervalo.' });
     lectura = s.pctEnRango == null ? 'Sesión de umbral: la que más sube tu FTP.'
       : s.pctEnRango >= 80 ? 'Umbral bien ejecutado: así sube tu FTP.' : 'Te costó mantener el rango: la próxima vez empieza el bloque un poco más suave.';
   } else if (tipo === 'vo2') {
-    datos.push({ etq: 'Sobre el 106 %', valor: f ? min(segSobre(m, f, 1.05)) : '-', ayuda: 'Para mejorar el VO₂máx sirven de 12 a 20 min en total.' });
+    datos.push({ etq: 'Sobre el 106 %', valor: f ? min(segSobre(s, f, 1.05)) : '-', ayuda: 'Para mejorar el VO₂máx sirven de 12 a 20 min en total.' });
     const w5 = E.mejorPotencia(m, 300);
     datos.push({ etq: 'Mejor 5 min', valor: w5 ? `${w5} W` : '-', ayuda: 'La potencia que mejor predice tu VO₂máx.' });
     datos.push({ etq: 'Pulso máx', valor: s.fcMax ? `${s.fcMax} lpm` : '-', ayuda: 'En series de VO₂ el pulso debería llegar cerca de tu máximo.' });
-    const t = f ? segSobre(m, f, 1.05) : 0;
+    const t = f ? segSobre(s, f, 1.05) : 0;
     lectura = t >= 720 ? 'Dosis completa de VO₂máx: descansa o rema suave mañana.' : 'Sesión de VO₂máx corta: suma minutos fuertes poco a poco, semana a semana.';
   } else if (tipo === 'sprint') {
     datos.push({ etq: 'Potencia máx', valor: s.wattsMax ? `${s.wattsMax} W` : '-', ayuda: 'El pico de la sesión.' });
@@ -113,7 +113,7 @@ export function tituloCapacidad(tipo, tipoPlan) {
 
 const enVentana = (sesiones, desde, hasta) => sesiones.filter((s) => s.fecha >= desde && s.fecha < hasta);
 const todasMuestras = (ss) => ss.flatMap((s) => s.muestras || []);
-const mejor = (ss, segs) => Math.max(0, ...ss.map((s) => E.mejorPotencia(s.muestras || [], segs) || 0)) || null;
+const mejor = (ss, segs) => Math.max(0, ...ss.map((s) => E.mejorPotenciaDe(s, segs) || 0)) || null;
 
 // Valor de cada capacidad en una ventana de sesiones (null si no hay datos suficientes).
 function medir(ss, { ftp, peso, fcRef }) {

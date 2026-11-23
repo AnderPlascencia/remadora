@@ -29,7 +29,7 @@ import * as Hab from '../habito.js';
 // Recalcula los base para tu condición y tu FTP de ahora.
 async function actualizarBase() {
   const { h } = await estadoHeroe();
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   estado.condicionBase = B.condicionDe(sesiones, ftp());
   estado.baseActual = B.entrenamientosBase(h.nivel, ftp(), { condicion: estado.condicionBase });
   return h;
@@ -79,7 +79,7 @@ export async function pintarEntrenamientos() {
   $('#pt-programa').hidden = pestana !== 'programa';
   const h = await actualizarBase();
   const lista = propios(await db.listar('entrenamientos'));
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   const o = opcConsejos(h, sesiones);
   // «Quiero subir…»: con un atributo elegido, los entrenamientos se ordenan por lo que lo suben.
   const subir = ajustes.leer('subirAtr', '');
@@ -261,7 +261,7 @@ export function arrancarPlanes1() {
     // Al renombrar, las sesiones y el plan pasan al nombre nuevo (si quieres) para no partir tu historial en dos.
     const anterior = enEdicion.id != null ? todos.find((e) => e.id === enEdicion.id)?.nombre : null;
     const renombrar = anterior && anterior !== enEdicion.nombre
-      ? (await H.sesiones()).filter((x) => x.entrenamiento === anterior) : [];
+      ? (await H.sinMuestras()).filter((x) => x.entrenamiento === anterior) : [];
     enEdicion.tipo = form.tipo.value;
     if (enEdicion.tipo === 'objetivo') {
       const valor = Number(form.obj_valor.value);
@@ -293,7 +293,7 @@ export async function llenarSelectorEntrenamientos(lista) {
   const todos = lista || (await db.listar('entrenamientos'));
   lista = propios(todos);
   if (!estado.baseActual.length) await actualizarBase();
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   const prog = leerPrograma();
   const sel = $('#sel-entrenamiento');
   const previo = sel.value || ajustes.leer('ultimoEnt', '');
@@ -352,7 +352,7 @@ export function semanaDelPlan(prog, sesiones) {
 }
 // La sesión del día (ver adaptacion.js): lo que toca según tu plan o, sin plan, según tu semana y tu cuerpo.
 export async function calcularDia(sesiones, todos) {
-  sesiones ??= await H.sesiones();
+  sesiones ??= await H.sinMuestras();
   todos ??= await db.listar('entrenamientos');
   const f = ftp();
   return A.sesionDelDia({ programa: leerPrograma(), sesiones, entrenamientos: [...todos, ...estado.baseActual], ftp: f, cuerpo: Cap.estadoCuerpo(f ? sesiones : [], f, Date.now(), { previo: previoHoy() }) });
@@ -732,7 +732,7 @@ async function abrirCompartir(s) {
 export async function abrirCompartirPeriodo(periodo) {
   let Tp;
   try { Tp = await import('../tarjeta-periodo.js'); } catch { toast('No se pudo crear la imagen'); return; }
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   if (!sesiones.length) { toast('Rema una sesión y aquí podrás compartir tu avance'); return; }
   let heroe = null;
   let paisaje = null;

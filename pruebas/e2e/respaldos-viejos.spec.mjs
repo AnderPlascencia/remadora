@@ -11,10 +11,11 @@ const ACTUALIZAR = !!process.env.ACTUALIZAR_DATOS;
 const esperado = ACTUALIZAR ? {} : JSON.parse(readFileSync(RUTA_ESPERADO, 'utf8'));
 
 // Lo que mira la prueba, calculado en la página con el historial ya restaurado (y reparado).
-const resumenEnLaPagina = (page) => page.evaluate(async () => {
+// Con ligeras, la lista sin muestras (etapa 23): cada sesión con su resumen guardado da los mismos números.
+const resumenEnLaPagina = (page, ligeras = false) => page.evaluate(async (ligeras) => {
   const H = await import('./src/historial.js');
   const E = await import('./src/estadisticas.js');
-  const ses = await H.sesiones();
+  const ses = ligeras ? await H.sinMuestras() : await H.sesiones();
   const per = JSON.parse(localStorage.getItem('personaje') || '{}');
   const h = H.estadoJuegoDe(ses, { ftp: Number(localStorage.getItem('ftp')) || 0, per });
   const records = Object.fromEntries(Object.entries(E.calcularRecords(ses)).map(([k, r]) => [k, r.valor]).sort());
@@ -24,6 +25,14 @@ const resumenEnLaPagina = (page) => page.evaluate(async () => {
     reparadas: ses.filter((s) => s.reparada).length,
     records, xp: h.xp, nivel: h.nivel, monedas: h.monedas, clase: per.clase || null,
   };
+}, ligeras);
+
+// Resúmenes guardados en la base (no solo en memoria), y de la versión actual.
+const resumenesGuardados = (page) => page.evaluate(async () => {
+  const db = await import('./src/db.js');
+  const { RESUMEN_V } = await import('./src/resumen.js');
+  const l = await db.listar('sesiones');
+  return l.filter((s) => s.res?.v === RESUMEN_V && s.res.n > 0).length;
 });
 
 for (const [nombre, armar] of Object.entries(RESPALDOS_VIEJOS)) {
@@ -51,5 +60,8 @@ for (const [nombre, armar] of Object.entries(RESPALDOS_VIEJOS)) {
       return;
     }
     expect(r).toEqual(esperado[nombre]);
+    // ⚖ Etapa 23: sin muestras, con los resúmenes, salen los mismos totales, marcas, XP, nivel y monedas.
+    expect(await resumenEnLaPagina(page, true)).toEqual(esperado[nombre]);
+    await expect.poll(() => resumenesGuardados(page)).toBe(buenas);
   });
 }

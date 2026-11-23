@@ -4,7 +4,7 @@
 // Nada de esto cambia tus métricas reales: solo el juego.
 /** @import { Capitulo, Hazana, OpcionesAtributos, OpcionesJuego, OpcionesRivales } from '../tipos/datos' */
 import { VIKINGO_PALADA_DESDE, sendaEn, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
-import { estres, claveDia, RECORDS, mejorTiempo, factorIntensidad, mejoraPct, SOLO_TU_DESDE } from './estadisticas.js';
+import { estres, claveDia, RECORDS, mejorTiempoDe, factorIntensidadDe, mejoraPct, SOLO_TU_DESDE, nMuestras, segundosCon } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
 import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
@@ -57,7 +57,7 @@ const MEJORA_TIEMPOS = [['t2000', '2000 m'], ['t5000', '5000 m']];
 export function mejoraReal(s, previos) {
   for (const [k, nombre] of MEJORA_TIEMPOS) {
     const antes = previos[k];
-    const v = s.muestras?.length ? mejorTiempo(s.muestras, Number(k.slice(1))) : null;
+    const v = nMuestras(s) ? mejorTiempoDe(s, Number(k.slice(1))) : null;
     if (antes > 0 && v > 0 && v <= antes * (1 - MEJORA_REAL_PCT)) return `Mejora real: ${nombre} un ${Math.round((1 - v / antes) * 100)} % más rápido`;
   }
   if (previos.prueba > 0 && s.pruebaWatts >= previos.prueba * (1 + MEJORA_REAL_PCT)) return `Mejora real: tu prueba de FTP un ${Math.round((s.pruebaWatts / previos.prueba - 1) * 100)} % más fuerte`;
@@ -652,8 +652,8 @@ export const esAtento = (s) => claveDia(s.fecha) >= ATENTO_DESDE && (s.atento ||
 // Minutos técnicos de las sesiones de antes de la etapa 12 (para la hazaña samurái), calculados una vez por sesión.
 const cacheTecnica = new Map();
 function minutosTecnicos(s, ftp) {
-  if (!s.muestras?.length) return 0;
-  const k = `${s.fecha}|${s.muestras.length}|${ftp}`;
+  if (!nMuestras(s)) return 0;
+  const k = `${s.fecha}|${nMuestras(s)}|${ftp}`;
   if (!cacheTecnica.has(k)) {
     if (cacheTecnica.size > 2000) cacheTecnica.clear();
     cacheTecnica.set(k, tecnicaDeSesion(s, ftp).minutos);
@@ -710,8 +710,9 @@ export const HAZANAS = [
 // ---------- Medidas de una sesión ----------
 const ftpDe = (s, ftpActual) => s.ftp || ftpActual || Math.max(60, Math.round((s.wattsProm || 100) / 0.8));
 
-// Descansos en que el pulso cayó al menos 20 lpm en el primer minuto.
-function recuperacionesFc(s) {
+// Descansos en que el pulso cayó al menos 20 lpm en el primer minuto (sin muestras, el guardado en el resumen).
+export function recuperacionesFc(s) {
+  if (!s.muestras?.length && s.res?.n) return s.res.rfc;
   if (!s.bloques || !s.muestras?.some((x) => x.fc)) return 0;
   let desde = 0;
   let n = 0;
@@ -737,37 +738,31 @@ export function ritmoEstable(muestras) {
 
 export function medidas(s, ftpActual) {
   const f = ftpDe(s, ftpActual);
-  let z2 = 0;
-  let z4 = 0;
-  let sobre = 0;
-  let spm24 = 0;
-  let vo2 = 0;
-  for (const x of s.muestras || []) {
-    const p = x.w / f;
-    if (p >= 0.56 && p <= 0.9) z2++;
-    if (p >= 0.91) z4++;
-    if (p >= 1.0) sobre++;
-    if (p >= 1.06) vo2++;
-    if (x.spm >= 24) spm24++;
-  }
+  // Con las muestras o, sin ellas, con el histograma de vatios del resumen (etapa 23): da los mismos segundos.
+  const z2 = segundosCon(s, (w) => w / f >= 0.56 && w / f <= 0.9);
+  const z4 = segundosCon(s, (w) => w / f >= 0.91);
+  const sobre = segundosCon(s, (w) => w / f >= 1.0);
+  const vo2 = segundosCon(s, (w) => w / f >= 1.06);
+  const n = nMuestras(s);
+  const spm24 = s.muestras?.length ? s.muestras.filter((x) => x.spm >= 24).length : s.res?.spm24 || 0;
   // Una carrera abandonada antes de la meta no suma fantasmas vencidos.
   const rivales = s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : []);
   // Minutos activos: con muestras (1 por segundo) se excluyen las pausas; sin ellas, la duración registrada.
-  const activos = s.muestras?.length ? s.muestras.filter((x) => x.w > 0 || x.spm > 0).length / 60 : (s.duracion || 0) / 60;
+  const activos = s.muestras?.length ? s.muestras.filter((x) => x.w > 0 || x.spm > 0).length / 60 : n ? s.res.act / 60 : (s.duracion || 0) / 60;
   return {
-    f, min: activos, metros: s.distancia || 0, kcal: s.kcal || 0, estable: ritmoEstable(s.muestras),
-    automatica: !!s.muestras?.length,
+    f, min: activos, metros: s.distancia || 0, kcal: s.kcal || 0, estable: s.muestras?.length || !n ? ritmoEstable(s.muestras) : s.res.est,
+    automatica: !!n,
     z2min: z2 / 60, z4min: z4 / 60, sobreSeg: sobre, spm24min: spm24 / 60, vo2Seg: vo2,
     delPlan: s.delPrograma && s.tiempoMeta != null ? 1 : 0, fcRec60: s.fcRec60 ?? 0,
     pct: s.pctEnRango, ganados: rivales.filter((r) => r.diferencia > 0).length,
     clasesVencidas: rivales.filter((r) => r.diferencia > 0 && r.clase).map((r) => r.clase),
     margenMin: Math.min(Infinity, ...rivales.filter((r) => r.diferencia > 0).map((r) => r.diferencia)),
-    t500: s.muestras?.length ? mejorTiempo(s.muestras, 500) : null,
-    t2000: s.muestras?.length ? mejorTiempo(s.muestras, 2000) : null,
+    t500: n ? mejorTiempoDe(s, 500) : null,
+    t2000: n ? mejorTiempoDe(s, 2000) : null,
     // Etapa 12: la Técnica nueva y lo que miran sus misiones.
     tec: esEtapa12(s.fecha) ? tecnicaDeSesion(s, f) : null,
     delDia: XC.esDelDia(s) && s.tiempoMeta != null ? 1 : 0,
-    suave: activos >= 15 && (s.intensidad ?? factorIntensidad(s.muestras, f) ?? (s.wattsProm || 0) / f) < 0.65 ? 1 : 0,
+    suave: activos >= 15 && (s.intensidad ?? factorIntensidadDe(s, f) ?? (s.wattsProm || 0) / f) < 0.65 ? 1 : 0,
     renidas: rivales.filter((r) => r.diferencia > 0 && factorMargen(r.diferencia, s.distancia) >= 1).length,
     altamar: rivales.some((r) => r.diferencia > 0 && r.dificultad === 'altamar') ? 1 : 0,
     completo: s.entrenamiento && s.tiempoMeta != null ? 1 : 0,
@@ -780,7 +775,11 @@ export function medidas(s, ftpActual) {
 // una pausa de 5 s o más también la descarta.
 export function sinPausas(s) {
   if (s.pausas?.some((p) => p.fin - p.ini >= 5000)) return false;
-  const ms = s.muestras || [];
+  if (!s.muestras?.length && s.res?.n) return s.res.sp;
+  return sinPausasMuestras(s.muestras || []);
+}
+// La parte de sinPausas que miran las muestras (se guarda en el resumen de la sesión).
+export function sinPausasMuestras(ms) {
   const activa = (x) => x.w > 0 || x.spm > 0;
   const i0 = ms.findIndex(activa);
   let i1 = ms.length - 1;
@@ -821,7 +820,7 @@ function gananciaSesion(s, m, ctx) {
   const at = { fuerza: 0, agilidad: 0, resistencia: 0, recuperacion: 0, tecnica: 0, voluntad: 0, gasto: 0 };
   at.gasto += (s.kcal || 0) / 50;
   at.fuerza += m.z4min * 1.2;
-  at.agilidad += (s.muestras || []).filter((x) => x.w / m.f >= 1.06).length / 20;
+  at.agilidad += segundosCon(s, (w) => w / m.f >= 1.06) / 20;
   at.resistencia += m.z2min * 0.5 + (s.duracion >= 1200 ? 4 : 0);
   if (s.distancia >= 400 && s.distancia <= 600 && s.duracion <= 150) at.agilidad += 5;
   const suave = s.wattsProm && s.wattsProm / m.f < 0.75;
@@ -947,7 +946,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const d = porDia.get(k) || { carga: 0, ifMax: 0, hechas: [] };
     const f = s.ftp || ftp;
     d.carga += s.estres ?? estres(s, f) ?? Math.round(((s.duracion || 0) / 60) * 0.8);
-    d.ifMax = Math.max(d.ifMax, s.intensidad ?? factorIntensidad(s.muestras, f) ?? (f && s.wattsProm ? s.wattsProm / f : 0));
+    d.ifMax = Math.max(d.ifMax, s.intensidad ?? factorIntensidadDe(s, f) ?? (f && s.wattsProm ? s.wattsProm / f : 0));
     if (s.tiempoMeta != null && s.entrenamiento) d.hechas.push(s.entrenamiento);
     porDia.set(k, d);
   }
@@ -1145,7 +1144,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const previos = { t2000: mejores.t2000, t5000: mejores.t5000, prueba: mejorPrueba };
     if (s.pruebaWatts > 0) mejorPrueba = Math.max(mejorPrueba || 0, s.pruebaWatts);
     let records = 0;
-    if (s.muestras?.length) {
+    if (nMuestras(s)) {
       for (const r of RECORDS) {
         const v = r.calc(s);
         if (v == null) continue;

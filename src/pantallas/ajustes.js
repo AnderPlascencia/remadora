@@ -42,7 +42,7 @@ export function arrancarAjustes1() {
   campoNumero('#in-fcmax', 'fcMax', '', () => {
     ajustes.escribir('fcMaxDeEdad', '0');
     ajustes.escribir('fcMaxFuente', ajustes.num('fcMax', 0) ? 'manual' : '');
-    H.sesiones().then(actualizarFcMax);
+    H.sinMuestras().then(actualizarFcMax);
   });
   // Al dar (o cambiar) el pulso en reposo, las zonas pasan a tu reserva de pulso: si la zona 2 se mueve más de
   // 5 lpm, se dice cuánto, para que no sorprenda en el próximo fondo.
@@ -157,7 +157,7 @@ export function actualizarFcMax(sesiones = []) {
 // La edad rellena el pulso máximo (208 − 0,7 × edad) si no lo has puesto a mano ni lo has alcanzado remando.
 export function aplicarEdad() {
   if (!ajustes.num('edad', 0) || fuenteFcMax() === 'manual') return;
-  H.sesiones().then(actualizarFcMax);
+  H.sinMuestras().then(actualizarFcMax);
 }
 function campoSelect(sel, clave, defecto, alCambiar) {
   const el = $(sel);
@@ -247,7 +247,7 @@ export const ritmoObjetivo = () => leerMmss(ajustes.leer('ritmoObjetivo', '')) |
 // Clasificación de tripulación por FTP (Grumete … Capitán): en la Ficha y en Ajustes, con aviso al subir.
 export function pintarClasificacion(sesiones = null) {
   // Sin FTP escrito se estima con el historial, igual que en la Ficha, para que Ajustes no diga otra cosa.
-  if (!sesiones && !ftp()) { H.sesiones().then((s) => pintarClasificacion(s)); return; }
+  if (!sesiones && !ftp()) { H.sinMuestras().then((s) => pintarClasificacion(s)); return; }
   const peso = ajustes.num('peso', 75);
   const w = ftp() || (sesiones ? estimarFtp(sesiones) : 0);
   const caja = $('#clasificacion-ftp');
@@ -316,7 +316,7 @@ export function arrancarAjustes2() {
   });
   pintarZonas();
   pintarFtpEstado();
-  H.sesiones().then(actualizarFcMax);
+  H.sinMuestras().then(actualizarFcMax);
   for (let n = 1; n <= 24; n++) selNivel.add(new Option(`Resistencia ${n}`, n));
   selNivel.value = 8;
   $('#btn-nivel-prueba').addEventListener('click', async () => {

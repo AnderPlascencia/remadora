@@ -113,7 +113,7 @@ export async function pintarPrograma() {
     $('#p-dias').querySelectorAll('select').forEach((x, i) => { x.value = previos[i] || ''; });
     return;
   }
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   const estados = P.estadoDias(prog, sesiones);
   const c = P.cumplimiento(estados);
   $('#prog-nombre').textContent = prog.nombre;
@@ -284,10 +284,10 @@ function pintarPlanFuturo(prog, sesiones, buscar) {
 // ---------- Asistente de plan por objetivo ----------
 // Ritmo actual y distancia habitual, sacados de tu historial (o de tu FTP) para que no tengas que escribirlos.
 export async function contextoPlan() {
-  const sesiones = await H.sesiones();
+  const sesiones = await H.sinMuestras();
   let split2k = null;
   for (const x of sesiones.slice(-30)) {
-    const t = x.muestras?.length ? E.mejorTiempo(x.muestras, 2000) : null;
+    const t = E.nMuestras(x) ? E.mejorTiempoDe(x, 2000) : null;
     if (t && (!split2k || t / 4 < split2k)) split2k = t / 4;
   }
   const w = ftp() || estimarFtp(sesiones);
@@ -385,7 +385,7 @@ export function arrancarPrograma() {
   $('#antes-remar').addEventListener('click', (e) => {
     const b = e.target.closest('[data-antes]');
     if (b) { responderAntes(b.dataset.antes, b.dataset.valor); return; }
-    if (e.target.closest('#antes-cambiar')) { estado.antesAbierto = true; H.sesiones().then(pintarAntes); }
+    if (e.target.closest('#antes-cambiar')) { estado.antesAbierto = true; H.sinMuestras().then(pintarAntes); }
   });
   $('#btn-cambiar').addEventListener('click', () => {
     const abierto = $('#otra-cosa').hidden;
@@ -414,7 +414,7 @@ async function pintarPlanMeta() {
   const dist = Number($('#pm-dist').value);
   const semanas = Math.round(Number($('#pm-semanas').value)) || 8;
   if (!$('#pm-inicio').value) $('#pm-inicio').value = E.claveDia(Date.now());
-  const sug = P.sugerirMeta(await H.sesiones(), dist, semanas);
+  const sug = P.sugerirMeta(await H.sinMuestras(), dist, semanas);
   const pct = sug ? String(Math.round(sug.mejora * 1000) / 10).replace('.', ',') : '';
   $('#pm-info').textContent = sug
     ? `${sug.real ? 'Tu mejor' : sug.modelo ? 'Tu predicción (con tu curva de potencia) para' : `Tu predicción (desde tus ${miles(sug.desde)} m) para`} ${miles(dist)} m: ${Ent.formatoMmss(sug.t)}. Una meta realista en ${semanas} semanas: ${Ent.formatoMmss(sug.meta)} (un ${pct} % mejor${sug.nivel === 'inicio' ? ', al empezar se mejora rápido' : ''}).`
@@ -431,7 +431,7 @@ async function crearPlanMeta() {
   const split = (segundos * 500) / distancia;
   if (split < 80 || split > 200) { $('#pm-error').textContent = 'Ese tiempo da un ritmo fuera de lo posible: revisa la distancia y el tiempo.'; return; }
   $('#pm-error').textContent = '';
-  const nivel = P.nivelRemero(await H.sesiones());
+  const nivel = P.nivelRemero(await H.sinMuestras());
   const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio, nivel, dias: perfil().dias, ctx: { diasSemana: citaGuardada().dias } });
   await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
@@ -450,7 +450,7 @@ export async function limpiarSobrantesDePlan() {
 }
 
 async function pintarRecomendacion() {
-  const r = E.recomendacion(await H.sesiones(), ftp());
+  const r = E.recomendacion(await H.sinMuestras(), ftp());
   const el = $('#recomendacion');
   // «Vas equilibrado» no pide nada: solo se muestra cuando hay algo que cambiar hoy.
   el.hidden = !r || r.tipo === 'normal';
@@ -469,7 +469,7 @@ export function delProgramaHoy(s) {
 let hoyTurno = 0;
 export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const turno = ++hoyTurno;
-  const [sesiones, todos] = await Promise.all([H.sesiones(), db.listar('entrenamientos')]);
+  const [sesiones, todos] = await Promise.all([H.sinMuestras(), db.listar('entrenamientos')]);
   if (turno !== hoyTurno) return;
   const prog = leerPrograma();
   const dia = await calcularDia(sesiones, todos);
@@ -641,7 +641,7 @@ async function responderAntes(clave, valor) {
 export async function revisarPlanAuto() {
   const prog = leerPrograma();
   if (!prog?.dias?.length || estado.sesion) return;
-  const [sesiones, ents] = await Promise.all([H.sesiones(), db.listar('entrenamientos')]);
+  const [sesiones, ents] = await Promise.all([H.sinMuestras(), db.listar('entrenamientos')]);
   const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo: previoHoy() });
   const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo });
   if (!r) return;

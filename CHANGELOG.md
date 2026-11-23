@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.104.0 · 2026-11-23
+
+Historial que escala (primera parte).
+
+- **Cada sesión guarda su resumen.** Al guardar una sesión, la app calcula una vez lo que antes sacaba de cada segundo remado: mejores tiempos y potencias, carga, minutos por zona, técnica, pausas y pulso. Las sesiones de antes se resumen solas la primera vez que abres la app con esta versión.
+- **Héroe, plan, preparar y ajustes ya no cargan cada segundo remado.** Leen las sesiones con su resumen. Con 600 sesiones, esa lista pesa unas 22 veces menos que con las muestras (unos 3 MB frente a 66 MB en JSON). Las muestras completas se siguen leyendo al elegir tu sesión anterior o tu mejor marca como referencia, en el resumen al terminar, en el historial de Progreso, en el detalle y al hacer un respaldo.
+- **Los mismos números.** Una prueba compara XP, nivel, monedas, misiones, récords, carga, FTP, metas sugeridas y la imagen del mes con y sin muestras, sesión por sesión y con todo el historial, y salen idénticos. Los respaldos de la v0.44 y de la v0.80 también dan lo mismo leídos con los resúmenes.
+- Mientras se parte la carga por pantalla, el tope de JavaScript de la primera carga en las pruebas sube de 380 a 400 KB comprimidos (temporal; la meta sigue siendo 380 KB).
+
 ## 0.103.0 · 2026-11-22
 
 El camino de tu clase, en una sola vista.
