@@ -1420,7 +1420,7 @@ body:has(#modo-remo:not([hidden])) .toast { top: auto; bottom: calc(96px + env(s
 .hoja-atr h3 { font-size: var(--t-m); margin: 6px 0 2px; }
 .hoja-atr h3:first-child { margin-top: 0; }
 .proxima { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borde); }
-.proxima .etq { font-size: var(--t-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--primario); }
+.proxima .etq { font-size: var(--t-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--primario-claro); }
 .proxima p { margin: 2px 0 0; font-size: var(--t-s); }
 .proxima .boton { margin-top: 10px; }
 /* Semana de héroe */
@@ -2208,3 +2208,9 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 /* Ajustes › Tu perfil: para qué sirve cada dato que falta, dentro de su campo. */
 .pista-campo { display: block; font-size: var(--t-xs); color: var(--texto-tenue); font-weight: 400; margin: 2px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pista-campo[hidden] { display: none; }
+/* Progreso › Cómo has mejorado: las medidas sin dato, juntas en una línea plegada. */
+.capacidades-vacias { grid-column: 1 / -1; }
+.capacidades-vacias > summary { min-height: 44px; display: flex; align-items: center; color: var(--texto-tenue); font-size: var(--t-s); cursor: pointer; }
+.capacidades-vacias ul { margin: 0; padding-left: 18px; color: var(--texto-tenue); font-size: var(--t-s); }
+.capacidades-vacias li { margin: 4px 0; }
+.capacidades-vacias b { color: var(--texto-suave); }

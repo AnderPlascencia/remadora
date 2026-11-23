@@ -68,7 +68,7 @@ test('una sola racha y un solo «qué toca»: el resumen dice la próxima del pl
   await remar(page, 60_000);
   await terminar(page);
   await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
-  await expect(page.locator('#hoja-atr .proxima')).toContainText(/Próxima de tu plan: .+, (mañana|el \w+)/);
+  await expect(page.locator('#hoja-proxima .proxima')).toContainText(/Próxima de tu plan: .+, (mañana|el \w+)/);
   await page.reload();
   await page.locator('#tab-historial').click();
   await expect(page.locator('#racha-etq')).toHaveText(/cumpliendo tu plan/);
