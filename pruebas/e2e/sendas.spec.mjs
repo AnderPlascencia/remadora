@@ -104,7 +104,7 @@ test('el camino del vikingo: siguiente hito, rangos, piezas y jefes, y la senda 
   await page.evaluate(async () => {
     const db = await import('./src/db.js');
     const muestras = Array.from({ length: 361 }, (_, k) => ({ t: k * 10, dist: k * 28, watts: 180, spm: 24 }));
-    for (let i = 0; i < 14; i++) await db.guardar('sesiones', { fecha: Date.now() - (14 - i) * 1.3e8, duracion: 3600, distancia: 10000, distFuente: 'watts', muestras });
+    for (let i = 0; i < 18; i++) await db.guardar('sesiones', { fecha: Date.now() - (18 - i) * 1.1e8, duracion: 3600, distancia: 10000, distFuente: 'watts', muestras });
   });
   await page.reload();
   await page.locator('#tab-heroe').click();
