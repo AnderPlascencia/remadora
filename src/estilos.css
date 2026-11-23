@@ -1420,7 +1420,7 @@ body:has(#modo-remo:not([hidden])) .toast { top: auto; bottom: calc(96px + env(s
 .hoja-atr h3 { font-size: var(--t-m); margin: 6px 0 2px; }
 .hoja-atr h3:first-child { margin-top: 0; }
 .proxima { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borde); }
-.proxima .etq { font-size: var(--t-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--primario); }
+.proxima .etq { font-size: var(--t-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--primario-claro); }
 .proxima p { margin: 2px 0 0; font-size: var(--t-s); }
 .proxima .boton { margin-top: 10px; }
 /* Semana de héroe */
