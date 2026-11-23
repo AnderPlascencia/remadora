@@ -9,6 +9,7 @@ import * as P from '../programa.js';
 import * as J from '../juego.js';
 import * as Cap from '../capacidades.js';
 import * as Hab from '../habito.js';
+import * as db from '../db.js';
 import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles, perfil } from '../ui.js';
 import { estado } from '../estado.js';
 import { avanzado } from './ajustes.js';
@@ -131,10 +132,13 @@ function pintarCapacidades() {
   const caps = Cap.capacidades(estado.cacheSesiones, opc);
   const hist = Cap.historialCapacidades(estado.cacheSesiones, opc);
   const fmt = (c, v) => (c.unidad === 'm/palada' ? v.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : c.unidad === 'ml/kg/min' || c.unidad === 'kJ' ? v.toLocaleString('es-MX', { minimumFractionDigits: 1 }) : miles(v));
-  $('#capacidades').innerHTML = caps.map((c) => {
-    const titulo = avanzado() ? c.nombre : c.simple;
+  const nombre = (c) => (avanzado() ? c.nombre : c.simple);
+  // Las que aún no tienen dato van juntas en una línea plegada: solo las que tienen número ocupan tarjeta.
+  const vacias = caps.filter((c) => c.valor == null);
+  const conDato = caps.filter((c) => c.valor != null);
+  $('#capacidades').innerHTML = conDato.map((c) => {
+    const titulo = nombre(c);
     const sub = avanzado() || c.nombre === c.simple ? '' : `<span class="tecnico">${c.nombre}</span>`;
-    if (c.valor == null) return `<div class="capacidad vacia"><div class="etq">${titulo}${sub}</div><div class="sub">${c.falta}</div></div>`;
     const pct = c.pct == null ? '<span class="igual">Nueva</span>'
       : c.pct === 0 ? '<span class="igual">= igual</span>'
         : `<span class="${c.pct > 0 ? 'mejor' : 'peor'}">${c.pct > 0 ? '▲ +' : '▼ '}${c.pct}%</span>`;
@@ -142,7 +146,8 @@ function pintarCapacidades() {
     return `<details class="capacidad ${c.pct > 0 ? 'sube' : c.pct < 0 ? 'baja' : ''}"><summary><div class="etq">${titulo}${sub}</div>
       <div class="valor">${pct}</div>${miniLinea(hist[c.clave])}${valor}</summary>
       <div class="sub como-subir">Para subirla: ${c.entrena.toLowerCase()}.</div></details>`;
-  }).join('');
+  }).join('') + (vacias.length ? `<details class="capacidades-vacias"><summary>${vacias.length === 1 ? `${nombre(vacias[0])} aún sin dato` : `${vacias.length} medidas aún sin dato`} ›</summary>
+    <ul>${vacias.map((c) => `<li><b>${nombre(c)}</b> · ${c.falta}</li>`).join('')}</ul></details>` : '');
   const suben = caps.filter((c) => c.mejora).length;
   $('#capacidades-resumen').textContent = suben ? `${suben} ${suben === 1 ? 'sube' : 'suben'}` : '';
 }
@@ -296,10 +301,30 @@ export async function pintarHistorial() {
   const semana = E.resumenPeriodos(lista, 'semana', 1)[0];
   const meta = ajustes.num('metaSemana', 10);
   const km = semana.metros / 1000;
-  // Las sesiones van junto a «Esta semana» para que los km quepan enteros a la derecha.
-  $('#semana-etq').textContent = `Esta semana · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
-  $('#semana-texto').textContent = `${km.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de ${miles(meta)} km${km >= meta ? ' ✓' : ''}`;
-  $('#semana-barra').style.width = `${Math.min(100, (100 * km) / meta)}%`;
+  // Con plan, la semana se mide como el plan: sesiones hechas de las planeadas y minutos remados de los previstos.
+  // Sin plan (o en una semana sin sesiones del plan), la meta de km de siempre.
+  const prog = leerPrograma();
+  const fl = prog ? P.semanaFlexible(prog, lista) : null;
+  const sem = prog ? P.semanaDe(prog) : null;
+  if (fl?.semana.length && sem) {
+    const ents = await db.listar('entrenamientos').catch(() => []);
+    const minDe = (n) => { const e = ents.find((x) => x.nombre === n); return e ? Math.round(P.duracionPlan(e) / 60) : 0; };
+    const hechas = fl.semana.filter((d) => d.estado === 'hecho').length;
+    const total = fl.semana.length;
+    const minPlan = fl.semana.reduce((a, d) => a + minDe(d.ent), 0);
+    const lunes = E.inicioPeriodo(Date.now(), 'semana');
+    const minHechos = Math.round(lista.filter((x) => x.fecha >= lunes).reduce((a, x) => a + (x.duracion || 0), 0) / 60);
+    $('#semana-etq').textContent = `Semana ${sem.n} de ${sem.total} · ${hechas} de ${total} ${total === 1 ? 'sesión' : 'sesiones'}${hechas >= total ? ' ✓' : ''}`;
+    $('#semana-texto').textContent = minPlan ? `${miles(minHechos)} de ${miles(minPlan)} min` : `${miles(minHechos)} min`;
+    $('#semana-barra').style.width = `${Math.min(100, (100 * hechas) / total)}%`;
+    $('#semana-barra').parentElement.setAttribute('aria-label', 'Sesiones del plan esta semana');
+  } else {
+    // Las sesiones van junto a «Esta semana» para que los km quepan enteros a la derecha.
+    $('#semana-etq').textContent = `Esta semana · ${semana.sesiones} ${semana.sesiones === 1 ? 'sesión' : 'sesiones'}`;
+    $('#semana-texto').textContent = `${km.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de ${miles(meta)} km${km >= meta ? ' ✓' : ''}`;
+    $('#semana-barra').style.width = `${Math.min(100, (100 * km) / meta)}%`;
+    $('#semana-barra').parentElement.setAttribute('aria-label', 'Meta semanal');
+  }
   pintarAvisoRespaldo(lista.length);
   pintarHeroeProgreso(lista);
   pintarPeriodos();

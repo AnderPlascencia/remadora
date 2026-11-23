@@ -210,7 +210,8 @@ export function arrancarHeroe() {
     vibrar(60);
     pintarHeroe();
   });
-  $('#hoja-atr').addEventListener('click', async (e) => {
+  // Lo próximo y la cita viven en #hoja-proxima (antes iban dentro de #hoja-atr).
+  $('#hoja-proxima').addEventListener('click', async (e) => {
     const c = e.target.closest('[data-cita]');
     if (c) { accionCita(c.dataset.cita); return; }
     const b = e.target.closest('[data-prox]');
@@ -541,17 +542,21 @@ export async function pintarAtrSesion(s, previas, resumen) {
     }
   }
   if (resumen) prox += citaResumen();
-  caja.hidden = !r.logros.length && !r.cerca.length && !prox;
+  // Lo próximo va justo después del esfuerzo, antes del juego (etapa 6); los logros se quedan con la XP.
+  $('#hoja-proxima').hidden = !prox;
+  $('#hoja-proxima').innerHTML = prox;
+  caja.hidden = !r.logros.length && !r.cerca.length;
   caja.innerHTML = `${r.logros.length ? `<h3>Lo que lograste</h3><ul class="lista-cond">${r.logros.map((x) => filaCond(x, 'hecho')).join('')}</ul>` : ''}
-    ${r.cerca.length ? `<details class="mas-detalle"><summary>Te quedaste cerca <span class="seccion-resumen">${r.cerca.length}</span></summary><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul></details>` : ''}${prox}`;
+    ${r.cerca.length ? `<details class="mas-detalle"><summary>Te quedaste cerca <span class="seccion-resumen">${r.cerca.length}</span></summary><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul></details>` : ''}`;
 }
 
 // Podio de la carrera contra fantasmas: puesto, tiempo (o diferencia) y XP de cada fantasma vencido.
 export async function pintarPodio(s) {
   const caja = $('#hoja-podio');
   const rivales = s.rivales || (s.rival ? [s.rival] : []);
-  caja.hidden = !rivales.length;
-  if (!rivales.length) return;
+  // Una carrera que no llegó a contar (menos de 5 min) no ocupa el resumen con un podio.
+  caja.hidden = !rivales.length || (s.carreraSinTerminar && (s.duracion || 0) < 300);
+  if (caja.hidden) return;
   const filas = [
     { nombre: 'Tú', yo: true, pos: 0, tiempo: s.tiempoMeta, img: await retratoPropio() },
     ...rivales.map((r) => ({

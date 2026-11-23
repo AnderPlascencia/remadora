@@ -846,19 +846,8 @@
       </div>
       <p id="hoja-sub" class="ayuda"></p>
       <div id="hoja-hito" class="hoja-hito" hidden><b id="hoja-hito-texto"></b><button type="button" id="btn-hito-compartir" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-descarga"/></svg><span>Compartir</span></button></div>
-      <div id="hoja-podio" class="podio" hidden></div>
+      <!-- Orden del resumen (etapa 6): lo hecho frente al plan, el esfuerzo, lo próximo y después el juego. -->
       <div id="hoja-capacidad" class="hoja-capacidad" hidden></div>
-      <div id="hoja-xp" class="hoja-xp" hidden></div>
-      <div id="hoja-atr" class="hoja-atr" hidden></div>
-      <div id="hoja-ftp" class="aviso exito" hidden></div>
-      <div id="hoja-tu-perfil" class="hoja-perfil" hidden>
-        <p><b>Tu edad y tu peso</b> afinan tus calorías y tu pulso máximo desde la próxima sesión.</p>
-        <div class="hoja-perfil-campos">
-          <label class="campo">Edad <input id="hp-edad" type="number" min="10" max="99" inputmode="numeric" placeholder="35"></label>
-          <label class="campo">Peso (kg) <input id="hp-peso" type="number" min="30" max="200" inputmode="numeric" placeholder="75"></label>
-        </div>
-        <div class="fila-botones"><button type="button" id="hp-guardar" class="boton primario chico">Guardar</button><button type="button" id="hp-no" class="enlace-boton">Ahora no</button></div>
-      </div>
       <div id="hoja-esfuerzo" class="esfuerzo">
         <h2 id="hoja-esfuerzo-titulo">¿Qué tan duro se sintió?</h2>
         <div id="rpe-auto" class="rpe-auto" hidden></div>
@@ -867,6 +856,19 @@
         <p id="rpe-texto" class="ayuda"></p>
         <label class="campo">Notas <textarea id="in-notas" rows="2" maxlength="500" placeholder="Cómo te sentiste, molestias, ajustes de la consola…"></textarea></label>
       </div>
+      <div id="hoja-proxima" class="hoja-atr" hidden></div>
+      <div id="hoja-tu-perfil" class="hoja-perfil" hidden>
+        <p><b>Tu edad y tu peso</b> afinan tus calorías y tu pulso máximo desde la próxima sesión.</p>
+        <div class="hoja-perfil-campos">
+          <label class="campo">Edad <input id="hp-edad" type="number" min="10" max="99" inputmode="numeric" placeholder="35"></label>
+          <label class="campo">Peso (kg) <input id="hp-peso" type="number" min="30" max="200" inputmode="numeric" placeholder="75"></label>
+        </div>
+        <div class="fila-botones"><button type="button" id="hp-guardar" class="boton primario chico">Guardar</button><button type="button" id="hp-no" class="enlace-boton">Ahora no</button></div>
+      </div>
+      <div id="hoja-podio" class="podio" hidden></div>
+      <div id="hoja-xp" class="hoja-xp" hidden></div>
+      <div id="hoja-atr" class="hoja-atr" hidden></div>
+      <div id="hoja-ftp" class="aviso exito" hidden></div>
       <details id="hoja-detalle" class="hoja-detalle">
       <summary><span id="hoja-detalle-titulo">Ver detalle</span></summary>
       <div id="hoja-records" class="records"></div>

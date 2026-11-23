@@ -151,7 +151,10 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
   hoja.querySelector('.hoja').scrollTop = 0;
   const f = new Date(s.fecha);
   $('#hoja-titulo').textContent = resumen ? '¡Sesión terminada!' : (s.entrenamiento || 'Remo libre');
-  $('#hoja-sub').textContent = `${resumen && s.entrenamiento ? `${s.entrenamiento} · ` : ''}${f.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}, ${f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+  // Al terminar, la primera línea es lo hecho: qué, cuánto tiempo, cuántos metros y a qué ritmo.
+  const hecho = [s.entrenamiento || 'Remo libre', formatoTiempo(s.duracion || 0), s.distancia ? `${miles(s.distancia)} m` : '', s.splitProm ? `${formatoSplit(s.splitProm)}/500` : ''].filter(Boolean).join(' · ');
+  if (resumen) $('#hoja-sub').textContent = hecho;
+  else $('#hoja-sub').textContent = `${f.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}, ${f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
 
   const recs = E.nuevosRecords(s, previas);
   $('#hoja-records').innerHTML = recs.map((r) => `<div class="record nuevo"><div class="etq">${ico('i-trofeo')}${resumen ? 'Nuevo récord' : 'Récord'}</div>

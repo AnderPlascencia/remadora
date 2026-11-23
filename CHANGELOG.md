@@ -7,6 +7,14 @@ Lo que cambia en cada versión de Rower. La versión de la app vive en `src/vers
 Por dentro: el archivo de la sesión, partido en tres.
 
 - **Nada cambia al remar.** `pantallas/sesion.js` pasaba de 1400 líneas y era el archivo en el que más chocaban los cambios. Ahora queda en tres: la conexión y el ciclo de la sesión (`sesion.js`), guardar y recuperar (`sesion-guardar.js`), y la voz y los avisos de la carrera (`sesion-voz.js`).
+## 0.118.0 · 2026-11-23
+
+El resumen y Progreso empiezan por tu plan.
+
+- **Resumen en el orden en que sirve.** Arriba, lo que hiciste en una línea: «Fondo 25 min · 38:00 · 9,100 m · 2:06/500». Debajo vienen qué entrenaste, cómo se sintió, la próxima sesión y tu cita. El podio, la XP y los logros van después.
+- **Sin podio si la carrera no contó.** Con menos de 5 minutos el resumen ya no muestra «Carrera sin terminar».
+- **Progreso abre con tu semana del plan.** Dice, por ejemplo, «Semana 1 de 6 · 1 de 3 sesiones» y «25 de 110 min». Sin plan sigue la meta de km de siempre.
+- **Las medidas sin dato van juntas** en una línea plegada, como «5 medidas aún sin dato ›». Solo las que tienen número ocupan tarjeta.
 
 ## 0.117.0 · 2026-11-23
 
