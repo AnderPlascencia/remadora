@@ -15,6 +15,7 @@ async function conMonedas(page) {
 async function abrirTienda(page) {
   await page.locator('#tab-heroe').click();
   await page.locator('[data-hp="tienda"]').click();
+  await page.locator('[data-tienda="paisajes"]').click();
   await expect(page.locator('#tienda-paisajes')).toBeVisible();
 }
 
@@ -105,6 +106,8 @@ test('la vista previa muestra un paisaje y una vela en una carrera de muestra y 
   await abrirTienda(page);
   // El paisaje en uso no la necesita; los demás sí, aunque no los tengas.
   await expect(page.locator('#tienda-paisajes .objeto.activo [data-previa]')).toHaveCount(0);
+  // La vista previa está en el detalle de la tarjeta, que se abre al tocarla
+  await page.locator('#tienda-paisajes .objeto').filter({ hasText: 'Laguna tropical' }).locator('[data-detalle]').click();
   await page.locator('#tienda-paisajes [data-previa="laguna"]').click();
   const hoja = page.locator('.hoja-fondo.previa');
   await expect(hoja.locator('h2')).toHaveText('Vista previa: Laguna tropical');
@@ -122,7 +125,10 @@ test('la vista previa muestra un paisaje y una vela en una carrera de muestra y 
   await expect(page.locator('#tienda-paisajes .objeto.activo')).toContainText('Fiordo');
 
   // Una vela de color, puesta solo mientras dura la vista previa
-  await page.locator('#tienda-velas .objeto').filter({ hasText: 'Velas de oro' }).locator('[data-previa]').click();
+  await page.locator('[data-tienda="bote"]').click();
+  const oro = page.locator('#tienda-velas .objeto').filter({ hasText: 'Velas de oro' });
+  await oro.locator('[data-detalle]').click();
+  await oro.locator('[data-previa]').click();
   await expect(hoja.locator('h2')).toHaveText('Vista previa: Velas de oro');
   expect(await page.evaluate(async () => (await import('./src/carrera.js')).equipoEnUso().vela)).toBe('oro');
   await page.waitForTimeout(2500);

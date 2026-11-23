@@ -428,32 +428,42 @@ function pintarColeccion(h, per) {
   usarEquipo(equipo);
   const hz = h.hazanas.find((x) => x.id === CB.hazanaDeClase(clase.clave));
   $('#coleccion-titulo').textContent = `Tu bote: colección ${clase.nombre.toLowerCase()}`;
-  $('#coleccion-hazana').innerHTML = hz ? `<div class="mision-fila"><span><b>Hazaña de clase: ${hz.nombre}</b> · ${hz.hecha ? 'cumplida' : hz.texto}</span></div>
-    <div class="progreso" role="progressbar" aria-label="Avance de la hazaña de clase" aria-valuemin="0" aria-valuemax="${hz.meta}" aria-valuenow="${hz.valor}" aria-valuetext="${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}"><div style="width:${Math.min(100, (hz.valor / hz.meta) * 100)}%"></div></div>
-    <small>${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}</small>` : '';
+  $('#coleccion-hazana').innerHTML = hz ? `<div class="mision-fila"><span><b>Hazaña: ${hz.nombre}</b></span><small>${hz.hecha ? 'cumplida' : `${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}`}</small></div>
+    <div class="progreso" role="progressbar" aria-label="Avance de la hazaña de clase" aria-valuemin="0" aria-valuemax="${hz.meta}" aria-valuenow="${hz.valor}" aria-valuetext="${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}"><div style="width:${Math.min(100, (hz.valor / hz.meta) * 100)}%"></div></div>` : '';
+  // Ficha corta: muestra, nombre, precio o estado y un botón. Lo demás (qué es, su ventaja, qué falta y la vista
+  // previa) se abre al tocar la muestra o el nombre.
   const ficha = (x, tipo, tiene, enUso, falta) => {
     const precio = x.como?.precio ?? x.precio;
     const boton = enUso
       ? (tipo === 'vela' && x.id === `${clase.clave}-clasica` ? '<span class="paisaje-uso">En uso</span>'
         : `<span class="paisaje-uso">En uso</span><button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" data-quitar>Quitar</button>`)
       : tiene ? `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}">Usar</button>`
-        : falta ? `<span class="bloqueada">${falta}</span>`
-          : `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" ${h.monedas < precio ? 'disabled' : ''}>${h.monedas < precio ? `Te faltan ${miles(precio - h.monedas)}` : 'Comprar'}</button>`;
-    const etiqueta = tiene ? (precio && !x.como?.gratis ? 'Comprado' : 'Ganado') : precio ? `${icoMoneda}${miles(precio)}` : '';
+        : falta ? `<span class="bloqueada">${falta.corto}</span>`
+          : `<button type="button" class="boton chico" data-pieza="${x.id}" data-tipo="${tipo}" ${h.monedas < precio ? 'disabled' : ''}>Comprar</button>`;
+    const estado = falta ? '' : x.como?.gratis ? 'Gratis' : tiene ? (precio ? 'Comprado' : 'Ganado') : precio ? `${icoMoneda}${miles(precio)}` : '';
     const ventaja = CB.ventajaTexto(CB.PIEZAS[x.id] || x, x.id);
     const ver = enUso ? '' : `<button type="button" class="boton chico" data-previa="${x.id}" data-tipo="${tipo}">${ico('i-play')}Vista previa</button>`;
-    return `<div class="objeto velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}">${muestraDe(x)}<b>${x.nombre}</b><small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}
-      <span class="monedas">${x.como?.gratis ? 'Gratis' : etiqueta}</span>${boton}${ver}</div>`;
+    return tarjeta(`velas${enUso ? ' activo' : ''}${tiene ? '' : ' sin-tener'}`, `${muestraDe(x)}<b>${x.nombre}</b>`, estado, boton,
+      `<small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}${falta ? `<small>${falta.largo}</small>` : ''}${ver}`);
   };
-  const faltaDe = (x) => (x.como.nivel ? `Llega al nivel ${x.como.nivel}` : x.como.hazana ? `Cumple «${hz?.nombre || 'la hazaña de clase'}»` : x.como.jefe ? `Vence al jefe del capítulo ${x.como.jefe}` : '');
+  const faltaDe = (x) => (x.como.nivel ? { corto: `Nivel ${x.como.nivel}`, largo: `Llega al nivel ${x.como.nivel}.` }
+    : x.como.hazana ? { corto: 'Hazaña', largo: `Cumple «${hz?.nombre || 'la hazaña de clase'}».` }
+      : x.como.jefe ? { corto: `Jefe ${x.como.jefe}`, largo: `Vence al jefe del capítulo ${x.como.jefe}.` } : null);
   const propias = CB.piezasDe(clase.clave, ctx).map((x) => {
     const tiene = CB.tienePieza(per, x.id, ctx);
-    return ficha(x, x.tipo, tiene, equipo[x.tipo] === x.id, tiene || x.como.precio ? '' : faltaDe(x));
+    return ficha(x, x.tipo, tiene, equipo[x.tipo] === x.id, tiene || x.como.precio ? null : faltaDe(x));
   });
-  const deColor = Object.entries(VELAS).map(([id, x]) => ficha({ ...x, id }, 'vela', tieneVelas(per, id), equipo.vela === id, ''));
+  const deColor = Object.entries(VELAS).map(([id, x]) => ficha({ ...x, id }, 'vela', tieneVelas(per, id), equipo.vela === id, null));
   caja.innerHTML = `${propias.join('')}<h3 class="tienda-sub">Velas de color · para cualquier bote</h3>${deColor.join('')}`;
 }
 
+// Una tarjeta de la tienda: la cara (muestra y nombre) abre el detalle; precio y botón siempre a la vista.
+let detalles = 0;
+function tarjeta(clases, cara, estado, boton, detalle) {
+  const id = `td-${++detalles}`;
+  return `<div class="objeto ${clases}"><button type="button" class="objeto-cara" data-detalle aria-expanded="false" aria-controls="${id}">${cara}</button>
+    ${estado ? `<span class="monedas">${estado}</span>` : ''}${boton}<div id="${id}" class="objeto-detalle" hidden>${detalle}</div></div>`;
+}
 const ICONO_VENTAJA = { salida: 'i-play', viento: 'i-sube', ancla: 'i-baja', segunda: 'i-corazon', estandarte: 'i-trofeo', mapa: 'i-fantasma', corriente: 'i-remo', aire: 'i-rayo', cuerno: 'i-voz', botin: 'i-diana', bitacora: 'i-reloj', talisman: 'i-fuego' };
 function pintarTienda(h, per) {
   const lunes = J.lunesDe(Date.now());
@@ -461,25 +471,32 @@ function pintarTienda(h, per) {
   const inv = per.inventario || {};
   const sig = new Date(`${lunes}T12:00`);
   sig.setDate(sig.getDate() + 7);
-  $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>. Ventajas de un solo uso para tus carreras contra fantasmas: una por carrera y nunca en las pruebas. En lote salen 3 por el precio de 2,5. La tienda cambia el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.`;
-  $('#tienda').innerHTML = items.map((x) => `<div class="objeto ventaja"><span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b><small>${x.texto}</small>
-    <span class="monedas">${icoMoneda}${x.precio}</span>${inv[x.id] ? `<span class="tienes">Tienes ${inv[x.id]}</span>` : ''}
-    <button type="button" class="boton chico" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? 'Te faltan monedas' : 'Comprar'}</button>
-    <button type="button" class="boton chico lote" data-comprar="${x.id}" data-lote ${h.monedas < V.precioLote(x) ? 'disabled' : ''}>${V.LOTE} por ${icoMoneda}${V.precioLote(x)}</button></div>`).join('');
+  for (const b of document.querySelectorAll('[data-tienda]')) {
+    b.classList.toggle('activo', b.dataset.tienda === vh.tienda);
+    b.setAttribute('aria-pressed', String(b.dataset.tienda === vh.tienda));
+  }
+  for (const el of document.querySelectorAll('#hp-tienda .ts')) el.hidden = el.id !== `ts-${vh.tienda}`;
+  detalles = 0;
+  $('#tienda-info').innerHTML = `Tienes ${icoMoneda}<b>${miles(h.monedas)}</b>`;
+  $('#ventajas-info').textContent = `Una por carrera contra fantasmas, nunca en las pruebas. Cambian el lunes ${sig.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.`;
+  $('#tienda').innerHTML = items.map((x) => tarjeta('ventaja', `<span class="ventaja-ico">${ico(ICONO_VENTAJA[x.id])}</span><b>${x.nombre}</b>`,
+    `${icoMoneda}${x.precio}${inv[x.id] ? ` <span class="tienes">· tienes ${inv[x.id]}</span>` : ''}`,
+    `<button type="button" class="boton chico" data-comprar="${x.id}" ${h.monedas < x.precio ? 'disabled' : ''}>Comprar</button>`,
+    `<small>${x.texto}</small><button type="button" class="boton chico lote" data-comprar="${x.id}" data-lote ${h.monedas < V.precioLote(x) ? 'disabled' : ''}>${V.LOTE} por ${icoMoneda}${V.precioLote(x)}</button>`)).join('');
   const elegido = paisajeElegido(per);
   // Ordenados por precio: la colección se lee como una escalera, del gratis al más caro.
   $('#tienda-paisajes').innerHTML = Object.entries(PAISAJES).sort(([, a], [, b]) => a.precio - b.precio).map(([id, x]) => {
     const tiene = tienePaisaje(per, id);
     const boton = id === elegido ? '<span class="paisaje-uso">En uso</span>'
       : tiene ? `<button type="button" class="boton chico" data-paisaje="${id}">Usar</button>`
-        : `<button type="button" class="boton chico" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>${h.monedas < x.precio ? `Te faltan ${miles(x.precio - h.monedas)}` : 'Comprar'}</button>`;
-    return `<div class="objeto paisaje${id === elegido ? ' activo' : ''}"><img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"${x.filtro ? ` style="filter:${x.filtro}"` : ''}><b>${x.nombre}</b><small>${x.texto}</small>
-      <span class="monedas">${x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis'}</span>${boton}
-      ${id === elegido ? '' : `<button type="button" class="boton chico" data-previa="${id}">${ico('i-play')}Vista previa</button>`}</div>`;
+        : `<button type="button" class="boton chico" data-paisaje="${id}" ${h.monedas < x.precio ? 'disabled' : ''}>Comprar</button>`;
+    return tarjeta(`paisaje${id === elegido ? ' activo' : ''}`, `<img src="${x.miniatura}" alt="" loading="lazy" width="320" height="138"${x.filtro ? ` style="filter:${x.filtro}"` : ''}><b>${x.nombre}</b>`,
+      x.precio ? (tiene ? 'Comprado' : `${icoMoneda}${x.precio}`) : 'Gratis', boton,
+      `<small>${x.texto}</small>${id === elegido ? '' : `<button type="button" class="boton chico" data-previa="${id}">${ico('i-play')}Vista previa</button>`}`);
   }).join('');
   pintarColeccion(h, per);
   const tengo = V.OBJETOS_VENTAJA.filter((x) => inv[x.id] > 0);
   $('#inventario').innerHTML = tengo.length ? tengo.map((x) => `<li><div class="mision-fila"><span><b>${x.nombre}</b> · ${x.texto}</span><span class="recompensa"><span class="xp">×${inv[x.id]}</span></span></div></li>`).join('')
-    : '<li class="vacio">Aún no tienes ventajas. Cómpralas aquí y elígelas en Entrenar antes de la carrera.</li>';
+    : '<li class="vacio">Aún no tienes ventajas. Elígelas en Entrenar antes de la carrera.</li>';
 }
 

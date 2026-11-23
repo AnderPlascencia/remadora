@@ -477,17 +477,32 @@
           <ul id="mis-hazanas" class="lista misiones"></ul>
         </div>
         <div id="hp-tienda" class="hp" hidden>
-          <p id="tienda-info" class="ayuda"></p>
-          <div id="tienda" class="tienda"></div>
-          <h2>Paisajes de la carrera</h2>
-          <p class="ayuda">Se compran una vez y son tuyos para siempre. Cambia de paisaje cuando quieras.</p>
-          <div id="tienda-paisajes" class="tienda paisajes"></div>
-          <h2 id="coleccion-titulo">Tu bote</h2>
-          <p class="ayuda">Velas, mascarón y palas de tu clase. Unas se ganan remando y otras se compran una vez. Cada pieza da una ventaja pequeña en las carreras contra fantasmas (hasta 25 m entre todas), nunca en las pruebas.</p>
-          <div id="coleccion-hazana" class="coleccion-hazana"></div>
-          <div id="tienda-velas" class="tienda velas"></div>
-          <h2>Tu bolsa</h2>
-          <ul id="inventario" class="lista misiones"></ul>
+          <div class="tienda-cabeza">
+            <p id="tienda-info" class="tienda-saldo"></p>
+            <div class="segmentado tienda-seg" role="group" aria-label="Sección de la tienda">
+              <button type="button" class="activo" data-tienda="bote" aria-pressed="true">Tu bote</button>
+              <button type="button" data-tienda="ventajas" aria-pressed="false">Ventajas</button>
+              <button type="button" data-tienda="paisajes" aria-pressed="false">Paisajes</button>
+            </div>
+          </div>
+          <div id="ts-bote" class="ts">
+            <h2 id="coleccion-titulo" class="visualmente-oculto">Tu bote</h2>
+            <p class="ayuda corta">Cada pieza da una ventaja pequeña contra fantasmas (hasta 25 m entre todas), nunca en las pruebas.</p>
+            <div id="coleccion-hazana" class="coleccion-hazana"></div>
+            <div id="tienda-velas" class="tienda velas"></div>
+          </div>
+          <div id="ts-ventajas" class="ts" hidden>
+            <h2 class="visualmente-oculto">Ventajas</h2>
+            <p id="ventajas-info" class="ayuda corta"></p>
+            <div id="tienda" class="tienda"></div>
+            <h3 class="tienda-sub">Tu bolsa</h3>
+            <ul id="inventario" class="lista misiones"></ul>
+          </div>
+          <div id="ts-paisajes" class="ts" hidden>
+            <h2 class="visualmente-oculto">Paisajes de la carrera</h2>
+            <p class="ayuda corta">Se compran una vez y son tuyos para siempre.</p>
+            <div id="tienda-paisajes" class="tienda paisajes"></div>
+          </div>
         </div>
       </div>
     </section>

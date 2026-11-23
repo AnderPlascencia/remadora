@@ -230,6 +230,7 @@ Object.assign(PAISAJES, {
     nombre: 'Bahía glaciar',
     texto: 'Cumbres nevadas, témpanos a la deriva, iglús y pingüinos.',
     precio: 2100,
+    pintado: true,
     orilla: {
       piezas: {
         tempano_alto: { x: 0, y: 0, w: 470, h: 694, pie: [0.5, 0.969], m: 10.83 },

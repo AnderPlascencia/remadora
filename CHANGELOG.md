@@ -2,7 +2,7 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
-## 0.106.1 · 2026-11-23
+## 0.107.1 · 2026-11-23
 
 Revisión de las etapas 20 a 23: el resumen al terminar y Progreso ya no cargan todas tus sesiones segundo a segundo, y Héroe y Progreso abren bien justo después de una actualización.
 
@@ -11,6 +11,22 @@ Revisión de las etapas 20 a 23: el resumen al terminar y Progreso ya no cargan 
 - El resumen de cada sesión guarda ahora los watts por pulso. Las sesiones guardadas se resumen otra vez una sola vez, sin que tengas que hacer nada.
 - **Sin mezclas de versiones.** Si la app se actualizó mientras la tenías abierta y luego entras por primera vez a Héroe o Progreso, se recarga sola para abrir la versión nueva completa, salvo que estés remando: en ese caso espera a que termines.
 - **Aviso si no carga.** Si la pestaña no se puede descargar (por ejemplo, sin conexión antes de que quedara guardada), ves un aviso en vez de una pantalla en blanco.
+## 0.107.0 · 2026-11-23
+
+La tienda, por secciones y con menos texto.
+
+- Héroe › Tienda se divide en Tu bote, Ventajas y Paisajes. Arriba dice una vez cuántas monedas tienes.
+- Cada tarjeta muestra solo la muestra, el nombre, el precio o lo que falta («🔒 Nivel 20», «🔒 Jefe 3», «🔒 Hazaña») y un botón. Al tocarla se abre lo demás: qué es, su ventaja, cómo se consigue y la vista previa.
+- Ya no se repite «Te faltan monedas» en cada botón: si no te alcanza, «Comprar» sale apagado.
+- Las piezas del bote van de tres en tres y la hazaña de clase cabe en una línea con su barra.
+
+## 0.106.1 · 2026-11-23
+
+La Bahía glaciar, repintada con el estilo de los héroes.
+
+- **Glaciar pintado.** Cumbres nevadas y frente de glaciar sobre agua oscura; témpanos, abetos nevados, bloques de hielo, iglú, rocas nevadas y pingüinos pintados con el mismo motor y la misma mano que los retratos.
+- **Nieve y agua oscura pintadas en la vista 3D**, con bruma lejana; también hay agua pintada en el canal de la vista 2D y una costa 2D con témpanos, iglú y bosque.
+- Miniatura nueva en la tienda.
 
 ## 0.106.0 · 2026-11-23
 
