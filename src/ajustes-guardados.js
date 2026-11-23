@@ -56,7 +56,8 @@ export const AJUSTES = {
   programa: A('json', null, false),
   calendarioPlan: A('json', null, false),
   eleccionDia: A('texto', '', false),
-  antesDeRemar: A('json', null, false), // { dia, sueno, dolor }: lo que respondiste hoy antes de remar
+  antesDeRemar: A('json', null, false), // { dia, sueno, dolor, zona }: lo que respondiste hoy antes de remar
+  dolores: A('json', [], true), // [{ dia, dolor, zona }] de las últimas 4 semanas (etapa 27)
   // Dónde te quedaste en la pantalla
   modoEnt: A('texto', 'libre', false),
   ultimoEnt: A('texto', '', false),

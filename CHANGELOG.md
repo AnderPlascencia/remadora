@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.111.0 · 2026-11-23
+
+La app cuida tu cuerpo un poco más.
+
+- **Dónde te duele.** Si en «Antes de remar» marcas molestia o dolor, te pregunta dónde (espalda baja, rodillas, hombros o cuello, muñecas o manos) y el consejo de hoy cambia según la zona, por ejemplo «espalda firme al final de la palada».
+- **Si se repite, la semana se suaviza.** Con molestia en la misma zona dos días o más en una semana, la app deja de proponerte sesiones duras y te sugiere consultar si no se va. Si un día respondes que ya no te duele, manda tu respuesta. El registro de molestias va en el respaldo.
+- **Semana muy pareja, día de descanso.** Si remaste casi igual todos los días, sin días suaves ni de descanso, la próxima sesión suave del plan pasa a descanso, siempre que la semana te siga cabiendo.
+- **Piernas cansadas.** En el detalle de una sesión, si sostuviste los watts subiendo la cadencia pero cada palada movió bastante menos, te lo avisa.
+
 ## 0.110.0 · 2026-11-23
 
 Héroe más corto y sin contradicciones.

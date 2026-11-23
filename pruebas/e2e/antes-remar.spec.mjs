@@ -21,8 +21,13 @@ test('antes de remar: responder cambia el estado de hoy, se pliega y desaparece 
   await expect(page.locator('#hoy-cuerpo')).toContainText('Dormiste mal');
 
   await caja.locator('[data-antes="dolor"][data-valor="si"]').click();
+  // Con dolor, también dónde (etapa 27): hasta responderlo no se pliega.
+  await expect(caja.locator('[data-antes="zona"]')).toHaveCount(5);
+  await expect(page.locator('#antes-plegado')).toBeHidden();
+  await caja.locator('[data-antes="zona"][data-valor="rodillas"]').click();
   await expect(page.locator('#antes-plegado')).toBeVisible();
-  await expect(page.locator('#antes-plegado')).toContainText('Dormiste mal · con dolor o malestar');
+  await expect(page.locator('#antes-plegado')).toContainText('Dormiste mal · con dolor o malestar en rodillas');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dolores')))).toEqual([expect.objectContaining({ dolor: 'si', zona: 'rodillas' })]);
   await expect(page.locator('#hoy-cuerpo')).toHaveAttribute('data-estado', 'agotado');
   const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem('antesDeRemar')));
   expect([guardado.sueno, guardado.dolor]).toEqual(['mal', 'si']);
@@ -32,6 +37,8 @@ test('antes de remar: responder cambia el estado de hoy, se pliega y desaparece 
   await expect(caja.locator('[data-antes="dolor"][data-valor="si"]')).toHaveAttribute('aria-pressed', 'true');
   await caja.locator('[data-antes="dolor"][data-valor="no"]').click();
   await expect(page.locator('#antes-plegado')).toContainText('sin dolor');
+  // El registro guarda una sola respuesta por día: la última.
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dolores')))).toEqual([expect.objectContaining({ dolor: 'no' })]);
   await expect(page.locator('#hoy-cuerpo')).toHaveAttribute('data-estado', 'cargado');
 
   // Nunca durante la sesión, y no vuelve a salir después de la primera del día.

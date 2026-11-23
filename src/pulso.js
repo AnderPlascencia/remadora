@@ -85,12 +85,41 @@ export const PREGUNTAS_PREVIAS = {
   sueno: { texto: '¿Cómo dormiste?', opciones: [['bien', 'Bien'], ['regular', 'Regular'], ['mal', 'Mal']] },
   dolor: { texto: '¿Algún dolor o malestar?', opciones: [['no', 'No'], ['leve', 'Leve'], ['si', 'Sí']] },
 };
+// Etapa 27: con dolor o molestia se pregunta dónde, y cada zona trae su consejo.
+export const ZONAS_DOLOR = [['espalda', 'Espalda baja'], ['rodillas', 'Rodillas'], ['hombros', 'Hombros o cuello'], ['munecas', 'Muñecas o manos'], ['otra', 'Otra']];
+const CONSEJO_ZONA = {
+  espalda: 'sin series ni cadencia alta, y con la espalda firme al final de la palada',
+  rodillas: 'sin llegar del todo adelante: acorta la entrada',
+  hombros: 'sin tirar de brazos: que empujen las piernas',
+  munecas: 'con el agarre suelto y las muñecas planas',
+};
+const nombreZona = (z) => (ZONAS_DOLOR.find(([k]) => k === z)?.[1] || '').toLowerCase();
+const DIA_MS = 864e5;
+// Días con dolor o molestia de los últimos 7 (dolores: [{ dia: 'aaaa-mm-dd', dolor, zona }]), los de una zona si se da.
+export function diasConDolor(dolores = [], hoy = new Date(), zona = null) {
+  const desde = hoy.getTime() - 7 * DIA_MS;
+  return (dolores || []).filter((d) => (d.dolor === 'leve' || d.dolor === 'si') && new Date(`${d.dia}T12:00`).getTime() > desde && (!zona || d.zona === zona));
+}
 // Qué cambia según tus respuestas de hoy: el estado mínimo del cuerpo y por qué (null si nada).
 // Dolor o enfermedad mandan sobre todo lo demás: no se entrena fuerte enfermo ni con dolor.
-export function efectoPrevio(resp) {
+// resp.dolores: las respuestas de los últimos días; dos o más días con molestia en la misma zona dejan la semana suave.
+export function efectoPrevio(resp, hoy = new Date()) {
   if (!resp) return null;
-  if (resp.dolor === 'si') return { clave: 'agotado', motivo: 'Con dolor o malestar, hoy descansa' };
-  if (resp.dolor === 'leve') return { clave: 'cargado', motivo: 'Con una molestia leve, hoy suave (y para si va a más)' };
+  const zona = resp.zona && resp.zona !== 'otra' ? resp.zona : null;
+  const consejo = zona ? `: rema ${CONSEJO_ZONA[zona]}` : '';
+  if (resp.dolor === 'si') return { clave: 'agotado', motivo: `Con dolor o malestar${zona ? ` en ${nombreZona(zona)}` : ''}, hoy descansa` };
+  if (resp.dolor === 'leve') {
+    const repetido = diasConDolor(resp.dolores, hoy, resp.zona || null).length >= 2;
+    return { clave: 'cargado', repetido, motivo: repetido
+      ? `Molestia en ${nombreZona(resp.zona) || 'el mismo sitio'} varios días esta semana: suave hasta que pase${consejo}. Si va a más o no se va en una semana, consulta a un profesional`
+      : `Con una molestia leve, hoy suave (y para si va a más)${consejo}` };
+  }
+  // Sin responder hoy, pero con molestias en la misma zona 2 días de esta semana: aún sin duras (si hoy dices que
+  // no te duele, manda tu respuesta).
+  const zonas = new Map();
+  for (const d of diasConDolor(resp.dolores, hoy)) zonas.set(d.zona || '', (zonas.get(d.zona || '') || 0) + 1);
+  const [zRep] = [...zonas].find(([, n]) => n >= 2) || [];
+  if (zRep != null && resp.dolor !== 'no') return { clave: 'cargado', repetido: true, motivo: `Tuviste molestias${zRep ? ` en ${nombreZona(zRep)}` : ''} 2 días o más esta semana: hoy mejor sin sesiones duras. Si ya no sientes nada, dilo en «Antes de remar»` };
   if (resp.sueno === 'mal') return { clave: 'cargado', motivo: 'Dormiste mal: hoy suave, la dura rinde más descansado' };
   return null;
 }

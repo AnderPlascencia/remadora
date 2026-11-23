@@ -251,6 +251,10 @@ export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp
         motivo: `Vas al día: hoy descansas. Si te apetece, adelanta «${d.ent}» (sugerida el ${DIA_SEM(d.fecha)}). ${margen}.${fuera}`,
       };
     }
+    // Semana muy pareja (monotonía alta, etapa 27): si la de hoy es suave y la semana cabe igual, hoy se descansa.
+    if (d && cuerpo?.monotonia && !duro(d.ent) && !d.atrasada && diasQuedan > pendientes.length) {
+      return { fuente: 'descanso', ent: null, alternativa: 'base:dis-suave', motivo: `Tu semana fue muy pareja, sin días de descanso: hoy descansa y «${d.ent}» cabe otro día. ${margen}.${fuera}` };
+    }
     if (d) {
       const rol = /^Prueba/.test(d.ent) ? 'Prueba: mide cuánto has mejorado'
         : duro(d.ent) ? 'La sesión clave de la semana: aquí se gana capacidad'
@@ -276,6 +280,7 @@ export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp
   const fueraSin = diasFuera(sesiones, ahora);
   if (tramoRegreso(fueraSin)) return sugerir('base:dis-suave', `Bienvenido de vuelta${fueraSin >= REGRESO.medio ? ` tras ${fueraSin} días` : ''}: hoy un fondo suave para retomar sin prisa.`);
   if (cuerpo?.clave === 'agotado') return sugerir('base:dis-suave', 'Vienes muy cargado: hoy descansa o rema 20 min muy suave.');
+  if (cuerpo?.monotonia) return sugerir('base:dis-suave', 'Tu semana fue muy pareja, sin días de descanso: hoy descansa o rema 20 min muy suave.');
   if (ayerDuro) return sugerir('base:dis-suave', 'Ayer fue una sesión dura: hoy suave para asimilarla.');
   if (cansado) return sugerir('base:dis-suave', 'Vas cargado: hoy suave y la próxima dura te saldrá mejor.');
   const semana = sesiones.filter((s) => s.fecha > ahora - 7 * DIA);
