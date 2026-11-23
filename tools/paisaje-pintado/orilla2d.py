@@ -1,5 +1,5 @@
 # Orilla 2D con la línea de costa recta y lo que sobresale encima del agua.
-# Uso: python3 orilla2d.py <paisaje> <costa_arriba.png> [costa_abajo.png] [tol]
+# Uso: python3 orilla2d.py <paisaje> <costa_arriba.png> [costa_abajo.png] [tol] [tol_abajo]
 # Salida: la costa de arriba (agua abajo) y, si se da, la de abajo (agua arriba), con el agua transparente.
 # La línea de costa queda siempre al 82 % del alto (arriba) o al 18 % (abajo): el resto es lo que sobresale.
 import sys, numpy as np, cv2
@@ -45,8 +45,9 @@ def sin_costura_h(a, B=120):
     t[:, :B, :3] = rgb; t[:, :B, 3:] = al * 255
     return t.clip(0, 255).astype(np.uint8)
 def hacer(src, tol, abajo=False):
+    if abajo:  # el agua va arriba: se voltea antes de quitarla, para que quede junto al borde de abajo como en la otra
+        Image.open(src).transpose(Image.FLIP_TOP_BOTTOM).save('/tmp/_abajo.png'); src = '/tmp/_abajo.png'
     rgba = quitar(src, tol=tol)
-    if abajo: rgba = rgba[::-1].copy()
     out = sin_costura_h(enderezar(rgba))
     if abajo: out = out[::-1].copy()
     im = Image.fromarray(out, 'RGBA'); return im.resize((1536, round(im.height * 1536 / im.width)), Image.LANCZOS)
@@ -55,4 +56,4 @@ if __name__ == '__main__':
     nombre = 'costa' if k == 'fiordo' else f'{k}_costa'
     hacer(sys.argv[2], tol).save(f'/root/sd/borde/{nombre}.webp', quality=80)
     if len(sys.argv) > 3 and sys.argv[3] != '-':
-        hacer(sys.argv[3], tol, abajo=True).save(f'/root/sd/borde/{nombre}_abajo.webp', quality=80)
+        hacer(sys.argv[3], float(sys.argv[5]) if len(sys.argv) > 5 else tol, abajo=True).save(f'/root/sd/borde/{nombre}_abajo.webp', quality=80)
