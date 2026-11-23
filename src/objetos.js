@@ -55,11 +55,13 @@ export const OBJETOS = [
   o('casco-gladiador', 'Casco de infante de marina', 'cabeza', 'rara', 'gladiador'),
   o('pintura-guerra', 'Pintura de guerra', 'cara', 'rara', 'gladiador'),
 
-  o('casco-cuernos-oro', 'Yelmo de Gjermundbu dorado', 'cabeza', 'epica', 'vikingo'),
-  o('sombrero-capitan', 'Sombrero de capitán', 'cabeza', 'epica', 'pirata'),
-  o('kabuto', 'Kabuto', 'cabeza', 'epica', 'samurai'),
-  o('corona-hielo', 'Corona de hielo', 'cabeza', 'epica', 'artico'),
-  o('armadura-gladiador', 'Corona naval', 'torso', 'epica', 'gladiador'),
+  // Jefes de los capítulos 1 a 5: insignias con nombre del capítulo, no ropa de una clase.
+  // Se conservan los ids para no tocar lo ya guardado.
+  o('casco-cuernos-oro', 'Llave del muelle', 'cabeza', 'epica', 'vikingo'),
+  o('sombrero-capitan', 'Escama de la Serpiente', 'cabeza', 'epica', 'pirata'),
+  o('kabuto', 'Diente del Kraken', 'cabeza', 'epica', 'samurai'),
+  o('corona-hielo', 'Brújula de mar abierto', 'cabeza', 'epica', 'artico'),
+  o('armadura-gladiador', 'Farol de la niebla', 'torso', 'epica', 'gladiador'),
   // Jefes de los capítulos 6 a 9 (etapa 9): se ganan como insignia, no se visten.
   o('yelmo-lava', 'Yelmo de lava', 'cabeza', 'epica', 'leyenda'),
   o('manto-escarcha', 'Manto de escarcha', 'torso', 'epica', 'leyenda'),
