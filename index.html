@@ -272,11 +272,11 @@
         <button type="button" data-pt="programa" aria-pressed="false">Programa</button>
       </div>
       <div id="pt-entrenamientos">
-        <div class="subir-atr"><span class="etq-campo">Quiero subir…</span>
-          <div id="subir-atr" class="chips secciones-ent" role="group" aria-label="Atributo que quieres subir"></div></div>
+        <details id="subir-caja" class="subir-atr"><summary>Quiero subir: <b id="subir-actual">cualquier atributo</b></summary>
+          <div id="subir-atr" class="chips secciones-ent" role="group" aria-label="Atributo que quieres subir"></div></details>
         <div id="subir-lista" class="subir-lista" hidden></div>
-        <span id="secciones-etq" class="etq-campo etq-secciones">Tipo de entrenamiento</span>
-        <div id="secciones-ent" class="chips secciones-ent" aria-label="Tipo de entrenamiento"></div>
+        <span id="secciones-etq" class="visualmente-oculto">Tipo de entrenamiento</span>
+        <div id="secciones-ent" class="chips secciones-ent" role="group" aria-labelledby="secciones-etq"></div>
         <p id="base-nivel" class="ayuda"></p>
         <div id="base-tarjetas" class="base-tarjetas"></div>
         <div class="mios-cabecera"><h2 id="mios-titulo">Tus entrenamientos</h2><button id="btn-nuevo-ent" class="boton chico">+ Nuevo</button></div>
