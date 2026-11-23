@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.122.0 · 2026-11-23
+
+Insignias de capítulo con nombre propio.
+
+- **Ya no son ropa de otra clase.** Las insignias de los capítulos 1 a 5 se llamaban como prendas de una clase (yelmo vikingo, sombrero pirata, kabuto…). Ahora cada una lleva el nombre de su capítulo: «Llave del muelle», «Escama de la Serpiente», «Diente del Kraken», «Brújula de mar abierto» y «Farol de la niebla».
+- **Sin nombres repetidos.** La insignia del capítulo 5 ya no se llama igual que el talento «Corona naval».
+- Las insignias que ya ganaste se conservan; solo cambia su nombre.
+
 ## 0.121.1 · 2026-11-23
 
 Orillas más naturales en la vista 2D.
