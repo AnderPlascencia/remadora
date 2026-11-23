@@ -12,7 +12,7 @@ import * as V from '../ventajas.js';
 import * as B from '../base.js';
 import * as C from '../consejos.js';
 import {
-  $, ajustes, cargarVista, citaGuardada, contarHasta, descargar, escaparHtml, formatoMeta, ftp, ico, miles, perfil, sinMovimiento, toast, vibrar,
+  $, ajustes, cargarVista, citaGuardada, contarHasta, descargar, escaparHtml, fechaCorta, formatoMeta, ftp, ico, miles, perfil, sinMovimiento, toast, vibrar,
 } from '../ui.js';
 import * as Ci from '../cita.js';
 import { estado } from '../estado.js';
@@ -337,6 +337,14 @@ export const equipoActual = (per, h) => {
 export async function aplicarEquipo() {
   const { per, h } = await estadoHeroe();
   usarEquipo(equipoActual(per, h));
+}
+
+// Ficha de una insignia (Héroe › Ficha y Progreso): nombre, «Cómo» se gana, y el avance o la fecha en que la ganaste.
+export function fichaInsignia({ nombre, como, ganada, fecha, avance, premio, pasado = false }) {
+  const barra = avance?.pct != null ? `<div class="progreso" aria-hidden="true"><div style="width:${Math.min(100, avance.pct)}%"></div></div>` : '';
+  const estado = ganada ? (fecha ? `Ganada el ${fechaCorta(fecha)}` : 'Ganada') : avance?.texto || '';
+  return `<div class="insignia${ganada ? '' : ' bloqueada'}"><span class="medalla">${ico(ganada ? 'i-trofeo' : 'i-diana')}</span><div class="insignia-texto">
+    <b>${nombre}</b><small class="insignia-como">${pasado ? como : `Cómo: ${como.charAt(0).toLowerCase()}${como.slice(1)}`}</small>${barra}<small>${estado}${premio ? ` · premio: ${premio}` : ''}</small></div></div>`;
 }
 
 // Tarjetas de la tienda: tocar la muestra o el nombre abre su detalle (solo una abierta por sección).

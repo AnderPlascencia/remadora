@@ -2,12 +2,31 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
-## 0.108.0 · 2026-11-23
+## 0.109.0 · 2026-11-23
 
 Respaldos mucho más livianos.
 
 - **El respaldo va comprimido.** Ajustes › Respaldo guarda un archivo `.json.gz` que pesa unas 10 veces menos: con muchas sesiones baja de decenas de MB a unos pocos, así cabe en el correo, en WhatsApp o en tu nube sin problema. Se arma sesión por sesión, sin cargar en memoria un texto gigante.
 - **Restaurar acepta los dos.** Puedes restaurar el respaldo nuevo comprimido y también tus respaldos `.json` de antes.
+
+## 0.108.0 · 2026-11-23
+
+Las insignias dicen cómo se consiguen.
+
+- Cada insignia, en Héroe › Ficha y en Progreso, dice «Cómo: …» con un verbo y la meta («rema 34 km en total»), lleva su avance con barra («20 de 34 km») y, cuando ya es tuya, la fecha en que la ganaste.
+- Las de capítulo nombran al jefe de tu saga y cómo vencerlo; la del capítulo en curso dice qué falta para abrirlo o que ya puedes enfrentarlo.
+- Las que te faltan salen primero, de la más cercana a la más lejana.
+- «Rival avanzado» ya se puede ganar: basta ganar una carrera en Alta mar. Quien la ganó con el rival avanzado de antes la conserva.
+- El aura de hielo sale una sola vez (tenía dos logros) y «Bajo 8 minutos», que ya no se puede ganar, no aparece si no la tienes.
+- El jefe en Misiones nombra la insignia que da. En la Tienda, el detalle de una pieza bloqueada dice la hazaña con su meta o el jefe por su nombre, y lo que no te alcanza dice cuántas monedas te faltan.
+- Los logros en escalera (km, sesiones, semanas, FTP, nivel) muestran su unidad en el avance.
+
+## 0.107.2 · 2026-11-23
+
+Las marcas de metros, integradas en el paisaje.
+
+- **En 2D, sin franja lisa abajo.** La orilla pintada llega hasta el borde y cada marca es una estaca de madera en la orilla con su placa («0 m», «10 m»…). Junto al borde la placa se corre hacia dentro, así que el 0 m ya se ve. Sobre el agua, la raya es ahora una corchera discreta de puntos claros y oscuros.
+- **En 3D, flotadores en vez de raya.** Las marcas transversales son una fila de flotadores claros y oscuros, y la placa de metros cuelga de una estaca en la orilla.
 
 ## 0.107.1 · 2026-11-23
 

@@ -442,23 +442,24 @@ export function elegirRival(sesiones, nombre, modo) {
 
 // ---------- Insignias ----------
 // Cada insignia: { clave, nombre, detalle, ganada, fecha? }. Se calcula con todo el historial.
+// como: qué hacer, con verbo y meta; unidad: la del avance («3 de 5 km»).
 export const INSIGNIAS = [
-  { clave: 'primera', nombre: 'Primera palada', detalle: 'Tu primera sesión guardada' },
-  { clave: 'km5', nombre: '5 km de una', detalle: '5000 m en una sola sesión' },
-  { clave: 'km10', nombre: '10 km de una', detalle: '10 000 m en una sola sesión' },
-  { clave: 'min30', nombre: 'Media hora', detalle: '30 minutos remando en una sesión' },
-  { clave: 'ses10', nombre: 'Constancia', detalle: '10 sesiones' },
-  { clave: 'ses50', nombre: 'Veterano', detalle: '50 sesiones' },
-  { clave: 'tot100', nombre: '100 km', detalle: '100 km en total' },
-  { clave: 'racha7', nombre: 'Semana perfecta', detalle: 'Completa una semana entera de tu plan' },
-  { clave: 'fantasma', nombre: 'Cazafantasmas', detalle: 'Ganarle a un fantasma' },
-  { clave: 'avanzado', nombre: 'Rival avanzado', detalle: 'Ganarle al fantasma avanzado' },
-  { clave: 'mejor3', nombre: 'Más rápido que al empezar', detalle: 'Baja un 3 % tu primer 2000 m' },
-  { clave: 'mejor6', nombre: 'Otro remero en 2000 m', detalle: 'Baja un 6 % tu primer 2000 m' },
+  { clave: 'primera', nombre: 'Primera palada', detalle: 'Guarda tu primera sesión de remo', meta: 1, unidad: 'sesión' },
+  { clave: 'km5', nombre: '5 km de una', detalle: 'Rema 5 km en una sola sesión', meta: 5, unidad: 'km' },
+  { clave: 'km10', nombre: '10 km de una', detalle: 'Rema 10 km en una sola sesión', meta: 10, unidad: 'km' },
+  { clave: 'min30', nombre: 'Media hora', detalle: 'Rema 30 minutos en una sola sesión', meta: 30, unidad: 'min' },
+  { clave: 'ses10', nombre: 'Constancia', detalle: 'Completa 10 sesiones', meta: 10, unidad: 'sesiones' },
+  { clave: 'ses50', nombre: 'Veterano', detalle: 'Completa 50 sesiones', meta: 50, unidad: 'sesiones' },
+  { clave: 'tot100', nombre: '100 km', detalle: 'Rema 100 km en total', meta: 100, unidad: 'km' },
+  { clave: 'racha7', nombre: 'Semana perfecta', detalle: 'Cumple todas las sesiones de una semana de tu plan (cuenta al cerrar la semana)' },
+  { clave: 'fantasma', nombre: 'Cazafantasmas', detalle: 'Gana una carrera contra un fantasma', meta: 1, unidad: 'carrera' },
+  { clave: 'avanzado', nombre: 'Rival avanzado', detalle: 'Gana una carrera en dificultad Alta mar', meta: 1, unidad: 'carrera' },
+  { clave: 'mejor3', nombre: 'Más rápido que al empezar', detalle: 'Rema 2000 m un 3 % más rápido que tu primer 2000 m', meta: 3, unidad: '%' },
+  { clave: 'mejor6', nombre: 'Otro remero en 2000 m', detalle: 'Rema 2000 m un 6 % más rápido que tu primer 2000 m', meta: 6, unidad: '%' },
   // Retiradas (etapa 18): eran tiempos fijos de Concept2 y la RW200 mide otros watts. Solo las gana una sesión de antes
   // de SOLO_TU_DESDE y solo se ven si ya las tienes.
-  { clave: 'sub8', nombre: 'Bajo 8 minutos', detalle: '2000 m en menos de 8:00', retirada: true },
-  { clave: 'sub7', nombre: 'Bajo 7 minutos', detalle: '2000 m en menos de 7:00', retirada: true },
+  { clave: 'sub8', nombre: 'Bajo 8 minutos', detalle: 'Rema 2000 m en menos de 8:00 (insignia retirada)', retirada: true },
+  { clave: 'sub7', nombre: 'Bajo 7 minutos', detalle: 'Rema 2000 m en menos de 7:00 (insignia retirada)', retirada: true },
 ];
 // Desde este día las marcas se miden contra ti mismo (tu primer 2000 m), no contra tiempos de Concept2.
 export const SOLO_TU_DESDE = '2026-11-24';
@@ -476,9 +477,13 @@ export function insignias(sesiones, { primeraSemanaPlan = null } = {}) {
   const dias = new Set();
   let primer2k = null;
   let mejor2k = null;
+  let kmMax = 0;
+  let minMax = 0;
   const marca = (clave, s) => { if (!ganadas[clave]) ganadas[clave] = s.fecha; };
   orden.forEach((s, i) => {
     total += s.distancia || 0;
+    kmMax = Math.max(kmMax, (s.distancia || 0) / 1000);
+    minMax = Math.max(minMax, (s.duracion || 0) / 60);
     marca('primera', s);
     if (s.distancia >= 5000) marca('km5', s);
     if (s.distancia >= 10000) marca('km10', s);
@@ -488,7 +493,8 @@ export function insignias(sesiones, { primeraSemanaPlan = null } = {}) {
     if (total >= 100000) marca('tot100', s);
     const rivales = s.carreraSinTerminar ? [] : s.rivales || (s.rival ? [s.rival] : []);
     if (rivales.some((r) => r.diferencia > 0)) marca('fantasma', s);
-    if (rivales.some((r) => r.nivel === 'avanzado' && r.diferencia > 0)) marca('avanzado', s);
+    // Los rivales de antes tenían nivel «avanzado»; desde los rivales a la medida, lo difícil es ganar en Alta mar.
+    if (rivales.some((r) => (r.nivel === 'avanzado' || r.dificultad === 'altamar') && r.diferencia > 0)) marca('avanzado', s);
     const t2k = nMuestras(s) ? mejorTiempoDe(s, 2000) : null;
     const antes = claveDia(s.fecha) < SOLO_TU_DESDE;
     if (antes && t2k && t2k < 480) marca('sub8', s);
@@ -505,7 +511,11 @@ export function insignias(sesiones, { primeraSemanaPlan = null } = {}) {
     if (n >= 7 && claveDia(s.fecha) < UNA_RACHA_DESDE) marca('racha7', s);
   });
   if (primeraSemanaPlan != null && !ganadas.racha7) ganadas.racha7 = primeraSemanaPlan;
-  return INSIGNIAS.filter((x) => !x.retirada || ganadas[x.clave]).map(({ retirada, ...x }) => ({ ...x, ganada: !!ganadas[x.clave], fecha: ganadas[x.clave] ?? null }));
+  const mejora = (n) => (primer2k && mejor2k && claveDia(Date.now()) >= SOLO_TU_DESDE ? Math.min(n, mejoraPct(primer2k, mejor2k)) : 0);
+  const valor = { primera: orden.length, km5: kmMax, km10: kmMax, min30: minMax, ses10: orden.length, ses50: orden.length, tot100: total / 1000, mejor3: mejora(3), mejor6: mejora(6) };
+  return INSIGNIAS.filter((x) => !x.retirada || ganadas[x.clave]).map(({ retirada, ...x }) => ({
+    ...x, ganada: !!ganadas[x.clave], fecha: ganadas[x.clave] ?? null, ...(x.meta ? { valor: Math.min(x.meta, valor[x.clave] ?? 0) } : {}),
+  }));
 }
 
 // Recomendación del día según la frescura (condición − fatiga).

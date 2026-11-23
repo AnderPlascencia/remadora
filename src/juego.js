@@ -674,26 +674,26 @@ export const HAZANAS_CLASE = [
 export const HAZANAS = [
   { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20 },
   { id: 'mision1', nombre: 'Primera misión', texto: 'Completa tu primera misión', meta: 1, valor: (g) => g.misiones, xp: 50, monedas: 20 },
-  { id: 'gran', nombre: 'Gran travesía', texto: '8 km en una sesión', meta: 8, valor: (g) => g.kmMax, xp: 180, monedas: 60 },
-  { id: 'canal', nombre: 'Cruzar el Canal de la Mancha', texto: '34 km en total', meta: 34, valor: (g) => g.kmTotal, monedas: 150, objeto: 'aura-fuego' },
-  { id: 'km50', nombre: 'Cincuenta kilómetros', texto: '50 km en total', meta: 50, valor: (g) => g.kmTotal, xp: 300, monedas: 100 },
-  { id: 'hora', nombre: 'La hora del remero', texto: '60 minutos en una sesión', meta: 60, valor: (g) => g.minMax, monedas: 150, objeto: 'cinta-campeon' },
+  { id: 'gran', nombre: 'Gran travesía', texto: 'Rema 8 km en una sola sesión', meta: 8, valor: (g) => g.kmMax, xp: 180, monedas: 60 },
+  { id: 'canal', nombre: 'Cruzar el Canal de la Mancha', texto: 'Rema 34 km en total', meta: 34, valor: (g) => g.kmTotal, monedas: 150, objeto: 'aura-fuego' },
+  { id: 'km50', nombre: 'Cincuenta kilómetros', texto: 'Rema 50 km en total', meta: 50, valor: (g) => g.kmTotal, xp: 300, monedas: 100 },
+  { id: 'hora', nombre: 'La hora del remero', texto: 'Rema 60 minutos en una sola sesión', meta: 60, valor: (g) => g.minMax, monedas: 150, objeto: 'cinta-campeon' },
   { id: 'ses25', nombre: 'Veinticinco entrenamientos', texto: 'Completa 25 sesiones', meta: 25, valor: (g) => g.sesiones, xp: 500, monedas: 150 },
   // Antes pedía 14 días seguidos, imposible remando de 1 a 4 veces por semana; quien ya los tenía la conserva.
   { id: 'racha14', nombre: 'Dos meses sin fallar', texto: 'Rema al menos una vez por semana 8 semanas seguidas', meta: 8, valor: (g) => Math.max(g.semanasMax, g.rachaMax >= 14 ? 8 : 0), monedas: 250, objeto: 'capa-leyenda' },
   // ⚖ Etapa 18: «Bajo 8 minutos» era un tiempo de Concept2 y la RW200 mide otros watts. Desde SOLO_TU_DESDE el aura de
   // hielo se gana bajando un 5 % tu primer 2000 m; «Bajo 8 minutos» solo lo gana un 2000 m de antes, y quien lo tiene lo conserva.
-  { id: 'sub8', nombre: 'Bajo 8 minutos', texto: '2000 m en menos de 8:00', meta: 1, valor: (g) => (g.mejor2000Antes && g.mejor2000Antes < 480 ? 1 : 0), monedas: 200, objeto: 'aura-hielo', oculto: true },
-  { id: 'mejora2k', nombre: 'Más rápido que al empezar', texto: 'Baja un 5 % tu primer 2000 m', meta: 5, valor: (g) => mejoraPct(g.primer2000, g.mejor2000), monedas: 200, objeto: 'aura-hielo', desde: SOLO_TU_DESDE },
+  { id: 'sub8', nombre: 'Bajo 8 minutos', texto: 'Rema 2000 m en menos de 8:00', meta: 1, valor: (g) => (g.mejor2000Antes && g.mejor2000Antes < 480 ? 1 : 0), monedas: 200, objeto: 'aura-hielo', oculto: true },
+  { id: 'mejora2k', nombre: 'Más rápido que al empezar', texto: 'Rema 2000 m un 5 % más rápido que tu primer 2000 m', meta: 5, valor: (g) => mejoraPct(g.primer2000, g.mejor2000), monedas: 200, objeto: 'aura-hielo', desde: SOLO_TU_DESDE },
   // Retirado en la etapa 9 (repetía el nombre del rango): solo lo gana una sesión con las reglas de antes, y quien lo tiene lo conserva.
   { id: 'nivel10', nombre: 'Nivel 10', texto: 'Llega al nivel 10', meta: 10, valor: (g) => g.nivelAntiguo, xp: 250, monedas: 100, oculto: true },
   // Desde v0.44.1 cada clase cuenta solo en una carrera distinta (antes una carrera de 3 rivales daba 3 clases); quien ya lo tenía lo conserva.
   { id: 'clases4', nombre: 'Vence a las 4 clases', texto: 'Gana 4 carreras distintas, cada una contra un rival de otra clase', meta: 4, valor: (g) => Math.max(clasesEnCarrerasDistintas(g.carrerasGanadas), g.clasesAntiguas.size), xp: 300, monedas: 100 },
-  { id: 'km100', nombre: 'Cien kilómetros', texto: '100 km en total', meta: 100, valor: (g) => g.kmTotal, xp: 600, monedas: 300, objeto: 'bote-dorado' },
+  { id: 'km100', nombre: 'Cien kilómetros', texto: 'Rema 100 km en total', meta: 100, valor: (g) => g.kmTotal, xp: 600, monedas: 300, objeto: 'bote-dorado' },
   { id: 'nivel25', nombre: 'Héroe de nivel 25', texto: 'Llega al nivel 25', meta: 25, valor: (g) => g.nivel, monedas: 300, objeto: 'aura-dorada' },
   // Metas largas (etapa 9): escalones para meses y años de remo. XP nominal (desde el 29 de octubre se paga la mitad).
   ...(/** @type {[number, string, number, number][]} */ ([[250, 'Doscientos cincuenta kilómetros', 600, 150], [500, 'Quinientos kilómetros', 800, 200], [1000, 'Mil kilómetros', 1200, 300], [2500, 'La vuelta al Mediterráneo', 2000, 500]]))
-    .map(([meta, nombre, xp, monedas]) => ({ id: `km${meta}`, nombre, texto: `${miles(meta)} km en total`, meta, valor: (g) => g.kmTotal, xp, monedas })),
+    .map(([meta, nombre, xp, monedas]) => ({ id: `km${meta}`, nombre, texto: `Rema ${miles(meta)} km en total`, meta, valor: (g) => g.kmTotal, xp, monedas })),
   ...(/** @type {[number, string, number, number][]} */ ([[50, 'Cincuenta entrenamientos', 600, 150], [100, 'Cien entrenamientos', 900, 250], [250, 'Doscientos cincuenta entrenamientos', 1500, 400], [500, 'Quinientos entrenamientos', 2500, 600]]))
     .map(([meta, nombre, xp, monedas]) => ({ id: `ses${meta}`, nombre, texto: `Completa ${meta} sesiones`, meta, valor: (g) => g.sesiones, xp, monedas })),
   ...(/** @type {[number, number, number][]} */ ([[40, 600, 200], [60, 900, 300], [80, 1500, 500]]))
