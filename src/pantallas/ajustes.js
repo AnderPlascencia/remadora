@@ -11,7 +11,7 @@ import * as J from '../juego.js';
 import * as Pf from '../perfil.js';
 import { VERSION } from '../version.js';
 import { olvidarTokens } from '../grafica.js';
-import { $, COLOR_ZONA, ajustes, citaGuardada, color, descargar, escaparHtml, fcRef, ftp, ico, perfil, toast } from '../ui.js';
+import { $, COLOR_ZONA, ajustes, citaGuardada, color, descargar, fcRef, ftp, ico, perfil, toast } from '../ui.js';
 import * as Ci from '../cita.js';
 import * as P from '../programa.js';
 import { TEXTO_FUENTE_FC, cambioZona2, fcMaxDeHistorial, fcMaxEfectiva, rangoZona2 } from '../pulso.js';
@@ -192,20 +192,34 @@ export async function exportarCitas() {
   descargar('rower-citas.ics', Ci.ics(citas), 'text/calendar');
   toast(prog?.dias?.length ? `${citas.length} sesiones de tu plan para tu calendario. Si el plan cambia, vuelve a añadirlo.` : `${citas.length} citas de las próximas 4 semanas para tu calendario`);
 }
+// Campo de cada dato del perfil y su pista corta (una línea a 360 px; la versión larga está en perfil.js USOS).
+const CONTROL_PERFIL = { edad: '#in-edad', sexo: '#sel-sexo', peso: '#in-peso', altura: '#in-altura', experiencia: '#sel-experiencia', minutos: '#sel-minutos' };
+const PISTA_PERFIL = { edad: 'Para tus zonas', sexo: 'Para tus calorías', peso: 'Para tus W/kg', altura: 'Para tus calorías', experiencia: 'Para tu primer plan', minutos: 'Tope de cada sesión' };
 // Qué falta del perfil y para qué sirve; si tu plan no coincide con tus días o tu tiempo, ofrece rehacerlo.
 export function pintarPerfil() {
   const p = perfil();
   const c = Pf.completitud(p);
-  $('#perfil-resumen').textContent = c.faltan.length ? `${c.hechos} de ${c.total} datos` : 'Completo';
+  // Plegado con su resumen; abierto solo la primera vez que se pinta con datos por llenar.
+  const resumen = [p.edad ? `${p.edad} años` : '', p.peso ? `${p.peso} kg` : '', p.dias ? `${p.dias} ${p.dias === 1 ? 'día' : 'días'}` : ''].filter(Boolean).join(' · ');
+  $('#perfil-resumen').textContent = c.faltan.length ? `${resumen ? `${resumen} · ` : ''}faltan ${c.faltan.length}` : resumen;
+  const sec = $('#perfil-resumen').closest('details');
+  if (!sec.dataset.pintado) { sec.dataset.pintado = '1'; sec.open = c.faltan.length > 0; }
+  // Cada dato que falta dice para qué sirve dentro de su campo, en vez de una lista aparte.
+  for (const u of Pf.USOS) {
+    const label = $(CONTROL_PERFIL[u.clave])?.closest('label');
+    if (!label) continue;
+    let pista = label.querySelector('.pista-campo');
+    if (!pista) { pista = document.createElement('small'); pista.className = 'pista-campo'; label.insertBefore(pista, label.querySelector('input, select')); }
+    pista.textContent = PISTA_PERFIL[u.clave] || '';
+    pista.title = u.texto;
+    pista.hidden = !u.falta(p);
+  }
   const prog = leerPrograma();
   const hoy = E.claveDia(Date.now());
   const diasPlan = [...new Set((prog?.dias || []).filter((d) => d.fecha >= hoy).map((d) => (new Date(`${d.fecha}T12:00`).getDay() + 6) % 7))].sort((a, b) => a - b);
   const otrosDias = prog?.porSemana === p.dias && citaGuardada().dias && diasPlan.length === p.dias && diasPlan.join() !== misDias().join();
   const distinto = prog?.objetivo && prog.dias?.length && (prog.porSemana !== p.dias || otrosDias || (p.minutos != null && (prog.minutosMax || 0) !== (p.minutos || 0)));
-  $('#perfil-usos').innerHTML = (c.faltan.length
-    ? `<p class="ayuda">Completa tu perfil para afinar la app:</p><ul class="lista-perfil">${c.faltan.map((u) => `<li>${escaparHtml(u.texto)}</li>`).join('')}</ul>`
-    : '<p class="ayuda">Tu perfil se usa para tus calorías, pulso máximo, FTP inicial, puesto en la tripulación y para armar y ajustar tus planes.</p>')
-    + (distinto ? `<div class="aviso suave-aviso perfil-plan"><span>${otrosDias ? `Tu plan va en otros días. ¿Lo rehago en ${misDias().map((d) => Ci.DIAS_NOMBRE[d]).join(', ')}?` : `Tu plan es de ${prog.porSemana} días${prog.minutosMax ? ` y sesiones de hasta ${prog.minutosMax} min` : ''}. ¿Lo rehago con ${p.dias} ${p.dias === 1 ? 'día' : 'días'}${p.minutos ? ` y hasta ${p.minutos} min` : ''}?`}</span><button type="button" id="btn-plan-perfil" class="boton chico">Rehacer plan</button></div>` : '');
+  $('#perfil-usos').innerHTML = (distinto ? `<div class="aviso suave-aviso perfil-plan"><span>${otrosDias ? `Tu plan va en otros días. ¿Lo rehago en ${misDias().map((d) => Ci.DIAS_NOMBRE[d]).join(', ')}?` : `Tu plan es de ${prog.porSemana} días${prog.minutosMax ? ` y sesiones de hasta ${prog.minutosMax} min` : ''}. ¿Lo rehago con ${p.dias} ${p.dias === 1 ? 'día' : 'días'}${p.minutos ? ` y hasta ${p.minutos} min` : ''}?`}</span><button type="button" id="btn-plan-perfil" class="boton chico">Rehacer plan</button></div>` : '');
 }
 // Sin sesiones ni FTP, el perfil da un FTP de arranque para que el plan y los rivales tengan watts con sentido.
 // Queda como estimado y la primera sesión de 10 min o más lo reemplaza, suba o baje.
@@ -252,7 +266,7 @@ export function pintarClasificacion(sesiones = null) {
   const w = ftp() || (sesiones ? estimarFtp(sesiones) : 0);
   const caja = $('#clasificacion-ftp');
   if (!w) {
-    caja.innerHTML = '<p class="ayuda">Tu puesto en la tripulación (de Grumete a Capitán) sale de tu FTP. Se calcula solo después de unas sesiones, o escríbelo arriba si lo conoces.</p><button type="button" class="boton chico" data-trip>Ver los 5 puestos</button>';
+    caja.innerHTML = '<p class="ayuda">Tu puesto en la tripulación sale de tu FTP, que se calcula solo al remar.</p><button type="button" class="boton chico" data-trip>Ver los 5 puestos</button>';
     $('#heroe-aguas').hidden = true;
     estado.escalaTrip = J.escalaTripulacion(0, peso, Pf.factorClasificacion(ajustes.leer('sexo', '')));
     estado.escalaTrip.sinFtp = true;

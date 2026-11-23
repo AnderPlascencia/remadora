@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.116.0 · 2026-11-23
+
+Menos texto mientras remas, en Planes y en Ajustes.
+
+- **Números con su unidad en el modo remo.** La distancia dice «1,250 m» y los watts máximos «210 W». El análisis de un fondo ya no muestra «Desacople -» cuando no hay dato: la lectura de abajo dice cómo medirlo.
+- **Planes con un filtro a la vista.** El tipo de entrenamiento queda arriba y «Quiero subir…» se pliega en una línea. Cada tarjeta tiene un solo botón, «Entrenar»: «Copiar y editar» está dentro del detalle.
+- **Ajustes › Tu perfil, plegado con su resumen** («35 años · 75 kg · 3 días»). Solo se abre solo si falta algo. Cada dato que falta dice para qué sirve dentro de su campo, en vez de una lista aparte.
+
 ## 0.115.0 · 2026-11-23
 
 Rema contra ti mismo de hace casi dos meses.

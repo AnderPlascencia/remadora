@@ -367,12 +367,12 @@ function valorCasilla(clave, t, dist, zfc) {
   switch (clave) {
     case 'spm': return ['Golpes/min', actual.spm];
     case 'tiempo': return ['Tiempo', formatoTiempo(t)];
-    case 'dist': return ['Distancia', dist];
+    case 'dist': return ['Distancia', `${miles(dist)} m`];
     case 'kcal': return ['Calorías', estado.sesion ? Math.round(estado.sesion.kcal) : 0];
     case 'extra': return estado.entrenamientoActivo?.objetivo && !objPaladas ? ['Paladas', estado.sesion ? Math.round(estado.sesion.paladas) : 0] : ['Calorías', estado.sesion ? Math.round(estado.sesion.kcal) : 0];
     case 'fc': return [zfc ? `Pulso · Z${zfc.n}` : 'Pulso', actual.fc || '—'];
     case 'kcalh': return ['kcal/hora', t >= 60 ? Math.round((estado.sesion.kcal * 3600) / t) : '—'];
-    case 'wmax': return ['Watts máx', estado.sesion?.wMax || 0];
+    case 'wmax': return ['Watts máx', `${estado.sesion?.wMax || 0} W`];
     case 'jpp': return ['J/palada', actual.spm ? `${Math.round((actual.watts * 60) / actual.spm)} J` : '—'];
     case 'mpp': {
       // Metros por palada de los últimos 30 s: responde a cómo remas ahora, no a toda la sesión.

@@ -85,6 +85,9 @@ export async function pintarEntrenamientos() {
   const subir = ajustes.leer('subirAtr', '');
   $('#subir-atr').innerHTML = [['', 'Todo'], ...J.ATRIBUTOS.map((a) => [a.clave, a.nombre])]
     .map(([k, n]) => `<button type="button" class="chip" data-subir="${k}" aria-pressed="${k === subir}">${n}${k && k === o.debil ? ' <span class="punto-bajo" title="Tu atributo más bajo">•</span>' : ''}</button>`).join('');
+  const atr = J.ATRIBUTOS.find((a) => a.clave === subir);
+  $('#subir-actual').textContent = atr ? atr.nombre : 'cualquier atributo';
+  if (subir) $('#subir-caja').open = true;
   for (const id of ['#secciones-etq', '#secciones-ent', '#base-nivel', '#base-tarjetas', '.mios-cabecera', '#lista-ent']) document.querySelector(id).hidden = !!subir;
   $('#subir-lista').hidden = !subir;
   if (subir) { pintarSubir(subir, h, o, lista); await llenarSelectorEntrenamientos(); return; }
@@ -94,14 +97,13 @@ export async function pintarEntrenamientos() {
   const bases = estado.baseActual.filter((x) => x.enfoque === seccion);
   $('#base-nivel').hidden = seccion === 'mios' || seccion === 'pruebas';
   $('#base-nivel').textContent = avanzado()
-    ? `Ajustados a tu condición ${estado.condicionBase || 0} (${B.TEXTO_CONDICION[B.escalonDeCondicion(estado.condicionBase || 0)]}): crecen cuando entrenas con constancia y bajan si lo dejas un tiempo.`
-    : 'Ajustados a tu forma de las últimas semanas: crecen cuando entrenas con constancia y bajan si lo dejas un tiempo.';
+    ? `Ajustados a tu condición ${estado.condicionBase || 0} (${B.TEXTO_CONDICION[B.escalonDeCondicion(estado.condicionBase || 0)]}).`
+    : 'Ajustados a tu forma de las últimas semanas.';
   $('#base-tarjetas').innerHTML = bases.map((x) => `<article class="base-tarjeta ${x.dificultad || 'prueba'}" data-ver="${x.id}">
       ${x.dificultad ? `<span class="dif">${B.nombreDificultad(x.dificultad)}</span>` : ''}<button type="button" class="base-nombre" data-ver="${x.id}" aria-label="Ver detalles de ${escaparHtml(x.nombre)}">${escaparHtml(x.nombre)}<span aria-hidden="true">›</span></button>
       <p class="base-resumen">${B.resumenEnt(x)}</p><p class="base-para">${x.proposito}</p>
       ${chipsAtr(previsionDe(x, o)?.seguro || {}, o.debil, 3)}
-      <div class="base-acciones"><button type="button" class="boton" data-usar="${x.id}">Entrenar</button>
-      <button type="button" class="boton chico" data-copiar="${x.id}">Copiar y editar</button></div></article>`).join('');
+      <div class="base-acciones"><button type="button" class="boton primario" data-usar="${x.id}">Entrenar</button></div></article>`).join('');
   // Tus entrenamientos: los de la sección, o todos en «Míos»
   const mios = seccion === 'mios' ? lista : lista.filter((x) => P.enfoqueDe(x) === seccion);
   $('#mios-titulo').textContent = seccion === 'mios' ? 'Tus entrenamientos' : `Tus entrenamientos de ${SECCIONES_ENT.find((x) => x.clave === seccion).nombre.toLowerCase()}`;
@@ -114,7 +116,8 @@ export async function pintarEntrenamientos() {
       <details class="menu-fila"><summary class="boton icono chico" aria-label="Opciones de ${escaparHtml(x.nombre)}">⋯</summary>
         <div class="menu-fila-caja"><button type="button" data-a="editar">${ico('i-editar')} Editar</button><button type="button" data-a="duplicar">${ico('i-copiar')} Duplicar</button>
         <button type="button" data-a="borrar" class="peligro">${ico('i-borrar')} Borrar</button></div></details></li>`;
-  const vacio = `<li class="vacio">${seccion === 'mios' ? 'Aún no has creado entrenamientos.' : 'Aún no tienes entrenamientos propios aquí.'} Toca «+ Nuevo» o «Copiar y editar» en uno base.</li>`;
+  // Vacío en una línea: «Copiar y editar» está dentro de cada entrenamiento de arriba.
+  const vacio = `<li class="vacio">${seccion === 'mios' ? 'Aún no has creado entrenamientos.' : 'Aún no tienes propios aquí.'}</li>`;
   ul.innerHTML = (tuyos.length ? tuyos.map(fila).join('') : vacio)
     + (prog ? '<li class="separador-plan"><button type="button" class="enlace-boton" id="btn-ver-del-plan">Las sesiones de tu plan están en Programa ›</button></li>' : '');
   await llenarSelectorEntrenamientos();
