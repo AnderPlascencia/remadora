@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.106.0 · 2026-11-23
+
+La app abre con menos peso.
+
+- **Héroe y Progreso se bajan al abrirlos.** La ficha, el camino, las misiones, la colección y la tienda del héroe, y las gráficas y el historial de Progreso, ya no se descargan al abrir la app. Se bajan la primera vez que entras a su pestaña, y sin conexión también funcionan porque quedan guardados. El JavaScript de la primera carga baja de unos 380 KB a 360 KB comprimidos.
+- El tope de JavaScript de la primera carga en las pruebas vuelve a 380 KB.
+
 ## 0.105.3 · 2026-11-22
 
 El polinesio sigue la historia de Kupe, el gran navegante.
