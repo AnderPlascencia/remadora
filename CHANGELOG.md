@@ -11,6 +11,14 @@ La tienda, por secciones y con menos texto.
 - Ya no se repite «Te faltan monedas» en cada botón: si no te alcanza, «Comprar» sale apagado.
 - Las piezas del bote van de tres en tres y la hazaña de clase cabe en una línea con su barra.
 
+## 0.106.1 · 2026-11-23
+
+La Bahía glaciar, repintada con el estilo de los héroes.
+
+- **Glaciar pintado.** Cumbres nevadas y frente de glaciar sobre agua oscura; témpanos, abetos nevados, bloques de hielo, iglú, rocas nevadas y pingüinos pintados con el mismo motor y la misma mano que los retratos.
+- **Nieve y agua oscura pintadas en la vista 3D**, con bruma lejana; también hay agua pintada en el canal de la vista 2D y una costa 2D con témpanos, iglú y bosque.
+- Miniatura nueva en la tienda.
+
 ## 0.106.0 · 2026-11-23
 
 La app abre con menos peso.
