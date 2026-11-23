@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.105.2 · 2026-11-23
+
+El Lago de los cerezos, repintado con el estilo de los héroes.
+
+- **Cerezos pintados.** Volcán nevado, colinas y cerezos en flor junto al lago; cerezos, pino japonés, bambú, torii, linterna de piedra, rocas e iris pintados con el mismo motor y la misma mano que los retratos.
+- **Pasto con pétalos y agua azul pintados en la vista 3D**, con bruma lejana; también hay agua pintada en el canal de la vista 2D y una costa 2D con cerezos y torii.
+- Miniatura nueva en la tienda.
+
 ## 0.105.1 · 2026-11-23
 
 El Lago de otoño, repintado con el estilo de los héroes.

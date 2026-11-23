@@ -40,7 +40,10 @@ c0=Image.open(R+f'assets/carrera/{k}_costa.webp'); cw,ch=c0.size
 c=np.asarray(Image.open(G+f'{k}_costa.png').convert('RGB'))[:ORI].astype(np.float32)
 ci=Image.fromarray(sin_costura_h(c,120).astype(np.uint8)); ci.resize((1536,round(ci.height*1536/ci.width)),Image.LANCZOS).save(O+f'{k}_costa.webp',quality=80)
 # piezas
-def objetos(path):
+RGBA={}
+# Hojas cuyo fondo se parece a las piezas (cerezos rosas sobre fondo rosa): el fondo se toma por relleno desde el borde.
+RELLENO={('cerezos','A')}
+def objetos(path, hoja=''):
   im=np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
   bg=np.median(np.concatenate([im[:8].reshape(-1,3),im[-8:].reshape(-1,3),im[:,:8].reshape(-1,3),im[:,-8:].reshape(-1,3)]),axis=0)
   d=np.sqrt(((im-bg)**2).sum(-1)); alpha=np.clip((d-60)/50,0,1)
@@ -48,13 +51,22 @@ def objetos(path):
     # Fondo magenta: se mide por lo «magenta» (min(R,B) − G), no por la distancia al color. Así las rocas rojas
     # y el adobe rosado no se toman por fondo (antes salían transparentes a medias y verdosos).
     M=np.minimum(im[...,0],im[...,2])-im[...,1]; bM=min(bg[0],bg[2])-bg[1]
-    alpha=np.clip((0.6*bM-M)/(0.5*bM),0,1)
+    alpha=np.maximum(np.clip((0.6*bM-M)/(0.5*bM),0,1),np.clip((d-100)/40,0,1))  # lo claro (flores) se aleja del fondo aunque sea rosa
+  if (k,hoja) in RELLENO:
+    u8=im.astype(np.uint8).copy(); hh,ww=u8.shape[:2]; fondo=np.zeros((hh+2,ww+2),np.uint8)
+    for sx,sy in [(0,0),(ww-1,0),(0,hh-1),(ww-1,hh-1),(ww//2,0),(ww//2,hh-1),(0,hh//2),(ww-1,hh//2)]:
+      cv2.floodFill(u8,fondo,(sx,sy),0,(28,28,28),(28,28,28),cv2.FLOODFILL_MASK_ONLY|cv2.FLOODFILL_FIXED_RANGE|(1<<8)|8)
+    fondo=fondo[1:-1,1:-1].astype(bool)
+    # Lo claro (flores) se queda; lo oscuro que tira a rosa (borde de pinos) se recorta por croma.
+    da=np.clip((d-25)/30,0,1); lum=im.mean(-1)
+    alpha=np.where(fondo,0.0,np.where(lum>140,da,np.minimum(da,alpha)))
+    alpha=cv2.GaussianBlur(alpha.astype(np.float32),(3,3),0)
   alpha=np.minimum(alpha,cv2.erode(alpha.astype(np.float32),np.ones((3,3),np.uint8)))
   a3=np.clip(alpha,0.05,1)[...,None]
   sp=np.where(alpha[...,None]<1,(im-(1-a3)*bg)/a3,im)
   ex=np.clip(np.minimum(sp[...,0],sp[...,2])-sp[...,1],0,None)
   if bg[0]>bg[1] and bg[2]>bg[1]: sp[...,0]-=ex; sp[...,2]-=ex
-  rgba=np.dstack([sp.clip(0,255),alpha*255]).astype(np.uint8)
+  rgba=np.dstack([sp.clip(0,255),alpha*255]).astype(np.uint8); RGBA[hoja]=rgba
   mask=(alpha>0.08).astype(np.uint8)
   mask=cv2.dilate(mask,np.ones((9,9),np.uint8))
   n,lab,st,cen=cv2.connectedComponentsWithStats(mask,8)
@@ -67,12 +79,16 @@ def objetos(path):
     if len(ys)==0: continue
     objs.append((x+w/2,y+h/2,Image.fromarray(cr[ys.min():ys.max()+1, xs.min():xs.max()+1],'RGBA')))
   return objs
-L={'A':objetos(G+f'{k}_piezasA.png'),'B':objetos(G+f'{k}_piezasB.png')}
+L={'A':objetos(G+f'{k}_piezasA.png','A'),'B':objetos(G+f'{k}_piezasB.png','B')}
 ini=src.index(f"  {k}: "); j=src.index('piezas: {',ini); e=src.index('}\n      },',j)
 pz={m.group(1):tuple(float(v) for v in m.group(2,3,4,5,6,7)) for m in re.finditer(r"(\w+): \{ x: (\d+), y: (\d+), w: (\d+), h: (\d+), pie: \[([\d.]+), ([\d.]+)\]",src[j:e])}
 a0=Image.open(R+f'assets/carrera/{k}_orilla.webp'); at=Image.new('RGBA',a0.size,(0,0,0,0))
 for nombre,(x,y,W,H,px,py) in pz.items():
-  hoja,px0,py0=PUNTOS[nombre]; ob=min(L[hoja],key=lambda o:(o[0]-px0)**2+(o[1]-py0)**2)[2]
+  hoja,px0,py0=PUNTOS[nombre][:3]
+  if len(PUNTOS[nombre])==7:  # recorte a mano: piezas que se tocan en la hoja (bambú y linterna)
+    x0,y0,x1,y1=PUNTOS[nombre][3:]; cr=RGBA[hoja][y0:y1,x0:x1]; ys,xs=np.where(cr[...,3]>40)
+    ob=Image.fromarray(cr[ys.min():ys.max()+1, xs.min():xs.max()+1],'RGBA')
+  else: ob=min(L[hoja],key=lambda o:(o[0]-px0)**2+(o[1]-py0)**2)[2]
   s1=min(W/ob.width,H*py/ob.height)
   if W/ob.width < H*py/ob.height:  # limitado por el ancho: aplastar un poco para ganar alto
     sq=max(0.72,(W/ob.width)/(H*py/ob.height)); ob=ob.resize((max(1,int(ob.width*sq)),ob.height)); s1=min(W/ob.width,H*py/ob.height)
