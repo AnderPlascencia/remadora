@@ -166,6 +166,9 @@ Object.assign(PAISAJES, {
     nombre: 'Lago de otoño',
     texto: 'Bosque de arces rojos y dorados, cabañas de troncos y una canoa.',
     precio: 1100,
+    agua: { src: 'assets/carrera/otono_agua3d.webp', m: 9 },
+    suelo3d: { src: 'assets/carrera/otono_suelo.webp', m: 8 },
+    aguaTextura3d: { src: 'assets/carrera/otono_agua3d.webp', m: 10 },
     orilla: {
       piezas: {
         pino: { x: 0, y: 0, w: 451, h: 752, pie: [0.5, 0.996], m: 11.75 },
