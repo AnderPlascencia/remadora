@@ -274,7 +274,7 @@ async function pintarPreparar() {
   const partes = [...est.detalle.map(([k, v]) => [k, v]), ...(est.extra ? [['Misiones y logros', est.extra]] : [])].filter(([, v]) => v > 0);
   caja.innerHTML = `<div class="xp-cabecera">${ico('i-trofeo')}<div><b>≈ ${miles(est.total)} XP</b> <span class="monedas">${icoMoneda}${est.monedas}</span>
     <small>si ${condicion}${est.subeNivel ? ` · subirías al nivel ${est.subeNivel}` : ''}</small></div></div>
-    <div class="xp-partes">${partes.map(([k, v]) => `<span>${k} <b>+${miles(v)}</b></span>`).join('')}</div>
+    ${partes.length ? `<details class="mas-detalle xp-desglose"><summary>De dónde sale la XP</summary><div class="xp-partes">${partes.map(([k, v]) => `<span>${k} <b>+${miles(v)}</b></span>`).join('')}</div></details>` : ''}
     ${bloqueAtributos(ent, hip, est, sesiones)}`;
 }
 

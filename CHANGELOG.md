@@ -2,6 +2,21 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.115.0 · 2026-11-23
+
+Rema contra ti mismo de hace casi dos meses.
+
+- **«Yo hace 7 semanas».** En las opciones de carrera hay una tercera línea amarilla de referencia: tu misma sesión de este entrenamiento de hace 6 a 8 semanas, la más cercana a 7. Así ves en el agua cuánto mejoraste. Si no hay una en ese rango, la app te lo dice.
+
+## 0.114.0 · 2026-11-23
+
+Hoy propone una sola cosa.
+
+- **La sesión del plan viene elegida también el día en que lo creas.** Un plan creado en domingo deja lista su primera sesión, la del lunes adelantada. Antes la tarjeta proponía Remo libre y debajo decía «Tu plan dice…».
+- **Programa ya no dice «no hay sesiones»** cuando el plan arranca la semana que viene: dice «Tu semana 1 empieza el lun 9 nov.».
+- **Lo hecho cierra la tarjeta.** Cuando ya remaste lo de hoy, Hoy dice «Hecho ✓» con la próxima sesión y su día. Desaparecen la versión corta y la promesa de XP, y Empezar abre un Remo libre suave por si quieres más.
+- **La XP prevista va en una línea con las monedas.** El desglose se abre en «De dónde sale la XP».
+
 ## 0.113.0 · 2026-11-23
 
 Los planes hacia una meta de 5 o 10 km entrenan a la intensidad correcta.
