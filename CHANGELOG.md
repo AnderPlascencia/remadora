@@ -2,7 +2,7 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
-## 0.122.0 · 2026-11-23
+## 0.123.0 · 2026-11-23
 
 Botes y velas nuevos en la carrera (aprobados por Ander).
 
@@ -10,6 +10,14 @@ Botes y velas nuevos en la carrera (aprobados por Ander).
 - **El remero cabe en su bote.** Es más pequeño respecto al casco y sus remos van apoyados en los toletes. Las rodillas se abren hacia la borda al recoger, sin salirse ni esconderse bajo el bote, y los pies apuntan hacia delante.
 - **Velas de verdad.** El mástil va a proa del remero, con su verga, y la vela se infla hacia delante con el viento de popa. En la 3D se ve su cara cóncava, con sus escotas a la borda. La tela es la de tu vela de la colección, o la clásica de tu clase.
 - **Gallardete en el tope.** Ondea hacia delante, como la vela, con el color de la marca de tu vela.
+
+## 0.122.0 · 2026-11-23
+
+Insignias de capítulo con nombre propio.
+
+- **Ya no son ropa de otra clase.** Las insignias de los capítulos 1 a 5 se llamaban como prendas de una clase (yelmo vikingo, sombrero pirata, kabuto…). Ahora cada una lleva el nombre de su capítulo: «Llave del muelle», «Escama de la Serpiente», «Diente del Kraken», «Brújula de mar abierto» y «Farol de la niebla».
+- **Sin nombres repetidos.** La insignia del capítulo 5 ya no se llama igual que el talento «Corona naval».
+- Las insignias que ya ganaste se conservan; solo cambia su nombre.
 
 ## 0.121.1 · 2026-11-23
 
