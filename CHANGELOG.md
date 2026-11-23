@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.115.0 · 2026-11-23
+
+Rema contra ti mismo de hace casi dos meses.
+
+- **«Yo hace 7 semanas».** En las opciones de carrera hay una tercera línea amarilla de referencia: tu misma sesión de este entrenamiento de hace 6 a 8 semanas, la más cercana a 7. Así ves en el agua cuánto mejoraste. Si no hay una en ese rango, la app te lo dice.
+
 ## 0.114.0 · 2026-11-23
 
 Hoy propone una sola cosa.
