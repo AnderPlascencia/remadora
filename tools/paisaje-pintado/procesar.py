@@ -111,7 +111,7 @@ def sin_costura(im):
 sin_costura(Image.open(G+f'{k}_suelo.png').convert('RGB')).resize((256,256),Image.LANCZOS).save(O+f'{k}_suelo.webp',quality=78)
 CAJA_AGUA={'canon':(120,70,512,430)}.get(k,(0,200,512,512))
 a=Image.open(G+f'{k}_agua.png').convert('RGB').crop(CAJA_AGUA).resize((512,512))
-ag=np.asarray(sin_costura(a)).astype(np.float32); cf={'canon':2.2,'otono':2.4}.get(k,1.0)
+ag=np.asarray(sin_costura(a)).astype(np.float32); cf={'canon':2.2,'otono':2.4,'glaciar':2.2}.get(k,1.0)
 ag=(ag-ag.reshape(-1,3).mean(0))*cf+ag.reshape(-1,3).mean(0)
 Image.fromarray(ag.clip(0,255).astype(np.uint8)).resize((256,256),Image.LANCZOS).save(O+f'{k}_agua3d.webp',quality=78)
 for f in sorted(os.listdir(O)): print(f, os.path.getsize(O+f))

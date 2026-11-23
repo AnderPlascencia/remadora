@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.106.1 · 2026-11-23
+
+La Bahía glaciar, repintada con el estilo de los héroes.
+
+- **Glaciar pintado.** Cumbres nevadas y frente de glaciar sobre agua oscura; témpanos, abetos nevados, bloques de hielo, iglú, rocas nevadas y pingüinos pintados con el mismo motor y la misma mano que los retratos.
+- **Nieve y agua oscura pintadas en la vista 3D**, con bruma lejana; también hay agua pintada en el canal de la vista 2D y una costa 2D con témpanos, iglú y bosque.
+- Miniatura nueva en la tienda.
+
 ## 0.106.0 · 2026-11-23
 
 La app abre con menos peso.
