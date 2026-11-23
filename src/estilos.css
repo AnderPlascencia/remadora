@@ -2205,3 +2205,6 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 
 /* Hoy cerrado (lo de hoy ya está hecho): sin promesa de XP para una sesión opcional. */
 .preparar.hecho-hoy #xp-estimada { display: none; }
+/* Ajustes › Tu perfil: para qué sirve cada dato que falta, dentro de su campo. */
+.pista-campo { display: block; font-size: var(--t-xs); color: var(--texto-tenue); font-weight: 400; margin: 2px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pista-campo[hidden] { display: none; }
