@@ -2214,3 +2214,10 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 .capacidades-vacias ul { margin: 0; padding-left: 18px; color: var(--texto-tenue); font-size: var(--t-s); }
 .capacidades-vacias li { margin: 4px 0; }
 .capacidades-vacias b { color: var(--texto-suave); }
+/* Resumen: minutos por encima del rango en un día suave del plan (no suman). */
+.fuera-plan { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 10px; font-size: var(--t-s); }
+.fuera-plan .ico { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+/* Día suave del plan remado por encima del rango: el reto pasa a ser una orden en ámbar. */
+.atr-reto.atencion { border-color: var(--aviso); border-style: solid; }
+.atr-reto.atencion b, .mr-atr.atencion b { color: var(--aviso); }
+:root[data-tema="claro"] .atr-reto.atencion b, :root[data-tema="claro"] .mr-atr.atencion b { color: #8A5A00; }

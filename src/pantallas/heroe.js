@@ -545,8 +545,10 @@ export async function pintarAtrSesion(s, previas, resumen) {
   // Lo próximo va justo después del esfuerzo, antes del juego (etapa 6); los logros se quedan con la XP.
   $('#hoja-proxima').hidden = !prox;
   $('#hoja-proxima').innerHTML = prox;
-  caja.hidden = !r.logros.length && !r.cerca.length;
-  caja.innerHTML = `${r.logros.length ? `<h3>Lo que lograste</h3><ul class="lista-cond">${r.logros.map((x) => filaCond(x, 'hecho')).join('')}</ul>` : ''}
+  caja.hidden = !r.logros.length && !r.cerca.length && !r.fuera;
+  // Fuera del plan (día suave remado fuerte): primero y en ámbar, sin puntos.
+  const fuera = r.fuera ? `<p class="aviso fuera-plan">${ico(r.fuera.icono)}<span><b>${escaparHtml(r.fuera.titulo)}</b> ${escaparHtml(r.fuera.detalle)}</span></p>` : '';
+  caja.innerHTML = `${fuera}${r.logros.length ? `<h3>Lo que lograste</h3><ul class="lista-cond">${r.logros.map((x) => filaCond(x, 'hecho')).join('')}</ul>` : ''}
     ${r.cerca.length ? `<details class="mas-detalle"><summary>Te quedaste cerca <span class="seccion-resumen">${r.cerca.length}</span></summary><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul></details>` : ''}`;
 }
 

@@ -9,7 +9,7 @@ import { tecnicaDeSesion, BONO_PCT } from './tecnica.js';
 
 // Tipos de sesión hechos para apretar. En el resto (fondo, técnica, calorías, remo libre) los retos no piden
 // sprints ni minutos en zona 4: romperían el día suave, que es lo que deja fresco para la próxima dura.
-export const INTENSOS = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
+export const INTENSOS = J.TIPOS_INTENSOS;
 export const esIntenso = (tipo) => INTENSOS.has(tipo);
 
 const ftpO = (ftp) => ftp || 150;
@@ -108,11 +108,13 @@ export function mejoresPara(clave, ents, opts = {}) {
 // rango = { min, max } en watts del tramo actual: el reto nunca te pide salirte de él.
 // tipo = tipoPlan del entrenamiento (null en remo libre). Sin rango en watts el reto nunca te pide subir de zona,
 // y en un día suave tampoco te premia por quedarte por encima de la zona 3.
-export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, rango = null, tipo = null } = {}) {
+// delPlan: la sesión es del plan (con un tipo suave, ir por encima de la zona 3 no suma y el reto pide bajar).
+export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, rango = null, tipo = null, delPlan = false, ahora = Date.now() } = {}) {
   const f = ftpO(ftp);
   if (!muestras.length) return null;
   const fin = muestras.at(-1);
-  const s = { fecha: Date.now(), duracion: fin.t, distancia: fin.dist || 0, muestras, ftp: f, pctEnRango: pct, tiempoMeta: null,
+  const s = { fecha: ahora, duracion: fin.t, distancia: fin.dist || 0, muestras, ftp: f, pctEnRango: pct, tiempoMeta: null,
+    tipoPlan: tipo, delPrograma: delPlan || undefined,
     wattsProm: Math.round(muestras.reduce((a, x) => a + x.w, 0) / muestras.length) };
   const totales = J.atributosDeSesion(s, { ftp: f, clase, ctx });
   const ult = muestras.slice(-10);
@@ -130,17 +132,21 @@ export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, 
     const porSeg = (0.6 / 60) * J.factorAtributo('tecnica', clase);
     const falta = Math.floor(v) + 1 - v;
     const txt = rango.max ? `${rango.min}–${rango.max} W` : `${rango.min} W o más`;
+    // Por encima del rango en un día suave del plan: una orden clara, en ámbar (no suma y estropea el fondo).
+    const bajar = fuera && rango.max && w > rango.max && J.esSuaveDelPlan(s);
     reto = {
       atributo: 'tecnica', puntos: 1, progreso: fuera ? 0 : 1 - falta, faltanSeg: fuera ? null : Math.max(1, Math.ceil(falta / porSeg)),
-      titulo: fuera ? `Vuelve a tu rango: ${txt}` : `Quédate en ${txt}`,
+      ...(bajar ? { aviso: true } : {}),
+      titulo: bajar ? `Baja a ${txt}` : fuera ? `Vuelve a tu rango: ${txt}` : `Quédate en ${txt}`,
       detalle: 'Cada minuto en rango, con la potencia pareja y la cadencia estable, suma Técnica.', corto: 'En rango y parejo sumas Técnica',
     };
   } else if (!rango && !esIntenso(tipo) && tipo != null && (!zona || zona.atributo !== 'resistencia')) {
     // Día suave sin rango en watts (fondo por pulso, meta de distancia o calorías): solo zonas 2 y 3.
     const arriba = !!zona;
+    const bajar = arriba && J.esSuaveDelPlan(s);
     reto = {
-      atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null,
-      titulo: arriba ? `Hoy toca suave: entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} W` : `Desde ${vatios(f, 0.56)} W sumas Resistencia`,
+      atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null, ...(bajar ? { aviso: true } : {}),
+      titulo: bajar ? `Baja a ${vatios(f, 0.56)}–${vatios(f, 0.9)} W` : arriba ? `Hoy toca suave: entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} W` : `Desde ${vatios(f, 0.56)} W sumas Resistencia`,
       detalle: 'Cada 2 min en zonas 2 y 3 suma Resistencia.', corto: `${vatios(f, 0.56)}–${vatios(f, 0.9)} W suma Resistencia`,
     };
   } else if (zona) {
@@ -176,9 +182,13 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
   const w106 = vatios(f, 1.06);
   if (s.tiempoMeta != null) logros.push({ icono: 'i-check', titulo: 'Terminaste el entrenamiento completo', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
   else if (s.entrenamiento) cerca.push({ icono: 'i-aviso', titulo: 'No lo terminaste', detalle: 'Terminarlo completo suma Voluntad.', atributo: 'voluntad', puntos: 3 * fa('voluntad') });
-  if (m.z4min >= 1) logros.push({ icono: 'i-fuego', titulo: `${Math.round(m.z4min)} min en zona 4`, detalle: `Por encima de ${w91} W.`, atributo: 'fuerza', puntos: real.fuerza });
   const agiSeg = (s.muestras || []).filter((x) => x.w / f >= 1.06).length;
-  if (agiSeg >= 20) logros.push({ icono: 'i-rayo', titulo: `${agiSeg} s por encima de ${w106} W`, atributo: 'agilidad', puntos: (agiSeg / 20) * fa('agilidad') });
+  // Día suave del plan: ir por encima de la zona 3 no suma (ver J.esSuaveDelPlan); se dice como lo que es.
+  const suavePlan = J.esSuaveDelPlan(s);
+  const fuera = suavePlan && m.z4min >= 1
+    ? { icono: 'i-aviso', titulo: `${Math.round(m.z4min)} min por encima de ${w91} W`, detalle: 'Hoy tocaba suave: ir más fuerte no suma Fuerza ni Agilidad y te quita frescura para la próxima dura.' } : null;
+  if (fuera) { /* va aparte: no es un logro ni algo que quedó cerca */ } else if (m.z4min >= 1) logros.push({ icono: 'i-fuego', titulo: `${Math.round(m.z4min)} min en zona 4`, detalle: `Por encima de ${w91} W.`, atributo: 'fuerza', puntos: real.fuerza });
+  if (suavePlan) { /* sin premio por ir rápido en un día suave */ } else if (agiSeg >= 20) logros.push({ icono: 'i-rayo', titulo: `${agiSeg} s por encima de ${w106} W`, atributo: 'agilidad', puntos: (agiSeg / 20) * fa('agilidad') });
   else if (s.muestras?.length && esIntenso(s.tipoPlan)) cerca.push({ icono: 'i-rayo', titulo: agiSeg ? `Solo ${agiSeg} s por encima de ${w106} W` : `Nada por encima de ${w106} W`, detalle: 'Un sprint de 20 s al final ya cuenta.', atributo: 'agilidad', puntos: fa('agilidad') });
   if (J.esEtapa12(s.fecha)) {
     const t = tecnicaDeSesion(s, f);
@@ -211,7 +221,7 @@ export function analisis(s, { ftp = 0, clase = null, ctx = {} } = {}) {
   }
   if (real.recuperacion >= 1) logros.push({ icono: 'i-corazon', titulo: 'Sesión de recuperación', atributo: 'recuperacion', puntos: real.recuperacion });
   const fino = (l) => l.map((x) => ({ ...x, puntos: Math.max(1, Math.round(x.puntos)) })).sort((a, b) => b.puntos - a.puntos).slice(0, 3);
-  return { logros: fino(logros), cerca: fino(cerca) };
+  return { logros: fino(logros), cerca: fino(cerca), fuera };
 }
 
 export const textoPuntos = (x) => `${x.puntos > 0 ? '+' : '−'}${Math.abs(x.puntos)} ${nombre(x.atributo)}`;
