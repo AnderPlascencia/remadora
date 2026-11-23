@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.112.1 · 2026-11-23
+
+La Costa mediterránea, repintada con el estilo de los héroes.
+
+- **Costa pintada.** Acantilados de caliza con casitas blancas al fondo y mar azul; cipreses, piñonero, olivo, casa encalada, buganvilla, rocas, barca y romero pintados con el mismo motor y la misma mano que los retratos.
+- **Pasto seco y mar azul pintados en la vista 3D**, con agua pintada en el canal de la vista 2D y una costa 2D con olivos, cipreses y rocas.
+- Miniatura nueva en la tienda.
+- **Marcas de metros más ligeras en 3D.** Los flotadores de todas las filas se pintan de una vez, así la vista 3D gasta menos en cada cuadro.
+
 ## 0.112.0 · 2026-11-23
 
 Accesibilidad que se nota en el teléfono.
