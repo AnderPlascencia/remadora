@@ -1097,11 +1097,17 @@ export function ratioCarga(sesiones, ftp, ahora = Date.now()) {
 // Monotonía > 2 con mucha carga = riesgo de sobrecarga.
 export function monotonia(sesiones, ftp, ahora = Date.now()) {
   const dias = forma(sesiones, ftp, 7, ahora).map((d) => d.carga);
-  const m = media(dias);
-  const sd = Math.sqrt(media(dias.map((x) => (x - m) ** 2)));
-  if (!m || !sd) return null;
-  const mono = dosDec(m / sd);
-  return { monotonia: mono, tension: Math.round(m * 7 * mono) };
+  const v = monotoniaCargas(dias);
+  if (v == null || !Number.isFinite(v)) return null;
+  const mono = dosDec(v);
+  return { monotonia: mono, tension: Math.round(media(dias) * 7 * mono) };
+}
+// El cálculo de Foster sobre cargas diarias: media / desviación. null sin carga; Infinity si todos los días son iguales.
+export function monotoniaCargas(cargas) {
+  const m = media(cargas);
+  if (!m) return null;
+  const sd = Math.sqrt(media(cargas.map((x) => (x - m) ** 2)));
+  return sd ? m / sd : Infinity;
 }
 
 // Reparto de la intensidad en los últimos `dias`: % del tiempo suave (≤ 75 % FTP), medio (76–90 %) y fuerte (> 90 %).

@@ -58,6 +58,7 @@ export const AJUSTES = {
   eleccionDia: A('texto', '', false),
   antesDeRemar: A('json', null, false), // { dia, sueno, dolor, zona }: lo que respondiste hoy antes de remar
   dolores: A('json', [], true), // [{ dia, dolor, zona }] de las últimas 4 semanas (etapa 27)
+  riesgoAbandono: A('json', null, false), // { dia, respondido } del último aviso de riesgo de abandono (etapa 30, habito.js). Fuera del respaldo: lo escribe el teléfono al mostrarlo
   // Dónde te quedaste en la pantalla
   modoEnt: A('texto', 'libre', false),
   ultimoEnt: A('texto', '', false),

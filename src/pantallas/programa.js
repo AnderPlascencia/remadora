@@ -11,6 +11,7 @@ import * as XC from '../xp-carga.js';
 import * as B from '../base.js';
 import * as Cap from '../capacidades.js';
 import * as A from '../adaptacion.js';
+import * as Hab from '../habito.js';
 import * as Pf from '../perfil.js';
 import * as Ci from '../cita.js';
 import { $, COLOR_ZONA, ajustes, citaGuardada, escaparHtml, ftp, ico, miles, perfil, previoHoy, toast } from '../ui.js';
@@ -583,12 +584,27 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   const usarFtp = (v) => { guardarFtp(v, true); revisado(); toast(`FTP: ${v} W. Tus zonas se ajustan solas`); pintarHoy(); };
   const noFtp = () => { revisado(); pintarHoy(); };
   // Un plan armado sin historial se ajusta a lo que remas cuando ya hay 4 sesiones desde que empezó.
+  const hoyClave = E.claveDia(Date.now());
+  let riesgo = null;
+  if (!estado.sesion && !sesiones.some((x) => E.claveDia(x.fecha) === hoyClave)) {
+    let previo = null;
+    try { previo = JSON.parse(ajustes.leer('riesgoAbandono', 'null')); } catch { /* sin aviso previo */ }
+    riesgo = Hab.mostrarRiesgo(previo, hoyClave) ? Hab.riesgoAbandono(sesiones) : null;
+    if (riesgo && previo?.dia !== hoyClave) ajustes.escribir('riesgoAbandono', JSON.stringify({ dia: hoyClave }));
+  }
   const desdePlan = prog ? sesiones.filter((x) => E.claveDia(x.fecha) >= prog.inicio).length : 0;
   if (prog?.proponerRehacer === E.claveDia(Date.now()) && prog.objetivo) {
     // Regreso tras 3 semanas o más (etapa 14): rehacer el plan desde hoy, a tu nivel de ahora.
     sug = { texto: A.textoRegreso('largo', prog.regreso?.dias ?? 21), boton: 'Rehacer plan', accion: () => rehacerPlan(prog, { ajustar: true, aviso: 'Rehice tu plan desde hoy' }) };
   } else if (prog?.sinHistorial && prog.objetivo && desdePlan >= 4 && dia?.fuente !== 'terminado') {
     sug = { texto: 'Tu plan se armó sin historial. ¿Lo ajusto a lo que remas ahora?', boton: 'Ajustar', accion: () => rehacerPlan(prog, { ajustar: true }) };
+  } else if (riesgo) {
+    // Riesgo de abandono (etapa 30): una sola vez, con una salida fácil y sin reproches.
+    const n = prog?.objetivo ? prog.porSemana || 3 : 0;
+    const fin = () => { ajustes.escribir('riesgoAbandono', JSON.stringify({ dia: hoyClave, respondido: true })); };
+    sug = n >= 3
+      ? { texto: Hab.textoRiesgo(riesgo), boton: `Bajar a ${n - 1} días`, accion: () => { fin(); rehacerPlan(prog, { ajustar: true, dias: n - 1, aviso: `Tu plan ahora es de ${n - 1} días por semana` }); }, no: () => { fin(); pintarHoy(); } }
+      : { texto: `${Hab.textoRiesgo(riesgo)} Una sesión suave y corta también cuenta.`, boton: 'Fondo suave', accion: () => { fin(); elegirEnt('base:dis-suave'); pintarHoy(); }, no: () => { fin(); pintarHoy(); } };
   } else if (valorDia && !esDelDia && dia.fuente !== 'hecho') {
     const que = { plan: 'Tu plan dice', recuperar: 'Puedes recuperar', sugerida: 'Te sugiero' }[dia.fuente] || 'Hoy';
     const nombre = dia.ent || estado.baseActual.find((x) => x.id === dia.id)?.nombre || '';

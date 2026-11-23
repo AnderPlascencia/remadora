@@ -75,6 +75,39 @@ export function pausas(sesiones, ahora = Date.now()) {
   };
 }
 
+// Riesgo de abandono (etapa 30): remabas con regularidad (2 o más por semana en las 4 semanas de antes) y ahora
+// mucho menos. «baja»: las 2 últimas semanas cerradas, a la mitad o menos, y 3 días o más sin remar. «hueco»: 7 días
+// o más sin remar. Con 21 días o más ya no se avisa: lo cubre el regreso, que rehace el plan.
+export const RIESGO = { minBase: 2, caida: 0.5, diasBaja: 3, diasHueco: 7, diasRegreso: 21, silencio: 42 };
+export function riesgoAbandono(sesiones, ahora = Date.now()) {
+  if (sesiones.length < 6) return null;
+  const primera = sesiones.reduce((m, s) => Math.min(m, s.fecha), Infinity);
+  if (inicioPeriodo(primera, 'semana') > inicioPeriodo(ahora, 'semana') - 6 * 7 * DIA) return null;
+  const sem = sesionesPorSemana(sesiones.filter((s) => s.fecha <= ahora), 7, ahora);
+  const prom = (xs) => Math.round((10 * xs.reduce((a, b) => a + b, 0)) / xs.length) / 10;
+  const base = prom(sem.slice(0, 4));
+  const reciente = prom(sem.slice(4, 6));
+  const { diasSinRemar: dias } = pausas(sesiones.filter((s) => s.fecha <= ahora), ahora);
+  if (base < RIESGO.minBase || dias == null || dias >= RIESGO.diasRegreso) return null;
+  if (dias >= RIESGO.diasHueco) return { motivo: 'hueco', base, reciente, dias };
+  if (dias >= RIESGO.diasBaja && reciente <= base * RIESGO.caida && sem[6] < base * RIESGO.caida) return { motivo: 'baja', base, reciente, dias };
+  return null;
+}
+// Se pregunta una sola vez: el día que aparece y, después de contestar o de ese día, no vuelve en 6 semanas.
+// `guardado` = { dia, respondido } del último aviso.
+export function mostrarRiesgo(guardado, hoy) {
+  if (!guardado?.dia) return true;
+  if (guardado.dia === hoy) return !guardado.respondido;
+  return Date.parse(`${hoy}T12:00`) - Date.parse(`${guardado.dia}T12:00`) >= RIESGO.silencio * DIA;
+}
+const vecesSemana = (n) => `${String(n).replace('.', ',')} ${n === 1 ? 'vez' : 'veces'} por semana`;
+export function textoRiesgo(r) {
+  const antes = r.motivo === 'hueco'
+    ? `Llevas ${r.dias} días sin remar, y antes remabas ${vecesSemana(r.base)}.`
+    : `Últimamente remas menos: ${vecesSemana(r.reciente)}, antes ${vecesSemana(r.base)}.`;
+  return `${antes} Le pasa a todos. ¿Lo hacemos más fácil? Si prefieres parar unas semanas, también está bien: tu progreso te espera.`;
+}
+
 // Lo que dicen los eventos en los últimos `dias` días.
 export function resumenEventos(eventos, sesiones, dias = 28, ahora = Date.now()) {
   const desde = ahora - dias * DIA;

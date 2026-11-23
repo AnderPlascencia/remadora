@@ -252,9 +252,7 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now(), { previo = null 
 // Monotonía de 7 cargas diarias (con los días sin remar en 0), o null si no pasa de 2 o hay menos de 5 días con carga.
 export function monotoniaDe(cargas) {
   if (cargas.length < 7 || cargas.filter((c) => c > 0).length < 5) return null;
-  const m = cargas.reduce((a, c) => a + c, 0) / cargas.length;
-  const sd = Math.sqrt(cargas.reduce((a, c) => a + (c - m) ** 2, 0) / cargas.length);
-  const v = sd ? m / sd : Infinity;
+  const v = E.monotoniaCargas(cargas);
   return v > 2 ? Math.round(Math.min(v, 9) * 10) / 10 : null;
 }
 
