@@ -8,7 +8,7 @@ import * as O from '../objetos.js';
 import * as V from '../ventajas.js';
 import * as B from '../base.js';
 import {
-  $, ajustes, escaparHtml, ftp, ico, miles, toast, 
+  $, ajustes, escaparHtml, ftp, marcarPestanas, ico, miles, toast, 
 } from '../ui.js';
 import { estado } from '../estado.js';
 import { pintarClasificacion } from './ajustes.js';
@@ -99,6 +99,7 @@ export async function pintarHeroe() {
     b.classList.toggle('activa', b.dataset.hp === vh.seccion);
     b.setAttribute('aria-selected', String(b.dataset.hp === vh.seccion));
   }
+  marcarPestanas($('.heroe-tabs'));
   for (const el of document.querySelectorAll('.hp')) el.hidden = el.id !== `hp-${vh.seccion}`;
   ({ ficha: pintarFicha, camino: pintarCamino, misiones: pintarMisiones, tienda: pintarTienda })[vh.seccion](h, per, clase, sesiones);
 }
