@@ -12,7 +12,7 @@ import * as Hab from '../habito.js';
 import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles, perfil } from '../ui.js';
 import { estado } from '../estado.js';
 import { avanzado } from './ajustes.js';
-import { estadoHeroe, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
+import { estadoHeroe, fichaInsignia, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
 import { abrirSesion } from './detalle.js';
 import { leerPrograma } from './programa.js';
 
@@ -321,8 +321,12 @@ export async function pintarHistorial() {
 
   const ins = E.insignias(lista, { primeraSemanaPlan: h.racha?.primeraSemanaPlan ?? null });
   $('#insignias-resumen').textContent = `${ins.filter((x) => x.ganada).length} de ${ins.length}`;
-  $('#insignias').innerHTML = ins.map((x) => `<div class="insignia${x.ganada ? '' : ' bloqueada'}" title="${x.detalle}"><span class="medalla">${ico('i-trofeo')}</span>
-    <b>${x.nombre}</b><small>${x.ganada ? fechaCorta(x.fecha) : x.detalle}</small></div>`).join('');
+  // Primero las que te faltan, de la más cercana a la más lejana; las ganadas al final.
+  const cerca = (x) => (x.ganada ? 2 : x.meta ? 1 - x.valor / x.meta : 1);
+  $('#insignias').innerHTML = [...ins].sort((a, b) => cerca(a) - cerca(b)).map((x) => fichaInsignia({
+    nombre: x.nombre, como: x.detalle, ganada: x.ganada, fecha: x.fecha,
+    avance: x.meta && !x.ganada ? { texto: `${(Math.floor(x.valor * 10) / 10).toLocaleString('es-MX')} de ${x.meta} ${x.unidad}`, pct: (100 * x.valor) / x.meta } : null,
+  })).join('');
 
   const recs = E.calcularRecords(lista);
   // Cuatro récords a la vista; el resto, al tocar «Ver todos».

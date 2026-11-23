@@ -2,6 +2,18 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.108.0 · 2026-11-23
+
+Las insignias dicen cómo se consiguen.
+
+- Cada insignia, en Héroe › Ficha y en Progreso, dice «Cómo: …» con un verbo y la meta («rema 34 km en total»), lleva su avance con barra («20 de 34 km») y, cuando ya es tuya, la fecha en que la ganaste.
+- Las de capítulo nombran al jefe de tu saga y cómo vencerlo; la del capítulo en curso dice qué falta para abrirlo o que ya puedes enfrentarlo.
+- Las que te faltan salen primero, de la más cercana a la más lejana.
+- «Rival avanzado» ya se puede ganar: basta ganar una carrera en Alta mar. Quien la ganó con el rival avanzado de antes la conserva.
+- El aura de hielo sale una sola vez (tenía dos logros) y «Bajo 8 minutos», que ya no se puede ganar, no aparece si no la tienes.
+- El jefe en Misiones nombra la insignia que da. En la Tienda, el detalle de una pieza bloqueada dice la hazaña con su meta o el jefe por su nombre, y lo que no te alcanza dice cuántas monedas te faltan.
+- Los logros en escalera (km, sesiones, semanas, FTP, nivel) muestran su unidad en el avance.
+
 ## 0.107.2 · 2026-11-23
 
 Las marcas de metros, integradas en el paisaje.

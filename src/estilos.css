@@ -538,11 +538,16 @@ details.seccion[open] { padding-bottom: 8px; }
 .recomendacion.descanso { border-left-color: var(--peligro); }
 .recomendacion.suave { border-left-color: var(--aviso); }
 .recomendacion.fuerte { border-left-color: var(--exito); }
-.insignias { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 4px 0 8px; }
-.insignia { background: var(--panel); border-radius: var(--r-medio); padding: 12px 8px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.insignias { display: grid; gap: 8px; margin: 4px 0 8px; }
+/* Una insignia por fila: medalla, nombre, «Cómo» se gana y avance o fecha */
+.insignia { background: var(--panel); border-radius: var(--r-medio); padding: 10px 12px; display: flex; align-items: flex-start; gap: 12px; }
+.insignia .medalla { flex: none; }
+.insignia-texto { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.insignia-texto .progreso { height: 6px; margin: 2px 0; }
+.insignia .insignia-como { color: var(--texto-suave); font-size: var(--t-s); }
 .insignia .medalla { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(145deg, #F7C873, #F2A33A 55%, #B5761C); color: #0B0F19; box-shadow: 0 4px 14px rgba(242, 163, 58, .3); }
 .insignia .medalla .ico { width: 24px; height: 24px; }
-.insignia b { font-size: var(--t-s); line-height: 1.2; }
+.insignia b { font-size: var(--t-m); line-height: 1.2; }
 .insignia small { font-size: var(--t-xs); color: var(--texto-tenue); line-height: 1.25; }
 .insignia.bloqueada .medalla { opacity: .7; }
 .insignia.bloqueada b { color: var(--texto-suave); }
