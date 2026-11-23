@@ -124,6 +124,11 @@ Object.assign(PAISAJES, {
 // Colección de paisajes propios (v0.54.0): cinco escenarios con su panorama, su orilla 3D y su costa 2D, renderizados
 // en Blender con tools/blender/paisaje/coleccion (objetos.py, temas.py, panorama.py, orilla.py y costa.py).
 const propio = (id, x) => ({
+  ...(x.pintado && {
+    agua: { src: `assets/carrera/${id}_agua3d.webp`, m: 9 },
+    suelo3d: { src: `assets/carrera/${id}_suelo.webp`, m: 8 },
+    aguaTextura3d: { src: `assets/carrera/${id}_agua3d.webp`, m: 10 },
+  }),
   ...x,
   miniatura: `assets/carrera/${id}_mini.webp`,
   panorama: { src: `assets/carrera/${id}.webp`, horizonte: 204 },
@@ -135,9 +140,7 @@ Object.assign(PAISAJES, {
     nombre: 'Cañón del desierto',
     texto: 'Mesetas rojas, saguaros y casas de adobe junto al río.',
     precio: 700,
-    agua: { src: 'assets/carrera/canon_agua3d.webp', m: 9 },
-    suelo3d: { src: 'assets/carrera/canon_suelo.webp', m: 8 },
-    aguaTextura3d: { src: 'assets/carrera/canon_agua3d.webp', m: 10 },
+    pintado: true,
     orilla: {
       piezas: {
         saguaro_alto: { x: 0, y: 0, w: 238, h: 651, pie: [0.5, 0.987], m: 10.18 },
@@ -166,9 +169,7 @@ Object.assign(PAISAJES, {
     nombre: 'Lago de otoño',
     texto: 'Bosque de arces rojos y dorados, cabañas de troncos y una canoa.',
     precio: 1100,
-    agua: { src: 'assets/carrera/otono_agua3d.webp', m: 9 },
-    suelo3d: { src: 'assets/carrera/otono_suelo.webp', m: 8 },
-    aguaTextura3d: { src: 'assets/carrera/otono_agua3d.webp', m: 10 },
+    pintado: true,
     orilla: {
       piezas: {
         pino: { x: 0, y: 0, w: 451, h: 752, pie: [0.5, 0.996], m: 11.75 },
