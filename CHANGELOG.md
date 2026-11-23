@@ -2,13 +2,24 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
-## 0.103.0 · 2026-11-22
+## 0.104.0 · 2026-11-23
 
 Historial que escala (primera parte).
 
 - **Cada sesión guarda su resumen.** Al guardar una sesión, la app calcula una vez lo que antes sacaba de cada segundo remado: mejores tiempos y potencias, carga, minutos por zona, técnica, pausas y pulso. Las sesiones de antes se resumen solas la primera vez que abres la app con esta versión.
 - **Héroe, plan, preparar y ajustes ya no cargan cada segundo remado.** Leen las sesiones con su resumen. Con 600 sesiones, esa lista pesa unas 22 veces menos que con las muestras (unos 3 MB frente a 66 MB en JSON). Las muestras completas se siguen leyendo al elegir tu sesión anterior o tu mejor marca como referencia, en el resumen al terminar, en el historial de Progreso, en el detalle y al hacer un respaldo.
 - **Los mismos números.** Una prueba compara XP, nivel, monedas, misiones, récords, carga, FTP, metas sugeridas y la imagen del mes con y sin muestras, sesión por sesión y con todo el historial, y salen idénticos. Los respaldos de la v0.44 y de la v0.80 también dan lo mismo leídos con los resúmenes.
+- Mientras se parte la carga por pantalla, el tope de JavaScript de la primera carga en las pruebas sube de 380 a 400 KB comprimidos (temporal; la meta sigue siendo 380 KB).
+
+## 0.103.0 · 2026-11-22
+
+El camino de tu clase, en una sola vista.
+
+- **Camino.** Talentos y Rangos se juntan en la nueva subpestaña Camino, la primera del Héroe. Es una línea del nivel 1 al 90 con lo que trae cada rango: el título de tu clase, las mejoras de talento que se abren, la vela o el mascarón que ganas por nivel y el jefe de cada capítulo. El jefe lleva candado hasta su nivel y espadas cuando ya puedes vencerlo.
+- **Siguiente hito.** Arriba se ve lo próximo que ganas y cuántas sesiones faltan a tu ritmo.
+- **La senda, una decisión clara.** Antes del nivel 20 ya se ven las dos sendas de tu clase. Al llegar, la tarjeta te pide elegir y te recuerda que cambiar es gratis.
+- **Menos texto.** Cada clase dice en una línea qué premia. Los números de cada talento siguen en «Talentos y senda», que se abre solo al tocar «Repartir».
+- Corregido: las mejoras 1 y 2 decían «desde el nivel 1», pero el primer punto de talento llega en el nivel 3.
 
 ## 0.102.1 · 2026-11-22
 

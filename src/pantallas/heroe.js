@@ -57,20 +57,11 @@ export function arrancarHeroe() {
     el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); oirHeroe(); } });
   }
   $('#linea-nivel').addEventListener('click', () => {
-    if ($('#linea-nivel').dataset.talentos) seccionHeroe = 'talentos';
+    if ($('#linea-nivel').dataset.talentos) { seccionHeroe = 'camino'; abrirTalentos = true; }
     irA('heroe');
   });
   $('#heroe-avisos').addEventListener('click', (e) => {
     if (e.target.closest('[data-aviso-xp]')) { ajustes.escribir('avisoXpLenta', '1'); pintarHeroe(); }
-  });
-  $('#niveles-carrusel').addEventListener('scroll', () => requestAnimationFrame(marcarNivel), { passive: true });
-  document.querySelector('#hp-niveles').addEventListener('click', (e) => {
-    const car = $('#niveles-carrusel');
-    const paso = e.target.closest('[data-niv]');
-    const ir = e.target.closest('[data-rango]');
-    const i = Math.round(car.scrollLeft / car.clientWidth);
-    if (paso) car.scrollTo({ left: (i + Number(paso.dataset.niv)) * car.clientWidth, behavior: 'smooth' });
-    if (ir) car.scrollTo({ left: Number(ir.dataset.rango) * car.clientWidth, behavior: 'smooth' });
   });
 
   $('#clases').addEventListener('click', (e) => {
@@ -103,14 +94,16 @@ export function arrancarHeroe() {
     seccionHeroe = b.dataset.hp;
     pintarHeroe();
   });
-  $('#arbol').addEventListener('click', async (e) => {
+  // Camino: la senda se elige en la tarjeta del siguiente hito o en Talentos y senda; los talentos, en su árbol.
+  $('#hp-camino').addEventListener('click', async (e) => {
     // Senda (etapa 4): desde el nivel 20, gratis y cuando quieras. Los grados se quedan en su casilla.
     const se = e.target.closest('[data-senda]');
     if (se) {
       const { per, h } = await estadoHeroe();
       const clave = J.claseDe(per.clase).clave;
       const nueva = se.dataset.senda === 'b' ? 'b' : 'a';
-      if (h.nivel < J.NIVEL_SENDA || J.sendaEn(per, clave) === nueva) return;
+      // La primera vez se puede confirmar la senda de siempre (la A) para dejar de verla como pendiente.
+      if (h.nivel < J.NIVEL_SENDA || (J.sendaEn(per, clave) === nueva && per.senda?.[clave]?.length)) return;
       guardarPersonaje({ senda: { ...(per.senda || {}), [clave]: [...(per.senda?.[clave] || []), [Date.now(), nueva]] } });
       toast(`Ahora sigues la senda ${J.SENDAS[clave][nueva].nombre}`);
       vibrar(80);
@@ -220,7 +213,7 @@ export function arrancarHeroe() {
   });
 
   $('#hoja-xp').addEventListener('click', (e) => {
-    if (e.target.closest('[data-ir-talentos]')) { cerrarHoja(); seccionHeroe = 'talentos'; irA('heroe'); return; }
+    if (e.target.closest('[data-ir-talentos]')) { cerrarHoja(); seccionHeroe = 'camino'; abrirTalentos = true; irA('heroe'); return; }
     const b = e.target.closest('[data-clase-rapida]');
     if (!b || leerPersonaje().clase) return;
     const c = J.claseDe(b.dataset.claseRapida);
@@ -321,7 +314,9 @@ export const filaCond = (x, clase = '') => `<li class="cond ${clase}">${ico(x.ic
 export const horasYMin = (seg) => { const h = Math.floor(seg / 3600); const m = Math.round((seg % 3600) / 60); return h ? `${miles(h)} h ${m} min` : `${m} min`; };
 export const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
 let claseElegida = null;
-let seccionHeroe = 'ficha';
+let seccionHeroe = 'camino';
+// Al llegar desde «puntos de talento por repartir», Talentos y senda se abre solo.
+let abrirTalentos = false;
 
 // Línea de nivel en Entrenar y punto en la pestaña Héroe cuando hay talentos por repartir.
 export async function pintarLineaNivel() {
@@ -344,14 +339,6 @@ function enSesiones(xp, h) {
   const n = Math.max(1, Math.ceil(xp / h.xpPorSesion));
   return `≈ ${n} ${n === 1 ? 'sesión' : 'sesiones'}`;
 }
-// «≈ 5 semanas a tu ritmo», con tus sesiones por semana de las últimas 4 semanas.
-function enSemanas(xp, h) {
-  const porSemana = h.ritmo?.sesSemana;
-  if (!(h.xpPorSesion > 0) || !porSemana || xp <= 0) return '';
-  const n = Math.max(1, Math.ceil(xp / (h.xpPorSesion * porSemana)));
-  return `≈ ${n} ${n === 1 ? 'semana' : 'semanas'} a tu ritmo`;
-}
-
 export async function estadoHeroe() {
   const per = leerPersonaje();
   return { per, h: H.estadoJuegoDe(await H.sinMuestras(), { ftp: ftp(), per }) };
@@ -412,7 +399,7 @@ export async function pintarHeroe() {
     b.setAttribute('aria-selected', String(b.dataset.hp === seccionHeroe));
   }
   for (const el of document.querySelectorAll('.hp')) el.hidden = el.id !== `hp-${seccionHeroe}`;
-  ({ ficha: pintarFicha, talentos: pintarTalentos, niveles: pintarNiveles, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
+  ({ ficha: pintarFicha, camino: pintarCamino, misiones: pintarMisiones, tienda: pintarTienda })[seccionHeroe](h, per, clase, sesiones);
 }
 
 // Aviso arriba del héroe: el cambio a la mitad de XP (una vez, y solo en Ficha: en las otras subpestañas tapaba el contenido).
@@ -566,65 +553,112 @@ function pintarTalentos(h, per, clase) {
       : '<p class="talento-valor nada">Con tus últimas sesiones no sumaría XP: no cumplen lo que pide.</p>';
     return `<div class="talento ${g ? 'aprendido' : motivo && g < t.max ? 'bloqueado' : 'disponible'}">
       <div class="talento-cab"><b>${t.nombre}</b><span class="etq-tal ${t.tipo}">${t.tipo === 'xp' ? 'XP' : 'Carrera'}</span>${t.intensidad ? '<span class="etq-tal intensidad" title="Talento de intensidad: descansa con el cuerpo cargado, en las sesiones del plan y tras 2 sesiones duras en la semana">Intensidad</span>' : ''}<span class="pips" aria-label="Grado ${g} de ${t.max}">${pips}</span></div>
-      <p>${gradoResaltado(t.texto, g, t.max)}</p>${valor}<div class="talento-pie"><small class="suave">Desde el nivel ${t.nivel}${g && g < t.max ? ` · Ahora: ${t.textoGrado(g).replace(/\.$/, '')}` : ''}</small>${accion}</div></div>`;
+      <p>${gradoResaltado(t.texto, g, t.max)}</p>${valor}<div class="talento-pie"><small class="suave">Desde el nivel ${Math.max(t.nivel, PRIMER_PUNTO)}${g && g < t.max ? ` · Ahora: ${t.textoGrado(g).replace(/\.$/, '')}` : ''}</small>${accion}</div></div>`;
   };
   const ts = J.talentosDe(clase.clave, senda);
   // Dos sendas desde el nivel 20: cambian las mejoras 3, 4 y la maestría. Cambiar es gratis.
-  const S = J.SENDAS[clase.clave];
-  const abierta = h.nivel >= J.NIVEL_SENDA;
-  const tarjetaSenda = (k) => {
-    const s = S[k];
-    const activa = senda === k;
-    const pie = activa ? '<span class="ok-texto">Tu senda</span>'
-      : abierta ? `<button type="button" class="boton chico" data-senda="${k}">Seguir esta senda</button>` : `<span class="suave">Se elige en el nivel ${J.NIVEL_SENDA}</span>`;
-    return `<div class="senda${activa ? ' activa' : ''}"><b>${s.nombre}</b><p class="suave">${s.lema}</p>${pie}</div>`;
-  };
-  const sendas = S ? `<h4 class="sub-tal">Tu senda</h4><div class="sendas">${tarjetaSenda('a')}${tarjetaSenda('b')}</div>
-      <p class="suave lema-tal">Las mejoras 1 y 2 son de toda la clase. La senda cambia las mejoras 3, 4 y la maestría; tus grados se quedan donde están y valen para la senda que sigas.</p>` : '';
+  const sendas = J.SENDAS[clase.clave] ? `<h4 class="sub-tal">Tu senda</h4>${tarjetaSendas(clase.clave, senda, h.nivel)}` : '';
   const comun = ts.filter((t) => !t.maestria && !t.senda);
   const deSenda = ts.filter((t) => !t.maestria && t.senda);
   $('#arbol').innerHTML = `<div class="rama"><div class="rama-titulo"><b>${J.cualidadDe(clase.clave)}</b><span>${clase.nombre}</span></div>
-      <p class="suave lema-tal">${J.lemaTalentos(clase.clave)} Solo cuentan en la XP y en las carreras contra fantasmas: tus métricas no cambian.</p>
       ${habilidadHtml(clase.clave, senda)}
       <h4 class="sub-tal">Mejoras de nivel</h4>${comun.map(fila).join('')}${sendas}${deSenda.map(fila).join('')}
       <h4 class="sub-tal">Maestría</h4>${ts.filter((t) => t.maestria).map(fila).join('')}</div>`;
 }
 
-// Niveles: un panel por rango (del 1 al 90) con la ilustración del héroe en ese rango y lo que trae cada nivel.
-function pintarNiveles(h, per, clase) {
-  const R = J.RANGOS;
-  const actual = R.indexOf(J.rangoDe(h.nivel));
-  const abre = { 20: 'Se abren las mejoras de nivel 3 y 4 de tus talentos', 40: 'Se abre la maestría de tus talentos' };
-  const filas = (desde, hasta) => {
-    let html = '';
-    for (let n = desde; n <= hasta; n++) {
-      const extras = [];
-      if (n > 1 && n % 3 === 0) extras.push('+1 punto de talento');
-      if (abre[n]) extras.push(abre[n]);
-      const estado = n < h.nivel ? 'hecho' : n === h.nivel ? 'actual' : '';
-      html += `<li class="${estado}"><b>Nivel ${n}</b><span>${n === 1 ? 'Inicio' : `${miles(J.xpParaNivel(n))} XP`}</span>${extras.length ? `<em>${extras.join(' · ')}</em>` : ''}</li>`;
-    }
-    return html;
-  };
-  $('#niveles-carrusel').innerHTML = R.map((r, i) => {
-    const hasta = i + 1 < R.length ? R[i + 1].nivel - 1 : J.NIVEL_MAX;
-    const falta = J.xpParaNivel(r.nivel) - h.xp;
-    const cuando = [enSesiones(falta, h), enSemanas(falta, h)].filter(Boolean).join(' · ');
-    const estado = i < actual ? 'Alcanzado' : i === actual ? `Tu rango · nivel ${h.nivel}` : `Te faltan ${miles(falta)} XP${cuando ? `<br><small>${cuando}</small>` : ''}`;
-    const nombre = J.nombreRango(r.nivel, clase.clave);
-    return `<section class="nivel-panel${i > actual ? ' futuro' : ''}${i === actual ? ' actual' : ''}" aria-label="${nombre}">
-      <div class="nivel-figura"><img src="assets/heroes/${clase.clave}_${r.id}.webp" width="216" height="252" alt="${clase.nombre} ${nombre}" loading="lazy"></div>
-      <h3>${nombre}</h3><p class="nivel-rango">Rango ${i + 1} · niveles ${r.nivel}–${hasta}</p><p class="nivel-estado">${i > actual ? '🔒 ' : ''}${estado}</p>
-      <ul class="nivel-lista">${filas(r.nivel, hasta)}</ul></section>`;
-  }).join('');
-  $('#niveles-puntos').innerHTML = R.map((r, i) => `<button type="button" data-rango="${i}" aria-label="Ver ${J.nombreRango(r.nivel, clase.clave)}"${i === actual ? ' class="tuyo"' : ''}></button>`).join('');
-  const car = $('#niveles-carrusel');
-  requestAnimationFrame(() => { car.scrollLeft = actual * car.clientWidth; marcarNivel(); });
+// ---------- Camino de la clase ----------
+// Talentos y Rangos en una vista: el siguiente hito arriba y una línea del nivel 1 al 90 con el título de cada rango,
+// las mejoras que se abren, la pieza del bote por nivel y el jefe de cada capítulo.
+const PRIMER_PUNTO = 3; // puntosDeNivel = floor(nivel / 3): el primer punto de talento llega en el nivel 3
+const NIVEL_PIEZA = { 1: 'clasica', [CB.NIVEL_RANGO]: 'rango', [CB.NIVEL_PROA]: 'proa' };
+
+// Hitos de una clase, en orden: uno por rango más el jefe final. Cada etiqueta: [texto, tipo, conseguida].
+export function hitosDeClase(clave, senda, { nivel = 1, capitulosHechos = 0 } = {}) {
+  const ts = J.talentosDe(clave, senda);
+  const talento = (pred) => ts.filter(pred).map((t) => t.nombre);
+  const hitos = J.RANGOS.map((r, i) => {
+    const etqs = [];
+    const abre = r.nivel === 1 ? talento((t) => t.nivel === 1 && !t.maestria)
+      : r.nivel === J.NIVEL_SENDA ? talento((t) => t.nivel === J.NIVEL_SENDA && !t.maestria)
+        : r.nivel === 40 ? talento((t) => t.maestria) : [];
+    for (const n of abre) etqs.push([r.nivel === 40 ? `Maestría: ${n}` : n, 'talento-e']);
+    const pieza = NIVEL_PIEZA[r.nivel] && CB.PIEZAS[`${clave}-${NIVEL_PIEZA[r.nivel]}`];
+    if (pieza) etqs.push([`${CB.TIPOS[pieza.tipo]} ${pieza.nombre}`, 'pieza']);
+    const cap = J.CAPITULOS.findIndex((c) => c.nivel === r.nivel);
+    if (cap >= 0) etqs.push([`Jefe: ${J.capituloDe(cap, clave).jefe.nombre}${cap < capitulosHechos ? ' · vencido' : nivel >= r.nivel ? ' · por vencer' : ''}`, 'jefe', cap < capitulosHechos]);
+    const titulo = J.nombreRango(r.nivel, clave) + (r.nivel === J.NIVEL_SENDA ? ' · eliges senda' : '');
+    return { nivel: r.nivel, rango: r.id, titulo, etqs: etqs.map(([txt, tipo, ok]) => ({ txt, tipo, ok: ok ?? nivel >= r.nivel })) };
+  });
+  const fin = J.CAPITULOS.length - 1;
+  if (!hitos.some((x) => x.nivel === J.CAPITULOS[fin].nivel)) {
+    const n = J.CAPITULOS[fin].nivel;
+    hitos.push({ nivel: n, titulo: 'Último capítulo', etqs: [{ txt: `Jefe final: ${J.capituloDe(fin, clave).jefe.nombre}${fin < capitulosHechos ? ' · vencido' : nivel >= n ? ' · por vencer' : ''}`, tipo: 'jefe', ok: fin < capitulosHechos }] });
+  }
+  return hitos;
 }
-function marcarNivel() {
-  const car = $('#niveles-carrusel');
-  const i = Math.round(car.scrollLeft / Math.max(1, car.clientWidth));
-  $('#niveles-puntos').querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
+
+// El jefe lleva candado hasta su nivel (puede abrirse antes cumpliendo su capítulo, ver Misiones) y espadas después.
+const etiquetasHito = (x, nivel) => (x.etqs.length ? `<div class="hito-etqs">${x.etqs.map((e) => `<span class="etq-hito ${e.tipo}${e.ok ? ' ok' : ''}">${e.tipo === 'jefe' ? (e.ok || nivel >= x.nivel ? '⚔ ' : '🔒 ') : ''}${escaparHtml(e.txt)}</span>`).join('')}</div>` : '');
+// Las dos sendas: la tuya marcada y, desde el nivel 20, botón para cambiar (en la tarjeta del 20, en las dos).
+const tarjetaSendas = (clave, senda, nivel, confirmar = false) => {
+  const S = J.SENDAS[clave];
+  return `<div class="sendas">${['a', 'b'].map((k) => {
+    const tuya = !confirmar && senda === k;
+    const pie = tuya ? '<span class="ok-texto">Tu senda</span>' : nivel >= J.NIVEL_SENDA ? `<button type="button" class="boton chico" data-senda="${k}">Seguir esta senda</button>` : `<span class="suave">Se elige en el nivel ${J.NIVEL_SENDA}</span>`;
+    const intensa = Object.values(S[k].talentos || {}).some((t) => t.intensidad);
+    return `<div class="senda${tuya ? ' activa' : ''}"><b>${S[k].nombre}${intensa ? ' ⚡' : ''}</b><p class="suave">${S[k].lema}</p>${pie}</div>`;
+  }).join('')}</div>`;
+};
+
+function pintarCamino(h, per, clase) {
+  const clave = clase.clave;
+  const senda = J.sendaEn(per, clave);
+  const hitos = hitosDeClase(clave, senda, h);
+  const S = J.SENDAS[clave];
+  const sinElegir = S && h.nivel >= J.NIVEL_SENDA && !per.senda?.[clave]?.length;
+  const sig = hitos.find((x) => x.nivel > h.nivel);
+  const caja = $('#camino-siguiente');
+  if (sinElegir) {
+    caja.innerHTML = `<div class="eti">Nivel ${J.NIVEL_SENDA} · ${escaparHtml(J.nombreRango(J.NIVEL_SENDA, clave))}</div><h3>Elige tu senda</h3>
+      <p>Cambia tus mejoras 3, 4 y la maestría. Puedes cambiar gratis cuando quieras: tus grados se conservan.</p>${tarjetaSendas(clave, senda, h.nivel, true)}`;
+  } else if (sig) {
+    const falta = J.xpParaNivel(sig.nivel) - h.xp;
+    const cuando = enSesiones(falta, h);
+    const resumen = sig.etqs.filter((e) => e.tipo !== 'jefe').map((e) => e.txt).join(' · ');
+    const jefe = sig.etqs.find((e) => e.tipo === 'jefe');
+    caja.innerHTML = `<div class="eti">Siguiente hito · nivel ${sig.nivel}${cuando ? ` · ${cuando}` : ''}</div>
+      <h3>${sig.nivel === J.NIVEL_SENDA && S ? 'Eliges tu senda' : escaparHtml(sig.titulo)}</h3>
+      <p>${escaparHtml([sig.nivel === J.NIVEL_SENDA && S ? J.nombreRango(sig.nivel, clave) : '', resumen, jefe ? `se abre ${jefe.txt.replace(/^Jefe/, 'el jefe')}` : ''].filter(Boolean).join(' · '))}</p>
+      ${sig.nivel === J.NIVEL_SENDA && S ? tarjetaSendas(clave, senda, h.nivel) : ''}`;
+  } else {
+    caja.innerHTML = `<div class="eti">Nivel ${h.nivel}</div><h3>Recorriste todo el camino</h3><p>${miles(h.xp)} XP en total.</p>`;
+  }
+  $('#camino-ident').innerHTML = `<span class="etq-hito talento-e">${escaparHtml(J.cualidadDe(clave))} · +15 % ${escaparHtml(nombreAtributo(clase.favorito))}</span><span>${J.lemaTalentos(clave)}</span>`;
+
+  // La línea: lo pasado en turquesa, «Estás aquí» entre dos hitos y lo que falta apagado.
+  const sigPunto = h.nivel < J.NIVEL_MAX ? Math.max(PRIMER_PUNTO, (Math.floor(h.nivel / 3) + 1) * 3) : null;
+  const aqui = `<li class="hito aqui" aria-current="step"><span class="hito-nodo">${h.nivel}</span><div class="hito-cuerpo"><b>Estás aquí</b>
+    <small>${sigPunto && sigPunto <= J.NIVEL_MAX ? `Siguiente punto de talento en el nivel ${sigPunto}` : 'Nivel máximo'}</small></div></li>`;
+  let html = '';
+  let puesto = false;
+  for (const x of hitos) {
+    if (!puesto && x.nivel > h.nivel) { html += aqui; puesto = true; }
+    if (x.nivel === h.nivel) puesto = true;
+    const hecho = x.nivel <= h.nivel;
+    const img = x.rango ? `<img src="assets/heroes/${clave}_${x.rango}_retrato.webp" width="36" height="36" alt="" loading="lazy">` : '';
+    html += `<li class="hito ${hecho ? 'hecho' : 'futuro'}${x.nivel === h.nivel ? ' aqui' : ''}"${x.nivel === h.nivel ? ' aria-current="step"' : ''}><span class="hito-nodo">${x.nivel}</span>
+      <div class="hito-cuerpo"><b>${img}${escaparHtml(x.titulo)}</b>${x.nivel === h.nivel && sigPunto ? `<small>Estás aquí · siguiente punto de talento en el nivel ${sigPunto}</small>` : ''}${etiquetasHito(x, h.nivel)}</div></li>`;
+  }
+  if (!puesto) html += aqui;
+  $('#camino-linea').innerHTML = html;
+
+  const det = $('#camino-talentos');
+  const pts = h.talentosPorRepartir;
+  $('#camino-talentos-resumen').textContent = pts > 0 ? `${pts} ${pts === 1 ? 'punto' : 'puntos'} por repartir` : S ? `Senda: ${S[senda].nombre}` : '';
+  $('#camino-talentos-resumen').classList.toggle('nuevo', pts > 0);
+  if (abrirTalentos) det.open = true;
+  abrirTalentos = false;
+  pintarTalentos(h, per, clase);
 }
 
 const NOMBRE_PRUEBA = { 'base:prueba-500': 'Prueba 500 m', 'base:prueba-2000': 'Prueba 2000 m', 'base:prueba-ftp': 'Prueba FTP 20 min' };

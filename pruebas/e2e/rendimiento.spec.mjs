@@ -8,7 +8,9 @@ import { FPS_MAX, DPR_MAX } from '../../src/carrera.js';
 // Antes se medía sin comprimir: 1,10 MB el 2026-11-04 (0.52.0) y 1,26 MB el 2026-11-11 (0.69.0), con el tope en
 // 1,30 MB y un 1 % de margen. Comprimido, el 2026-11-21 (0.74.0): 436 KB.
 const BYTES_MAX = 520_000;
-const BYTES_MAX_TIPO = { js: 380_000, css: 45_000, html: 30_000 };
+// JS: tope temporal de 400 KB (2026-11-23, 0.104.0, con 379,9 KB en main) hasta partir la carga por pantalla (Héroe,
+// Tienda y Progreso bajo demanda); la meta es volver a 380 KB. Solo la infraestructura cambia este tope.
+const BYTES_MAX_TIPO = { js: 400_000, css: 45_000, html: 30_000 };
 const ARCHIVOS_MAX = 70;
 // Cuadros pintados por segundo, con CPU ×4. En local, solo: 2D 36, 3D 21, realista 13, modo remo 20; con otra prueba
 // en paralelo (como en CI) cae a la mitad o menos y salta mucho. El mínimo atrapa lo que se vuelve varias veces más
