@@ -124,7 +124,15 @@ export function arrancarHeroe() {
       pintarHeroe();
     }
   });
+  // Tienda por secciones: Tu bote, Ventajas y Paisajes.
+  $('#hp-tienda .tienda-seg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tienda]');
+    if (!b || b.dataset.tienda === vh.tienda) return;
+    vh.tienda = b.dataset.tienda;
+    pintarHeroe();
+  });
   $('#tienda').addEventListener('click', async (e) => {
+    if (alternarDetalle(e)) return;
     const b = e.target.closest('[data-comprar]');
     if (!b) return;
     const { per, h } = await estadoHeroe();
@@ -143,7 +151,7 @@ export function arrancarHeroe() {
   });
 
   $('#tienda-paisajes').addEventListener('click', async (e) => {
-    if (await previa(e)) return;
+    if (alternarDetalle(e) || await previa(e)) return;
     const b = e.target.closest('[data-paisaje]');
     if (!b) return;
     const id = b.dataset.paisaje;
@@ -165,7 +173,7 @@ export function arrancarHeroe() {
   });
   // Colección del bote de tu clase: velas, mascarón y palas; y las velas de color, que valen para cualquier bote.
   $('#tienda-velas').addEventListener('click', async (e) => {
-    if (await previa(e)) return;
+    if (alternarDetalle(e) || await previa(e)) return;
     const b = e.target.closest('[data-pieza]');
     if (!b) return;
     const id = b.dataset.pieza;
@@ -288,7 +296,7 @@ export const horasYMin = (seg) => { const h = Math.floor(seg / 3600); const m = 
 export const icoMoneda = '<svg class="moneda" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>';
 // Estado de la pantalla, compartido con heroe-vista.js. vh.abrirTalentos: al llegar desde «puntos de talento por
 // repartir», Talentos y senda se abre solo.
-export const vh = { claseElegida: null, seccion: 'camino', abrirTalentos: false };
+export const vh = { claseElegida: null, seccion: 'camino', abrirTalentos: false, tienda: 'bote' };
 
 // Línea de nivel en Entrenar y punto en la pestaña Héroe cuando hay talentos por repartir.
 export async function pintarLineaNivel() {
@@ -330,6 +338,22 @@ export const equipoActual = (per, h) => {
 export async function aplicarEquipo() {
   const { per, h } = await estadoHeroe();
   usarEquipo(equipoActual(per, h));
+}
+
+// Tarjetas de la tienda: tocar la muestra o el nombre abre su detalle (solo una abierta por sección).
+function alternarDetalle(e) {
+  const b = e.target.closest('[data-detalle]');
+  if (!b) return false;
+  const abrir = b.getAttribute('aria-expanded') !== 'true';
+  for (const o of e.currentTarget.querySelectorAll('[data-detalle][aria-expanded="true"]')) {
+    o.setAttribute('aria-expanded', 'false');
+    o.parentElement.classList.remove('abierto');
+    o.parentElement.querySelector('.objeto-detalle').hidden = true;
+  }
+  b.setAttribute('aria-expanded', String(abrir));
+  b.parentElement.classList.toggle('abierto', abrir);
+  b.parentElement.querySelector('.objeto-detalle').hidden = !abrir;
+  return true;
 }
 
 // «Vista previa» de un paisaje o una pieza: su código se baja solo al tocarla.

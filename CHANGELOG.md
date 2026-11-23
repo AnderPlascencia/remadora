@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.107.0 · 2026-11-23
+
+La tienda, por secciones y con menos texto.
+
+- Héroe › Tienda se divide en Tu bote, Ventajas y Paisajes. Arriba dice una vez cuántas monedas tienes.
+- Cada tarjeta muestra solo la muestra, el nombre, el precio o lo que falta («🔒 Nivel 20», «🔒 Jefe 3», «🔒 Hazaña») y un botón. Al tocarla se abre lo demás: qué es, su ventaja, cómo se consigue y la vista previa.
+- Ya no se repite «Te faltan monedas» en cada botón: si no te alcanza, «Comprar» sale apagado.
+- Las piezas del bote van de tres en tres y la hazaña de clase cabe en una línea con su barra.
+
 ## 0.106.0 · 2026-11-23
 
 La app abre con menos peso.
