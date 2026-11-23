@@ -61,8 +61,9 @@ export function mostrarConsejo(vista) {
   const el = document.createElement('div');
   el.className = 'consejo';
   el.setAttribute('role', 'note');
-  el.innerHTML = `${ico(t.icono)}<div class="consejo-texto"><b>${t.titulo}</b><span>${t.resumen}</span></div>
-    <div class="consejo-botones"><button type="button" class="boton chico" data-guia="${t.clave}">Cómo funciona</button><button type="button" class="boton chico" data-entendido>Entendido</button></div>`;
+  // Una línea: el nombre de la pestaña ya está en la barra; «?» abre la guía y la × la oculta para siempre.
+  el.innerHTML = `${ico(t.icono)}<span class="consejo-texto">${t.resumen}</span>
+    <button type="button" class="boton icono chico" data-guia="${t.clave}" aria-label="Cómo funciona ${t.titulo}">?</button><button type="button" class="boton icono chico" data-entendido aria-label="Entendido, ocultar">${ico('i-cerrar')}</button>`;
   el.addEventListener('click', (e) => {
     const g = e.target.closest('[data-guia]');
     if (!g && !e.target.closest('[data-entendido]')) return;

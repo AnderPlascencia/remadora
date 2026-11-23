@@ -391,7 +391,8 @@ export async function pintarHeroe() {
   $('#heroe-xp-barra').style.width = `${pct}%`;
   const ses = h.hasta ? enSesiones(h.hasta - h.xp, h) : '';
   // El texto cuenta lo mismo que la barra (el avance dentro del nivel); el total va aparte.
-  $('#heroe-xp-texto').textContent = h.hasta ? `${miles(h.xp - h.desde)} de ${miles(h.hasta - h.desde)} XP para el nivel ${h.nivel + 1}${ses ? ` (${ses})` : ''} · ${miles(h.xp)} en total` : `${miles(h.xp)} XP · nivel máximo`;
+  // Una línea: cuándo llega el siguiente nivel y el avance que marca la barra. El total de XP está en la guía («?»).
+  $('#heroe-xp-texto').textContent = h.hasta ? `Nivel ${h.nivel + 1}${ses ? ` en ${ses}` : ''} · ${miles(h.xp - h.desde)} / ${miles(h.hasta - h.desde)} XP` : `${miles(h.xp)} XP · nivel máximo`;
   $('.heroe-xp').setAttribute('aria-valuenow', String(Math.round(pct)));
   pintarAvisosHeroe(h, sesiones);
   for (const b of document.querySelectorAll('.heroe-tabs button')) {
@@ -691,9 +692,7 @@ function pintarMisiones(h) {
   $('#mis-diarias').innerHTML = pendientesPrimero(h.diarias).map((m) => filaMision(m)).join('');
   $('#mis-semanales').innerHTML = pendientesPrimero(h.semanales).map((m) => filaMision(m)).join('');
   const c = h.capitulo;
-  $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p><p class="cap-avance">${c.listo
-      ? `Vence a ${c.jefe.nombre} para ${c.n < J.CAPITULOS.length ? `pasar al capítulo ${c.n + 1}` : 'terminar la historia'}.`
-      : `El jefe se desbloquea al cumplir lo de abajo o al llegar al nivel ${c.nivel}.`}${c.pendiente ? ' Ya lo venciste antes de tiempo: en cuanto se desbloquee, el capítulo es tuyo con tu próxima sesión.' : ''}</p></div>
+  $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p>${c.pendiente ? '<p class="cap-avance">Ya lo venciste antes de tiempo: en cuanto se desbloquee, el capítulo es tuyo con tu próxima sesión.</p>' : ''}</div>
     <ul class="lista misiones">${c.progreso.map((r) => filaMision({ clave: `cap-${r.clave}`, texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
     <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}, ${J.OTRAS_FORMAS_JEFE}${
       c.listo ? ' · ¡ya puedes enfrentarlo!' : ` · se desbloquea al cumplir lo de arriba o en el nivel ${c.nivel}`}</small></div>
@@ -705,7 +704,10 @@ function pintarMisiones(h) {
   const logro = (x) => filaMision({ clave: x.id, nombre: x.nombre, texto: x.texto, meta: x.meta, valor: x.valor, xp: x.xp, monedas: x.monedas + (x.objeto ? J.PREMIO_INSIGNIA : 0), premio: x.objeto ? `insignia ${O.objeto(x.objeto).nombre}` : '', hecha: x.hecha });
   // Los logros hechos se guardan en un desplegable: arriba quedan solo los que te faltan.
   const hechos = h.hazanas.filter((x) => x.hecha);
-  $('#mis-hazanas').innerHTML = h.hazanas.filter((x) => !x.hecha).sort((a, b) => avance(b) - avance(a)).map(logro).join('')
+  // Solo los 3 más cercanos a la vista; el resto, plegado.
+  const faltan = h.hazanas.filter((x) => !x.hecha).sort((a, b) => avance(b) - avance(a));
+  $('#mis-hazanas').innerHTML = faltan.slice(0, 3).map(logro).join('')
+    + (faltan.length > 3 ? `<li class="hechos-grupo"><details><summary>Ver los otros ${faltan.length - 3} <span class="seccion-resumen"></span></summary><ul class="lista misiones">${faltan.slice(3).map(logro).join('')}</ul></details></li>` : '')
     + (hechos.length ? `<li class="hechos-grupo"><details><summary>${ico('i-check')}Completados <span class="seccion-resumen">${hechos.length}</span></summary><ul class="lista misiones">${hechos.map(logro).join('')}</ul></details></li>` : '');
 }
 
