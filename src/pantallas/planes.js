@@ -310,6 +310,15 @@ export async function llenarSelectorEntrenamientos(lista) {
     }
     if (og.children.length) sel.append(og);
   }
+  // La sesión del día puede ser de la semana que viene (un plan creado en domingo adelanta la del lunes):
+  // también se lista, para que la tarjeta Hoy la deje elegida en vez de proponer Remo libre.
+  const diaHoy = prog ? await calcularDia(sesiones, todos) : null;
+  const vHoy = diaHoy?.ent && ['plan', 'recuperar'].includes(diaHoy.fuente) ? valorDe(diaHoy.ent, todos) : null;
+  if (vHoy && ![...sel.options].some((o) => o.value === vHoy)) {
+    let og = sel.querySelector('optgroup');
+    if (!og || og.label !== 'Tu plan esta semana') { og = document.createElement('optgroup'); og.label = 'Tu plan esta semana'; sel.append(og); }
+    og.prepend(new Option(`Hoy · ${diaHoy.ent}`, vHoy));
+  }
   // Por sección: primero los base de tu nivel y luego los tuyos (sin los del plan).
   for (const g of P.GRUPOS_ENT) {
     const bases = estado.baseActual.filter((x) => x.enfoque === g.clave);
@@ -327,7 +336,7 @@ export async function llenarSelectorEntrenamientos(lista) {
   // Si hoy ya elegiste otra cosa a mano, se respeta.
   if (estado.elegirLoDeHoy && !estado.sesion) {
     estado.elegirLoDeHoy = false;
-    const dia = await calcularDia(sesiones, todos);
+    const dia = prog ? diaHoy : await calcularDia(sesiones, todos);
     const v = dia && ['plan', 'recuperar', 'sugerida'].includes(dia.fuente) ? (dia.id || valorDe(dia.ent, todos)) : null;
     if (v && ajustes.leer('eleccionDia', '') !== E.claveDia(Date.now()) && [...sel.options].some((o) => o.value === v)) {
       sel.value = v; ajustes.escribir('ultimoEnt', sel.value); ajustes.escribir('modoEnt', 'objetivo');

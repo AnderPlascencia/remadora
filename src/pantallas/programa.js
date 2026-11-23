@@ -134,8 +134,13 @@ export async function pintarPrograma() {
     const tipo = /^Prueba/.test(d.ent) ? 'Prueba' : e && P.esDura(e) ? 'Dura' : 'Suave';
     return `<li data-estado="${d.estado}"><span class="sp-dia">${d.hechaEl ? diaCorto(d.hechaEl) : d.diaCorto}</span><span class="sp-info"><b>${escaparHtml(d.ent)}</b><small>${tipo}${e ? ` · ${escaparHtml(B.resumenEnt(e).split(' · ')[0])}` : ''} · ${d.atrasada ? 'Pendiente, cuando puedas' : ESTADO[d.estado]}${d.estado === 'hecho' ? ' ✓' : ''}</small></span>${
       v && d.estado !== 'hecho' ? `<button type="button" class="boton chico" data-entrenar="${v}">Entrenar</button>` : ''}</li>`;
-  }).join('') : '<li class="vacio">Esta semana no hay sesiones en tu plan.</li>';
+  }).join('') : '';
   const quedan = P.semanaFlexible(prog, sesiones);
+  // Un plan que arranca la semana que viene no dice «no hay sesiones»: la tarjeta Hoy ya adelanta la primera.
+  if (!semana.length) {
+    const prox = quedan.futuras[0];
+    $('#semana-plan').innerHTML = `<li class="vacio">${prox ? `Tu semana 1 empieza el ${diaPlan(prox.fecha)}.` : 'Esta semana no hay sesiones en tu plan.'}</li>`;
+  }
   $('#semana-plan-nota').hidden = !semana.length;
   $('#semana-plan-nota').textContent = quedan.pendientes.length
     ? `Hechas ${semana.length - quedan.pendientes.length} de ${semana.length}. Los días son una sugerencia: haz las que faltan cuando te venga bien antes del domingo (te ${quedan.diasQuedan === 1 ? 'queda 1 día' : `quedan ${quedan.diasQuedan} días`}).`
@@ -192,6 +197,7 @@ function tiraBloques(ent) {
   }).join('');
 }
 const minTexto = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
+const DIA_LARGO = (k) => `el ${new Date(`${k}T12:00`).toLocaleDateString('es-MX', { weekday: 'long' })}`;
 const diaPlan = (k) => { const d = new Date(`${k}T12:00`); const f = (o) => d.toLocaleDateString('es-MX', o).replace('.', ''); return `${f({ weekday: 'short' })} ${d.getDate()} ${f({ month: 'short' })}`; };
 
 // Programa › Hoy: la sesión del día (ya con lo que ajustó el plan) o el descanso y la próxima.
@@ -478,6 +484,12 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   if (dia) $('#recomendacion').hidden = true; else pintarRecomendacion();
   const valorDia = dia ? (dia.id || valorDe(dia.ent, todos)) : null;
   const esDelDia = !!(ent && valorDia && String(ent.id) === valorDia);
+  const hoyK = E.claveDia(Date.now());
+  // Lo de hoy ya está hecho: si la sesión del plan seguía elegida sola (no a mano), Empezar pasa a Remo libre
+  // para no invitar a repetirla, y la tarjeta se cierra con la próxima.
+  if (dia?.fuente === 'hecho' && esDelDia && ajustes.leer('eleccionDia', '') !== hoyK) { elegirEnt(''); return; }
+  const cerrada = !!prog && !ent && (dia?.fuente === 'hecho' || (dia?.fuente === 'descanso' && sesiones.some((x) => E.claveDia(x.fecha) === hoyK)));
+  $('#preparar').classList.toggle('hecho-hoy', cerrada);
   const ETQ = { plan: 'Hoy toca', hecho: 'Hoy toca · ya lo hiciste', recuperar: 'Para recuperar hoy', sugerida: 'Sugerido para hoy' };
   $('#hoy-etq').textContent = esDelDia ? ETQ[dia.fuente] || 'Hoy' : ent ? 'Tu entrenamiento' : dia?.fuente === 'descanso' ? 'Hoy descansas' : 'Hoy';
   $('#hoy-nombre').textContent = ent ? ent.nombre : libreConFantasmas() ? 'Remo libre contra 3 fantasmas' : 'Remo libre';
@@ -515,10 +527,21 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   pintarAntes(sesiones);
   // Tu próxima cita (etapa 13): el día y la hora en que quedaste contigo.
   const cg = citaGuardada();
-  const hoyK = E.claveDia(Date.now());
   const cita = Ci.proximaCita({ programa: prog, dias: Ci.diasDeCita(cg.dias, perfil().dias), hora: cg.hora, movida: cg.movida, hechoHoy: sesiones.some((x) => E.claveDia(x.fecha) === hoyK) });
-  $('#hoy-cita').hidden = !cita;
+  $('#hoy-cita').hidden = !cita || cerrada;
   $('#hoy-cita').textContent = cita ? `Tu próxima cita: ${Ci.textoCita(cita)}${cita.ent && cita.fecha !== hoyK ? ` · ${cita.ent}` : ''}` : '';
+  if (cerrada) {
+    // «Hecho ✓ · Próxima: el sábado, 19:00», con la sesión debajo. El motivo y la cita dirían lo mismo otra vez.
+    const fl = P.semanaFlexible(prog, sesiones);
+    const prox = fl.pendientes[0] || fl.futuras[0] || null;
+    const cuando = cita && cita.fecha !== hoyK ? Ci.textoCita(cita) : prox ? (fl.pendientes[0] ? 'esta semana' : DIA_LARGO(prox.fecha)) : '';
+    const proxEnt = cita?.ent && cita.fecha !== hoyK ? cita.ent : prox?.ent;
+    $('#hoy-etq').textContent = 'Hoy';
+    $('#hoy-nombre').textContent = 'Hecho ✓';
+    const proxima = cuando ? `Próxima: ${cuando}${proxEnt ? ` · ${proxEnt}` : ''}.` : 'Era la última sesión del plan.';
+    $('#hoy-resumen').textContent = `${proxima} Si quieres más, Empezar abre un Remo libre suave.`;
+    $('#hoy-porque').hidden = true;
+  }
   // Tu meta a la vista (etapa 18): con un plan hacia una meta, tu tiempo estimado hoy frente a la meta.
   const meta = prog?.meta;
   const est = meta ? E.estimar(sesiones, meta.distancia, { peso: perfil().peso }) : null;
