@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.107.2 · 2026-11-23
+
+Las marcas de metros, integradas en el paisaje.
+
+- **En 2D, sin franja lisa abajo.** La orilla pintada llega hasta el borde y cada marca es una estaca de madera en la orilla con su placa («0 m», «10 m»…). Junto al borde la placa se corre hacia dentro, así que el 0 m ya se ve. Sobre el agua, la raya es ahora una corchera discreta de puntos claros y oscuros.
+- **En 3D, flotadores en vez de raya.** Las marcas transversales son una fila de flotadores claros y oscuros, y la placa de metros cuelga de una estaca en la orilla.
+
 ## 0.107.1 · 2026-11-23
 
 Revisión de las etapas 20 a 23: el resumen al terminar y Progreso ya no cargan todas tus sesiones segundo a segundo, y Héroe y Progreso abren bien justo después de una actualización.
