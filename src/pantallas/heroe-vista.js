@@ -8,7 +8,7 @@ import * as O from '../objetos.js';
 import * as V from '../ventajas.js';
 import * as B from '../base.js';
 import {
-  $, ajustes, escaparHtml, fechaCorta, ftp, ico, miles, toast, 
+  $, ajustes, escaparHtml, ftp, ico, miles, toast, 
 } from '../ui.js';
 import { estado } from '../estado.js';
 import { pintarClasificacion } from './ajustes.js';
@@ -152,14 +152,7 @@ function pintarFicha(h, per, clase, sesiones) {
     : ''; // Sin sesiones, «Esta semana» ya invita a remar la primera: no se repite aquí.
   // Héroe nuevo: los 7 atributos en una lista compacta, sin barras vacías ni «sin cambios esta semana».
   $('#heroe-atributos').classList.toggle('vacio', !Object.values(h.atributos).some((v) => v > 0));
-  $('#heroe-atributos-nota').textContent = J.TEXTO_ATRIBUTOS;
   pintarInsigniasHistoria(h, per);
-  const ult = [...sesiones].sort((a, b) => b.fecha - a.fecha).slice(0, 3);
-  $('#heroe-sesiones').innerHTML = ult.length ? ult.map((x) => {
-    const g = h.porSesion.get(x.fecha);
-    return `<li><div><b>${fechaCorta(x.fecha)} · ${escaparHtml(x.entrenamiento || 'Remo libre')}</b> <span class="xp">+${miles(g.xp + g.xpExtra)} XP</span> <span class="monedas">${icoMoneda}${g.monedas}</span></div>
-      <div class="chips-ganancia solo-avanzado">${Object.entries(g.ganancias).map(([k, v]) => `<span>${nombreAtributo(k)} +${v}</span>`).join('')}</div></li>`;
-  }).join('') : '<li class="vacio">Tu primera sesión le dará experiencia a tu héroe.</li>';
 }
 
 // «Iniciado de la fuerza · 12 para Diestro».
@@ -168,7 +161,6 @@ function tituloCorto(clave, valor) {
   const sig = t.siguiente ? `${miles(t.siguiente.faltan)} para <b>${t.siguiente.nombre.split(' ')[0]}</b>` : 'Título máximo';
   return `${t.actual ? `${t.actual} · ` : ''}${sig}`;
 }
-// Semana de héroe: la meta de atributo de la semana, una semana sugerida para equilibrarte y el título más cercano.
 // Insignias de la historia: los jefes de los capítulos y los logros con premio. Cada ficha dice qué la gana («Cómo»),
 // cuánto llevas y, si ya es tuya, cuándo la ganaste. Un mismo objeto es una sola ficha (el aura de hielo tiene dos logros).
 function pintarInsigniasHistoria(h, per) {
@@ -202,6 +194,7 @@ function pintarInsigniasHistoria(h, per) {
   })).join('');
 }
 
+// Semana de héroe: la meta de atributo de la semana, una semana sugerida para equilibrarte y el título más cercano.
 function pintarSemanaHeroe(h, sesiones, f) {
   const caja = $('#heroe-semana');
   const mi = h.semanales.find((m) => m.clave === 'atributo');
@@ -413,9 +406,10 @@ function filaMision(m) {
   const pct = Math.min(100, (100 * m.valor) / m.meta);
   // Las misiones del día y de la semana tienen un atajo a Entrenar con lo que piden.
   const atajo = m.preparar != null && !m.hecha ? `<button type="button" class="enlace-boton" data-preparar="${m.preparar}">Hacer ahora ›</button>` : '';
-  return `<li class="${m.hecha ? 'hecha' : ''}"><div class="mision-fila"><span>${m.hecha ? ico('i-check') : ''}${m.nombre ? `<b>${m.nombre}</b> · ` : ''}${m.texto}</span>
-    <span class="recompensa">${m.xp ? `<span class="xp">+${miles(m.xp)} XP</span>` : ''}${m.monedas ? `<span class="monedas">${icoMoneda}${m.monedas}</span>` : ''}</span></div>
-    <div class="progreso"><div style="width:${pct}%"></div></div><div class="mision-pie"><small>${avanceMision(m)}${m.premio ? ` · premio: <b>${m.premio}</b>` : ''}</small>${atajo}</div></li>`;
+  // Nombre y premio en una línea; lo que pide, debajo en pequeño.
+  return `<li class="${m.hecha ? 'hecha' : ''}"><div class="mision-fila"><span>${m.hecha ? ico('i-check') : ''}${m.nombre ? `<b>${m.nombre}</b>` : m.texto}</span>
+    <span class="recompensa">${m.xp ? `<span class="xp">+${miles(m.xp)} XP</span>` : ''}${m.monedas ? `<span class="monedas">${icoMoneda}${m.monedas}</span>` : ''}</span></div>${m.nombre ? `<small class="mision-texto">${m.texto}</small>` : ''}
+    ${m.meta > 1 ? `<div class="progreso"><div style="width:${pct}%"></div></div>` : ''}${m.meta > 1 || m.premio || atajo ? `<div class="mision-pie"><small>${m.meta > 1 ? avanceMision(m) : ''}${m.premio ? `${m.meta > 1 ? ' · ' : ''}premio: <b>${m.premio}</b>` : ''}</small>${atajo}</div>` : ''}</li>`;
 }
 
 function pintarMisiones(h) {
@@ -426,8 +420,9 @@ function pintarMisiones(h) {
   const c = h.capitulo;
   $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p>${c.pendiente ? '<p class="cap-avance">Ya lo venciste antes de tiempo: en cuanto se desbloquee, el capítulo es tuyo con tu próxima sesión.</p>' : ''}</div>
     <ul class="lista misiones">${c.progreso.map((r) => filaMision({ clave: `cap-${r.clave}`, texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
-    <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}, ${J.OTRAS_FORMAS_JEFE}${
-      c.listo ? ' · ¡ya puedes enfrentarlo!' : ` · se desbloquea al cumplir lo de arriba o en el nivel ${c.nivel}`}</small></div>
+    <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}${
+      c.listo ? ' · ¡ya puedes enfrentarlo!' : ` · se abre al cumplir lo de arriba o en el nivel ${c.nivel}`}</small>
+      <details class="jefe-formas"><summary>Otras formas de vencerlo</summary><small>${J.OTRAS_FORMAS_JEFE.replace(/^o /, '').replace(/, o /g, ' · ')}</small></details></div>
       <span class="premio"><span class="xp">+${miles(c.xp)} XP</span> ${icoMoneda}${c.monedas + J.PREMIO_INSIGNIA} + insignia ${O.objeto(c.objeto)?.nombre || ''}</span>
       ${c.listo ? `<button type="button" class="boton primario jefe-boton" data-preparar="${c.preparar}">Enfrentar: ${NOMBRE_PRUEBA[c.preparar]}</button>` : ''}</div>`
     : '<p class="aviso exito">¡Terminaste la historia! Eres una leyenda de los mares.</p>';
