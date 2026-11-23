@@ -210,7 +210,7 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
     ['Watts prom', s.wattsProm], ['Watts máx', s.wattsMax],
     ['Split prom', formatoSplit(s.splitProm)], ['Golpes/min', s.spmProm],
     ['Calorías', s.kcal], ['Paladas', s.paladas ?? '-'],
-    ['Metros/palada', tec.metrosPorPalada ?? '-'],
+    ['Metros/palada', tec.metrosPorPalada != null ? `${tec.metrosPorPalada.toLocaleString('es-MX')} m` : '-'],
   ];
   if (avanzado()) stats.push(['Trabajo/palada', tec.joulesPorPalada ? `${tec.joulesPorPalada} J` : '-']);
   stats.push(['Pulso prom', s.fcProm || '-']);

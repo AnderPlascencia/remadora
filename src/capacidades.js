@@ -55,8 +55,9 @@ export function analisisSesion(s, { ftp = 0, fcMax = 0 } = {}) {
   if (tipo === 'fondo') {
     const zona = refPulso(fcMax).max && s.fcProm ? E.zonaFc(s.fcProm, fcMax) : null;
     datos.push({ etq: 'Pulso medio', valor: s.fcProm ? `${s.fcProm} lpm${zona ? ` · Z${zona.n}` : ''}` : '-', ayuda: 'En fondo conviene la zona 2.' });
-    datos.push({ etq: 'Desacople', valor: desacople != null ? `${decimal(desacople)} %` : '-', ayuda: 'Cuánto se despegó el pulso de los watts entre la 1.ª y la 2.ª mitad.' });
-    datos.push({ etq: 'Metros/palada', valor: tec.metrosPorPalada ?? '-', ayuda: 'Más metros con el mismo esfuerzo = mejor técnica.' });
+    // Sin desacople (sesión corta o sin reloj) no se pinta un dato vacío: la lectura de abajo dice cómo medirlo.
+    if (desacople != null) datos.push({ etq: 'Desacople', valor: `${decimal(desacople)} %`, ayuda: 'Cuánto se despegó el pulso de los watts entre la 1.ª y la 2.ª mitad.' });
+    datos.push({ etq: 'Metros/palada', valor: tec.metrosPorPalada != null ? decimal(tec.metrosPorPalada) : '-', ayuda: 'Más metros con el mismo esfuerzo = mejor técnica.' });
     if (desacople == null) lectura = s.fcProm ? 'Rema 25 min o más seguidos con el reloj para medir tu motor aeróbico.' : 'Conecta el reloj para medir cómo responde tu corazón en los fondos.';
     else if (desacople < 5) lectura = 'Motor aeróbico sólido: tu pulso no se despegó de los watts.';
     else lectura = `Tu pulso subió un ${decimal(desacople)} % respecto a los watts: fondos más largos y suaves te harán aguantar mejor.`;

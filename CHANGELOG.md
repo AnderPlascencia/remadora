@@ -2,12 +2,20 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
-## 0.116.0 · 2026-11-23
+## 0.117.0 · 2026-11-23
 
 Un aviso a tiempo si remas cada vez menos.
 
 - **¿Lo hacemos más fácil?** Si remabas 2 veces por semana o más y en las últimas semanas bajaste a la mitad, o llevas 7 días sin remar, Hoy te lo dice una sola vez, sin reproches. Con un plan de 3 días o más ofrece bajar un día por semana; sin plan, un fondo suave. «Ahora no» lo cierra, y no vuelve a preguntar en 6 semanas. Si prefieres parar unas semanas, también está bien.
 - **Una sola cuenta de monotonía.** El aviso de semana muy pareja y la métrica de Datos avanzados usan el mismo cálculo.
+
+## 0.116.0 · 2026-11-23
+
+Menos texto mientras remas, en Planes y en Ajustes.
+
+- **Números con su unidad en el modo remo.** La distancia dice «1,250 m» y los watts máximos «210 W». El análisis de un fondo ya no muestra «Desacople -» cuando no hay dato: la lectura de abajo dice cómo medirlo.
+- **Planes con un filtro a la vista.** El tipo de entrenamiento queda arriba y «Quiero subir…» se pliega en una línea. Cada tarjeta tiene un solo botón, «Entrenar»: «Copiar y editar» está dentro del detalle.
+- **Ajustes › Tu perfil, plegado con su resumen** («35 años · 75 kg · 3 días»). Solo se abre solo si falta algo. Cada dato que falta dice para qué sirve dentro de su campo, en vez de una lista aparte.
 
 ## 0.115.0 · 2026-11-23
 
