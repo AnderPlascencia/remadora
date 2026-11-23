@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.116.0 · 2026-11-23
+
+Un aviso a tiempo si remas cada vez menos.
+
+- **¿Lo hacemos más fácil?** Si remabas 2 veces por semana o más y en las últimas semanas bajaste a la mitad, o llevas 7 días sin remar, Hoy te lo dice una sola vez, sin reproches. Con un plan de 3 días o más ofrece bajar un día por semana; sin plan, un fondo suave. «Ahora no» lo cierra, y no vuelve a preguntar en 6 semanas. Si prefieres parar unas semanas, también está bien.
+- **Una sola cuenta de monotonía.** El aviso de semana muy pareja y la métrica de Datos avanzados usan el mismo cálculo.
+
 ## 0.115.0 · 2026-11-23
 
 Rema contra ti mismo de hace casi dos meses.
