@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.105.1 · 2026-11-23
+
+El Lago de otoño, repintado con el estilo de los héroes.
+
+- **Otoño pintado.** Colinas con arces rojos y dorados entre niebla y un lago azul; pinos, arces, abedules, cabaña de troncos, rocas, helechos y canoa pintados con el mismo motor y la misma mano que los retratos.
+- **Hojas caídas y agua azul pintadas en la vista 3D**, con bruma lejana; también hay agua pintada en el canal de la vista 2D y una costa 2D con bosque y cabaña.
+- Miniatura nueva en la tienda.
+
 ## 0.105.0 · 2026-11-23
 
 Menos texto arriba de cada pestaña y Misiones más corta.
