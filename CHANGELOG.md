@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.113.0 · 2026-11-23
+
+Los planes hacia una meta de 5 o 10 km entrenan a la intensidad correcta.
+
+- **Zonas según tu nivel, no solo según la meta.** El fondo, el tramo firme y el umbral de un plan de 5 o 10 km se calculan ahora desde tu 2000 m equivalente. Antes salían del ritmo de la meta y en un 10 km quedaban unos 10 s por 500 m demasiado suaves. En un plan de 2000 m no cambia nada.
+- **Series que siguen siendo la sesión clave.** En metas largas, las series a ritmo nunca van más lentas que tu umbral, así cada semana tiene su sesión dura de verdad.
+- Los planes que ya tienes no cambian: se aplica al crear uno nuevo.
+
 ## 0.112.1 · 2026-11-23
 
 La Costa mediterránea, repintada con el estilo de los héroes.

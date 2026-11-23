@@ -271,7 +271,9 @@ export function cadenciaGuia(b, splitMeta = null) {
 export const conCadencia = (e) => (e.bloques ? { ...e, bloques: e.bloques.map((b) => { const g = cadenciaGuia(b, e.splitMeta); return g ? { ...b, spmGuia: g } : b; }) } : e);
 
 // Sesiones del plan hacia una meta, en split. Mismo formato que SESIONES: (p, k, ctx, semana) → entrenamiento.
-function semanaMeta(split, distancia) {
+// Las zonas (fondo, firme, umbral y calentamiento) salen del split de 2000 m equivalente a la meta (ley de Paul): así un
+// 5 o 10 km no entrena el fondo y el umbral demasiado suaves. Las series de ritmo van al split de la propia meta.
+function semanaMeta(split, distancia, ritmoMeta = split) {
   const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + META_CAL[0], max: split + META_CAL[1] };
   const descanso = (seg) => ({ nombre: 'Descanso', duracion: seg, metrica: '', min: 0, max: 0 });
   const fondoB = (seg) => ({ nombre: 'Fondo', duracion: seg, metrica: 'split', min: split + META_FONDO[0], max: split + META_FONDO[1] });
@@ -306,7 +308,9 @@ function semanaMeta(split, distancia) {
     const [n, f] = paso([[6, 0.25], [5, 0.3], [4, 0.375]], p);
     const tramo = Math.max(100, Math.min(1000, Math.round((distancia * f) / 50) * 50));
     const r = reps(n, k);
-    const sp = split + Math.round(3 * (1 - p));
+    // En metas largas (10 km) el ritmo de la meta queda por debajo del umbral: las series van como mínimo a +8 s del
+    // 2000 m equivalente, para que sigan siendo la sesión que sube el ritmo.
+    const sp = Math.min(ritmoMeta, split + 8) + Math.round(3 * (1 - p));
     const bloques = Array.from({ length: r }, (_, i) => [
       { nombre: `${tramo} m ${i + 1}/${r}`, fin: 'distancia', cantidad: tramo, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 1 },
       ...(i < r - 1 ? [descanso(Math.round(tramo / 5) + 30)] : []),
@@ -452,6 +456,8 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
   const misDias = Array.isArray(ctx?.diasSemana) && ctx.diasSemana.length === dias && new Set(ctx.diasSemana).size === dias
     && ctx.diasSemana.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) ? [...ctx.diasSemana].sort((a, b) => a - b) : DIAS_PLAN[dias];
   const split = meta ? Math.round((meta.segundos * 500) / meta.distancia) : null;
+  // Referencia de las zonas: el split de 2000 m equivalente a la meta (en un 2000 m, el mismo).
+  const ref = meta ? (meta.distancia === 2000 ? split : Math.round((predecir(meta.distancia, meta.segundos, 2000) * 500) / 2000)) : null;
   const obj = meta ? { clave: 'meta', prueba: 'meta' } : objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
   const pruebaDe = () => (meta
     ? { tipo: 'objetivo', nombre: `Prueba ${meta.distancia} m`, prueba: true, objetivo: { metrica: 'distancia', valor: meta.distancia } }
@@ -459,12 +465,12 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
   const vol = NIVELES_PLAN.find((n) => n.clave === nivel)?.volumen ?? 1;
   const cx = { ...ctx, nivelPlan: nivel };
   const tiposBase = SEMANA_TIPO.base.slice(0, dias);
-  const tiposObj = (meta ? semanaMeta(split, meta.distancia) : SEMANA_TIPO[obj.clave]).slice(0, dias);
+  const tiposObj = (meta ? semanaMeta(ref, meta.distancia, split) : SEMANA_TIPO[obj.clave]).slice(0, dias);
   const base = meta ? 0 : semanasDeBase(obj.clave, nivel, semanas);
   const entrenamientos = [];
   // Cada sesión de un plan de meta guarda el split de la meta: con él se sabe cuáles son duras (umbral y series).
   const agregar = (ent) => {
-    if (!entrenamientos.some((x) => x.nombre === ent.nombre)) entrenamientos.push(meta ? { ...ent, splitMeta: split } : ent);
+    if (!entrenamientos.some((x) => x.nombre === ent.nombre)) entrenamientos.push(meta ? { ...ent, splitMeta: ref } : ent);
     return ent.nombre;
   };
   // Con tope de minutos (tu perfil), una sesión que se pasa se rehace con menos volumen hasta que quepa.
@@ -489,7 +495,7 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     const otra = meta ? null : /^(Umbral|Sweet spot)/.test(e.nombre) ? SESIONES.umbralCorto : /^Fondo .*tempo/.test(e.nombre) ? SESIONES.fondo([20, 30]) : null;
     if (tope && duracionPlan(e) > tope && otra) e = ajustar(otra, p, k, s);
     // Tope de trabajo por encima del 106 % del FTP en una sesión.
-    const conMeta = (x) => (meta ? { ...x, splitMeta: split } : x);
+    const conMeta = (x) => (meta ? { ...x, splitMeta: ref } : x);
     for (let i = 0, kk = k; i < 6 && segVo2(conMeta(e)) > VO2_MAX_SESION; i++) { kk *= 0.85; e = ajustar(fn, p, kk, s); }
     return conCadencia(conMeta({ tipo: e.tipo || 'intervalos', ...e }));
   };
