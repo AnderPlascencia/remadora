@@ -260,6 +260,7 @@ Object.assign(PAISAJES, {
     nombre: 'Costa mediterránea',
     texto: 'Acantilados de caliza, cipreses, olivos y casitas blancas.',
     precio: 2700,
+    pintado: true,
     orilla: {
       piezas: {
         cipres_alto: { x: 0, y: 0, w: 176, h: 760, pie: [0.5, 0.996], m: 11.88 },
@@ -271,20 +272,20 @@ Object.assign(PAISAJES, {
         roca_grande: { x: 0, y: 1129, w: 287, h: 111, pie: [0.5, 0.822], m: 1.73 },
         roca: { x: 289, y: 1129, w: 157, h: 73, pie: [0.503, 0.729], m: 1.14 },
         barca: { x: 448, y: 1129, w: 322, h: 70, pie: [0.5, 0.844], m: 1.09 },
-        lavanda: { x: 772, y: 1129, w: 80, h: 42, pie: [0.506, 0.915], m: 0.65 }
+        romero: { x: 772, y: 1129, w: 80, h: 42, pie: [0.506, 0.915], m: 0.65 }
       },
       elegir: (r1, r2) => (r1 < 0.08 ? 'roca' : r1 < 0.12 ? 'roca_grande' : r1 < 0.17 && r2 < 0.5 ? 'casa'
         : r1 < 0.21 && r2 < 0.5 ? 'barca' : r1 < 0.36 ? (r2 < 0.5 ? 'buganvilla' : 'olivo')
           : r2 < 0.35 ? 'cipres_alto' : r2 < 0.6 ? 'cipres' : r2 < 0.8 ? 'olivo' : 'pinonero'),
       fondo: (r2) => (r2 > 0.7 ? 'pinonero' : r2 > 0.45 ? 'cipres_alto' : 'olivo'),
       apartar: { casa: 4, barca: -1 },
-      borde: 'lavanda',
+      borde: 'romero',
       // Los piñoneros se inclinan hacia +x: en la orilla derecha se espejan siempre
       espejo: (s) => s > 0
     },
     colores: {
-      tierra2d: '#8A8A55', agua2d: ['#1E6FB0', '#0F4E8A'], cielo3d: ['#8FB6E6', '#D6E3F0'], agua3d: ['#2E6FA8', '#0B3E6E'],
-      reflejo: '180,210,240', arena3d: '#E0D2B0', tierra3d: '#7A7A4A', bruma: 240
+      tierra2d: '#8F7A44', agua2d: ['#1C6496', '#0E4470'], cielo3d: ['#8FB6E6', '#D6E3F0'], agua3d: ['#2E6FA8', '#0B3E6E'],
+      reflejo: '180,210,240', arena3d: '#D8CCB0', tierra3d: '#9A8550', bruma: 240
     }
   }),
 });
@@ -1949,6 +1950,8 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
   ctx.textAlign = 'left';
   let ultimaEtq = Infinity;
   const marcas = [];
+  // Los flotadores de todas las filas se juntan en dos trazos (claro y oscuro) y se rellenan una vez cada uno.
+  const flot = [];
   for (let m = Math.ceil(camZ / paso) * paso; m < camZ + alcance; m += paso) {
     if (m < 0) continue;
     const a = P(minX - 2, m);
@@ -1958,8 +1961,7 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
     const nf = Math.max(6, Math.min(28, Math.round((b.x - a.x) / Math.max(5, a.s * 0.18))));
     const rf = Math.max(0.8, a.s * 0.028);
     for (let i = 0; i <= nf; i++) {
-      ctx.fillStyle = i % 2 ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.55)';
-      ctx.fillRect(a.x + ((b.x - a.x) * i) / nf - rf, a.y + ((b.y - a.y) * i) / nf - rf * 0.6, rf * 2, rf * 1.2);
+      flot.push(a.x + ((b.x - a.x) * i) / nf - rf, a.y + ((b.y - a.y) * i) / nf - rf * 0.6, rf * 2, rf * 1.2, i % 2);
     }
     // Etiquetas solo mientras no se amontonan cerca del horizonte; van en una estaca de la orilla derecha.
     if (ultimaEtq - b.y >= 16 && b.x + 50 < ancho) {
@@ -1967,6 +1969,12 @@ function pintar3d(c, { ctx, ancho, alto }, { botes, t, ritmo, referencias = [], 
       marcas.push({ txt: `${m} m`, x: b.x + 6, y: (poste ? poste.y : b.y) + 4, pie: b, poste });
       ultimaEtq = b.y;
     }
+  }
+  for (const [osc, color] of [[0, 'rgba(255,255,255,0.55)'], [1, 'rgba(15,23,42,0.45)']]) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let j = 0; j < flot.length; j += 5) if (flot[j + 4] === osc) ctx.rect(flot[j], flot[j + 1], flot[j + 2], flot[j + 3]);
+    ctx.fill();
   }
   const meta = c.estado.meta;
   if (meta != null && meta - camZ < alcance && meta > camZ) {
