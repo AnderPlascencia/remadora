@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.121.0 · 2026-11-23
+
+Los días suaves se reman suaves (decisiones de Ander).
+
+- **Sin edad, el pulso pasa a watts.** Un bloque «a pulso suave» se rema ahora en watts: con un FTP de 150, la zona 2 es 84–113 W. Antes quedaba «Libre» y nada te frenaba. La vista normal lo dice («con tu edad sería por pulso») y, en cuanto pones tu edad, vuelve a ser por pulso.
+- **En un día suave del plan, ir fuerte no suma.** Desde el 24 de noviembre, los minutos por encima del 91 % de tu FTP en una sesión suave del plan ya no dan Fuerza ni Agilidad. Mientras remas, el reto pasa a una orden en ámbar, «Baja a 112–150 W». En el resumen salen aparte como minutos por encima del rango, sin puntos. Las sesiones de antes no cambian.
+
 ## 0.120.0 · 2026-11-23
 
 La carrera gasta menos batería.

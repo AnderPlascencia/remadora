@@ -175,11 +175,28 @@ export function bandasPotencia(ent, ftp) {
 }
 
 // Bloques con el % de FTP convertido a watts (lo que se guarda con la sesión).
-export function normalizarBloques(bloques, ftp, fcMax = 0) {
+// Sin pulso de referencia (sin edad ni pulso máximo), un bloque en % de la reserva de pulso se rema en watts
+// (decisión de Ander, 23 nov): antes quedaba «Libre» y nada frenaba un fondo remado fuerte. Equivalencia por zonas:
+// 60–70 % de la reserva (zona 2) ≈ 56–75 % del FTP; 80 % ≈ 90 %; 90 % ≈ 105 %. Con tu edad vuelve al pulso.
+const FCPCT_A_FTP = [[50, 50], [60, 56], [70, 75], [80, 90], [90, 105], [100, 120]];
+export function pctFtpDeFcpct(x) {
+  const t = FCPCT_A_FTP;
+  if (x <= t[0][0]) return t[0][1];
+  for (let i = 1; i < t.length; i++) {
+    const [a, fa] = t[i - 1];
+    const [b, fb] = t[i];
+    if (x <= b) return Math.round(fa + ((x - a) * (fb - fa)) / (b - a));
+  }
+  return t.at(-1)[1];
+}
+// wattsSinFc: false deja el bloque sin meta, como antes (para dibujar sin inventar una banda).
+export function normalizarBloques(bloques, ftp, fcMax = 0, { wattsSinFc = true } = {}) {
   return bloques.map((b) => {
     if (b.metrica === 'fcpct') {
       const r = rangoFc(b, fcMax);
-      return r ? { ...b, metrica: 'fc', min: r.min, max: r.max } : { ...b, metrica: '' };
+      if (r) return { ...b, metrica: 'fc', min: r.min, max: r.max };
+      const w = wattsSinFc && rangoWatts({ metrica: 'ftp', min: pctFtpDeFcpct(b.min), max: pctFtpDeFcpct(b.max) }, ftp);
+      return w ? { ...b, metrica: 'watts', min: w.min, max: w.max, deFc: true } : { ...b, metrica: '' };
     }
     if (b.metrica !== 'ftp') return { ...b };
     const r = rangoWatts(b, ftp);
@@ -189,7 +206,7 @@ export function normalizarBloques(bloques, ftp, fcMax = 0) {
 
 // Bloques para dibujar el perfil: todo con meta de potencia queda en watts (el split se convierte).
 export function bloquesEnWatts(bloques, ftp) {
-  return normalizarBloques(bloques, ftp).map((b) => {
+  return normalizarBloques(bloques, ftp, 0, { wattsSinFc: false }).map((b) => {
     if (b.metrica === 'watts') return b;
     if (b.metrica === 'split') return { ...b, metrica: 'watts', min: wattsDeSplit(b.max), max: wattsDeSplit(b.min) };
     return { ...b, metrica: b.metrica === 'spm' || b.metrica === 'fc' ? b.metrica : '' };

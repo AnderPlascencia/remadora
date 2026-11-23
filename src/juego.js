@@ -50,6 +50,12 @@ export const NO_PERDER_DESDE = '2026-11-23';
 // paga un premio grande (XP_MEJORA_REAL tal cual, sin el factor de XP lenta), uno al mes como mucho. Solo cuenta desde MEJORA_REAL_DESDE: las sesiones de antes no cambian.
 export const MEJORA_REAL_DESDE = '2026-11-24';
 export const MEJORA_REAL_PCT = 0.02;
+// Días suaves del plan (decisión de Ander, 23 nov): en una sesión del plan que no es dura (fondo, técnica, calorías),
+// los segundos por encima de la zona 3 (91 % del FTP o más) no dan Fuerza ni Agilidad: premiaban justo lo que
+// estropea un fondo. Desde SUAVE_SIN_ZONAS_DESDE; las sesiones de antes no cambian.
+export const SUAVE_SIN_ZONAS_DESDE = '2026-11-24';
+export const TIPOS_INTENSOS = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
+export const esSuaveDelPlan = (s) => claveDia(s.fecha) >= SUAVE_SIN_ZONAS_DESDE && !!s.delPrograma && !!s.tipoPlan && !TIPOS_INTENSOS.has(s.tipoPlan);
 export const XP_MEJORA_REAL = 250;
 export const MONEDAS_MEJORA_REAL = 50;
 const MEJORA_TIEMPOS = [['t2000', '2000 m'], ['t5000', '5000 m']];
@@ -819,8 +825,10 @@ function gananciaSesion(s, m, ctx) {
   const gr = ctx.grados || {};
   const at = { fuerza: 0, agilidad: 0, resistencia: 0, recuperacion: 0, tecnica: 0, voluntad: 0, gasto: 0 };
   at.gasto += (s.kcal || 0) / 50;
-  at.fuerza += m.z4min * 1.2;
-  at.agilidad += segundosCon(s, (w) => w / m.f >= 1.06) / 20;
+  if (!esSuaveDelPlan(s)) {
+    at.fuerza += m.z4min * 1.2;
+    at.agilidad += segundosCon(s, (w) => w / m.f >= 1.06) / 20;
+  }
   at.resistencia += m.z2min * 0.5 + (s.duracion >= 1200 ? 4 : 0);
   if (s.distancia >= 400 && s.distancia <= 600 && s.duracion <= 150) at.agilidad += 5;
   const suave = s.wattsProm && s.wattsProm / m.f < 0.75;

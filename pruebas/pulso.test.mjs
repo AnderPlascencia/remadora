@@ -127,3 +127,17 @@ for (const ent of [Ent.PRUEBAS['Prueba FTP 20 min'], Ent.EJEMPLOS.find((e) => e.
   assert.match(p.consejo, /5 primeros minutos.*3 últimos/);
 }
 console.log('pulso OK');
+
+// Sin edad ni pulso máximo, un bloque de pulso se rema en watts (zona 2 ≈ 56–75 % del FTP); con pulso, en lpm.
+{
+  const { normalizarBloques, pctFtpDeFcpct } = await import('../src/entrenamientos.js');
+  assert.equal(pctFtpDeFcpct(60), 56);
+  assert.equal(pctFtpDeFcpct(70), 75);
+  assert.equal(pctFtpDeFcpct(65), 66);
+  const [w] = normalizarBloques([{ nombre: 'Fondo', duracion: 1500, metrica: 'fcpct', min: 60, max: 70 }], 150, 0);
+  assert.deepEqual([w.metrica, w.min, w.max], ['watts', 84, 113]);
+  const [fc] = normalizarBloques([{ nombre: 'Fondo', duracion: 1500, metrica: 'fcpct', min: 60, max: 70 }], 150, 185);
+  assert.equal(fc.metrica, 'fc');
+  const [libre] = normalizarBloques([{ nombre: 'Fondo', duracion: 1500, metrica: 'fcpct', min: 60, max: 70 }], 0, 0);
+  assert.equal(libre.metrica, '');
+}

@@ -693,7 +693,10 @@ function actualizarAtrVivo() {
   const pct = estado.sesion.segConMeta ? Math.round((100 * estado.sesion.segEnRango) / estado.sesion.segConMeta) : null;
   const b = estado.sesion.info && !estado.sesion.info.terminado ? estado.sesion.info.bloque : null;
   const rw = b && Ent.rangoWatts(b, ftp());
-  const v = C.enVivo(estado.sesion.muestras, { ...a.opc, pct, tipo: estado.sesion.tipoPlan ?? null, rango: rw ? { min: Math.round(rw.min), max: Math.round(rw.max) } : null });
+  const v = C.enVivo(estado.sesion.muestras, {
+    ...a.opc, pct, tipo: estado.sesion.tipoPlan ?? null, rango: rw ? { min: Math.round(rw.min), max: Math.round(rw.max) } : null,
+    delPlan: !!estado.sesion.xpCtx?.delPlanSemana,
+  });
   if (!v) return;
   const subidas = ATR_VIVO.filter((k) => v.puntos[k] > (a.vistos[k] || 0));
   if (subidas.length && estado.sesion.t - a.ultimoPop >= 15) {
@@ -716,6 +719,9 @@ function pintarAtrVivo(v) {
   $('#atr-vivo').hidden = false;
   // Solo los atributos que ya sumaron hoy (o el del reto en curso): seis chips en +0 son ruido.
   $('#atr-vivo-chips').innerHTML = ATR_VIVO.filter((k) => v.puntos[k] > 0 || k === r.atributo).map((k) => `<span class="${k === r.atributo ? 'activo' : ''}">${nombreAtributo(k)} <b>+${v.puntos[k]}</b></span>`).join('');
+  // Día suave del plan remado por encima del rango: el reto es una orden en ámbar («Baja a 84–135 W»).
+  $('#atr-reto').classList.toggle('atencion', !!r.aviso);
+  $('#mr-atr').classList.toggle('atencion', !!r.aviso);
   $('#atr-reto').innerHTML = `${anillo}<div><b>${escaparHtml(r.titulo)}</b><small>${escaparHtml(r.detalle)}</small></div><span class="cond-pts">${metaCaja}</span>`;
   const mr = $('#mr-atr');
   mr.hidden = false;
