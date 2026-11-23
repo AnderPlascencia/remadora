@@ -12,17 +12,15 @@ import * as V from '../ventajas.js';
 import * as B from '../base.js';
 import * as C from '../consejos.js';
 import {
-  $, ajustes, citaGuardada, contarHasta, descargar, escaparHtml, fechaCorta, formatoMeta, ftp, ico, miles, perfil, sinMovimiento, toast, vibrar,
+  $, ajustes, cargarVista, citaGuardada, contarHasta, descargar, escaparHtml, formatoMeta, ftp, ico, miles, perfil, sinMovimiento, toast, vibrar,
 } from '../ui.js';
 import * as Ci from '../cita.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
-import { pintarClasificacion } from './ajustes.js';
 import { estimarFtp, pintarChips, srcRetratoRango } from './preparar.js';
 import { pintarModoEnt, retratoPropio, vistaPrevia } from './vivo.js';
 import { corto } from './sesion.js';
 import { cerrarHoja, llenarSelectorEntrenamientos, obtenerEnt } from './planes.js';
-import { HABILIDADES, habilidadDe, RESERVA } from '../habilidades.js';
 import { proximo } from '../programa.js';
 import * as E from '../estadisticas.js';
 import { leerPrograma } from './programa.js';
@@ -321,7 +319,8 @@ export function enSesiones(xp, h) {
 }
 // La pantalla del héroe (ficha, camino, misiones, tienda) vive en heroe-vista.js y se baja al abrirla.
 export async function pintarHeroe() {
-  return (await import('./heroe-vista.js')).pintarHeroe();
+  const v = await cargarVista(() => import('./heroe-vista.js'), 'tu héroe', () => !!estado.sesion);
+  return v?.pintarHeroe();
 }
 export async function estadoHeroe() {
   const per = leerPersonaje();

@@ -112,7 +112,6 @@ export function tituloCapacidad(tipo, tipoPlan) {
 // ---------- Capacidades en el tiempo ----------
 
 const enVentana = (sesiones, desde, hasta) => sesiones.filter((s) => s.fecha >= desde && s.fecha < hasta);
-const todasMuestras = (ss) => ss.flatMap((s) => s.muestras || []);
 const mejor = (ss, segs) => Math.max(0, ...ss.map((s) => E.mejorPotenciaDe(s, segs) || 0)) || null;
 
 // Valor de cada capacidad en una ventana de sesiones (null si no hay datos suficientes).
@@ -123,7 +122,7 @@ function medir(ss, { ftp, peso, fcRef }) {
   const metros = ss.filter((s) => s.paladas).reduce((a, s) => a + (s.distancia || 0), 0);
   const recs = ss.filter((s) => s.fcRec60 != null).slice(-5).map((s) => s.fcRec60);
   return {
-    base: fcRef ? E.wattsAPulso(todasMuestras(ss), fcRef) : null,
+    base: fcRef ? E.wattsAPulsoDe(ss, fcRef) : null,
     umbral: ftp || null,
     vo2: E.vo2maxEstimado(w5, peso),
     anaerobica: pc ? Math.round(pc.wPrima / 100) / 10 : null,
@@ -267,7 +266,7 @@ function lunes(n, ahora) {
 export function motorSemanal(sesiones, fcRef, n = 8, ahora = Date.now()) {
   return lunes(n, ahora).map((ini) => {
     const ss = enVentana(sesiones, ini, ini + 7 * DIA);
-    return { inicio: ini, w: fcRef ? E.wattsAPulso(todasMuestras(ss), fcRef) : null };
+    return { inicio: ini, w: fcRef ? E.wattsAPulsoDe(ss, fcRef) : null };
   });
 }
 

@@ -1,20 +1,9 @@
 // Progreso: historial, tendencia, récords y resumen semanal.
-import { formatoSplit, formatoTiempo } from '../protocolo.js';
-import { dibujar, dibujarBarras } from '../grafica.js';
-import * as H from '../historial.js';
-import * as E from '../estadisticas.js';
-import { rangoZona2 } from '../pulso.js';
-import * as P from '../programa.js';
-import * as J from '../juego.js';
-import * as Cap from '../capacidades.js';
-import * as Hab from '../habito.js';
-import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles, perfil } from '../ui.js';
+import { formatoTiempo } from '../protocolo.js';
+import { $, ajustes, cargarVista, miles } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
-import { avanzado, guardarRespaldo } from './ajustes.js';
-import { estadoHeroe, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
-import { abrirSesion } from './detalle.js';
-import { leerPrograma } from './programa.js';
+import { guardarRespaldo } from './ajustes.js';
 import { abrirCompartirPeriodo } from './planes.js';
 
 // ---------- Progreso ----------
@@ -65,12 +54,12 @@ export function pintarAvisoRespaldo(total) {
 }
 
 // Lo que pinta la pestaña Progreso vive en progreso-vista.js y se baja al abrirla (o al pedir una gráfica).
-const vista = () => import('./progreso-vista.js');
-export const pintarHistorial = async () => (await vista()).pintarHistorial();
-const pintarPeriodos = async () => (await vista()).pintarPeriodos();
-export const pintarTendencia = async () => (await vista()).pintarTendencia();
-export const pintarForma = async () => (await vista()).pintarForma();
-export const pintarCurva = async () => (await vista()).pintarCurva();
-export const pintarMotor = async () => (await vista()).pintarMotor();
-export const pintarGasto = async () => (await vista()).pintarGasto();
-export const pintarConstancia = async () => (await vista()).pintarConstancia();
+const vista = async () => (await cargarVista(() => import('./progreso-vista.js'), 'Progreso', () => !!estado.sesion)) || {};
+export const pintarHistorial = async () => (await vista()).pintarHistorial?.();
+const pintarPeriodos = async () => (await vista()).pintarPeriodos?.();
+export const pintarTendencia = async () => (await vista()).pintarTendencia?.();
+export const pintarForma = async () => (await vista()).pintarForma?.();
+export const pintarCurva = async () => (await vista()).pintarCurva?.();
+export const pintarMotor = async () => (await vista()).pintarMotor?.();
+export const pintarGasto = async () => (await vista()).pintarGasto?.();
+export const pintarConstancia = async () => (await vista()).pintarConstancia?.();

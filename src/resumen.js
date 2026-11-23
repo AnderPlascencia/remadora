@@ -5,19 +5,19 @@
 // análisis que miran cada segundo. Las funciones que leen el resumen (estadisticas.js: mejorTiempoDe, segundosCon…)
 // dan lo mismo que con las muestras: lo comprueba pruebas/resumen.test.mjs.
 // Si cambia lo que se guarda, se sube RESUMEN_V y el historial rehace los resúmenes viejos (ver historial.js).
-import { mejorTiempo, mejorPotencia, potenciaNormalizada, esfuerzosMaximos, sumaEn, DURACIONES_CURVA } from './estadisticas.js';
+import { mejorTiempo, mejorPotencia, potenciaNormalizada, esfuerzosMaximos, sumaEn, pulsoW, DURACIONES_CURVA } from './estadisticas.js';
 import { DISTANCIAS_PREDICCION } from './entrenamientos.js';
 import { DISTANCIAS_MARCA } from './prediccion.js';
 import { fcMax5s } from './pulso.js';
 import { ritmoEstable, sinPausasMuestras, recuperacionesFc } from './juego.js';
 import { ventanasTecnica } from './tecnica.js';
 
-export const RESUMEN_V = 1; // el mismo que historial.js
+export const RESUMEN_V = 2; // el mismo que historial.js
 export const DISTANCIAS_RESUMEN = [...new Set([500, 1000, 2000, 5000, 6000, 10000, ...DISTANCIAS_PREDICCION, ...DISTANCIAS_MARCA])];
 export const DURACIONES_RESUMEN = [...new Set([...DURACIONES_CURVA, 60, 240, 300, 600, 1200])];
 
-// { v, n, t: {metros: s}, w: {segs: W}, np, em, hw: [[W, segundos]], act, conW, spm24, est, sp, rfc, fc5, tec, bw }.
-// bw: por cada bloque, [segundos, suma de vatios] de sus muestras (lo que mira revisarFtp). cal: ver abajo.
+// { v, n, t: {metros: s}, w: {segs: W}, np, em, hw: [[W, segundos]], act, conW, spm24, est, sp, rfc, fc5, tec, bw, pf }.
+// pf: por cada pulso, [lpm, segundos, suma de vatios] (los watts a un pulso dado, v2). bw: por cada bloque, [segundos, suma de vatios] de sus muestras (lo que mira revisarFtp). cal: ver abajo.
 // Una sesión sin muestras da { v, n: 0 }: así se sabe que ya está resumida.
 export function resumir(s) {
   const m = s?.muestras;
@@ -45,6 +45,7 @@ export function resumir(s) {
     fc5: fcMax5s(m),
     tec: ventanasTecnica(s),
     bw: bloquesW(m, s.bloques),
+    pf: pulsoW(m),
     // El calentamiento (minuto 4 y 5) de las sesiones con pulso: para «hoy vas más cargado que de costumbre».
     cal: m.some((x) => x.fc) ? m.slice(240, 301) : null,
   };

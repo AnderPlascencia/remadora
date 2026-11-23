@@ -1,5 +1,5 @@
 // Punto de entrada: carga cada pantalla y la arranca en el mismo orden de siempre.
-import { $, ajustes, reajustarTextos, vigilarCapas } from './ui.js';
+import { $, ajustes, marcarVersionNueva, reajustarTextos, vigilarCapas } from './ui.js';
 import { estado } from './estado.js';
 import { arrancarNavegacion, irA, vistaActiva } from './navegacion.js';
 import { arrancarAjustes1, arrancarAjustes2, arrancarAjustes3, pintarPerfil } from './pantallas/ajustes.js';
@@ -86,5 +86,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.startMessages?.();
   // Al actualizar, el mensaje anterior llega al service worker viejo, cuya caché borra el nuevo al activarse:
   // se repite cuando el nuevo toma el control para que los paisajes comprados sigan disponibles sin conexión.
-  navigator.serviceWorker.addEventListener('controllerchange', () => precargarRecursos());
+  // Si ya había uno (no es la primera visita), es otra versión: las pantallas que se bajan al abrirlas recargan antes.
+  const habia = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { precargarRecursos(); if (habia) marcarVersionNueva(); });
 }

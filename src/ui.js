@@ -98,6 +98,20 @@ function programarSiguiente() {
   const espera = Math.max(0, avisoActual.desde + TOAST_MIN - Date.now());
   siguienteTimer = setTimeout(() => { if (colaAvisos.length) mostrarAviso(colaAvisos.shift()); }, espera);
 }
+// Pantallas que se bajan al abrirlas (Héroe, Progreso). Si mientras tanto se activó una versión nueva de la app,
+// su código ya es de otra versión que el de esta página: sin una sesión en curso se recarga para no mezclarlas.
+// Si no se puede bajar (sin conexión antes de quedar guardada), lo dice en vez de dejar la pantalla en blanco.
+let versionNueva = false;
+export const marcarVersionNueva = () => { versionNueva = true; };
+export async function cargarVista(cargar, nombre, enSesion = () => false) {
+  if (versionNueva && !enSesion()) { location.reload(); return null; }
+  try {
+    return await cargar();
+  } catch {
+    toast(`No se pudo abrir ${nombre}. Revisa tu conexión y vuelve a intentarlo.`, 5000);
+    return null;
+  }
+}
 export function toast(texto, ms = 3000, prioridad = 'normal') {
   if (avisoActual?.texto === texto || colaAvisos.some((a) => a.texto === texto)) return;
   const a = { texto, ms, p: PRIORIDAD_AVISO[prioridad] ?? PRIORIDAD_AVISO.normal };

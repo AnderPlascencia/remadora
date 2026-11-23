@@ -39,20 +39,20 @@ test('una sesión terminada se guarda con sus muestras y abre el resumen', async
 
 test('si leer el historial falla al terminar, la sesión se guarda igual', async ({ page }) => {
   await remar(page, 30_000);
-  // La primera lectura de todas las muestras del historial después de guardar la sesión falla (como al quedarse sin
-  // memoria con cientos de sesiones). Se arma al guardar: así otra pantalla que lea el historial antes, con la
-  // prueba en marcha, no se lleva el fallo.
+  // La primera lectura del historial después de guardar la sesión falla (como al quedarse sin memoria con cientos de
+  // sesiones). Se arma al guardar: así otra pantalla que lea el historial antes, con la prueba en marcha, no se
+  // lleva el fallo. El fin de sesión lee la lista sin muestras (índice por fecha de «sesiones»).
   await page.evaluate(() => {
-    const getAll = IDBObjectStore.prototype.getAll;
     const put = IDBObjectStore.prototype.put;
     window.__falloMuestras = 'esperando';
     IDBObjectStore.prototype.put = function (...a) {
       if (window.__falloMuestras === 'esperando' && this.name === 'sesiones') window.__falloMuestras = 'armado';
       return put.apply(this, a);
     };
-    IDBObjectStore.prototype.getAll = function (...a) {
-      if (window.__falloMuestras === 'armado' && this.name === 'muestras') { window.__falloMuestras = 'hecho'; throw new DOMException('sin memoria', 'UnknownError'); }
-      return getAll.apply(this, a);
+    const getAllIndice = IDBIndex.prototype.getAll;
+    IDBIndex.prototype.getAll = function (...a) {
+      if (window.__falloMuestras === 'armado' && this.objectStore.name === 'sesiones') { window.__falloMuestras = 'hecho'; throw new DOMException('sin memoria', 'UnknownError'); }
+      return getAllIndice.apply(this, a);
     };
   });
   await terminar(page);
