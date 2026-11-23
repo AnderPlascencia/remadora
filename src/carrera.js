@@ -551,8 +551,18 @@ export function crearCarrera(canvas) {
 // esto también evita dibujar la 2D el doble de veces que se nota. La tolerancia de 4 ms absorbe el vaivén de
 // requestAnimationFrame para que a 60 Hz se dibuje justo uno de cada dos cuadros.
 export const FPS_MAX = { '2d': 60, '3d': 30, real: 30 };
+// En pausa (el bote quieto) y con «Ahorro de batería» (Ajustes) todas las vistas van a 30 fps como mucho; el ahorro
+// además deja la densidad en 1,5 como mucho. Una 2D a 30 fps no cuenta como lenta para bajar la densidad.
+export const FPS_REPOSO = 30;
+export const DPR_AHORRO = 1.5;
+let ahorro = false;
+export function fijarAhorro(si) { ahorro = !!si; }
+export function fpsTope(modo, pausa = false, conAhorro = ahorro) {
+  const f = FPS_MAX[modo] ?? 60;
+  return pausa || conAhorro ? Math.min(f, FPS_REPOSO) : f;
+}
 export function tocaPintar(c, ahora) {
-  const fps = FPS_MAX[c.modo] ?? 60;
+  const fps = fpsTope(c.modo, !!c.estado?.pausa);
   return !c.ultimoPintado || ahora - c.ultimoPintado >= 1000 / fps - 4;
 }
 
@@ -573,7 +583,7 @@ function cuadro(ahora) {
     // Un cuadro que se salta por el límite de fps no cuenta como «sin vista realista»: el clip sigue.
     if (!tocaPintar(c, ahora)) { if (c.modo === 'real') realEsperando = true; continue; }
     const intervalo = c.ultimoPintado ? ahora - c.ultimoPintado : 0;
-    medirCuadro(c.densidad, c.modo, intervalo);
+    medirCuadro(c.densidad, c.modo, intervalo, fpsTope(c.modo, !!c.estado.pausa));
     cuadroPintado(c.modo, intervalo);
     c.ultimoPintado = ahora;
     pintarCarrera(c, ahora);
@@ -725,19 +735,20 @@ function palasReal(ctx, vista, f, palas, ox, oy, kx, ky) {
 export const DPR_MAX = { '2d': 2, '3d': 2, real: 1.5 };
 // Si el teléfono no llega, la densidad baja sola por escalones (2 → 1,5 → 1,25, nunca por debajo de 1).
 const DPR_ESCALONES = [1, 0.75, 0.625];
-export function densidadCarrera(modo, dprPantalla = 1, escalon = 0) {
-  const tope = (DPR_MAX[modo] ?? 2) * DPR_ESCALONES[Math.min(escalon, DPR_ESCALONES.length - 1)];
+export function densidadCarrera(modo, dprPantalla = 1, escalon = 0, conAhorro = ahorro) {
+  const max = conAhorro ? Math.min(DPR_AHORRO, DPR_MAX[modo] ?? 2) : DPR_MAX[modo] ?? 2;
+  const tope = max * DPR_ESCALONES[Math.min(escalon, DPR_ESCALONES.length - 1)];
   return Math.min(dprPantalla || 1, Math.max(1, tope));
 }
 // Cuenta los cuadros lentos de cada lienzo: si en 60 cuadros pintados, 40 o más tardaron más de 1,5 veces lo que
 // pide su tope de fps (25 ms en 2D, 50 ms en 3D y realista), baja un escalón. Al cambiar de vista se vuelve a empezar.
 // Los huecos de más de medio segundo (pausa, pestaña oculta, lienzo fuera de la pantalla) no cuentan.
 export const DENSIDAD_VENTANA = 60;
-export function medirCuadro(d, modo, intervalo) {
+export function medirCuadro(d, modo, intervalo, fps = FPS_MAX[modo] ?? 60) {
   if (d.modo !== modo) { d.modo = modo; d.escalon = 0; d.n = 0; d.lentos = 0; }
   if (!(intervalo > 0) || intervalo > 500) return false;
   d.n += 1;
-  if (intervalo > 1.5 * (1000 / (FPS_MAX[modo] ?? 60))) d.lentos += 1;
+  if (intervalo > 1.5 * (1000 / fps)) d.lentos += 1;
   if (d.n < DENSIDAD_VENTANA) return false;
   const bajar = d.lentos >= (DENSIDAD_VENTANA * 2) / 3 && d.escalon < DPR_ESCALONES.length - 1;
   if (bajar) d.escalon += 1;

@@ -1,4 +1,5 @@
 // Pantalla de ajustes: perfil, preferencias, zonas, prueba de nivel, respaldo y reparaciones de datos.
+import { fijarAhorro } from '../carrera.js';
 import { VARIANTES } from '../variantes.js';
 import { formatoSplit } from '../protocolo.js';
 import * as db from '../db.js';
@@ -84,6 +85,8 @@ export function arrancarAjustes1() {
   interruptor('#in-pausa-auto', 'pausaAuto', true);
   interruptor('#in-atr-vivo', 'atrVivo', true);
   interruptor('#in-res-auto', 'resAuto', false);
+  fijarAhorro(ajustes.si('ahorroBateria', false));
+  interruptor('#in-ahorro', 'ahorroBateria', false, fijarAhorro);
   interruptor('#in-avanzado', 'avanzado', false, () => {
     aplicarAvanzado();
     pintarClasificacion();

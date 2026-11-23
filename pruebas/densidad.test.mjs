@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DPR_MAX, FPS_MAX, densidadCarrera, medirCuadro, DENSIDAD_VENTANA } from '../src/carrera.js';
+import { DPR_MAX, FPS_MAX, densidadCarrera, medirCuadro, DENSIDAD_VENTANA, fpsTope, tocaPintar } from '../src/carrera.js';
 import { DPR_MAX_GRAFICA } from '../src/grafica.js';
 
 test('la carrera 2D y 3D pinta como mucho a densidad 2 y la realista a 1,5; las gráficas a 2', () => {
@@ -57,5 +57,27 @@ test('al cambiar de vista la densidad vuelve al máximo de la vista nueva', () =
   assert.equal(d.escalon, 1);
   medirCuadro(d, '2d', 16);
   assert.equal(d.modo, '2d');
+  assert.equal(d.escalon, 0);
+});
+
+test('en pausa y con «Ahorro de batería» la carrera va a 30 fps, y el ahorro deja la densidad en 1,5', () => {
+  assert.equal(fpsTope('2d'), 60);
+  assert.equal(fpsTope('2d', true), 30, 'en pausa');
+  assert.equal(fpsTope('2d', false, true), 30, 'con ahorro');
+  assert.equal(fpsTope('3d', true, true), 30, 'la 3D ya iba a 30');
+  // 2D en pausa: a 20 ms del último cuadro no toca pintar; a 33 ms sí.
+  const c = { modo: '2d', estado: { pausa: true }, ultimoPintado: 1000 };
+  assert.equal(tocaPintar(c, 1020), false);
+  assert.equal(tocaPintar(c, 1033), true);
+  assert.equal(tocaPintar({ ...c, estado: { pausa: false } }, 1020), true);
+  assert.equal(densidadCarrera('2d', 4, 0, true), 1.5);
+  assert.equal(densidadCarrera('real', 4, 0, true), 1.5);
+  assert.equal(densidadCarrera('2d', 4, 2, true), 1, 'los escalones siguen bajando desde 1,5');
+  assert.equal(densidadCarrera('2d', 1.25, 0, true), 1.25);
+});
+
+test('una 2D a 30 fps por pausa o ahorro no cuenta como lenta', () => {
+  const d = nueva();
+  for (let i = 0; i < DENSIDAD_VENTANA * 2; i++) medirCuadro(d, '2d', 34, fpsTope('2d', true));
   assert.equal(d.escalon, 0);
 });

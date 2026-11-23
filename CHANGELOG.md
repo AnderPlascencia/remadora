@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.120.0 · 2026-11-23
+
+La carrera gasta menos batería.
+
+- **En pausa, la carrera va a 30 cuadros por segundo.** Con el bote quieto no hace falta más, y el teléfono trabaja la mitad.
+- **«Ahorro de batería»** en Ajustes › Apariencia. La carrera se dibuja siempre a 30 cuadros por segundo y con un poco menos de detalle (densidad 1,5 como mucho). Sirve para sesiones largas o un teléfono que se calienta.
+
 ## 0.119.0 · 2026-11-23
 
 Por dentro: el archivo de la sesión, partido en tres.
