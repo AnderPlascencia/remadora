@@ -199,6 +199,7 @@ Object.assign(PAISAJES, {
     nombre: 'Lago de los cerezos',
     texto: 'Cerezos en flor, toriis rojos y un volcán nevado al fondo.',
     precio: 1500,
+    pintado: true,
     orilla: {
       piezas: {
         cerezo: { x: 0, y: 0, w: 590, h: 550, pie: [0.5, 0.988], m: 8.6 },
