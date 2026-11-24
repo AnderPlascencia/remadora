@@ -110,7 +110,9 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
     let motivo = null;
     const avisado = cuerpo?.motivos?.length && ['cargado', 'agotado'].includes(cuerpo.clave);
     if (avisado) motivo = cuerpo.motivos[0];
-    else if (forma && forma.condicion >= 10 && forma.frescura < -30) motivo = `Vienes muy cansado (frescura ${forma.frescura})`;
+    // El mismo umbral que «Agotado» en el estado del cuerpo: condición menos fatiga de hoy, por debajo de −25
+    // (antes era la frescura de ayer bajo −30, y Hoy y el plan podían decir cosas distintas el mismo día).
+    else if (forma && forma.condicion >= 10 && forma.condicion - forma.fatiga < -25) motivo = `Vienes muy cansado (frescura ${forma.condicion - forma.fatiga})`;
     else if (ratio != null && ratio > 1.5) motivo = 'Tu carga de esta semana se disparó';
     else if (recMala) motivo = 'Tu pulso tardó más de lo normal en bajar la última vez';
     if (motivo) {

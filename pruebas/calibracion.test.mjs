@@ -128,7 +128,12 @@ assert.ok(!Ent.EJEMPLOS.some((e) => /2:10/.test(e.nombre)), 'sin ritmos fijos en
   assert.equal(B.condicionDe([], 200, ahora), 0);
   const sesiones = Array.from({ length: 30 }, (_, i) => ({ fecha: ahora - i * 864e5, estres: 70 }));
   assert.ok(B.condicionDe(sesiones, 200, ahora) >= 25);
-  assert.equal(umbral(B.basesPara(1, 200, sesiones, ahora)), '4 × 8 min en umbral');
+  // Ronda 2 (E2): la condición arranca con la carga media de las 2 primeras semanas, así que un mes a 70 diarios
+  // ya es condición ~70 (antes ~36 por arrancar en 0) y el volumen sube al escalón alto.
+  assert.equal(umbral(B.basesPara(1, 200, sesiones, ahora)), '5 × 8 min en umbral');
+  // Dos semanas a 30 diarios quedan en el escalón medio.
+  const suaves = Array.from({ length: 14 }, (_, i) => ({ fecha: ahora - i * 864e5, estres: 30 }));
+  assert.equal(umbral(B.basesPara(1, 200, suaves, ahora)), '4 × 8 min en umbral');
   assert.equal(B.entrenamientosBase(1, 200, { condicion: 0 }).find((x) => x.id === 'base:pot-mant').escalon, 0);
 }
 // «Ritmo 2000 m»: series de 500 m al 110–118 % del FTP (o su split), con activación.

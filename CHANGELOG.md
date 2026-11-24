@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.126.2 · 2026-11-24
+
+El cansancio que ves es el real (corrección previa C3 de la ronda 2).
+
+- **Tus talentos y habilidades de intensidad ya no se apagan por error.** La app contaba como «intensa» cualquier sesión con FTP, aunque fuera un fondo suave, y tras dos sesiones en la semana los apagaba («Hoy tu furia descansa»). Ahora solo cuentan las sesiones duras y las que usaron un talento de intensidad.
+- **Sin «carga disparada» en tus primeros meses.** La condición arrancaba en 0, así que remando siempre igual el aviso decía que tu carga se había disparado entre la semana 4 y la 6, y cambiaba tu sesión dura por un fondo. Ahora arranca con tu carga media de las 2 primeras semanas. Con la misma carga cada semana, el ratio queda en 0,9–1 y tu semana normal cae dentro del rango seguro.
+- **El estado del cuerpo ya no sale un escalón peor tras remar.** La carga de hoy se sumaba dos veces y «Cargado» salía como «Muy cansado». Hoy y tu plan usan ahora el mismo cálculo y el mismo umbral de cansancio.
+- No cambia nada de la XP ni de las sesiones que ya tienes.
+
 ## 0.126.1 · 2026-11-24
 
 Pruebas en las que se puede confiar (corrección previa C1 de la ronda 2).

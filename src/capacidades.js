@@ -210,8 +210,10 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now(), { previo = null 
     // Sin carga registrada, tus respuestas siguen contando.
     return efecto ? { clave: efecto.clave, ...ESTADOS_CUERPO[efecto.clave], horas: 0, motivos: [efecto.motivo], ratio: null, seguro: null } : null;
   }
-  const cond = (hoy.condicion * 41 + hoy.carga) / 42; // tras sumar la carga de hoy
-  const fat = (hoy.fatiga * 6 + hoy.carga) / 7;
+  // forma() ya suma la carga de hoy a la condición y la fatiga (antes se sumaba otra vez aquí: el estado salía un
+  // escalón peor tras cualquier sesión, ronda 2 E3).
+  const cond = hoy.condicion;
+  const fat = hoy.fatiga;
   const fres = cond - fat;
   // Sin 4 semanas de historial, ni ratio ni rango seguro: la condición aún no refleja tu carga habitual.
   const conHistorial = E.diasDeHistorial(sesiones, ahora) >= E.DIAS_PARA_RATIO;

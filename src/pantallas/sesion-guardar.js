@@ -191,7 +191,8 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
     }
     if (s.ventaja?.objeto) registro.ventajaUsada = s.ventaja.objeto;
     // Para el límite semanal de intensidad (2 sesiones duras o con intensidad por semana).
-    if (V.usoIntensidad(s.ventaja)) registro.intensidad = true;
+    // Campo propio (ronda 2, E1): antes pisaba `intensidad`, que es el factor de intensidad (IF) de la sesión.
+    if (V.usoIntensidad(s.ventaja)) registro.usoIntensidad = true;
     registro.rival = resumen(s.rival);
     if (s.rivales.length > 1) registro.rivales = s.rivales.map(resumen);
     // Terminar antes de completar el entrenamiento no gana la carrera: se guarda la diferencia, pero no cuenta como victoria.
