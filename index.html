@@ -57,6 +57,7 @@
   <link rel="modulepreload" href="src/registro.js">
   <link rel="modulepreload" href="src/reloj.js">
   <link rel="modulepreload" href="src/remadora.js">
+  <link rel="modulepreload" href="src/reto.js">
   <link rel="modulepreload" href="src/sagas.js">
   <link rel="modulepreload" href="src/talentos.js">
   <link rel="modulepreload" href="src/tecnica.js">
@@ -181,6 +182,7 @@
           <button type="button" class="chip" data-rival="anterior" aria-pressed="false">Mi anterior</button>
           <button type="button" class="chip" data-rival="mejor" aria-pressed="false">Mi mejor</button>
           <button type="button" class="chip" data-rival="pasado" aria-pressed="false">Yo hace 7 semanas</button>
+          <button type="button" class="chip" data-rival="reto" aria-pressed="false" hidden>Reto</button>
         </div>
         <div id="referencias-vista" class="rivales-vista"></div>
         <label id="ventaja-campo" class="campo" hidden><span>Ventaja para la carrera <button type="button" class="ayuda-q" data-ayuda="ventaja" aria-label="¿Qué es una ventaja?">?</button></span>
@@ -1058,6 +1060,7 @@
         <label class="interruptor"><input type="checkbox" id="compartir-heroe" checked><span>Nombre del héroe</span></label>
         <label class="interruptor"><input type="checkbox" id="compartir-pulso"><span>Pulso</span></label>
         <label class="interruptor"><input type="checkbox" id="compartir-kcal"><span>Calorías</span></label>
+        <label id="compartir-reto-campo" class="interruptor" hidden><input type="checkbox" id="compartir-reto" checked><span>Enlace para que te reten<small class="ayuda bloque">Quien lo abre rema contra esta sesión. Lleva tu nombre, el entrenamiento y tus metros cada 10 s</small></span></label>
       </div>
       <div class="fin-botones compartir-botones">
         <button type="button" id="compartir-enviar" class="boton primario grande">Compartir</button>

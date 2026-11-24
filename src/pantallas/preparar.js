@@ -15,6 +15,7 @@ import { pintarClasificacion, pintarZonas, ritmoObjetivo } from './ajustes.js';
 import { modoEnt } from './vivo.js';
 import { chipsAtr, filaCond, icoMoneda, inventario, leerPersonaje, opcConsejos, previsionDe } from './heroe.js';
 import { contextoXp } from './programa.js';
+import * as R from '../reto.js';
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
@@ -32,13 +33,32 @@ function rivalesElegidos() {
   return conRivales() ? ['clase', 'clase', 'clase'] : [];
 }
 // Mi anterior y Mi mejor ya no son rivales: son líneas amarillas de referencia en tu carril.
-const NOMBRE_REF = { anterior: 'Mi anterior', mejor: 'Mi mejor', pasado: 'Yo hace 7 semanas' };
+const NOMBRE_REF = { anterior: 'Mi anterior', mejor: 'Mi mejor', pasado: 'Yo hace 7 semanas', reto: 'el reto' };
+// El reto recibido por enlace (etapa 25), o null.
+export function retoActivo() {
+  const r = R.decodificarReto(ajustes.leer('retoActivo', ''));
+  return r && { ...r, nombre: r.nombre || 'Tu retador' };
+}
+// Al abrir un enlace de reto: se guarda, se enciende su línea en tu carril y se dice cómo verlo.
+export function recibirReto(texto) {
+  const r = R.decodificarReto(texto);
+  if (!r) { toast('No se pudo leer el enlace del reto'); return null; }
+  ajustes.escribir('retoActivo', texto);
+  const refs = referenciasElegidas();
+  if (!refs.includes('reto')) ajustes.escribir('referencias', JSON.stringify([...refs, 'reto']));
+  const quien = r.nombre || 'Alguien';
+  toast(`${quien} te reta: ${miles(r.distancia)} m en ${Math.round(r.duracion / 60)} min. Rema en Remo libre${r.ent ? ` o en «${r.ent}»` : ''} y su bote va en rosa en tu carril.`, 8000);
+  pintarChips();
+  return r;
+}
+// El reto vale en Remo libre o en su mismo entrenamiento.
+const retoVale = (r, ent) => !!r && (!ent || ent.nombre === r.ent);
 const listaY = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}` : xs[0] || '');
 function referenciasElegidas() {
   try {
     const guardadas = ajustes.leer('referencias', null);
     const v = JSON.parse(guardadas ?? ajustes.leer('rivales', '[]'));
-    return Array.isArray(v) ? ['anterior', 'mejor', 'pasado'].filter((k) => v.includes(k)) : [];
+    return Array.isArray(v) ? ['anterior', 'mejor', 'pasado', 'reto'].filter((k) => v.includes(k) && (k !== 'reto' || retoActivo())) : [];
   } catch { return []; }
 }
 export const hayCarrera = () => !!(estado.sesion && (estado.sesion.rival || estado.sesion.referencias?.length));
@@ -105,10 +125,14 @@ export function pintarChips() {
   const nClase = sel.length;
   pintarDificultad();
   const refs = referenciasElegidas();
+  const reto = retoActivo();
+  const chipReto = $('#chips-rival [data-rival="reto"]');
+  chipReto.hidden = !reto;
+  if (reto) chipReto.textContent = `Reto de ${reto.nombre}`;
   for (const b of document.querySelectorAll('#chips-rival .chip')) {
     const activa = refs.includes(b.dataset.rival);
     b.setAttribute('aria-pressed', String(activa));
-    b.style.setProperty('--chip', activa ? COLOR_REFERENCIA : '');
+    b.style.setProperty('--chip', activa ? (b.dataset.rival === 'reto' ? COLOR_RETO : COLOR_REFERENCIA) : '');
     b.disabled = !!estado.sesion;
   }
   const semana = J.rivalDeLaSemana(J.lunesDe(Date.now()), leerPersonaje().clase);
@@ -188,6 +212,7 @@ export async function crearRivales(ent, { vista = false } = {}) {
 
 // Líneas de referencia en tu carril: tu sesión anterior y tu mejor marca de este entrenamiento.
 const COLOR_REFERENCIA = '#FACC15';
+const COLOR_RETO = '#F472B6';
 export async function crearReferencias(ent, { vista = false } = {}) {
   const refs = referenciasElegidas();
   if (!refs.length) return [];
@@ -195,6 +220,12 @@ export async function crearReferencias(ent, { vista = false } = {}) {
   const sesiones = await H.sinMuestras();
   const lista = [];
   for (const clave of refs) {
+    if (clave === 'reto') {
+      const r = retoActivo();
+      if (retoVale(r, ent)) lista.push({ ...r, entrenamiento: r.ent, clave, nombre: `Reto de ${r.nombre}`, etiqueta: r.nombre, discontinua: false, color: COLOR_RETO });
+      else if (vista) lista.push({ falta: true, clave, nombre: `Reto de ${r?.nombre || ''}`, muestras: [], color: COLOR_RETO, detalle: `Es de «${r?.ent}»: elige ese entrenamiento o Remo libre.` });
+      continue;
+    }
     const elegida = E.elegirRival(sesiones, ent?.nombre, clave);
     const s = elegida && (await H.obtener(elegida.id).catch(() => null));
     const semanas = s ? Math.round((Date.now() - s.fecha) / (7 * 864e5)) : 7;
@@ -226,7 +257,7 @@ function tarjetaRival(r) {
       <span>${F.ESTILOS[r.clase].texto}. ${J.CUANDO_DIFICIL[r.clase]}.</span></div></div>`;
   }
   let detalle = '';
-  if (r.falta) detalle = 'Aún no hay una sesión de este entrenamiento para usarla de referencia.';
+  if (r.falta) detalle = r.detalle || 'Aún no hay una sesión de este entrenamiento para usarla de referencia.';
   else if (r.fecha) detalle = `${fechaMini(r.fecha)} · ${miles(r.distancia ?? r.muestras.at(-1)?.dist ?? 0)} m en ${formatoTiempo(r.duracion ?? r.muestras.at(-1)?.t ?? 0)}`;
   else if (r.ftp) detalle = `Rema a ${r.ftp} W de FTP, sin estilo propio.`;
   return `<div class="rival-tarjeta${r.falta ? ' falta' : ''}" style="--chip:${r.color || 'var(--borde)'}"><span class="rival-ico">${ico('i-fantasma')}</span>

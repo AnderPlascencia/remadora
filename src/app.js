@@ -3,7 +3,7 @@ import { $, ajustes, marcarVersionNueva, reajustarTextos, vigilarCapas } from '.
 import { estado } from './estado.js';
 import { arrancarNavegacion, irA, vistaActiva } from './navegacion.js';
 import { arrancarAjustes1, arrancarAjustes2, arrancarAjustes3, pintarPerfil } from './pantallas/ajustes.js';
-import { arrancarPreparar, hayCarrera } from './pantallas/preparar.js';
+import { arrancarPreparar, hayCarrera, recibirReto } from './pantallas/preparar.js';
 import { abrirModoRemo, ajustarNumeros, arrancarVivo1, arrancarVivo2, dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
 import { arrancarRegistro } from './registro.js';
 import * as Hab from './habito.js';
@@ -55,8 +55,12 @@ window.addEventListener('resize', () => {
 });
 actualizarBotones();
 // Atajos del icono (etapa 16): «Entrenar hoy» y «Remo libre» abren el modo remo listo para empezar.
-const atajo = new URLSearchParams(location.search).get('atajo');
-if (atajo) history.replaceState(history.state, '', location.pathname + location.hash);
+const parametros = new URLSearchParams(location.search);
+const atajo = parametros.get('atajo');
+// «Rema contra mí» (etapa 25): un enlace con ?reto= trae la sesión de otra persona para remar contra ella.
+const reto = parametros.get('reto');
+if (atajo || reto) history.replaceState(history.state, '', location.pathname + location.hash);
+if (reto) recibirReto(reto);
 limpiarSobrantesDePlan().then(() => llenarSelectorEntrenamientos()).then(revisarPlanAuto).then(() => abrirAtajo(atajo));
 function abrirAtajo(a) {
   if ((a !== 'hoy' && a !== 'libre') || !ajustes.si('inicioHecho', false) || estado.sesion) return;
