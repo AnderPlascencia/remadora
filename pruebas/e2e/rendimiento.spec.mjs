@@ -10,7 +10,7 @@ import { FPS_MAX, DPR_MAX } from '../../src/carrera.js';
 const BYTES_MAX = 520_000;
 // JS: de vuelta a 380 KB (2026-11-23, 0.106.0) al cargar Héroe y Progreso al abrirlos: 359,6 KB. Solo la
 // infraestructura cambia este tope. En 0.126.0 había vuelto a 377,7 KB; en 0.126.4 la bienvenida y el detalle de la
-// sesión salen de la primera carga: 370,3 KB la primera vez (con bienvenida) y 365,2 KB después.
+// sesión salen de la primera carga: 371,0 KB la primera vez (con bienvenida) y unos 366 KB después.
 const BYTES_MAX_TIPO = { js: 380_000, css: 45_000, html: 30_000 };
 const ARCHIVOS_MAX = 70;
 // Cuadros pintados por segundo, con CPU ×4. En local, solo: 2D 36, 3D 21, realista 13, modo remo 20; con otra prueba
