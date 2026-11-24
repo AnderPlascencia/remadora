@@ -25,7 +25,7 @@ import {
   abrirModoRemo, carreraEnt, carreraRemo, cerrarModoRemo, dibujarVivo, duracionCarrera, modoEnt, pintar, pintarAlLlegar, pintarModoEnt, retratoPropio, textoAntesDeEmpezar, vigilarTipoSesion, vistaPrevia,
 } from './vivo.js';
 import { agregarLog } from '../registro.js';
-import { datoRecibido, fijarFuenteBle, numerosPintados, reiniciarDiagnostico } from '../diagnostico.js';
+import { datoRecibido, fijarFuenteBle, iniciarBateria, numerosPintados, reiniciarDiagnostico } from '../diagnostico.js';
 import { leyendaPerfil, obtenerEnt } from './planes.js';
 import { pintarConstancia, pintarCurva, pintarForma, pintarGasto, pintarMotor, pintarTendencia } from './progreso.js';
 import { estadoHeroe, inventario, leerPersonaje, nombreAtributo } from './heroe.js';
@@ -401,7 +401,7 @@ async function iniciarSesion(reanudar = null) {
   // Calentamientos de las últimas sesiones con pulso: para notar si hoy vas más cargado que de costumbre.
   const calentamientos = recientes.filter((x) => x.res?.cal).slice(-15).map((x) => ({ muestras: x.res.cal }));
   // El diagnóstico (latencia, cuadros por segundo, Bluetooth) se cuenta por sesión.
-  if (!reanudar) { reiniciarDiagnostico(); remadora.reiniciarEstadisticas(); }
+  if (!reanudar) { reiniciarDiagnostico(); iniciarBateria(); remadora.reiniciarEstadisticas(); }
   Hab.anotar('sesionInicio', { reanudada: !!reanudar, ent: estado.entrenamientoActivo?.nombre || null });
   tomarCandado();
   estado.sesion = {

@@ -75,6 +75,25 @@ test('la sesión guarda su diagnóstico (latencia del dato y Bluetooth) y Ajuste
   expect(registros[0].fecha).toBe(s.fecha);
 });
 
+test('la sesión guarda lo que gastó de batería si el teléfono no cargó', async ({ page }) => {
+  await page.evaluate(() => {
+    window.__bat = { level: 0.8, charging: false, onchargingchange: null };
+    Object.defineProperty(navigator, 'getBattery', { configurable: true, value: async () => window.__bat });
+  });
+  await remar(page, 30_000);
+  // Como si la sesión hubiera empezado hace 7 min (remar 7 min de verdad tarda demasiado en la prueba).
+  await page.evaluate(async () => {
+    const d = await import('./src/diagnostico.js');
+    await d.iniciarBateria(Date.now() - 7 * 60_000);
+    window.__bat.level = 0.78;
+  });
+  await terminar(page);
+  await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
+  const [s] = await listar(page, 'sesiones');
+  expect(s.diagnostico?.bateria).toMatchObject({ pct: 2, min: 7 });
+  expect(s.diagnostico.bateria.porHora).toBeGreaterThan(15);
+});
+
 test('una sesión de menos de 10 s no se guarda', async ({ page }) => {
   await remar(page, 5_000);
   await terminar(page);

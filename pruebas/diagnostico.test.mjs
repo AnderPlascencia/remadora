@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   percentil, crearMuestras, crearBufferPaquetes, datoRecibido, numerosPintados, cuadroPintado,
-  reiniciarDiagnostico, resumenDiagnostico, textoDiagnostico,
+  reiniciarDiagnostico, resumenDiagnostico, textoDiagnostico, consumoBateria,
 } from '../src/diagnostico.js';
 
 test('percentiles: mediana y peor 5 %', () => {
@@ -65,4 +65,15 @@ test('paquetes largos se cortan con marca, y la copia guardada se lee igual', ()
   const leida = crearBufferPaquetes(0, copia);
   assert.equal(leida.texto(), b.texto());
   assert.match(b.texto(), /<< \[otro\] (07 ){21}07 …/);
+});
+
+test('el consumo de batería sale por hora y no cuenta si el teléfono cargó o la sesión fue muy corta', () => {
+  const t0 = Date.parse('2026-11-23T20:00:00');
+  const ini = { nivel: 0.8, t: t0, cargando: false };
+  assert.deepEqual(consumoBateria(ini, { nivel: 0.74, t: t0 + 58 * 60e3, cargando: false }), { pct: 6, porHora: 6.2, min: 58 });
+  assert.equal(consumoBateria({ ...ini, cargando: true }, { nivel: 0.74, t: t0 + 3600e3, cargando: false }), null, 'cargó al empezar');
+  assert.equal(consumoBateria(ini, { nivel: 0.9, t: t0 + 3600e3, cargando: true }), null, 'cargó al terminar');
+  assert.equal(consumoBateria(ini, { nivel: 0.79, t: t0 + 5 * 60e3, cargando: false }), null, 'menos de 6 min');
+  assert.equal(consumoBateria(null, { nivel: 0.79, t: t0 + 3600e3 }), null, 'sin getBattery');
+  assert.deepEqual(textoDiagnostico({ bateria: { pct: 6, porHora: 6.2, min: 58 } }), ['Batería: bajó 6 % en 58 min (6,2 % por hora)']);
 });
