@@ -3,11 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 import { test as base, expect } from '@playwright/test';
 
-// Cada página falla la prueba si lanza un error de JavaScript. Los avisos (toast) quedan en window.__avisos
+// Cada página falla la prueba si lanza un error de JavaScript o algo que la CSP bloquea. Los avisos (toast) quedan en window.__avisos
 // porque se reemplazan entre sí y duran 3 s. Compartir archivos se apaga para que el respaldo se descargue.
 async function prepararPagina(page) {
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));
+  // Lo que bloquea la política de contenido (CSP, ronda 2) también falla la prueba: así ninguna e2e la rompe sin verlo.
+  page.on('console', (m) => { if (/Content Security Policy/i.test(m.text())) errores.push(m.text()); });
   page.on('dialog', (d) => d.accept());
   await page.addInitScript(() => {
     window.__avisos = [];
