@@ -26,10 +26,11 @@ export function vieneCalentado(sesiones, ahora = Date.now()) {
   return (sesiones || []).some((s) => s.fecha < ahora && s.fecha + (s.duracion || 0) * 1000 >= ahora - VENTANA_CALENTAR && (s.duracion || 0) >= CALENTAR_SEG);
 }
 
-// Sesiones de esta semana (desde el lunes) que fueron duras o usaron un talento de intensidad.
+// Sesiones de esta semana (desde el lunes) que fueron duras o usaron un talento de intensidad. `intensidad` es el
+// factor de intensidad (un número): solo cuenta el `true` de las sesiones guardadas antes de `usoIntensidad` (ronda 2, E1).
 export function sesionesIntensasSemana(sesiones, ftp, ahora = Date.now()) {
   const lunes = lunesDe(ahora);
-  return (sesiones || []).filter((s) => s.fecha >= lunes && s.fecha < ahora && (s.intensidad || TIPOS_DUROS.has(tipoSesion(s, s.ftp || ftp)))).length;
+  return (sesiones || []).filter((s) => s.fecha >= lunes && s.fecha < ahora && (s.usoIntensidad === true || s.intensidad === true || TIPOS_DUROS.has(tipoSesion(s, s.ftp || ftp)))).length;
 }
 
 // Permiso para la intensidad en la carrera que empieza. cuerpo = estadoCuerpo() de hoy (o null).

@@ -334,16 +334,30 @@ export function forma(sesiones, ftp, dias = 60, ahora = Date.now()) {
   const res = [];
   let ctl = 0;
   let atl = 0;
+  // Ronda 2 (E2): la condición y la fatiga arrancan con tu carga diaria media de las 2 primeras semanas, no en 0.
+  // Arrancando en 0, con la misma carga cada semana el ratio salía 1,6 a las 5 semanas y 1,26 a las 8, y la app
+  // cambiaba tu dura por un fondo («tu carga se disparó») sin que hubieras subido nada.
+  const diaPrimero = porDia.size ? claveDia(primero) : null;
+  let sembrado = false;
   const d = new Date(Math.min(primero, ahora - dias * 864e5));
   d.setHours(12, 0, 0, 0);
   const fin = new Date(ahora);
   fin.setHours(12, 0, 0, 0);
   while (d <= fin) {
-    const carga = porDia.get(claveDia(d.getTime())) || 0;
+    const clave = claveDia(d.getTime());
+    if (!sembrado && diaPrimero && clave >= diaPrimero) {
+      sembrado = true;
+      const desde = new Date(d);
+      const n = Math.max(1, Math.min(14, Math.round((fin - desde) / 864e5) + 1));
+      let suma = 0;
+      for (let i = 0; i < n; i++) { suma += porDia.get(claveDia(desde.getTime())) || 0; desde.setDate(desde.getDate() + 1); }
+      ctl = atl = suma / n;
+    }
+    const carga = porDia.get(clave) || 0;
     const tsb = ctl - atl;
     ctl += (carga - ctl) / 42;
     atl += (carga - atl) / 7;
-    res.push({ dia: claveDia(d.getTime()), carga, condicion: Math.round(ctl), fatiga: Math.round(atl), frescura: Math.round(tsb) });
+    res.push({ dia: clave, carga, condicion: Math.round(ctl), fatiga: Math.round(atl), frescura: Math.round(tsb) });
     d.setDate(d.getDate() + 1);
   }
   return res.slice(-dias);
