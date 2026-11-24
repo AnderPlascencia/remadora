@@ -23,7 +23,7 @@ import { PAISAJES, paisajeElegido } from '../carrera.js';
 import { esDePlan, guardarPrograma, leerPrograma, pintarPrograma } from './programa.js';
 import { cerrarGuia } from './ayuda.js';
 import * as Hab from '../habito.js';
-import * as R from '../reto.js';
+import * as R from '../fantasma.js';
 
 // ---------- Editor de entrenamientos ----------
 // ---------- Planes: entrenamientos base (según tu nivel) y los tuyos ----------

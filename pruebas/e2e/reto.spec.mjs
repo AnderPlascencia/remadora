@@ -1,4 +1,4 @@
-import { test, expect, abrirApp, completarBienvenida, esperarAviso, remar, terminar, avanzar, enCurso } from './ayuda.mjs';
+import { test, expect, abrirApp, completarBienvenida, esperarAviso, remar, terminar, avanzar } from './ayuda.mjs';
 
 // Etapa 25, «Rema contra mí»: la imagen se comparte con un enlace; quien lo abre tiene esa sesión en su carril.
 test('compartir manda el enlace del reto y quien lo abre rema contra esa sesión', async ({ page, otroTelefono }) => {
@@ -40,7 +40,7 @@ test('compartir manda el enlace del reto y quien lo abre rema contra esa sesión
   await expect(chip).toHaveText(/^Reto de /);
   await expect(chip).toHaveAttribute('aria-pressed', 'true');
   await b.locator('#btn-grabar').click();
-  await expect.poll(() => enCurso(b)).not.toBeNull();
+  await expect.poll(() => b.evaluate(async () => !!(await import('./src/estado.js')).estado.sesion)).toBe(true);
   const refs = await b.evaluate(async () => (await import('./src/estado.js')).estado.sesion.referencias.map((r) => ({ clave: r.clave, n: r.muestras.length })));
   expect(refs).toContainEqual(expect.objectContaining({ clave: 'reto' }));
   expect(refs.find((r) => r.clave === 'reto').n).toBeGreaterThanOrEqual(80);

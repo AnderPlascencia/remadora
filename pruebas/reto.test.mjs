@@ -1,7 +1,7 @@
 // «Rema contra mí»: la sesión va y vuelve por el enlace sin perder el ritmo, y un enlace roto no entra.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import * as R from '../src/reto.js';
+import * as R from '../src/fantasma.js';
 
 // 45 min con un ritmo que cambia: 3,5 m/s y un tramo a 4,5 m/s.
 const muestras = [];
@@ -13,7 +13,7 @@ test('ida y vuelta: misma distancia, mismo entrenamiento y la misma posición a 
   const url = R.enlaceReto('https://ejemplo.github.io/remadora/?atajo=hoy#x', sesion, 'Ander');
   assert.ok(url.startsWith('https://ejemplo.github.io/remadora/?reto='), url);
   assert.ok(url.length < 2000, `enlace de ${url.length} caracteres`);
-  const r = R.decodificarReto(new URL(url).searchParams.get(R.PARAM));
+  const r = R.decodificarReto(new URL(url).searchParams.get(R.PARAM_RETO));
   assert.equal(r.nombre, 'Ander');
   assert.equal(r.ent, 'Fondo 45 min (zona 2)');
   assert.equal(r.duracion, 2700);

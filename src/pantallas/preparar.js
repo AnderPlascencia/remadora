@@ -15,7 +15,6 @@ import { pintarClasificacion, pintarZonas, ritmoObjetivo } from './ajustes.js';
 import { modoEnt } from './vivo.js';
 import { chipsAtr, filaCond, icoMoneda, inventario, leerPersonaje, opcConsejos, previsionDe } from './heroe.js';
 import { contextoXp } from './programa.js';
-import * as R from '../reto.js';
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
 const MAX_RIVALES = 3;
@@ -36,12 +35,12 @@ function rivalesElegidos() {
 const NOMBRE_REF = { anterior: 'Mi anterior', mejor: 'Mi mejor', pasado: 'Yo hace 7 semanas', reto: 'el reto' };
 // El reto recibido por enlace (etapa 25), o null.
 export function retoActivo() {
-  const r = R.decodificarReto(ajustes.leer('retoActivo', ''));
+  const r = F.decodificarReto(ajustes.leer('retoActivo', ''));
   return r && { ...r, nombre: r.nombre || 'Tu retador' };
 }
 // Al abrir un enlace de reto: se guarda, se enciende su línea en tu carril y se dice cómo verlo.
 export function recibirReto(texto) {
-  const r = R.decodificarReto(texto);
+  const r = F.decodificarReto(texto);
   if (!r) { toast('No se pudo leer el enlace del reto'); return null; }
   ajustes.escribir('retoActivo', texto);
   const refs = referenciasElegidas();
