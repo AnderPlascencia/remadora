@@ -37,7 +37,8 @@ test('con clase, los ánimos son de tu personaje y al terminar la voz resume el 
     const per = JSON.parse(localStorage.getItem('personaje') || '{}');
     localStorage.setItem('personaje', JSON.stringify({ ...per, clase: 'vikingo', nombre: 'Prueba' }));
   });
-  test.setTimeout(150_000);
+  // 5 min simulados con la carrera dibujándose cuadro a cuadro: en el CI tardaba ~2,5 min y se pasaba del tope de 150 s.
+  test.setTimeout(240_000);
   await remar(page, 5 * 60_000);
   await terminar(page);
   await avanzar(page, 2_000);

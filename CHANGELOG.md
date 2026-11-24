@@ -2,6 +2,11 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.125.0 · 2026-11-24
+
+El diagnóstico mide la batería.
+
+- **Batería por sesión.** Ajustes › Diagnóstico muestra cuánto bajó la batería en la sesión y a cuánto por hora (por ejemplo «bajó 6 % en 58 min»). No cuenta si el teléfono cargó en algún momento o si la sesión duró menos de 6 minutos. Se guarda con cada sesión y va en el respaldo, como la latencia y los cuadros por segundo.
 ## 0.124.1 · 2026-11-24
 
 Dos arreglos de diseño de la revisión de UX.

@@ -1,6 +1,6 @@
 // Diagnóstico local de la sesión: lo que tarda un dato de la consola en verse, los cuadros por segundo de la carrera,
-// cómo va la cola de Bluetooth y los paquetes de la consola de los últimos ~30 min. Todo se queda en el teléfono:
-// se ve en Ajustes › Diagnóstico, se guarda con cada sesión (y sale en el respaldo) y va en el registro descargable.
+// lo que gasta de batería, cómo va la cola de Bluetooth y los paquetes de la consola de los últimos ~30 min. Todo se
+// queda en el teléfono: se ve en Ajustes › Diagnóstico, se guarda con cada sesión (y sale en el respaldo) y va en el registro descargable.
 
 // Percentil p (0–100) de una lista de números; null si está vacía.
 export function percentil(lista, p) {
@@ -46,6 +46,27 @@ export function cuadroPintado(modo, intervalo) {
   (cuadros[modo] ||= crearMuestras()).anotar(intervalo);
 }
 
+// ---------- Batería durante la sesión ----------
+// Chrome en Android da el nivel con navigator.getBattery() (en pasos de 1 %). Si el teléfono estuvo cargando en algún
+// momento, la cuenta no vale. Menos de 6 minutos o menos de un paso de nivel tampoco dicen nada.
+let bateria = null;
+let batInicio = null;
+export async function iniciarBateria(ahora = Date.now()) {
+  batInicio = null;
+  try { bateria ||= (await navigator.getBattery?.()) || null; } catch { bateria = null; }
+  if (!bateria) return;
+  batInicio = { nivel: bateria.level, t: ahora, cargando: !!bateria.charging };
+  bateria.onchargingchange = () => { if (batInicio && bateria.charging) batInicio.cargando = true; };
+}
+export function consumoBateria(inicio, fin) {
+  if (!inicio || !fin || inicio.cargando || fin.cargando) return null;
+  const horas = (fin.t - inicio.t) / 36e5;
+  if (!(horas >= 0.1)) return null;
+  const pct = Math.round((inicio.nivel - fin.nivel) * 1000) / 10;
+  if (pct < 0) return null;
+  return { pct, porHora: Math.round((10 * pct) / horas) / 10, min: Math.round(horas * 60) };
+}
+
 export function reiniciarDiagnostico() {
   latencias.vaciar();
   llegada = null;
@@ -65,6 +86,8 @@ export function resumenDiagnostico(ble = null) {
   }
   if (Object.keys(fps).length) r.fps = fps;
   if (ble && ble.escrituras) r.ble = { ...ble };
+  const bat = bateria && consumoBateria(batInicio, { nivel: bateria.level, t: Date.now(), cargando: !!bateria.charging });
+  if (bat) r.bateria = bat;
   return Object.keys(r).length ? r : null;
 }
 
@@ -75,6 +98,7 @@ export function textoDiagnostico(d) {
   const lineas = [];
   if (d.latencia) lineas.push(`Dato de la consola → pantalla: ${d.latencia.p50} ms (mediana), ${d.latencia.p95} ms (peor 5 %)`);
   for (const [modo, f] of Object.entries(d.fps || {})) lineas.push(`${NOMBRES_VISTA[modo] || modo}: ${f.p50} cuadros/s (peor 5 %: ${f.p5})`);
+  if (d.bateria) lineas.push(`Batería: bajó ${String(d.bateria.pct).replace('.', ',')} % en ${d.bateria.min} min (${String(d.bateria.porHora).replace('.', ',')} % por hora)`);
   if (d.ble) lineas.push(`Bluetooth: ${d.ble.escrituras} escrituras, cola máxima ${d.ble.colaMax}, ${d.ble.lentas} lentas (> 150 ms), ${d.ble.saltadas} consultas saltadas`);
   return lineas;
 }
