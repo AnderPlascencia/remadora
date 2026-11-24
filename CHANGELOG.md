@@ -2,12 +2,18 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
-## 0.123.1 · 2026-11-24
+## 0.124.1 · 2026-11-24
 
 Dos arreglos de diseño de la revisión de UX.
 
 - **El nombre del bloque se lee entero en la vista Carrera.** Arriba a la izquierda salía «1/3 ·…» porque «luego Libre a 18–22 golpes/min» se comía el espacio. Ahora ese texto pasa a dos líneas y el nombre del bloque cabe.
 - **Compartir, primero y a todo el ancho.** En la hoja de compartir, Compartir queda arriba a todo el ancho, con Guardar y Cerrar debajo. Antes quedaba sola a media anchura en una segunda fila. El orden con el teclado o el lector de pantalla es el mismo que se ve.
+
+## 0.124.0 · 2026-11-24
+
+El aviso «¿Lo hacemos más fácil?» llega antes.
+
+- **Con 4 semanas de historial basta** (antes pedía 6). Compara tus 2 últimas semanas con las de antes, sin contar las semanas previas a tu primera sesión. Sigue saliendo una sola vez y sin reproches.
 
 ## 0.123.0 · 2026-11-23
 

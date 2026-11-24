@@ -75,17 +75,20 @@ export function pausas(sesiones, ahora = Date.now()) {
   };
 }
 
-// Riesgo de abandono (etapa 30): remabas con regularidad (2 o más por semana en las 4 semanas de antes) y ahora
+// Riesgo de abandono (etapa 30): remabas con regularidad (2 o más por semana en las semanas de antes, hasta 4) y ahora
 // mucho menos. «baja»: las 2 últimas semanas cerradas, a la mitad o menos, y 3 días o más sin remar. «hueco»: 7 días
 // o más sin remar. Con 21 días o más ya no se avisa: lo cubre el regreso, que rehace el plan.
-export const RIESGO = { minBase: 2, caida: 0.5, diasBaja: 3, diasHueco: 7, diasRegreso: 21, silencio: 42 };
+export const RIESGO = { semanasMin: 4, minBase: 2, caida: 0.5, diasBaja: 3, diasHueco: 7, diasRegreso: 21, silencio: 42 };
 export function riesgoAbandono(sesiones, ahora = Date.now()) {
   if (sesiones.length < 6) return null;
   const primera = sesiones.reduce((m, s) => Math.min(m, s.fecha), Infinity);
-  if (inicioPeriodo(primera, 'semana') > inicioPeriodo(ahora, 'semana') - 6 * 7 * DIA) return null;
+  // Semanas cerradas desde la de tu primera sesión: hacen falta 4 (2 de base y las 2 últimas).
+  const cerradas = Math.round((inicioPeriodo(ahora, 'semana') - inicioPeriodo(primera, 'semana')) / (7 * DIA));
+  if (cerradas < RIESGO.semanasMin) return null;
   const sem = sesionesPorSemana(sesiones.filter((s) => s.fecha <= ahora), 7, ahora);
   const prom = (xs) => Math.round((10 * xs.reduce((a, b) => a + b, 0)) / xs.length) / 10;
-  const base = prom(sem.slice(0, 4));
+  // La base: hasta 4 semanas antes de las 2 últimas, sin contar las de antes de empezar.
+  const base = prom(sem.slice(Math.max(0, 6 - cerradas), 4));
   const reciente = prom(sem.slice(4, 6));
   const { diasSinRemar: dias } = pausas(sesiones.filter((s) => s.fecha <= ahora), ahora);
   if (base < RIESGO.minBase || dias == null || dias >= RIESGO.diasRegreso) return null;

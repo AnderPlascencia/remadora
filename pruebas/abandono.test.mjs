@@ -40,8 +40,16 @@ assert.equal(Hab.riesgoAbandono(en(regular.filter((d) => d <= -21)), ahora), nul
 // Quien remaba 1 vez por semana no está en riesgo por remar 1 vez por semana.
 assert.equal(Hab.riesgoAbandono(en([-42, -35, -28, -21, -14, -7]), ahora), null);
 
-// Con menos de 6 semanas de historial, nada.
-assert.equal(Hab.riesgoAbandono(en([-28, -27, -25, -21, -20, -18]), ahora), null);
+// Con menos de 4 semanas cerradas desde la primera sesión, nada.
+assert.equal(Hab.riesgoAbandono(en([-21, -20, -18, -14, -13, -11]), ahora), null);
+
+// Con 4 semanas basta: 5 y 2 por semana, luego 1 y 1, y 4 días sin remar (lo que pasó en un respaldo real).
+const corto = Hab.riesgoAbandono(en([-28, -27, -26, -25, -24, -21, -18, -12, -4]), ahora);
+assert.equal(corto?.motivo, 'baja');
+assert.equal(corto.base, 3.5);
+assert.equal(corto.reciente, 1);
+// Las semanas de antes de empezar no bajan la base: con 4 semanas de 3, la base es 3 y no 1,5.
+assert.equal(Hab.riesgoAbandono(en([-28, -26, -24, -21, -19, -17, -11, -4]), ahora)?.base, 3);
 
 // Las sesiones del futuro (relojes cambiados) no cuentan.
 assert.equal(Hab.riesgoAbandono(en([...regular, -11, -4, 5]), ahora)?.motivo, 'baja');
