@@ -7,6 +7,12 @@ Lo que cambia en cada versión de Rower. La versión de la app vive en `src/vers
 El diagnóstico mide la batería.
 
 - **Batería por sesión.** Ajustes › Diagnóstico muestra cuánto bajó la batería en la sesión y a cuánto por hora (por ejemplo «bajó 6 % en 58 min»). No cuenta si el teléfono cargó en algún momento o si la sesión duró menos de 6 minutos. Se guarda con cada sesión y va en el respaldo, como la latencia y los cuadros por segundo.
+## 0.124.1 · 2026-11-24
+
+Dos arreglos de diseño de la revisión de UX.
+
+- **El nombre del bloque se lee entero en la vista Carrera.** Arriba a la izquierda salía «1/3 ·…» porque «luego Libre a 18–22 golpes/min» se comía el espacio. Ahora ese texto pasa a dos líneas y el nombre del bloque cabe.
+- **Compartir, primero y a todo el ancho.** En la hoja de compartir, Compartir queda arriba a todo el ancho, con Guardar y Cerrar debajo. Antes quedaba sola a media anchura en una segunda fila. El orden con el teclado o el lector de pantalla es el mismo que se ve.
 
 ## 0.124.0 · 2026-11-24
 
