@@ -7,6 +7,7 @@ Lo que cambia en cada versión de Rower. La versión de la app vive en `src/vers
 Pruebas en las que se puede confiar (corrección previa C1 de la ronda 2).
 
 - **Restaurar un respaldo ya no deja la reparación a medias.** Con otro héroe, la app se recargaba 1,5 s después de restaurar, aunque la reparación del historial siguiera corriendo, y no la repetía al volver a abrir. Ahora recarga cuando termina, y si se cierra antes, la repite entera al arrancar.
+- **Compartir ya no falla cuando la imagen tarda en prepararse.** El botón se leía del evento después de esperar la imagen, cuando el navegador ya lo había soltado, y el envío se cortaba con un error.
 - **Las pruebas pasan también en tu zona horaria.** Una prueba de la colección daba rojo en México porque comparaba con la fecha en UTC. Ahora el CI corre las unitarias en UTC, Ciudad de México y Madrid.
 - **Las pruebas e2e van en dos mitades en paralelo**, para no rozar el tope de tiempo del CI, y las que pasan solo al reintentar salen en el resumen del trabajo, para arreglarlas en vez de esconderlas.
 
