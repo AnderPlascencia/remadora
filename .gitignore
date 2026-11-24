@@ -5,3 +5,4 @@ test-results/
 playwright-report/
 publicar/
 lcov.info
+e2e-resultados.json

@@ -673,9 +673,10 @@ export function arrancarPlanes2() {
     anotarCompartir('guardar');
   });
   $('#compartir-enviar').addEventListener('click', async (ev) => {
+    // El botón se toma antes de esperar: después del await, ev.currentTarget ya es null (fallaba con la imagen lenta).
+    const boton = ev.currentTarget;
     const listo = await imagenCompartir();
     if (!listo) return;
-    const boton = ev.currentTarget;
     boton.disabled = true;
     try {
       const archivo = new File([listo.blob], listo.nombre, { type: 'image/png' });
