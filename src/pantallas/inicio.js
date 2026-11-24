@@ -94,7 +94,12 @@ function pintarInicio() {
 }
 
 // Al arrancar la app (en orden, desde app.js).
-export function arrancarInicio() {
+// Ronda 2 (QA-F4): este módulo ya no va en la primera carga. Se carga para la primera bienvenida o al repetirla
+// desde Ayuda; los oyentes se ponen una sola vez, la primera vez que hacen falta.
+let escuchando = false;
+function escucharInicio() {
+  if (escuchando) return;
+  escuchando = true;
   $('#inicio').addEventListener('click', (e) => {
     const c = e.target.closest('[data-clase]');
     const o = e.target.closest('[data-obj]');
@@ -138,6 +143,9 @@ export function arrancarInicio() {
     }
     if (remadora.conectada) terminarInicio();
   });
+}
+export function arrancarInicio() {
+  escucharInicio();
   (async () => {
     if (ajustes.si('inicioHecho', false)) { ofrecerRecuperar(); mostrarConsejo('entrenar'); return; }
     // Solo para quien empieza de cero: con héroe o sesiones guardadas, ya pasó por aquí.
@@ -202,6 +210,7 @@ async function terminarInicio({ saltar = false } = {}) {
   if (texto) toast(texto, 4000);
 }
 export function abrirInicio({ repetir = false } = {}) {
+  escucharInicio();
   const p = perfil();
   const per = leerPersonaje();
   const prog = leerPrograma();

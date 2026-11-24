@@ -7,15 +7,13 @@ import { arrancarPreparar, hayCarrera, recibirReto } from './pantallas/preparar.
 import { abrirModoRemo, ajustarNumeros, arrancarVivo1, arrancarVivo2, dibujarVivo, vistaPrevia } from './pantallas/vivo.js';
 import { arrancarRegistro } from './registro.js';
 import * as Hab from './habito.js';
-import { activarVersionEnEspera, actualizarBotones, arrancarSesion1, arrancarSesion2 } from './pantallas/sesion.js';
+import { activarVersionEnEspera, actualizarBotones, arrancarSesion1, arrancarSesion2, ofrecerRecuperar } from './pantallas/sesion.js';
 import { arrancarPlanes1, arrancarPlanes2, llenarSelectorEntrenamientos } from './pantallas/planes.js';
 import { arrancarProgreso, pintarHistorial } from './pantallas/progreso.js';
 import { arrancarHeroe, pintarLineaNivel, precargarRecursos } from './pantallas/heroe.js';
 import { VERSION } from './version.js';
-import { arrancarDetalle } from './pantallas/detalle.js';
 import { arrancarPrograma, limpiarSobrantesDePlan, pintarPrograma, revisarPlanAuto } from './pantallas/programa.js';
-import { arrancarInicio } from './pantallas/inicio.js';
-import { arrancarAyuda } from './pantallas/ayuda.js';
+import { arrancarAyuda, mostrarConsejo } from './pantallas/ayuda.js';
 
 arrancarNavegacion();
 arrancarAjustes1();
@@ -28,12 +26,14 @@ arrancarVivo2();
 arrancarPlanes1();
 arrancarProgreso();
 arrancarHeroe();
-arrancarDetalle();
 arrancarPrograma();
 arrancarAjustes3();
 arrancarPlanes2();
 arrancarSesion2();
-arrancarInicio();
+// Ronda 2 (QA-F4): la bienvenida y el detalle de una sesión ya no van en la primera carga. La bienvenida se baja solo
+// si falta hacerla; el detalle, al abrir una sesión (pone sus oyentes al cargarse).
+if (ajustes.si('inicioHecho', false)) { ofrecerRecuperar(); mostrarConsejo('entrenar'); }
+else import('./pantallas/inicio.js').then((m) => m.arrancarInicio());
 arrancarAyuda();
 pintarPerfil();
 Hab.anotar('app');
