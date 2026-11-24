@@ -12,7 +12,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   retries: process.env.CI ? 1 : 0,
   forbidOnly: !!process.env.CI,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'e2e-resultados.json' }]] : 'list',
   use: {
     baseURL: `http://127.0.0.1:${PUERTO}/`,
     ...devices['Pixel 7'],

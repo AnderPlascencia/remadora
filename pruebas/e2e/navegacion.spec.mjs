@@ -42,6 +42,9 @@ test('el historial de Progreso va plegado y dice cuántas sesiones hay', async (
 });
 
 test('el asistente de metas parte de tu predicción y la mejora cambia con las semanas', async ({ page }) => {
+  // 150 s remados para tener un tramo de 500 m: en local tarda 1,2 min, pero en CI con 2 trabajadores agotó dos
+  // veces el tope de 120 s.
+  test.setTimeout(240_000);
   await abrirApp(page);
   await completarBienvenida(page);
   await remar(page, 150_000);

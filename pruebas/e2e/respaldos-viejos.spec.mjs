@@ -59,7 +59,9 @@ for (const [nombre, armar] of Object.entries(RESPALDOS_VIEJOS)) {
       writeFileSync(RUTA_ESPERADO, `${JSON.stringify({ ...todo, [nombre]: r }, null, 2)}\n`);
       return;
     }
-    expect(r).toEqual(esperado[nombre]);
+    // La reparación del historial corre tras restaurar y antes de la recarga: se espera a que termine (antes la prueba
+    // leía a veces a media reparación y daba 1 m de diferencia).
+    await expect.poll(() => resumenEnLaPagina(page), { timeout: 20_000 }).toEqual(esperado[nombre]);
     // ⚖ Etapa 23: sin muestras, con los resúmenes, salen los mismos totales, marcas, XP, nivel y monedas.
     expect(await resumenEnLaPagina(page, true)).toEqual(esperado[nombre]);
     await expect.poll(() => resumenesGuardados(page)).toBe(buenas);

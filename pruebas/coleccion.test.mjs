@@ -101,7 +101,8 @@ assert.equal(CB.velaDeRival(null, { dificultad: 'altamar' }), null);
   const h = J.estadoJuego(lista, { ftp: FTP, ahora: lista.at(-1).fecha + 3600e3, calendario: {} });
   assert.ok(h.hazanas.find((x) => x.id === 'clase-vikingo').hecha, '80 000 paladas');
   const logro = h.logros.find((l) => l.texto.includes('Saga de las cien mil'));
-  assert.equal(new Date(logro.fecha).toISOString().slice(0, 10), '2026-11-05', 'se cobra en la primera sesión desde el cambio');
+  // Fecha local (las 18:00 de México ya son el día siguiente en UTC).
+  assert.equal(new Date(logro.fecha).toLocaleDateString('sv-SE'), '2026-11-05', 'se cobra en la primera sesión desde el cambio');
   assert.equal(logro.monedas, 300);
 }
 

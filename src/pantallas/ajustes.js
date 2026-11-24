@@ -434,12 +434,12 @@ async function restaurarRespaldo(archivo) {
     if (reemplazar || ajustes.leer(k, null) == null) ajustes.escribir(k, v);
   }
   toast(`Restaurado: ${nS} sesiones y ${nE} entrenamientos nuevos${reemplazar ? ', con el héroe, el plan y los ajustes del respaldo' : ''}${invalidas ? `. ${invalidas} ${invalidas === 1 ? 'sesión dañada no se trajo' : 'sesiones dañadas no se trajeron'}` : ''}`);
-  // Con el héroe y los ajustes cambiados, lo más simple y seguro es volver a cargar la app.
-  if (reemplazar) setTimeout(() => location.reload(), 1500);
+  // Con el héroe y los ajustes cambiados, lo más simple y seguro es volver a cargar la app (después de reparar).
   rellenarPerfil();
   pintarPerfil();
   llenarSelectorEntrenamientos();
   pintarHoy();
+  return { recargar: reemplazar };
 }
 
 // Pide a Chrome que no borre el historial aunque al teléfono le falte espacio (una app instalada suele obtenerlo).
@@ -469,7 +469,14 @@ export function arrancarAjustes3() {
   $('#in-restaurar').addEventListener('change', async (e) => {
     const archivo = e.target.files[0];
     e.target.value = '';
-    if (archivo) { await restaurarRespaldo(archivo); await repararSesiones(); }
+    if (!archivo) return;
+    const r = await restaurarRespaldo(archivo);
+    // Un respaldo puede traer sesiones del formato viejo. Si la app se cierra a media reparación, la marca a 0
+    // hace que el próximo arranque la repita entera (antes la recarga de abajo podía cortarla a la mitad).
+    await db.guardarEstado('versionDatos', 0);
+    await repararSesiones();
+    await db.guardarEstado('versionDatos', VERSION_DATOS);
+    if (r?.recargar) setTimeout(() => location.reload(), 1500);
   });
   pintarInfoRespaldo();
   protegerDatos();
