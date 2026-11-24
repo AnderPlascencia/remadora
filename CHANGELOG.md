@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.126.0 · 2026-11-24
+
+Rema contra mí.
+
+- **Comparte un reto.** Al compartir la imagen de una sesión va también un enlace (lo puedes apagar). Quien lo abre tiene tu sesión en su carril como un bote rosa que rema exactamente lo que remaste tú, en Remo libre o en el mismo entrenamiento.
+- **Lo que viaja en el enlace:** tu nombre (el del héroe, si lo dejas), el entrenamiento, la fecha y tus metros cada 10 s. Ni pulso, ni peso, ni nada más. No pasa por ningún servidor.
+- **Al abrir un reto** aparece «Reto de …» en las opciones de carrera, ya encendido. Lo apagas como cualquier referencia.
+
 ## 0.125.0 · 2026-11-24
 
 El diagnóstico mide la batería.

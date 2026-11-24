@@ -23,6 +23,7 @@ import { PAISAJES, paisajeElegido } from '../carrera.js';
 import { esDePlan, guardarPrograma, leerPrograma, pintarPrograma } from './programa.js';
 import { cerrarGuia } from './ayuda.js';
 import * as Hab from '../habito.js';
+import * as R from '../fantasma.js';
 
 // ---------- Editor de entrenamientos ----------
 // ---------- Planes: entrenamientos base (según tu nivel) y los tuyos ----------
@@ -679,7 +680,9 @@ export function arrancarPlanes2() {
     try {
       const archivo = new File([listo.blob], listo.nombre, { type: 'image/png' });
       const titulo = compartir?.tipo === 'periodo' ? (compartir.periodo === 'mes' ? 'Mi mes en Rower' : 'Mi semana en Rower') : 'Mi sesión en Rower';
-      if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: titulo });
+      const extra = textoCompartir();
+      if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: titulo, ...extra });
+      else if (extra.url && navigator.share) await navigator.share({ title: titulo, ...extra });
       else descargar(listo.nombre, listo.blob, 'image/png');
       anotarCompartir('compartir');
     } catch (err) {
@@ -737,8 +740,20 @@ async function abrirCompartir(s) {
   $('#compartir-pulso').checked = false;
   $('#compartir-pulso').closest('label').hidden = !s.fcProm;
   $('#compartir-kcal').checked = false;
+  // «Rema contra mí» (etapa 25): con la imagen va un enlace para remar contra esta sesión.
+  compartir.reto = R.codificarReto(s) ? { nombre: heroe?.nombre || '' } : null;
+  $('#compartir-reto').checked = true;
+  $('#compartir-reto-campo').hidden = !compartir.reto;
   $('#compartir-dialogo').hidden = false;
   pintarCompartir();
+}
+// Lo que acompaña a la imagen al compartirla: el texto y el enlace del reto, si está elegido.
+function textoCompartir() {
+  const c = compartir;
+  if (c?.tipo === 'periodo' || !c?.reto || !$('#compartir-reto').checked) return {};
+  const nombre = $('#compartir-heroe').checked ? c.reto.nombre : '';
+  const url = R.enlaceReto(location.href, c.s, nombre);
+  return url ? { text: R.textoReto(c.s, nombre), url } : {};
 }
 // Tarjeta de la semana o del mes (etapa 31): la misma vista previa, con «esta / la anterior» en vez de pulso.
 export async function abrirCompartirPeriodo(periodo) {
@@ -829,6 +844,7 @@ export function cerrarCompartir() {
   if (compartir?.url) URL.revokeObjectURL(compartir.url);
   compartir = null;
   $('#compartir-cual').hidden = true;
+  $('#compartir-reto-campo').hidden = true;
   $('#compartir-img').alt = 'Vista previa de la imagen de tu sesión';
   $('#compartir-img').removeAttribute('src');
   $('#compartir-dialogo').hidden = true;
