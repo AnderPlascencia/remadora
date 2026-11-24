@@ -3,7 +3,6 @@ import * as G from '../guia.js';
 import { $, ajustes, ico, toast } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
-import { abrirInicio } from './inicio.js';
 
 // ---------- Guía rápida y consejos de la primera visita a cada pestaña ----------
 const NOMBRE_VISTA = { entrenar: 'Entrenar', entrenamientos: 'Planes', heroe: 'Héroe', historial: 'Progreso', ajustes: 'Ajustes' };
@@ -42,7 +41,7 @@ export function arrancarAyuda() {
     if (ir) { cerrarGuia(); irA(ir.dataset.ir); }
   });
   $('#btn-guia').addEventListener('click', () => abrirGuia());
-  $('#btn-repetir-inicio').addEventListener('click', () => abrirInicio({ repetir: true }));
+  $('#btn-repetir-inicio').addEventListener('click', async () => (await import('./inicio.js')).abrirInicio({ repetir: true }));
   $('#btn-consejos').addEventListener('click', () => {
     for (const v of Object.keys(G.CONSEJO_DE_VISTA)) ajustes.escribir(`consejo-${v}`, '0');
     ajustes.escribir('ayudaGestos', '0');

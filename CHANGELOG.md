@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.126.4 · 2026-11-24
+
+La app abre con menos código (corrección previa C5 de la ronda 2).
+
+- **La bienvenida y el detalle de la sesión ya no se bajan al abrir.** La bienvenida se carga solo si te falta hacerla (o si la repites desde Ayuda), y el detalle, al terminar o abrir una sesión. El código de la primera carga baja de 377,7 a 365,2 KB comprimidos (370,3 KB la primera vez, con la bienvenida).
+
 ## 0.126.3 · 2026-11-24
 
 El reto ya no pasa por ningún servidor (corrección previa C4 de la ronda 2).

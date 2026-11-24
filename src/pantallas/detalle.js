@@ -58,7 +58,11 @@ function pintarRpe() {
 }
 
 // Al arrancar la app (en orden, desde app.js).
+// Los oyentes se ponen al cargar el módulo (ya no va en la primera carga: ronda 2, QA-F4).
+let arrancado = false;
 export function arrancarDetalle() {
+  if (arrancado) return;
+  arrancado = true;
   arrancarPerfilPorPartes();
   // El hito de la sesión abre la misma imagen para compartir, ya con su plantilla.
   $('#btn-hito-compartir').addEventListener('click', () => $('#btn-compartir-img').click());
@@ -308,3 +312,5 @@ function dibujarHojaGraficas(s) {
     }
   }
 }
+
+arrancarDetalle();

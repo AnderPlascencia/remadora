@@ -18,11 +18,10 @@ import { ftpAutomatico } from './preparar.js';
 import { agregarLog, guardarRegistroSesion } from '../registro.js';
 import { resumenDiagnostico } from '../diagnostico.js';
 import { guardarPersonaje, inventario, pintarLineaNivel } from './heroe.js';
-import { abrirSesion, fcParaEsfuerzo } from './detalle.js';
 import { delProgramaHoy, pintarHoy, revisarPlanAuto } from './programa.js';
+import { decirResumenJuego } from './sesion-voz.js';
 import * as XC from '../xp-carga.js';
 import { actual, fcFresca, remadora, sesionEnOtraPestana } from './sesion.js';
-import { decirResumenJuego } from './sesion-voz.js';
 
 // ---------- Sesión en curso a salvo ----------
 // Android puede cerrar la app en segundo plano o con el gesto de atrás: cada 10 s remados (y al ocultarse)
@@ -217,6 +216,9 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
   }
   await borrarSesionEnCurso();
   if (!recuperada) guardarRegistroSesion(registro.fecha, registro.diagnostico);
+  // Ronda 2 (QA-F4): el detalle de la sesión se carga aquí, con la sesión ya guardada (no va en la primera
+  // carga). Sin conexión sale de la caché del service worker, como el resto.
+  const { abrirSesion, fcParaEsfuerzo } = await import('./detalle.js');
   let previas = null;
   try {
     // Sin muestras: el resumen, los récords y el juego leen el resumen guardado de cada sesión (etapa 23).

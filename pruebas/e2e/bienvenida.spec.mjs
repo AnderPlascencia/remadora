@@ -13,6 +13,11 @@ test('la bienvenida arma el plan, deja la app en modo demo y no vuelve a salir',
   await page.reload();
   await expect(page.locator('#tab-entrenar')).toBeVisible();
   await expect(page.locator('#inicio')).toBeHidden();
+  // Con la bienvenida hecha, su módulo ya no se baja al abrir (ronda 2, QA-F4), pero se puede repetir desde Ayuda.
+  await page.locator('#tab-ajustes').click();
+  await page.locator('[data-seccion="ayuda"] summary').click();
+  await page.locator('#btn-repetir-inicio').click();
+  await expect(page.locator('#inicio')).toBeVisible();
 });
 
 test('«Saltar» cierra la bienvenida sin plan', async ({ page }) => {
