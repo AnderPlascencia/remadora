@@ -11,9 +11,10 @@ const sesion = { fecha: Date.parse('2026-11-23T20:00:00'), duracion: 2700, dista
 
 test('ida y vuelta: misma distancia, mismo entrenamiento y la misma posición a cada minuto', () => {
   const url = R.enlaceReto('https://ejemplo.github.io/remadora/?atajo=hoy#x', sesion, 'Ander');
-  assert.ok(url.startsWith('https://ejemplo.github.io/remadora/?reto='), url);
+  // En el fragmento, sin la consulta vieja: el reto no llega al servidor (ronda 2, INF-R5).
+  assert.ok(url.startsWith('https://ejemplo.github.io/remadora/#reto='), url);
   assert.ok(url.length < 2000, `enlace de ${url.length} caracteres`);
-  const r = R.decodificarReto(new URL(url).searchParams.get(R.PARAM_RETO));
+  const r = R.decodificarReto(new URLSearchParams(new URL(url).hash.slice(1)).get(R.PARAM_RETO));
   assert.equal(r.nombre, 'Ander');
   assert.equal(r.ent, 'Fondo 45 min (zona 2)');
   assert.equal(r.duracion, 2700);

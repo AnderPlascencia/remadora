@@ -323,8 +323,8 @@ export function enlaceReto(base, s, nombre) {
   if (!c) return null;
   const u = new URL(base);
   u.search = '';
-  u.hash = '';
-  u.searchParams.set(PARAM_RETO, c);
+  // En el fragmento (#reto=…): el navegador no lo manda al servidor ni en el Referer.
+  u.hash = `${PARAM_RETO}=${c}`;
   return u.toString();
 }
 

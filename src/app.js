@@ -57,9 +57,11 @@ actualizarBotones();
 // Atajos del icono (etapa 16): «Entrenar hoy» y «Remo libre» abren el modo remo listo para empezar.
 const parametros = new URLSearchParams(location.search);
 const atajo = parametros.get('atajo');
-// «Rema contra mí» (etapa 25): un enlace con ?reto= trae la sesión de otra persona para remar contra ella.
-const reto = parametros.get('reto');
-if (atajo || reto) history.replaceState(history.state, '', location.pathname + location.hash);
+// «Rema contra mí» (etapa 25): un enlace con #reto= trae la sesión de otra persona para remar contra ella. Va en el
+// fragmento para que no llegue al servidor (ronda 2, INF-R5); los enlaces viejos con ?reto= siguen valiendo.
+const enHash = new URLSearchParams(location.hash.slice(1)).get('reto');
+const reto = enHash || parametros.get('reto');
+if (atajo || reto) history.replaceState(history.state, '', location.pathname + (enHash ? '' : location.hash));
 if (reto) recibirReto(reto);
 limpiarSobrantesDePlan().then(() => llenarSelectorEntrenamientos()).then(revisarPlanAuto).then(() => abrirAtajo(atajo));
 function abrirAtajo(a) {
