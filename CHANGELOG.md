@@ -2,6 +2,12 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.124.0 · 2026-11-24
+
+El aviso «¿Lo hacemos más fácil?» llega antes.
+
+- **Con 4 semanas de historial basta** (antes pedía 6). Compara tus 2 últimas semanas con las de antes, sin contar las semanas previas a tu primera sesión. Sigue saliendo una sola vez y sin reproches.
+
 ## 0.123.0 · 2026-11-23
 
 Botes y velas nuevos en la carrera (aprobados por Ander).
