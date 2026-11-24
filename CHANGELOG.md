@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.126.3 · 2026-11-24
+
+El reto ya no pasa por ningún servidor (corrección previa C4 de la ronda 2).
+
+- **El enlace del reto va después del «#».** Antes iba en la dirección (`?reto=`), así que tus metros llegaban a los registros de GitHub Pages aunque el texto dijera que no pasaba por ningún servidor. Lo que va después del «#» se queda en el teléfono. Los enlaces que ya compartiste siguen valiendo.
+- **La app solo carga su propio código.** Ahora entra texto de otras personas por los enlaces de reto, así que la página bloquea cualquier código que no sea suyo. Un nombre con trampas («<img onerror…>») se ve como texto y no hace nada. Todas las pruebas fallan si algo choca con esa regla.
+
 ## 0.126.2 · 2026-11-24
 
 El cansancio que ves es el real (corrección previa C3 de la ronda 2).
