@@ -199,7 +199,15 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
     if (ent ? s.tiempoMeta == null : s.t < 300) registro.carreraSinTerminar = true;
   }
   if (s.referencias?.length) {
-    registro.referencias = s.referencias.map((r) => ({ nombre: r.nombre, fecha: r.fecha ?? null, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)) }));
+    // clave (ronda 2, R2-6): qué referencia era, para premiar ganarle a tu yo pasado y al reto. En un reto a distancia
+    // completo también se guarda por cuántos segundos llegaste antes (negativo: después).
+    const metaDist = ent?.objetivo?.metrica === 'distancia' && s.tiempoMeta != null ? ent.objetivo.valor : null;
+    registro.referencias = s.referencias.map((r) => {
+      const ref = { nombre: r.nombre, clave: r.clave ?? null, fecha: r.fecha ?? null, diferencia: Math.round(s.dist - E.distanciaEn(r.muestras, s.t)) };
+      const tr = r.clave === 'reto' && metaDist ? F.tiempoA(r, metaDist) : null;
+      if (tr != null) ref.segundos = Math.round(tr - s.tiempoMeta);
+      return ref;
+    });
   }
   registro.marcas = E.marcasDeSesion(registro);
   // Primero se guarda, y solo después se lee el historial (récords, resumen, héroe): si leer cientos de sesiones con

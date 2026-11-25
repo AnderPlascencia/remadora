@@ -4,7 +4,7 @@
 // Nada de esto cambia tus métricas reales: solo el juego.
 /** @import { Capitulo, Hazana, OpcionesAtributos, OpcionesJuego, OpcionesRivales } from '../tipos/datos' */
 import { VIKINGO_PALADA_DESDE, CLASES_JUSTAS_DESDE, sendaEn, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
-import { estres, claveDia, RECORDS, mejorTiempoDe, factorIntensidadDe, mejoraPct, SOLO_TU_DESDE, nMuestras, segundosCon } from './estadisticas.js';
+import { estres, claveDia, RECORDS, mejorTiempoDe, factorIntensidadDe, mejoraPct, SOLO_TU_DESDE, nMuestras, segundosCon, ftpDeSesion } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
 import { tecnicaDeSesion, TOPE_MIN as TOPE_TECNICA_MIN } from './tecnica.js';
@@ -12,6 +12,7 @@ import { objeto } from './objetos.js';
 import { hazanaDeClase, PIEZAS as PIEZAS_BOTE } from './coleccion-bote.js';
 import { capituloDeClase, aJefe } from './sagas.js';
 import { MAESTRIA_DESDE, MIN_SEG_MAESTRIA, claseEn, nivelMaestria, monedasMaestria, nombreMaestria, maestriaDe } from './maestria.js';
+import * as GA from './ganarte.js';
 import { tiendaVentajas, XP_ESTANDARTE, XP_ESTANDARTE_ANTES, MONEDAS_ESTANDARTE, XP_BITACORA, MONEDAS_BOTIN } from './ventajas.js';
 export const PREMIO_INSIGNIA = 50;
 
@@ -357,6 +358,11 @@ const crear = (d, r, semilla) => {
 
 // Tu ritmo en las 4 semanas anteriores a `desde` (ms): las misiones se ajustan a lo que remas de verdad.
 // Solo usa sesiones anteriores, así las misiones de un día o una semana no cambian mientras remas.
+// El ritmo de la semana y si hay una sesión de hace 6 a 8 semanas para «Más que tu yo pasado».
+export function ritmoConPasado(sesiones, desde) {
+  const r = ritmoReciente(sesiones, desde);
+  return r && claveDia(desde + 12 * 36e5) >= GA.GANARTE_DESDE ? { ...r, pasado: GA.hayYoPasado(sesiones, desde) } : r;
+}
 export function ritmoReciente(sesiones, desde) {
   const prev = sesiones.filter((s) => s.fecha < desde && s.fecha >= desde - 28 * 864e5);
   if (!prev.length) return null;
@@ -539,6 +545,8 @@ function misionAtributo(clave) {
 // Semanales de la etapa 12: la misma línea que las diarias, cada una de una sesión de XP (400 nominales): tu plan,
 // técnica, el rival de la semana y la misión de tu clase.
 export const XP_MISION_SEMANAL = 400;
+const MAS_QUE_TU_YO = { id: 'yopasado', nombre: 'Más que tu yo pasado', texto: () => 'Gánale a «Yo hace 7 semanas» en una sesión completa (la eliges en Rivales)', metas: [1], valor: (d) => d.yoPasado || 0 };
+const numeroSemana = (lunes) => Math.round(new Date(`${lunes}T12:00`).getTime() / (7 * 864e5));
 function misionesDeSemana12(lunes, clase, rit, reto) {
   const semilla = `s${lunes}`;
   const r = azar(semilla);
@@ -558,6 +566,9 @@ function misionesDeSemana12(lunes, clase, rit, reto) {
   // las otras clases, ahora pide tu ritmo habitual.
   if (lunes >= CLASES_JUSTAS_DESDE && deClase?.id === 'dominio') deClase = { ...deClase, ...DOMINIO_JUSTO };
   if (lunes >= CLASES_JUSTAS_DESDE && deClase?.id === 'rumbo') deClase = { ...deClase, metas: [entre(Math.round(rit?.sesSemana || 2), 2, 5)] };
+  // ⚖ Ganarte a ti mismo: con una sesión de hace 6 a 8 semanas, «Más que tu yo pasado» ocupa el lugar del rival de la
+  // semana. Con plan, siempre (la semana del plan no deja hueco para una carrera); sin plan, una semana sí y otra no.
+  if (lunes >= GA.GANARTE_DESDE && rit?.pasado && (rit.conPlan || numeroSemana(lunes) % 2 === 0)) reto = MAS_QUE_TU_YO;
   // Con plan, la diaria ya pide la cadencia del bloque cada día de remo: sin «Semana pareja», que la repetía.
   const lista = [...(plan ? [plan] : []), ...(unaVez && rit?.conPlan ? [] : [tecnica]), reto, ...(deClase ? [deClase] : [])];
   return lista.map((d) => crear12({ ...d, xp: [XP_MISION_SEMANAL] }, r, semilla));
@@ -767,7 +778,10 @@ export const HAZANAS = [
   // pero se cobran desde COLECCION_DESDE (quien ya las cumplía las cobra en su siguiente sesión).
   ...HAZANAS_CLASE,
   ...(/** @type {[number, string, number, number][]} */ ([[10, 'Más fuerte', 400, 100], [25, 'Mucho más fuerte', 800, 200], [50, 'Otro remero', 1200, 300]]))
-    .map(([meta, nombre, xp, monedas]) => ({ id: `ftp${meta}`, nombre, texto: `Sube tu FTP ${meta} W desde tu primera sesión con FTP`, meta, valor: (g) => g.ftpMejora, xp, monedas })),
+    // ⚖ Desde GANARTE_DESDE los sustituye la escalera de fuerza (cada 5 W): solo cuentan la mejora hasta entonces, y
+    // quien los tiene los conserva.
+    .map(([meta, nombre, xp, monedas]) => ({ id: `ftp${meta}`, nombre, texto: `Sube tu FTP ${meta} W desde tu primera sesión con FTP`, meta, valor: (g) => g.ftpMejoraAntes, xp, monedas, oculto: true })),
+  { id: 'reto1', nombre: 'Primer reto aceptado', texto: 'Rema hasta el final contra el reto que te mandó alguien', meta: 1, valor: (g) => g.retos, monedas: 100, desde: GA.GANARTE_DESDE },
 ];
 
 // ---------- Medidas de una sesión ----------
@@ -1133,7 +1147,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   };
   let mppSuma = 0;
   let mppN = 0;
-  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, mejor2000Antes: null, primer2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0, semanas2: 0, enRango80: 0 };
+  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, mejor2000Antes: null, primer2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, ftpMejoraAntes: 0, retos: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0, semanas2: 0, enRango80: 0 };
   // Inicio del día y del lunes (ms) para ajustar las misiones a tu ritmo de las semanas anteriores.
   const inicioDia = (ms) => new Date(ms).setHours(0, 0, 0, 0);
   const inicioLunes = (lunes) => new Date(`${lunes}T00:00`).getTime();
@@ -1142,7 +1156,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const dia = { clave: null, misiones: [], hechas: new Set(), d: null };
   const semana = { clave: null, misiones: [], hechas: new Set(), d: null };
   const nuevoAgg = () => ({ metros: 0, min: 0, kcal: 0, z2min: 0, z4min: 0, sobreSeg: 0, spm24min: 0, vo2Seg: 0, delPlan: 0, maxKcal: 0, mejorRec: 0, mejorPct: 0, ganados: 0, sesiones: 0, dias: new Set(),
-    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0, vencidas: [], delDia: 0, suaves: 0, tecMin: 0, renidas: 0, altamar: 0, completos: 0, pruebas: 0, atr: Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0])) });
+    maxMetros: 0, maxMin: 0, estables: 0, diariasHechas: 0, vencidas: [], delDia: 0, suaves: 0, tecMin: 0, renidas: 0, altamar: 0, completos: 0, pruebas: 0, yoPasado: 0, atr: Object.fromEntries(ATRIBUTOS.map((a) => [a.clave, 0])) });
   // Atributos antes de cada semana (para elegir la meta de atributo) y si ya usaste banda de pulso.
   let semAtr = { lunes: null, atr: null, pulso: false };
   let hayPulso = false;
@@ -1159,6 +1173,13 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const hazanas = new Set();
   let mejorPrueba = null; // watts de tu mejor prueba de FTP hasta la sesión anterior
   let mesMejora = null; // mes (aaaa-mm) del último premio por mejora real
+  // Ganarte a ti mismo (GANARTE_DESDE): FTP de cada sesión para el eFTP, tu mejor 1000 m, el eFTP del último premio,
+  // la semana del último premio a tu yo pasado y el escalón de fuerza ya pagado (null hasta la primera sesión nueva).
+  const ftpSes = [];
+  let mejor1000 = null;
+  let eftpPagado = 0;
+  let yoSemana = null;
+  let escalonPagado = null;
 
   // Los premios que antes eran ropa dan ahora una insignia y 50 monedas más.
   const lograr = (fecha, tipo, texto, m0, obj, xpExtra = 0) => {
@@ -1214,6 +1235,14 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const m = medidas(s, ftp);
     const previos = { t2000: mejores.t2000, t5000: mejores.t5000, prueba: mejorPrueba };
     if (s.pruebaWatts > 0) mejorPrueba = Math.max(mejorPrueba || 0, s.pruebaWatts);
+    const ganarte = hoy >= GA.GANARTE_DESDE;
+    if (ganarte) {
+      const base = GA.eftpEn(ftpSes, s.fecha - GA.EFTP_SEMANAS * 7 * 864e5);
+      Object.assign(previos, { t500: mejores.t500, t1000: mejor1000, eftpBase: base ? Math.max(base, eftpPagado) : null });
+    }
+    ftpSes.push({ fecha: s.fecha, w: ftpDeSesion(s) });
+    const t1000 = nMuestras(s) ? mejorTiempoDe(s, 1000) : null;
+    if (t1000 > 0) mejor1000 = mejor1000 == null ? t1000 : Math.min(mejor1000, t1000);
     let records = 0;
     if (nMuestras(s)) {
       for (const r of RECORDS) {
@@ -1256,9 +1285,20 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     jefeSesion = null;
     xp += gan.xp;
     if (hoy >= MEJORA_REAL_DESDE && mesMejora !== hoy.slice(0, 7)) {
-      const texto = mejoraReal(s, previos);
-      if (texto) { mesMejora = hoy.slice(0, 7); lograr(s.fecha, 'mejora', texto, MONEDAS_MEJORA_REAL, null, XP_MEJORA_REAL / factorXp(s.fecha)); }
+      const eftp = ganarte ? GA.eftpEn(ftpSes, s.fecha) : null;
+      const texto = ganarte ? GA.mejoraRealGanarte(s, previos, eftp) : mejoraReal(s, previos);
+      if (texto) {
+        mesMejora = hoy.slice(0, 7);
+        if (ganarte) {
+          if (/FTP estimado/.test(texto)) eftpPagado = eftp;
+          lograr(s.fecha, 'mejora', texto, GA.MONEDAS_MEJORA_REAL_GANARTE, null, GA.XP_MEJORA_REAL_GANARTE / factorXp(s.fecha));
+        } else lograr(s.fecha, 'mejora', texto, MONEDAS_MEJORA_REAL, null, XP_MEJORA_REAL / factorXp(s.fecha));
+      }
     }
+    // Ganarle a tu yo de hace 7 semanas: una vez por semana, con su línea en el resumen.
+    const yo = ganarte ? GA.yoPasadoGanado(s) : null;
+    if (yo && yoSemana !== lunesS) { yoSemana = lunesS; lograr(s.fecha, 'yo', GA.textoYoPasado(yo), GA.MONEDAS_YO_PASADO, null, GA.XP_YO_PASADO / factorXp(s.fecha)); }
+    if (ganarte && GA.retoRemado(s)) g.retos++;
     const ganancias = {};
     const atrSesion = {};
     for (const [k, v] of Object.entries(gan.atributos)) {
@@ -1277,14 +1317,14 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const lunes = lunesDe(s.fecha);
     const atrDia = hoy >= MISION_UNICA_DESDE ? atributoDeLaSemana(semAtr.lunes === lunes ? semAtr.atr : atributos, { sinPulso: !(semAtr.lunes === lunes ? semAtr.pulso : hayPulso), lunes }) : null;
     if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(s.fecha)), { cargaAyer: cargaDia.get(ayer) || 0, planHoy: hoy in cal ? cal[hoy] : null, atributo: atrDia }), hechas: new Set(), d: nuevoAgg() });
-    if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes)), atributoDeLaSemana(semAtr.atr, { sinPulso: !semAtr.pulso, lunes })), hechas: new Set(), d: nuevoAgg() });
+    if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes, per.clase, ritmoConPasado(orden, inicioLunes(lunes)), atributoDeLaSemana(semAtr.atr, { sinPulso: !semAtr.pulso, lunes })), hechas: new Set(), d: nuevoAgg() });
     for (const agg of [dia.d, semana.d]) {
       agg.metros += m.metros; agg.min += m.min; agg.kcal += m.kcal; agg.z2min += m.z2min; agg.z4min += m.z4min;
       agg.sobreSeg += m.sobreSeg; agg.spm24min += m.spm24min; agg.ganados += m.ganados; agg.sesiones++;
       agg.vo2Seg += m.vo2Seg; agg.delPlan += m.delPlan; agg.maxKcal = Math.max(agg.maxKcal, m.kcal); agg.mejorRec = Math.max(agg.mejorRec, m.fcRec60);
       agg.mejorPct = Math.max(agg.mejorPct, m.pct ?? 0);
       agg.delDia += m.delDia; agg.suaves += m.suave; agg.tecMin += m.tec?.minutos || 0; agg.renidas += m.renidas; agg.altamar += m.altamar;
-      agg.completos += m.completo; agg.pruebas += m.prueba;
+      agg.completos += m.completo; agg.pruebas += m.prueba; agg.yoPasado += yo ? 1 : 0;
       agg.maxMetros = Math.max(agg.maxMetros, m.metros); agg.maxMin = Math.max(agg.maxMin, m.min);
       if (m.estable) agg.estables++;
       agg.vencidas.push(...m.clasesVencidas);
@@ -1340,6 +1380,13 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     if (s.ftp > 0) {
       g.ftpInicial ??= s.ftp;
       g.ftpMejora = Math.max(g.ftpMejora, s.ftp - g.ftpInicial);
+    }
+    if (!ganarte) g.ftpMejoraAntes = g.ftpMejora;
+    else {
+      // Escalera de fuerza: lo que ya pagaron los logros de +10, +25 y +50 W no se cobra otra vez.
+      escalonPagado ??= Math.floor(Math.max(0, ...[10, 25, 50].filter((w) => w <= g.ftpMejoraAntes)) / GA.ESCALON_FTP_W);
+      const { escalon } = GA.escaleraFtp(g.ftpMejora);
+      for (; escalonPagado < escalon; escalonPagado++) lograr(s.fecha, 'mejora', `Escalera de fuerza: tu FTP sube ${(escalonPagado + 1) * GA.ESCALON_FTP_W} W desde tu primera sesión con FTP`, GA.MONEDAS_ESCALON_FTP, null, GA.XP_ESCALON_FTP / factorXp(s.fecha));
     }
     g.nivel = nivelAhora(xp);
     if (cap < CAPITULOS.length) {
@@ -1406,7 +1453,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   const atrHoy = atributoDeLaSemana(atributos, { sinPulso: !hayPulso, lunes });
   const atrDiaHoy = hoy >= MISION_UNICA_DESDE ? atributoDeLaSemana(semAtr.lunes === lunes ? semAtr.atr : atributos, { sinPulso: !(semAtr.lunes === lunes ? semAtr.pulso : hayPulso), lunes }) : null;
   const diaHoy = dia.clave === hoy ? dia : { misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(ahora)), { cargaAyer: cargaDia.get(claveDia(ahora - 864e5)) || 0, planHoy: hoy in cal ? cal[hoy] : null, atributo: atrDiaHoy }), hechas: new Set(), d: nuevoAgg() };
-  const semanaHoy = semana.clave === lunes ? semana : { misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes)), atrHoy), hechas: new Set(), d: nuevoAgg() };
+  const semanaHoy = semana.clave === lunes ? semana : { misiones: misionesDeSemana(lunes, per.clase, ritmoConPasado(orden, inicioLunes(lunes)), atrHoy), hechas: new Set(), d: nuevoAgg() };
   // La XP que se muestra es la que se paga hoy (desde el 29 de octubre, la mitad).
   const fHoy = factorXp(ahora);
   const vista = (gr) => gr.misiones.map((mi) => ({
@@ -1467,6 +1514,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     piezasJefe: [...piezasJefe],
     hazanas: HAZANAS.filter((h) => !h.oculto || hazanas.has(h.id)).map((h) => ({ ...h, xp: Math.round((h.xp || 0) * fHoy), hecha: hazanas.has(h.id), ...vistaHazana(h, g, hoy) })),
     xpPorSesion,
+    // Escalera de fuerza (GANARTE_DESDE): cuánto subió tu FTP y el próximo escalón. null sin FTP o antes de la fecha.
+    escaleraFtp: g.ftpInicial != null && hoy >= GA.GANARTE_DESDE ? { ...GA.escaleraFtp(g.ftpMejora), xp: GA.XP_ESCALON_FTP, monedas: GA.MONEDAS_ESCALON_FTP } : null,
     ritmo: ritmoReciente(orden, ahora),
     factorXp: fHoy,
     contexto: contextoHoy(orden, { ahora, dias, cargaDia, mppPromedio: mppN ? mppSuma / mppN : 0, sinPulso: !hayPulso, rachaAyer: rachaPlan(claveDia(ahora - 864e5), dias, false, claveDia(ahora)) }),

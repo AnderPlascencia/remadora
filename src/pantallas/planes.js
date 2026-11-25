@@ -7,6 +7,7 @@ import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import * as P from '../programa.js';
 import * as J from '../juego.js';
+import * as GA from '../ganarte.js';
 import * as B from '../base.js';
 import * as C from '../consejos.js';
 import * as Cap from '../capacidades.js';
@@ -757,7 +758,12 @@ function textoCompartir() {
   if (c?.tipo === 'periodo' || !c?.reto || !$('#compartir-reto').checked) return {};
   const nombre = $('#compartir-heroe').checked ? c.reto.nombre : '';
   const url = R.enlaceReto(location.href, c.s, nombre);
-  return url ? { text: R.textoReto(c.s, nombre), url } : {};
+  if (!url) return {};
+  // ⚖ Reto ganado (R2-6): el mensaje dice por cuánto, y el enlace es tu sesión para que te lo devuelvan.
+  const reto = GA.esGanarte(c.s.fecha) ? GA.retoRemado(c.s) : null;
+  const quien = reto ? GA.nombreReto(reto.ref) : '';
+  const text = reto?.gano ? `Le gané a${quien ? ` tu reto, ${quien},` : ' tu reto'} por ${GA.margen(reto.ref)}. ${R.textoReto(c.s, nombre).replace(/^(.* te reta|Te reto): remé/, 'Remé').replace('¿Me alcanzas?', '¿Me alcanzas ahora?')}` : R.textoReto(c.s, nombre);
+  return { text, url };
 }
 // Tarjeta de la semana o del mes (etapa 31): la misma vista previa, con «esta / la anterior» en vez de pulso.
 export async function abrirCompartirPeriodo(periodo) {
