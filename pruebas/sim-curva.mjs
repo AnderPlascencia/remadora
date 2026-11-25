@@ -31,6 +31,7 @@ export const TIPOS = {
   fondo60: (f, e, ftp) => sesion(f, [[W(60), 0.68, 22]], { entrenamiento: 'Fondo 60', tipoPlan: 'fondo', ...e }, ftp),
   rec: (f, e, ftp) => sesion(f, [[W(25), 0.5, 20]], { entrenamiento: 'Recuperación', tipoPlan: 'recuperacion', ...e }, ftp),
   p2000: (f, e, ftp) => sesion(f, [[W(10), 0.6, 22], [450, 1.25, 31], [W(8), 0.5, 20]], { entrenamiento: 'Prueba 2000 m', tipoPlan: 'prueba', ...e }, ftp),
+  p500: (f, e, ftp) => sesion(f, [[W(10), 0.6, 22], [100, 1.5, 34], [W(8), 0.5, 20]], { entrenamiento: 'Prueba 500 m', tipoPlan: 'prueba', ...e }, ftp),
   pftp: (f, e, ftp) => sesion(f, [[W(12), 0.6, 22], [W(20), 1.05, 28], [W(8), 0.5, 20]], { entrenamiento: 'Prueba FTP 20 min', tipoPlan: 'prueba', pruebaWatts: Math.round(ftp * 1.05), ...e }, ftp),
   libre30: (f, e, ftp) => sesion(f, [[W(30), 0.78, 24]], { entrenamiento: null, tiempoMeta: null, pctEnRango: null, pctAlto: null, pctBajo: null, ...e }, ftp),
 };
@@ -52,14 +53,18 @@ export const PERFILES = {
   plan4: { clase: 'vikingo', plan: PLAN4 },
   plan3libre1: { clase: 'pirata', plan: PLAN3, libres: [[4, 'costa']] },
   libre4: { clase: 'pirata', libres: [[0, 'costa'], [2, 'costa'], [4, 'altamar'], [6, 'costa']] },
-  sugerida2: { clase: 'polinesio', sugeridas: [[1, 'fondo30'], [4, 'fondo45']] },
+  // Sin plan, dos fondos sugeridos por semana; cuando la app propone la prueba del jefe, la hace (sigueJefe).
+  sugerida2: { clase: 'polinesio', sugeridas: [[1, 'fondo30'], [4, 'fondo45']], sigueJefe: true },
   plan6: { clase: 'romano', plan: PLAN6 },
   intermitente4: { clase: 'samurai', plan: PLAN4, pausa: (w) => w % 10 >= 7 },
+  // El ritmo real de Ander (respaldo de noviembre): plan de 4 días del que hace algo más de la mitad, y una semana
+  // sin remar cada 9.
+  ander: { clase: 'vikingo', plan: PLAN4, hace: 0.55, pausa: (w) => w % 9 === 8 },
 };
 const pruebaDe = (w) => (w % 6 === 5 ? (w % 12 === 5 ? 'p2000' : 'pftp') : null);
 
 // Las sesiones y el calendario del plan de `semanas` semanas desde el lunes `base` (ms).
-export function generar(P, semanas, base, semilla = 7) {
+export function generar(P, semanas, base, semilla = 7, cambios = new Map()) {
   const r = azar(semilla);
   const ses = [];
   const cal = {};
@@ -76,12 +81,33 @@ export function generar(P, semanas, base, semilla = 7) {
       const f = base + (w * 7 + d) * D;
       const s = TIPOS[t](f, { delPrograma: true, delDia: 'plan' }, ftp);
       cal[clave(f)] = s.entrenamiento;
-      ses.push(s);
+      if (!P.hace || r() < P.hace) ses.push(s);
     });
-    for (const [d, t] of P.sugeridas || []) ses.push(TIPOS[t](base + (w * 7 + d) * D, { delDia: 'sugerida' }, ftp));
+    for (const [d, t] of P.sugeridas || []) {
+      const f = base + (w * 7 + d) * D;
+      ses.push(TIPOS[cambios.get(f) || t](f, { delDia: 'sugerida' }, ftp));
+    }
     for (const [d, dif] of P.libres || []) ses.push(TIPOS.libre30(base + (w * 7 + d) * D + 3600e3, { rivales: rivales(r, dif, 3, P.clase) }, ftp));
   }
   return { ses: ses.sort((a, b) => a.fecha - b.fecha), cal };
+}
+
+// La sugerida propone la prueba del jefe tras SUGERIR_JEFE_DIAS con el capítulo abierto (adaptacion.js): con los
+// niveles de una pasada, qué sugeridas pasan a ser esa prueba. Devuelve Map(fecha → tipo de sesión).
+const PRUEBA_SIM = { 'base:prueba-500': 'p500', 'base:prueba-2000': 'p2000', 'base:prueba-ftp': 'pftp' };
+function pruebasDeJefe(h, ses) {
+  const cambios = new Map();
+  let cap = 0, abierto = null, nivel = 1;
+  for (const s of ses) {
+    if (cap >= J.CAPITULOS.length) break;
+    if (abierto == null && nivel >= J.CAPITULOS[cap].nivel) abierto = s.fecha;
+    if (s.delDia === 'sugerida' && abierto != null && s.fecha - abierto >= J.SUGERIR_JEFE_DIAS * D) {
+      cambios.set(s.fecha, PRUEBA_SIM[J.PRUEBA_JEFE[J.CAPITULOS[cap].jefe.tipo]]);
+      cap++; abierto = null;
+    }
+    nivel = h.porSesion.get(s.fecha)?.nivelDespues || nivel;
+  }
+  return cambios;
 }
 
 // Talentos: reparto codicioso en la fecha en que se alcanza cada nivel.
@@ -103,11 +129,16 @@ function arbolDesde(h, clase) {
 // Corre un perfil: estado del juego al final, con los talentos repartidos (pasadas = veces que se reparte).
 export function simular(nombre, { semanas = 104, base = new Date('2026-11-23T19:00').getTime(), pasadas = 1 } = {}) {
   const P = PERFILES[nombre];
-  const { ses, cal } = generar(P, semanas, base);
+  let { ses, cal } = generar(P, semanas, base);
   const ahora = base + semanas * 7 * D;
   const opts = { ftp: FTP0, ahora, calendario: P.plan ? cal : null, metaSemanaKm: 20 };
   let per = { clase: P.clase, arbol: { [P.clase]: {} } };
   let h = J.estadoJuego(ses, { ...opts, per });
+  // Quien sigue la sugerida hace la prueba del jefe cuando se la propone (dos vueltas: la prueba cambia los niveles).
+  if (P.sigueJefe) for (let k = 0; k < 2; k++) {
+    ({ ses } = generar(P, semanas, base, 7, pruebasDeJefe(h, ses)));
+    h = J.estadoJuego(ses, { ...opts, per });
+  }
   for (let k = 0; k < pasadas; k++) {
     per = { clase: P.clase, arbol: { [P.clase]: arbolDesde(h, P.clase) } };
     h = J.estadoJuego(ses, { ...opts, per });
@@ -118,8 +149,12 @@ export function simular(nombre, { semanas = 104, base = new Date('2026-11-23T19:
   const xpSesiones = [...h.porSesion.values()].reduce((a, p) => a + p.xp + p.xpExtra, 0);
   const xpMisiones = h.logros.filter((l) => l.tipo === 'diaria' || l.tipo === 'semanal').reduce((a, l) => a + l.xp, 0);
   const finales = [...h.porSesion.entries()].filter(([f]) => semanaDe(f) > semanas - 8).map(([, p]) => p.xp + p.xpExtra);
+  // Semana de cada jefe vencido y el hueco más largo sin jefe (contando desde el principio y hasta el final).
+  const jefes = h.logros.filter((l) => l.tipo === 'jefe').map((l) => semanaDe(l.fecha));
+  const bordes = [0, ...jefes, ...(jefes.length < J.CAPITULOS.length ? [semanas] : [])];
+  const huecoMax = Math.max(...bordes.slice(1).map((j, i) => j - bordes[i]));
   return {
-    h, ses, legendario, xpSesiones, xpMisiones, pctMisiones: xpSesiones ? (100 * xpMisiones) / xpSesiones : 0,
+    h, ses, legendario, jefes, huecoMax, xpSesiones, xpMisiones, pctMisiones: xpSesiones ? (100 * xpMisiones) / xpSesiones : 0,
     xpSesionFinal: finales.reduce((a, b) => a + b, 0) / (finales.length || 1),
     diarias: h.logros.filter((l) => l.tipo === 'diaria'), diasDeRemo: new Set(ses.map((s) => clave(s.fecha))).size,
   };

@@ -18,7 +18,7 @@ import { avanzado, cerrarTripulacion } from './ajustes.js';
 import { cerrarModoRemo, vistaPrevia } from './vivo.js';
 import { cerrarFin, paraPerfil } from './sesion.js';
 import { pintarHistorial } from './progreso.js';
-import { chipsAtr, estadoHeroe, hitoSesion, opcConsejos, previsionDe, srcHeroe } from './heroe.js';
+import { chipsAtr, estadoHeroe, hitoSesion, leerPersonaje, opcConsejos, previsionDe, srcHeroe } from './heroe.js';
 import { PAISAJES, paisajeElegido } from '../carrera.js';
 import { esDePlan, guardarPrograma, leerPrograma, pintarPrograma } from './programa.js';
 import { cerrarGuia } from './ayuda.js';
@@ -368,7 +368,10 @@ export async function calcularDia(sesiones, todos) {
   sesiones ??= await H.sinMuestras();
   todos ??= await db.listar('entrenamientos');
   const f = ftp();
-  return A.sesionDelDia({ programa: leerPrograma(), sesiones, entrenamientos: [...todos, ...estado.baseActual], ftp: f, cuerpo: Cap.estadoCuerpo(f ? sesiones : [], f, Date.now(), { previo: previoHoy() }) });
+  const programa = leerPrograma();
+  // Sin plan, el jefe que lleva 2 semanas esperando: la sugerida propone su prueba.
+  const jefe = programa?.dias?.length ? null : J.jefeParaSugerir(H.estadoJuegoDe(await H.sinMuestras(), { ftp: f, per: leerPersonaje() }).capitulo);
+  return A.sesionDelDia({ programa, sesiones, entrenamientos: [...todos, ...estado.baseActual], ftp: f, cuerpo: Cap.estadoCuerpo(f ? sesiones : [], f, Date.now(), { previo: previoHoy() }), jefe });
 }
 
 let enEdicion = null;

@@ -209,8 +209,9 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
 // Devuelve { fuente, ent (nombre, con plan) o id (base, sin plan), motivo, alternativa? } o null.
 //   fuente: 'plan' | 'hecho' | 'recuperar' | 'descanso' | 'terminado' | 'sugerida'
 // cuerpo: el resultado de estadoCuerpo (capacidades.js), o null si no hay FTP o datos.
+// jefe: sin plan, el jefe que lleva 2 semanas esperando (juego.jefeParaSugerir): la sugerida propone su prueba.
 const DIA_SEM = (clave) => new Date(`${clave}T12:00`).toLocaleDateString('es-MX', { weekday: 'long' });
-export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp = 0, cuerpo = null, ahora = Date.now() }) {
+export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp = 0, cuerpo = null, jefe = null, ahora = Date.now() }) {
   const hoy = E.claveDia(ahora);
   const ayer = E.claveDia(ahora - DIA);
   const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
@@ -285,6 +286,7 @@ export function sesionDelDia({ programa, sesiones = [], entrenamientos = [], ftp
   if (cuerpo?.monotonia) return sugerir('base:dis-suave', 'Tu semana fue muy pareja, sin días de descanso: hoy descansa o rema 20 min muy suave.');
   if (ayerDuro) return sugerir('base:dis-suave', 'Ayer fue una sesión dura: hoy suave para asimilarla.');
   if (cansado) return sugerir('base:dis-suave', 'Vas cargado: hoy suave y la próxima dura te saldrá mejor.');
+  if (jefe?.id) return sugerir(jefe.id, `Hoy, ${jefe.nombre}: lleva ${jefe.dias} días esperándote. Esta prueba lo vence y mide cuánto mejoraste.`);
   const semana = sesiones.filter((s) => s.fecha > ahora - 7 * DIA);
   const duras = semana.filter((s) => DURO.has(tipoSesion(s, ftp)));
   if (duras.length >= 2) return sugerir('base:dis-mant', `Ya llevas ${duras.length} sesiones duras en 7 días: hoy fondo (lo ideal es 80 % suave y 20 % duro).`);

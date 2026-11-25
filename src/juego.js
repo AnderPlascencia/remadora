@@ -613,10 +613,28 @@ export const CAPITULOS = [
     req: [['km', 200], ['sesiones', 20]], jefe: { nombre: 'El Rey de los mares', tipo: 'pftp', texto: 'Completa la «Prueba FTP 20 min»' }, monedas: 500, objeto: 'corona-mares', xp: 2000 },
 ];
 // Las otras dos formas de vencer a un jefe (reglas de la etapa 9).
-export const OTRAS_FORMAS_JEFE = 'o cumple la sesión clave de tu plan (umbral, VO₂, sprint o prueba), o gana una carrera en Alta mar, o cumple una semana entera de tu plan';
+export const OTRAS_FORMAS_JEFE = 'o cumple una sesión dura de tu plan o de las sugeridas (umbral, VO₂, sprint o prueba), o gana una carrera en Alta mar, o cumple una semana entera de tu plan (sin plan, 3 sesiones sugeridas en una semana)';
 const TIPOS_CLAVE = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
 // Sesión clave del plan: la del día, de un tipo duro, cumplida (no solo terminada).
 export const esSesionClave = (s) => !!s.delPrograma && TIPOS_CLAVE.has(s.tipoPlan) && XC.cumplimientoPlan(s) === 'cumplida';
+// La historia para todos (ronda 2, R2-1 y R2-2), desde HISTORIA_DESDE (lo anterior no cambia, nadie pierde un jefe):
+// - el capítulo se abre solo al llegar a su nivel (sus requisitos de kilómetros, sesiones o zonas ya no lo abren);
+// - sin plan, también vence al jefe una sesión sugerida dura cumplida (la sesión clave de quien rema sin plan),
+//   o 3 sugeridas cumplidas en una semana (vale como la semana del plan, solo para el jefe: no paga XP de semana);
+// - tras SUGERIR_JEFE_DIAS con el capítulo abierto, la sugerida del día propone la prueba del jefe.
+export const HISTORIA_DESDE = '2026-11-25';
+export const SUGERIDAS_SEMANA_JEFE = 3;
+export const SUGERIR_JEFE_DIAS = 14;
+const esHistoriaNueva = (s) => claveDia(s.fecha) >= HISTORIA_DESDE;
+const sugeridaCumplida = (s) => s.delDia === 'sugerida' && XC.cumplimientoPlan(s) === 'cumplida';
+// Sin plan, tras SUGERIR_JEFE_DIAS con el capítulo abierto, la sugerida propone la prueba del jefe (ver adaptacion.js).
+// capitulo: el de estadoJuego. Devuelve { id, nombre, dias } o null.
+export function jefeParaSugerir(capitulo, ahora = Date.now()) {
+  if (!capitulo?.listo || capitulo.listoDesde == null || claveDia(ahora) < HISTORIA_DESDE) return null;
+  const dias = Math.floor((ahora - capitulo.listoDesde) / 864e5);
+  return dias >= SUGERIR_JEFE_DIAS ? { id: capitulo.preparar, nombre: capitulo.jefe.nombre, dias } : null;
+}
+export const esClaveSugerida = (s) => esHistoriaNueva(s) && !s.delPrograma && TIPOS_CLAVE.has(s.tipoPlan) && sugeridaCumplida(s);
 export const ganaAltaMar = (s) => !s.carreraSinTerminar && (s.rivales || (s.rival ? [s.rival] : [])).some((r) => r.dificultad === 'altamar' && r.diferencia > 0);
 // Entrenamiento que prepara el botón «Enfrentar» de cada jefe.
 export const PRUEBA_JEFE = { p500: 'base:prueba-500', p2000: 'base:prueba-2000', pftp: 'base:prueba-ftp', mejor500: 'base:prueba-500', mejor2000: 'base:prueba-2000' };
@@ -1090,6 +1108,9 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   let capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
   let capMejores = {};
   let capPendiente = false; // forma de vencer al jefe ya hecha, a la espera de abrir el capítulo
+  let capListo = false; // el capítulo ya se abrió (no se vuelve a cerrar)
+  let capListoDesde = null; // fecha (ms) de la sesión con la que se abrió
+  let sugSemana = { lunes: null, n: 0 }; // sesiones sugeridas cumplidas esta semana (para el jefe)
   let jefeSesion = null;
   // Piezas de bote ganadas a los jefes (etapa 6.2): la de la clase con la que remabas al vencerlo.
   const piezasJefe = new Set();
@@ -1282,8 +1303,17 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       const r9 = XC.usaReglas9(s);
       capAgg.sesiones++; capAgg.km += m.metros / 1000; capAgg.z2min += m.z2min; capAgg.z4min += m.z4min;
       capAgg.fantasmas += m.ganados; capAgg.racha = Math.max(capAgg.racha, racha);
-      // Con las reglas nuevas el capítulo también se abre al llegar a su nivel.
-      const listo = c.req.every(([k, v]) => capAgg[k] >= v) || (r9 && g.nivel >= c.nivel);
+      // Con las reglas nuevas el capítulo también se abre al llegar a su nivel; desde HISTORIA_DESDE, solo así.
+      const porReq = !esHistoriaNueva(s) && c.req.every(([k, v]) => capAgg[k] >= v);
+      if (!capListo && (porReq || (r9 && g.nivel >= c.nivel))) { capListo = true; capListoDesde = s.fecha; }
+      const listo = capListo;
+      // Sin plan: 3 sugeridas cumplidas en una semana valen como la semana del plan para el jefe.
+      let semanaSugerida = false;
+      if (esHistoriaNueva(s) && sugeridaCumplida(s)) {
+        const lunes = lunesDe(s.fecha);
+        if (sugSemana.lunes !== lunes) sugSemana = { lunes, n: 0 };
+        semanaSugerida = ++sugSemana.n === SUGERIDAS_SEMANA_JEFE;
+      }
       const nombre = s.entrenamiento || '';
       const prueba = {
         p500: nombre.startsWith('Prueba 500') && s.tiempoMeta != null,
@@ -1293,7 +1323,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
         mejor2000: m.t2000 != null && (capMejores.t2000 == null || m.t2000 < capMejores.t2000),
       }[c.jefe.tipo];
       // Desde la curva nueva, una semana del plan cumplida también vence al jefe (decisión de Ander).
-      const vence = prueba || (r9 && (esSesionClave(s) || ganaAltaMar(s) || (hoy >= CURVA_DESDE && (creditos?.semanas || 0) > 0)));
+      const vence = prueba || (r9 && (esSesionClave(s) || esClaveSugerida(s) || semanaSugerida || ganaAltaMar(s) || (hoy >= CURVA_DESDE && (creditos?.semanas || 0) > 0)));
       // Una forma de vencerlo hecha antes de abrir el capítulo se guarda para cuando se abra.
       if (r9 && vence && !listo) capPendiente = true;
       if (listo && (vence || capPendiente)) {
@@ -1306,6 +1336,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
         capAgg = { sesiones: 0, km: 0, z2min: 0, z4min: 0, fantasmas: 0, racha: 0 };
         capMejores = { t500: mejores.t500, t2000: mejores.t2000 };
         capPendiente = false;
+        capListo = false;
+        capListoDesde = null;
       }
     }
     // Logros: se revisan hasta que no salga ninguno nuevo (uno puede subir el nivel y desbloquear otro).
@@ -1350,9 +1382,14 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   monedas += canjeados * MONEDAS_POR_PUNTO;
   const capitulo = cap < CAPITULOS.length ? {
     n: cap + 1, ...capituloDeClase(CAPITULOS, cap, claveClase), xp: Math.round(CAPITULOS[cap].xp * fHoy),
-    progreso: CAPITULOS[cap].req.map(([k, v]) => ({ clave: k, texto: REQ_TEXTO[k], meta: v, valor: Math.min(v, Math.round(capAgg[k] * 10) / 10) })),
-    listo: CAPITULOS[cap].req.every(([k, v]) => capAgg[k] >= v) || nivel >= CAPITULOS[cap].nivel,
+    // Desde HISTORIA_DESDE, lo único que abre el capítulo es su nivel.
+    progreso: claveDia(ahora) >= HISTORIA_DESDE ? [{ clave: 'nivel', texto: `Llega al nivel ${CAPITULOS[cap].nivel}`, meta: CAPITULOS[cap].nivel, valor: Math.min(CAPITULOS[cap].nivel, nivel) }]
+      : CAPITULOS[cap].req.map(([k, v]) => ({ clave: k, texto: REQ_TEXTO[k], meta: v, valor: Math.min(v, Math.round(capAgg[k] * 10) / 10) })),
+    // Antes de HISTORIA_DESDE, los requisitos también abrían el capítulo (un capítulo abierto así lo sigue estando).
+    listo: capListo || nivel >= CAPITULOS[cap].nivel || (claveDia(ahora) < HISTORIA_DESDE && CAPITULOS[cap].req.every(([k, v]) => capAgg[k] >= v)),
+    listoDesde: capListoDesde,
     porNivel: nivel >= CAPITULOS[cap].nivel,
+    soloNivel: claveDia(ahora) >= HISTORIA_DESDE,
     pendiente: capPendiente,
     preparar: PRUEBA_JEFE[CAPITULOS[cap].jefe.tipo],
   } : null;
