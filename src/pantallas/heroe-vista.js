@@ -449,7 +449,10 @@ function pintarMisiones(h) {
   const hechos = h.hazanas.filter((x) => x.hecha);
   // Solo los 3 más cercanos a la vista; el resto, plegado.
   const faltan = h.hazanas.filter((x) => !x.hecha).sort((a, b) => avance(b) - avance(a));
-  $('#mis-hazanas').innerHTML = faltan.slice(0, 3).map(logro).join('')
+  // Escalera de fuerza (⚖ Ganarte a ti mismo): siempre arriba, con lo que llevas y el próximo escalón.
+  const e = h.escaleraFtp;
+  const escalera = e ? filaMision({ clave: 'escalera-ftp', nombre: 'Escalera de fuerza', texto: `Tu FTP subió ${e.mejora} W desde tu primera sesión con FTP: cada 5 W más es un escalón`, meta: e.siguiente, valor: e.mejora, xp: e.xp, monedas: e.monedas, unidad: 'W', hecha: false }) : '';
+  $('#mis-hazanas').innerHTML = escalera + faltan.slice(0, 3).map(logro).join('')
     + (faltan.length > 3 ? `<li class="hechos-grupo"><details><summary>Ver los otros ${faltan.length - 3} <span class="seccion-resumen"></span></summary><ul class="lista misiones">${faltan.slice(3).map(logro).join('')}</ul></details></li>` : '')
     + (hechos.length ? `<li class="hechos-grupo"><details><summary>${ico('i-check')}Completados <span class="seccion-resumen">${hechos.length}</span></summary><ul class="lista misiones">${hechos.map(logro).join('')}</ul></details></li>` : '');
 }

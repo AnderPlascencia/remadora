@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.130.0 · 2026-11-25
+
+Ganarte a ti mismo (etapa 6 de la ronda 2).
+
+- **Ganarle a tu yo de hace 7 semanas da premio:** +60 XP, una vez por semana, y su propia línea en el resumen («Le ganaste a tu yo del 8 de octubre por 42 m»). Antes era solo una línea en tu carril. Cuenta si terminas la sesión (en Remo libre, 10 min o más).
+- **Misión semanal «Más que tu yo pasado».** Cuando tienes una sesión de hace 6 a 8 semanas del mismo entrenamiento, ocupa el lugar de «Rival de la semana»: con plan, siempre (la semana del plan no deja hueco para una carrera); sin plan, una semana sí y otra no.
+- **Devolver un reto.** Si le ganas al reto que te mandaron, el resumen y la tarjeta dicen por cuánto («Le ganó a Ana por 4 s»; en segundos si el reto era de distancia), y el botón de compartir te propone devolvérselo con tu sesión: «Le gané a tu reto, Ana, por 4 s… ¿Me alcanzas ahora?». Remar un reto hasta el final da el logro «Primer reto aceptado». Ganar un reto no da XP, para que nadie se mande retos fáciles.
+- **La mejora real pesa más:** 600 XP (antes 250) y 80 monedas. Ahora también cuentan el 500 m, el 1000 m y tu FTP estimado (eFTP) cuando sube un 2 % sobre el de hace 6 semanas, en una sesión que lo empuja. Sigue siendo uno al mes como mucho.
+- **Escalera de fuerza:** cada 5 W que sube tu FTP desde tu primera sesión con FTP es un escalón (+300 XP y 50 monedas), visible arriba en Logros. Sustituye a «Más fuerte», «Mucho más fuerte» y «Otro remero» (+10, +25 y +50 W): quien ya los tiene los conserva, y lo que pagaron no se cobra otra vez.
+- En 2 años con un plan de 4 días salen 10 premios por mejora (antes 3). Lo remado hasta el 25 de noviembre se cuenta con las reglas de antes.
+
 ## 0.129.0 · 2026-11-25
 
 Primer día y resumen (etapa 5 de la ronda 2).

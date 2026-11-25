@@ -3,6 +3,7 @@
 // fantasma ganado por poco. Las sesiones normales no tienen hito: siguen con el botón de siempre, sin insistir.
 import { estadoDias, lunesDe } from './programa.js';
 import { claveDia } from './estadisticas.js';
+import { esGanarte, margen, nombreReto, retoRemado, yoPasadoGanado } from './ganarte.js';
 
 export const POR_POCO_M = 25; // ganarle a un fantasma por menos de esto es un final de foto
 
@@ -31,16 +32,25 @@ export function hitosDelPlan(programa, previas, s) {
 }
 
 // datos: { jefe: { nombre, premio }, rango: { nombre }, plan: { semanas, tira, nombre }, semana: { n, de },
-// records: nuevosRecords (con anterior), rivales: [{ nombre, diferencia }] }.
+// records: nuevosRecords (con anterior), rivales: [{ nombre, diferencia }], sesion: la sesión (sus referencias) }.
+// ⚖ Ganarte a ti mismo (desde GANARTE_DESDE): el reto ganado va después de la semana del plan, y tu yo pasado después del récord.
 // Devuelve { clave, kicker, texto, boton, tira? } o null. kicker va en la tarjeta; boton, en el resumen.
 export function hitoDe(datos = {}) {
-  const { jefe, rango, plan, semana, records = [], rivales = [] } = datos;
+  const { jefe, rango, plan, semana, records = [], rivales = [], sesion = null } = datos;
+  const nuevo = !!sesion?.fecha && esGanarte(sesion.fecha);
+  const reto = nuevo ? retoRemado(sesion) : null;
+  const yo = nuevo ? yoPasadoGanado(sesion) : null;
   if (jefe) return { clave: 'jefe', kicker: '¡JEFE VENCIDO!', texto: `${jefe.nombre} cae${jefe.premio ? ` · ${jefe.premio}` : ''}`, boton: `¡Venciste a ${jefe.nombre}! Compártelo` };
   if (plan) return { clave: 'plan', kicker: 'PLAN COMPLETO', texto: `${plan.semanas} semanas${plan.nombre ? ` de ${plan.nombre}` : ''}, de principio a fin`, boton: '¡Terminaste tu plan! Compártelo', tira: plan.tira };
   if (rango) return { clave: 'rango', kicker: 'NUEVO RANGO', texto: `Ahora es ${rango.nombre}`, boton: `¡Ahora eres ${rango.nombre}! Compártelo` };
   if (semana) return { clave: 'semana', kicker: 'SEMANA COMPLETA', texto: `Semana ${semana.n} de ${semana.de} del plan, sin faltar una`, boton: '¡Semana del plan completa! Compártela' };
+  if (reto?.gano) {
+    const quien = nombreReto(reto.ref);
+    return { clave: 'reto', kicker: 'RETO GANADO', texto: `Le ganó${quien ? ` a ${quien}` : ' al reto'} por ${margen(reto.ref)}`, boton: `¡Le ganaste${quien ? ` a ${quien}` : ' al reto'}! Devuélvele el reto` };
+  }
   const r = records.find((x) => x.anterior != null && x.clave !== 'wmax');
   if (r) return { clave: 'record', kicker: 'RÉCORD PERSONAL', texto: '', boton: '¡Nuevo récord! Compártelo' };
+  if (yo) return { clave: 'pasado', kicker: 'MÁS QUE SU YO PASADO', texto: `Le ganó a su yo de hace 7 semanas por ${margen(yo)}`, boton: '¡Le ganaste a tu yo pasado! Compártelo' };
   const pocos = rivales.filter((x) => Number.isFinite(x.diferencia) && x.diferencia > 0 && x.diferencia <= POR_POCO_M);
   if (pocos.length && rivales.every((x) => !Number.isFinite(x.diferencia) || x.diferencia > 0)) {
     const m = Math.min(...pocos.map((x) => x.diferencia));

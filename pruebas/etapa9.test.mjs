@@ -168,8 +168,10 @@ assert.ok(J.CAPITULOS.find((c) => c.nombre === 'Mar abierto').req.includes(J.REQ
   assert.ok(h.nivel >= 10);
   assert.ok(!h.hazanas.some((x) => x.id === 'nivel10'), 'oculto y sin pagar con las reglas nuevas');
   assert.ok(h.hazanas.find((x) => x.id === 'km250').hecha, '360 km');
-  assert.ok(h.hazanas.find((x) => x.id === 'ftp10').hecha, 'el FTP subió 12 W');
-  assert.ok(!h.hazanas.find((x) => x.id === 'ftp25').hecha);
+  // ⚖ Desde GANARTE_DESDE (26 nov) la subida de FTP la paga la escalera de fuerza, cada 5 W: 12 W son 2 escalones.
+  assert.ok(!h.hazanas.some((x) => x.id === 'ftp10'), 'los logros de +10/+25/+50 W solo se ganan antes de la fecha');
+  assert.equal(h.logros.filter((l) => /^Escalera de fuerza/.test(l.texto)).length, 2, 'el FTP subió 12 W');
+  assert.deepEqual([h.escaleraFtp.mejora, h.escaleraFtp.siguiente], [12, 15]);
   // …pero quien lo ganó con las reglas viejas lo conserva.
   const viejas = nuevas.map((s, i) => ({ ...s, fecha: dia('2026-09-01') + i * 864e5, reglasXp: undefined }));
   const v = J.estadoJuego(viejas, { ftp: FTP, ahora: viejas.at(-1).fecha + 1e6 });

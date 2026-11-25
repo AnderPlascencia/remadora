@@ -7,6 +7,7 @@ import { hablar } from '../voz.js';
 import { fraseGrabadaAlAzar } from '../voces-clase.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
+import * as GA from '../ganarte.js';
 import * as O from '../objetos.js';
 import * as V from '../ventajas.js';
 import * as B from '../base.js';
@@ -416,7 +417,26 @@ export async function hitoSesion(s, previas = []) {
     semana,
     records: E.nuevosRecords(s, previas),
     rivales: s.rivales || (s.rival ? [s.rival] : []),
+    sesion: s,
   });
+}
+
+// ⚖ Ganarte a ti mismo: tu yo pasado y el reto tienen su propia línea en el resumen, fuera de «Cómo la ganaste».
+function lineasGanarte(s, logros) {
+  if (!GA.esGanarte(s.fecha)) return '';
+  const filas = [];
+  const yo = GA.yoPasadoGanado(s);
+  if (yo) {
+    const l = logros.find((x) => x.tipo === 'yo');
+    filas.push(`${escaparHtml(GA.textoYoPasado(yo))}${l ? ` <span class="xp">+${miles(l.xp)} XP</span>` : ' <small>(el premio ya salió esta semana)</small>'}`);
+  }
+  const reto = GA.retoRemado(s);
+  if (reto) {
+    const quien = GA.nombreReto(reto.ref);
+    filas.push(reto.gano ? `Le ganaste${quien ? ` a ${escaparHtml(quien)}` : ' al reto'} por ${GA.margen(reto.ref)}. Devuélvele el reto con tu sesión desde Compartir.`
+      : `Remaste el reto${quien ? ` de ${escaparHtml(quien)}` : ''} hasta el final. ${reto.ref.segundos != null ? `Te faltaron ${Math.abs(reto.ref.segundos)} s` : `Te faltaron ${GA.margen(reto.ref)}`}: mándale el tuyo desde Compartir.`);
+  }
+  return filas.map((f) => `<p class="xp-ganarte">${ico('i-trofeo')}<span>${f}</span></p>`).join('');
 }
 
 // XP, monedas y logros que dio la sesión, en la hoja de resumen. Devuelve true si subiste de nivel o venciste a un jefe.
@@ -443,6 +463,7 @@ export function pintarXpSesion(s, previas, resumen) {
     ${puntos > 0 && clase && h.talentosPorRepartir > 0 ? `<span class="subio-talento">+${puntos} ${puntos === 1 ? 'punto' : 'puntos'} de talento <button type="button" class="boton chico primario" data-ir-talentos>Repartir</button></span>` : ''}
     <div class="progreso heroe-xp" role="progressbar" aria-label="Experiencia hacia el siguiente nivel"><div style="width:${h.hasta ? (100 * (h.xp - h.desde)) / (h.hasta - h.desde) : 100}%"></div></div>
     ${g.avisoDescanso ? '<p class="aviso-descanso suave">Hoy tocaba descanso: mañana tu sesión dura puede costarte más.</p>' : ''}
+    ${lineasGanarte(s, logros)}
     <small class="xp-nivel">Nivel ${h.nivel}${h.hasta ? ` · faltan ${miles(h.hasta - h.xp)} XP para el ${h.nivel + 1}${ses ? ` (${ses})` : ''}` : ''}</small>
     <details class="xp-desglose"${resumen ? '' : ' open'}><summary>Cómo la ganaste${logros.length ? ` · ${logros.length} ${logros.length === 1 ? 'logro' : 'logros'}` : ''}</summary>
     ${logros.map((l) => `<div class="logro ${l.tipo}">${ico(['jefe', 'hazana', 'mejora'].includes(l.tipo) ? 'i-trofeo' : 'i-check')}<span>${l.texto}${l.objeto ? ` · insignia <b>${O.objeto(l.objeto).nombre}</b>` : ''}</span><span class="recompensa">${l.xp ? `<span class="xp">+${miles(l.xp)} XP</span>` : ''}<span class="monedas">${icoMoneda}${l.monedas}</span></span></div>`).join('')}

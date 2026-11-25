@@ -81,3 +81,42 @@ test('un enlace de reto dañado no rompe nada y avisa', async ({ page }) => {
   await expect(page.locator('#toast')).toHaveText('No se pudo leer el enlace del reto');
   expect(await page.evaluate(() => localStorage.getItem('retoActivo'))).toBeNull();
 });
+
+// ⚖ Ronda 2, R2-6: ganarle a un reto (desde el 26 de noviembre) tiene su línea en el resumen, el botón para devolverlo
+// y el mensaje dice por cuánto ganaste (en segundos: el reto es de distancia). El logro «Primer reto aceptado» sale sin XP.
+test('ganarle a un reto: su línea en el resumen, el logro y el mensaje para devolverlo', async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.clock.install({ time: new Date('2026-11-26T12:00:00') });
+  await page.goto('./');
+  // Un 500 m remado a 2 m/s: 250 s.
+  const codigo = await page.evaluate(async () => {
+    const F = await import('./src/fantasma.js');
+    const muestras = Array.from({ length: 260 }, (_, i) => ({ t: i + 1, dist: (i + 1) * 2 }));
+    return F.codificarReto({ fecha: Date.now() - 3 * 864e5, duracion: 260, entrenamiento: 'Prueba 500 m', muestras }, 'Ana');
+  });
+  // Desde «./» solo cambiaría el fragmento, sin recargar: se abre como enlace nuevo.
+  await page.goto(`./?abrir=1#reto=${codigo}`);
+  await expect(page.locator('#toast')).toContainText('te reta');
+  await completarBienvenida(page);
+  await avanzar(page, 4000);
+  await page.evaluate(async () => (await import('./src/pantallas/heroe.js')).prepararEntrenamiento('base:prueba-500'));
+  await expect(page.locator('#chips-rival [data-rival="reto"]')).toHaveAttribute('aria-pressed', 'true');
+  await remar(page, 200_000);
+  await page.locator('#fin-terminar').click();
+  await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');
+  await expect(page.locator('#hoja-xp .xp-ganarte')).toContainText(/Le ganaste a Ana por \d+ s/);
+  await expect(page.locator('#hoja-hito-texto')).toHaveText('¡Le ganaste a Ana! Devuélvele el reto');
+  await page.locator('#hoja-xp .xp-desglose > summary').click();
+  await expect(page.locator('#hoja-xp .xp-desglose')).toContainText('Logro: Primer reto aceptado');
+  await page.evaluate(() => {
+    window.__compartido = null;
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async (datos) => { window.__compartido = { text: datos.text, url: datos.url }; } });
+  });
+  await page.locator('#btn-compartir-img').click();
+  await page.locator('#compartir-enviar').click();
+  await expect.poll(() => page.evaluate(() => window.__compartido)).not.toBeNull();
+  const enviado = await page.evaluate(() => window.__compartido);
+  expect(enviado.text).toMatch(/^Le gané a tu reto, Ana, por \d+ s\. Remé [\d,]+ m en \d+ min en «Prueba 500 m»\. ¿Me alcanzas ahora\?/);
+  expect(new URLSearchParams(new URL(enviado.url).hash.slice(1)).get('reto')).toBeTruthy();
+});
