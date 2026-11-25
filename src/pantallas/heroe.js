@@ -68,6 +68,7 @@ export function arrancarHeroe() {
     vh.claseElegida = b.dataset.clase;
     for (const x of document.querySelectorAll('#clases [data-clase]')) x.setAttribute('aria-checked', String(x === b));
     $('#btn-crear-heroe').disabled = false;
+    $('#heroe-nombre').placeholder = `Ej.: ${J.claseDe(vh.claseElegida)?.ejemplo || 'un apodo que te guste'}`;
   });
   $('#btn-crear-heroe').addEventListener('click', () => {
     if (!vh.claseElegida) return;

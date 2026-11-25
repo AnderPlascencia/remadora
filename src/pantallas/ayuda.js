@@ -43,13 +43,14 @@ export function arrancarAyuda() {
   $('#btn-guia').addEventListener('click', () => abrirGuia());
   $('#btn-repetir-inicio').addEventListener('click', async () => (await import('./inicio.js')).abrirInicio({ repetir: true }));
   $('#btn-consejos').addEventListener('click', () => {
-    for (const v of Object.keys(G.CONSEJO_DE_VISTA)) ajustes.escribir(`consejo-${v}`, '0');
+    for (const v of Object.keys(G.CONSEJO_DE_VISTA)) { ajustes.escribir(`consejo-${v}`, '0'); ajustes.escribir(`consejoVisto-${v}`, '0'); }
     ajustes.escribir('ayudaGestos', '0');
     toast('Los consejos vuelven a salir al abrir cada pestaña');
     mostrarConsejo('ajustes');
   });
 }
-// Una tarjeta arriba de la pestaña la primera vez que la abres: qué hay aquí, con un botón a la guía.
+export const CONSEJO_VISITAS = 2;
+// Una tarjeta arriba de la pestaña las primeras veces que la abres: qué hay aquí, con un botón a la guía.
 export function mostrarConsejo(vista) {
   document.querySelectorAll('.consejo').forEach((x) => x.remove());
   const t = G.consejoDe(vista);
@@ -57,6 +58,10 @@ export function mostrarConsejo(vista) {
   // El día de la bienvenida, Entrenar va sin consejo: sale la próxima vez que abras la app.
   if (vista === 'entrenar' && estado.primerDia) return;
   if (!t || ajustes.si(`consejo-${vista}`, false) || !$('#inicio').hidden || estado.sesion || matchMedia('(orientation: landscape) and (max-height: 520px)').matches) return;
+  // Ronda 2, UX2-37: sale en las dos primeras visitas y después se oculta solo (sigue en Ajustes › Ayuda).
+  const vistas = Number(ajustes.leer(`consejoVisto-${vista}`, '0')) || 0;
+  if (vistas >= CONSEJO_VISITAS) { ajustes.escribir(`consejo-${vista}`, '1'); return; }
+  ajustes.escribir(`consejoVisto-${vista}`, String(vistas + 1));
   const el = document.createElement('div');
   el.className = 'consejo';
   el.setAttribute('role', 'note');

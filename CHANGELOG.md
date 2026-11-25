@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.132.0 · 2026-11-25
+
+Héroe más corto (etapa 8 de la ronda 2).
+
+- **Misiones cabe en dos pantallas** (antes, más de tres). La historia del capítulo va plegada junto a su nombre; con el capítulo que se abre por nivel, el requisito ya no se repite arriba del jefe; un solo «Hacer ahora», en la primera misión pendiente; de cada serie de logros (km, sesiones, nivel, semanas seguidas) solo la próxima meta, y los demás logros y los completados en un solo desplegable.
+- **La Ficha cabe en dos pantallas.** Los atributos van plegados y solo se abre el que te conviene subir, con el porqué dentro.
+- **Al bajar, el héroe queda arriba en una línea** (retrato, nombre, nivel y XP) junto a las pestañas.
+- **Sin nombre, tu héroe se llama como su clase** y la línea de abajo dice solo el rango, sin repetirla. El ejemplo de nombre cambia con la clase que eliges.
+- **La tienda dice cuánto te falta.** En lugar de un «Comprar» apagado, «Te faltan 120 monedas»; y lo que se gana de otra forma dice cómo: «Desde el nivel 20», «Vence al jefe 3», «Con tu hazaña».
+- Los consejos de cada pestaña salen las dos primeras veces y después se van solos (siguen en Ajustes › Ayuda).
+
 ## 0.131.0 · 2026-11-25
 
 Arreglos rápidos del juego (etapa 7 de la ronda 2).

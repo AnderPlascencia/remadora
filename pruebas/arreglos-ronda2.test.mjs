@@ -48,3 +48,11 @@ test('R2-19: los logros, jefes y misiones semanales pagan lo que dicen (xpReal)'
   // Lo que se muestra hoy es lo mismo que se pagaría hoy.
   for (const x of h.hazanas) assert.equal(x.xp, J.xpReal(J.HAZANAS.find((y) => y.id === x.id).xp, fecha + 36e5));
 });
+
+// Etapa 8 (UX2-27): cada clase trae su ejemplo de nombre, para el campo «Nombre de tu héroe».
+test('cada clase tiene un ejemplo de nombre propio', async () => {
+  const { CLASES } = await import('../src/juego.js');
+  const ejemplos = CLASES.map((c) => c.ejemplo);
+  assert.ok(ejemplos.every((x) => typeof x === 'string' && x.length > 3 && x.length <= 20), ejemplos.join(', '));
+  assert.equal(new Set(ejemplos).size, CLASES.length);
+});

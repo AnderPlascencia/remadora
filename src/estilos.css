@@ -615,7 +615,8 @@ details.seccion[open] { padding-bottom: 8px; }
 .monedas { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--moneda); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .monedas.grande { font-size: var(--t-l); }
 .moneda { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.heroe-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--panel); border-radius: var(--r-medio); padding: 4px; margin: 14px 0 6px; position: sticky; top: 64px; z-index: 5; }
+.heroe-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--panel); border-radius: var(--r-medio); padding: 4px; margin: 14px 0 6px; }
+.heroe-pegajosa { position: sticky; top: 64px; z-index: 5; }
 .heroe-tabs button { position: relative; min-height: 44px; border: 0; border-radius: var(--r-chico); background: transparent; color: var(--texto-suave); font: inherit; font-size: var(--t-s); font-weight: 700; cursor: pointer; padding: 0 2px; }
 .heroe-tabs button.activa { background: var(--panel-2); color: var(--texto); box-shadow: inset 0 -3px 0 var(--primario); }
 .heroe-tabs button[data-aviso]:not([data-aviso=""])::after { content: attr(data-aviso); position: absolute; top: -4px; right: -2px; min-width: 18px; height: 18px; border-radius: var(--r-chico); background: var(--primario); color: var(--sobre-primario); font-size: var(--t-xs); font-weight: 800; line-height: 18px; text-align: center; }
@@ -1991,7 +1992,7 @@ details.mas-detalle[hidden] { display: none; }
 /* Horizontal: la barra superior se va al desplazar (el riel ya da la navegación) y suelta casi 60 px de alto. */
 @media (orientation: landscape) and (max-height: 560px) {
   .barra { position: static; }
-  .heroe-tabs { top: 0; }
+  .heroe-pegajosa { top: 0; }
 }
 
 /* Recuperar una sesión: «Guardar sesión» arriba a todo lo ancho; «Descartar» y «Seguir remando» debajo. */
@@ -2273,3 +2274,30 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 .xp-ganarte { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; font-size: var(--t-s); }
 .xp-ganarte svg { flex: none; width: 18px; height: 18px; color: var(--primario-claro); margin-top: 2px; }
 .xp-ganarte .xp { font-weight: 700; color: var(--primario-claro); white-space: nowrap; }
+
+/* Ronda 2, etapa 8: Héroe más corto. La historia del capítulo, plegada. */
+.cap-historia > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--texto-suave); font-size: var(--t-s); }
+.cap-historia[open] > summary { min-height: 32px; }
+.atr-conviene { color: var(--texto); }
+/* UX2-23: al bajar, una línea pegada arriba con el héroe (retrato, nombre, nivel y XP) sobre las pestañas. */
+.heroe-mini { display: none; }
+.heroe-pegajosa.compacta { background: var(--fondo); padding-top: 4px; }
+.heroe-pegajosa.compacta .heroe-mini { display: flex; align-items: center; gap: 8px; padding: 2px 4px; font-size: var(--t-s); }
+.heroe-mini img { width: 28px; height: 28px; border-radius: var(--r-chico); flex: none; }
+.heroe-mini b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heroe-mini .mini-nivel { color: var(--xp); font-weight: 800; white-space: nowrap; }
+.mini-xp { width: 56px; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; flex: none; }
+.mini-xp > span { display: block; height: 100%; background: var(--xp); }
+.heroe-pegajosa.compacta .heroe-tabs { margin-top: 4px; }
+/* UX2-28: sin monedas, la tarjeta dice cuánto falta en lugar de un «Comprar» apagado. */
+.objeto .bloqueada.faltan { font-size: var(--t-s); font-weight: 700; color: var(--texto-suave); padding: 6px 0; text-align: center; margin-top: auto; display: inline-flex; align-items: center; justify-content: center; gap: 2px; }
+.objeto.velas .bloqueada.faltan::before { content: none; }
+.bloqueada.faltan .moneda { width: 14px; height: 14px; }
+.logros-hechos { display: flex; align-items: center; gap: 6px; font-size: var(--t-s); color: var(--texto-suave); margin: 12px 0 6px; }
+.logros-hechos svg { width: 16px; height: 16px; color: var(--exito, var(--primario)); }
+/* «La historia» en la misma línea que el nombre del capítulo; al abrirla ocupa todo el ancho. */
+.capitulo .cap-cabecera { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; }
+.cap-cabecera .etq, .cap-cabecera .cap-avance, .cap-historia[open] { flex-basis: 100%; }
+.cap-cabecera b { flex: 1; min-width: 0; }
+.cap-historia:not([open]) > summary { padding: 0 4px; }
+#hp-misiones > h2 { margin-top: 16px; }
