@@ -1,12 +1,15 @@
 // Accesibilidad con axe-core (WCAG 2.1 A y AA) en las pantallas principales y con los tres temas, más la letra
-// mínima de 14 px en el modo remo, que se lee de lejos mientras remas.
+// mínima de 14 px en el modo remo, que se lee de lejos mientras remas, y de 13 px en el resto.
+// Corre en el Pixel 7 y en el teléfono de Ander (proyecto `cph2653`, 360 × 792), donde aparecen los fallos de ancho.
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, abrirApp, completarBienvenida, avanzar, remar, terminar } from './ayuda.mjs';
 
-async function revisar(page, pantalla) {
+async function revisar(page, pantalla, { tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'], dentro } = {}) {
   // Sin animaciones: el split se desvanece 0,16 s al cambiar y axe no debe medir el contraste a medio camino.
   await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important; }' });
-  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  let axe = new AxeBuilder({ page }).withTags(tags);
+  if (dentro) axe = axe.include(dentro);
+  const { violations } = await axe.analyze();
   const resumen = violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.slice(0, 3).map((n) => `${n.target.join(' ')} ${n.any[0]?.message || ''}`).join(' | ')}`);
   expect(resumen, `axe en ${pantalla}`).toEqual([]);
 }
@@ -64,12 +67,45 @@ for (const tema of ['oscuro', 'claro', 'contraste']) {
       await expect(page.locator('#modo-remo')).toBeHidden();
     }
 
+    // Las cuatro subpestañas de Héroe: Tienda y Misiones tienen precios y progreso que se leen para decidir.
     await page.locator('#tab-heroe').click();
-    await avanzar(page, 500);
-    await revisar(page, 'Héroe');
+    for (const hp of ['camino', 'misiones', 'tienda', 'ficha']) {
+      await page.locator(`[data-hp="${hp}"]`).click();
+      await avanzar(page, 500);
+      await revisarTodo(page, `Héroe (${hp})`);
+      const min = await letraMinima(page, '#vista-heroe');
+      expect(min.px, `letra más chica de Héroe (${hp}): ${min.texto}`).toBeGreaterThanOrEqual(13);
+    }
     await page.locator('#tab-ajustes').click();
     await avanzar(page, 500);
-    await revisar(page, 'Ajustes');
+    await revisarTodo(page, 'Ajustes');
+  });
+}
+
+// Lo que se lee remando pide 7:1 (WCAG AAA) en los tres temas, de pie y en horizontal, y ningún botón bajo 44 px.
+for (const tema of ['oscuro', 'claro', 'contraste']) {
+  test(`tema ${tema}: el modo remo llega a 7:1 y sus botones miden 44 px, de pie y en horizontal`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await abrirApp(page);
+    await page.evaluate((t) => localStorage.setItem('tema', t), tema);
+    await page.reload();
+    await completarBienvenida(page);
+    await page.locator('#btn-grabar').click();
+    await avanzar(page, 3_000);
+    const { width, height } = page.viewportSize();
+    for (const [w, h, forma] of [[width, height, 'de pie'], [height, width, 'en horizontal']]) {
+      await page.setViewportSize({ width: w, height: h });
+      for (const vista of ['numeros', 'grafica', 'carrera']) {
+        await page.evaluate((v) => localStorage.setItem('vistaRemo', v), vista);
+        await page.locator('#btn-modo-remo').click();
+        await expect(page.locator('#modo-remo')).toBeVisible();
+        await avanzar(page, 2_000);
+        await revisar(page, `modo remo ${forma} (${vista}) a 7:1`, { tags: ['wcag2aaa'], dentro: '#modo-remo' });
+        expect(await tactilesChicos(page), `objetivos táctiles de menos de 44 px en el modo remo ${forma} (${vista})`).toEqual([]);
+        await page.locator('#mr-salir').click();
+        await expect(page.locator('#modo-remo')).toBeHidden();
+      }
+    }
   });
 }
 
@@ -114,6 +150,8 @@ for (const tema of ['oscuro', 'claro', 'contraste']) {
       await page.locator(`.planes-pestanas [data-pt="${pt}"]`).click();
       await avanzar(page, 500);
       await revisarTodo(page, `Planes (${pt})`);
+      const min = await letraMinima(page, '#vista-entrenamientos');
+      expect(min.px, `letra más chica de Planes (${pt}): ${min.texto}`).toBeGreaterThanOrEqual(13);
     }
   });
 }
