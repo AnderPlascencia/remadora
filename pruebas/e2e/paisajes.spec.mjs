@@ -29,8 +29,9 @@ test('la tienda ofrece los cinco paisajes nuevos, ordenados por precio y con su 
   const precios = await tarjetas.locator('.monedas').allInnerTexts();
   const numeros = precios.map((t) => (t === 'Gratis' ? 0 : Number(t.replace(/\D/g, ''))));
   expect(numeros).toEqual([...numeros].sort((a, b) => a - b));
-  // Sin monedas no se puede comprar
-  await expect(page.locator('#tienda-paisajes [data-paisaje="glaciar"]')).toBeDisabled();
+  // Sin monedas no hay botón: la tarjeta dice cuánto falta
+  await expect(page.locator('#tienda-paisajes [data-paisaje="glaciar"]')).toHaveCount(0);
+  await expect(tarjetas.filter({ hasText: 'Bahía glaciar' }).locator('.faltan')).toContainText('Te faltan');
   for (const id of Object.keys(COLECCION)) {
     const img = tarjetas.filter({ hasText: COLECCION[id] }).locator('img');
     await img.scrollIntoViewIfNeeded();

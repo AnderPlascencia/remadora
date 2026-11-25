@@ -83,6 +83,7 @@ export const AJUSTES = {
 // Claves con un prefijo fijo: consejo-entrenar, consejo-heroe…
 export const PREFIJOS = {
   'consejo-': A('si', false, false),
+  'consejoVisto-': A('numero', null, false), // ronda 2, UX2-37: veces que salió el consejo de esa pestaña
 };
 
 export function definicion(clave) {

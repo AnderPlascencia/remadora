@@ -91,11 +91,11 @@ export function comoSubir(clave, f = 0) {
 
 // Cada clase tiene un atributo favorito que crece un 15 % más rápido.
 export const CLASES = [
-  { clave: 'vikingo', nombre: 'Vikingo', favorito: 'fuerza', lema: 'Cada palada es un hachazo.', para: 'Para quien rema con palada larga y potente.', icono: '<path d="M5 14a7 7 0 0 1 14 0v3H5z"/><path d="M5 13 2.5 6M19 13l2.5-7M9 17v3M15 17v3M12 7v4"/>' },
-  { clave: 'pirata', nombre: 'Pirata', favorito: 'agilidad', lema: 'Rápido, impredecible y al abordaje.', para: 'Para quien rema contra fantasmas.', icono: '<path d="M12 3a7 7 0 0 0-7 7c0 2.4 1.3 4 3 5v3h8v-3c1.7-1 3-2.6 3-5a7 7 0 0 0-7-7z"/><path d="M9 10h.01M15 10h.01M10 18v3M14 18v3"/>' },
-  { clave: 'samurai', nombre: 'Samurái', favorito: 'tecnica', lema: 'La forma perfecta vence a la fuerza.', para: 'Para quien sigue un plan y rema sin pausas.', icono: '<path d="M5 19 19 5l1.5-1.5M15 5l4 4M7 15l2 2M3.5 20.5 5 19"/>' },
-  { clave: 'polinesio', nombre: 'Polinesio', favorito: 'resistencia', lema: 'El océano entero es tu camino.', para: 'Para sesiones de 30 min o más de 5 km.', icono: '<path d="M12 2v12"/><path d="M9.5 14h5l-1 6.5a1.5 1.5 0 0 1-3 0z"/><path d="M3 9c2 1.5 4 1.5 6 0M15 9c2 1.5 4 1.5 6 0"/>' },
-  { clave: 'romano', nombre: 'Romano', favorito: 'voluntad', lema: 'No se rinde. Nunca.', para: 'Para quien rema 3 o más veces por semana.', icono: '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M12 7v10M8 11h8"/>' },
+  { clave: 'vikingo', nombre: 'Vikingo', favorito: 'fuerza', lema: 'Cada palada es un hachazo.', ejemplo: 'Astrid Remo Férreo', para: 'Para quien rema con palada larga y potente.', icono: '<path d="M5 14a7 7 0 0 1 14 0v3H5z"/><path d="M5 13 2.5 6M19 13l2.5-7M9 17v3M15 17v3M12 7v4"/>' },
+  { clave: 'pirata', nombre: 'Pirata', favorito: 'agilidad', lema: 'Rápido, impredecible y al abordaje.', ejemplo: 'Tess la Bucanera', para: 'Para quien rema contra fantasmas.', icono: '<path d="M12 3a7 7 0 0 0-7 7c0 2.4 1.3 4 3 5v3h8v-3c1.7-1 3-2.6 3-5a7 7 0 0 0-7-7z"/><path d="M9 10h.01M15 10h.01M10 18v3M14 18v3"/>' },
+  { clave: 'samurai', nombre: 'Samurái', favorito: 'tecnica', lema: 'La forma perfecta vence a la fuerza.', ejemplo: 'Kaito del Río', para: 'Para quien sigue un plan y rema sin pausas.', icono: '<path d="M5 19 19 5l1.5-1.5M15 5l4 4M7 15l2 2M3.5 20.5 5 19"/>' },
+  { clave: 'polinesio', nombre: 'Polinesio', favorito: 'resistencia', lema: 'El océano entero es tu camino.', ejemplo: 'Moana Ola Larga', para: 'Para sesiones de 30 min o más de 5 km.', icono: '<path d="M12 2v12"/><path d="M9.5 14h5l-1 6.5a1.5 1.5 0 0 1-3 0z"/><path d="M3 9c2 1.5 4 1.5 6 0M15 9c2 1.5 4 1.5 6 0"/>' },
+  { clave: 'romano', nombre: 'Romano', favorito: 'voluntad', lema: 'No se rinde. Nunca.', ejemplo: 'Livia Invicta', para: 'Para quien rema 3 o más veces por semana.', icono: '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M12 7v10M8 11h8"/>' },
 ];
 // Clases antiguas → clase nueva con el mismo espíritu. El héroe conserva XP, talentos y objetos.
 export const CLASES_ANTIGUAS = { explorador: 'polinesio', monje: 'samurai', gladiador: 'romano' };

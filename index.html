@@ -414,7 +414,7 @@
         <p class="ayuda">Tu héroe crece con cada entrenamiento real. Tu historial ya cuenta: empiezas con el nivel que te ganaste. Elige una clase: su atributo favorito crece un 15 % más rápido.</p>
         <div id="clases" class="inicio-clases" role="radiogroup" aria-label="Clase"></div>
         <label class="campo">Nombre de tu héroe <small>(opcional)</small>
-          <input id="heroe-nombre" maxlength="20" autocomplete="off" placeholder="Ander el Implacable">
+          <input id="heroe-nombre" maxlength="20" autocomplete="off" placeholder="Ej.: un apodo que te guste">
         </label>
         <div class="fila-botones"><button id="btn-crear-heroe" class="boton primario grande" disabled>Crear héroe</button></div>
       </div>
@@ -433,11 +433,14 @@
           </div>
         </div>
         <div id="heroe-avisos" class="heroe-avisos"></div>
+        <div class="heroe-pegajosa">
+        <div id="heroe-mini" class="heroe-mini" aria-hidden="true"></div>
         <div class="heroe-tabs" role="tablist" aria-label="Secciones del héroe">
           <button type="button" role="tab" id="tab-hp-camino" aria-controls="hp-camino" data-hp="camino" class="activa" aria-selected="true">Camino</button>
           <button type="button" role="tab" id="tab-hp-misiones" aria-controls="hp-misiones" data-hp="misiones">Misiones</button>
           <button type="button" role="tab" id="tab-hp-tienda" aria-controls="hp-tienda" data-hp="tienda">Tienda</button>
           <button type="button" role="tab" id="tab-hp-ficha" aria-controls="hp-ficha" data-hp="ficha">Ficha</button>
+        </div>
         </div>
         <div id="hp-ficha" class="hp" role="tabpanel" aria-labelledby="tab-hp-ficha" hidden>
           <div id="ficha-figura" class="armario-vista" role="button" tabindex="0" aria-label="Oír a tu héroe" title="Toca para oír a tu héroe"></div>
@@ -448,7 +451,6 @@
           </div>
           <h2>Esta semana</h2>
           <div id="heroe-semana" class="heroe-semana"></div>
-          <div id="heroe-recomienda" class="recomienda"></div>
           <h2>Atributos <small class="h2-nota">Últimas 6 semanas · toca uno para ver qué lo sube</small></h2>
           <div id="heroe-radar" class="radar solo-avanzado"></div>
           <div id="heroe-atributos" class="atributos-guia"></div>
@@ -932,7 +934,7 @@
         <h2>Elige tu héroe</h2>
         <p class="ayuda">Crece con cada sesión que remas. Su atributo favorito sube un 15 % más rápido.</p>
         <div id="inicio-clases" class="inicio-clases" role="radiogroup" aria-label="Clase"></div>
-        <label class="campo">Nombre <small>(opcional)</small><input id="inicio-nombre" maxlength="20" autocomplete="off" placeholder="Ander el Implacable"></label>
+        <label class="campo">Nombre <small>(opcional)</small><input id="inicio-nombre" maxlength="20" autocomplete="off" placeholder="Ej.: un apodo que te guste"></label>
       </section>
       <section class="inicio-paso" data-paso="3" hidden>
         <div id="inicio-hola" class="inicio-hola">

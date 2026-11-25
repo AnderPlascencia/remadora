@@ -107,7 +107,7 @@ function escucharInicio() {
     const m = e.target.closest('[data-minutos]');
     const x = e.target.closest('[data-exp]');
     const sx = e.target.closest('[data-sexo]');
-    if (c) inicio.clase = c.dataset.clase;
+    if (c) { inicio.clase = c.dataset.clase; $('#inicio-nombre').placeholder = `Ej.: ${J.claseDe(inicio.clase)?.ejemplo || 'un apodo que te guste'}`; }
     if (o) inicio.objetivo = o.dataset.obj;
     if (d) inicio.dias = Number(d.dataset.dias);
     if (m) inicio.minutos = Number(m.dataset.minutos);
