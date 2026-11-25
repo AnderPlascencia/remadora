@@ -1584,7 +1584,6 @@ details.mas-detalle[hidden] { display: none; }
 .modo-remo.vista-carrera .mr-resta { font-size: 28px; }
 .modo-remo.vista-carrera .mr-tiempo .mr-etq { font-size: var(--t-s); }
 /* «luego Libre a 18–22 golpes/min» pasa a dos líneas en vez de comerse el nombre del bloque («1/3 ·…»). */
-.modo-remo.vista-carrera .mr-tiempo { max-width: 42%; }
 .modo-remo.vista-carrera .mr-tiempo .mr-etq { display: block; white-space: normal; line-height: 1.2; }
 .modo-remo.vista-carrera .mr-nombre { -webkit-line-clamp: 2; }
 .modo-remo.vista-carrera #mr-leyenda { display: none; }
@@ -2228,3 +2227,21 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 .atr-reto.atencion { border-color: var(--aviso); border-style: solid; }
 .atr-reto.atencion b, .mr-atr.atencion b { color: var(--aviso); }
 :root[data-tema="claro"] .atr-reto.atencion b, :root[data-tema="claro"] .mr-atr.atencion b { color: #8A5A00; }
+
+/* Etapa 3 de la ronda 2 (UX2-6): de pie, el nombre del bloque tiene todo el ancho que deja el reloj, y la línea del
+   reloj («Bloque 1/3 · luego…») baja a una fila propia a lo ancho, alineada con él. */
+@media (orientation: portrait) {
+  .modo-remo .mr-arriba { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 12px; row-gap: 2px; align-items: start; }
+  .modo-remo .mr-arriba > .mr-meta { grid-column: 1; grid-row: 1; }
+  .modo-remo .mr-tiempo { display: contents; }
+  .modo-remo .mr-tiempo .mr-resta { grid-column: 2; grid-row: 1; text-align: right; }
+  .modo-remo .mr-arriba > .mr-salir { grid-column: 3; grid-row: 1; }
+  .modo-remo .mr-tiempo .mr-etq { grid-column: 1 / -1; grid-row: 2; display: block; text-align: right; white-space: normal; }
+}
+/* UX2-9 y UX2-5: el reto de atributo solo va en verde cuando estás dentro de la zona que suma; fuera, o con un bloque
+   que pide golpes o pulso, va en el color del texto, sin competir con la meta del bloque. */
+.mr-atr.fuera:not(.atencion) b, .mr-atr.secundario:not(.atencion) b { color: var(--texto-suave); font-weight: 600; }
+.mr-atr.secundario { font-size: var(--t-s); }
+@media (orientation: landscape) and (max-height: 560px) {
+  .modo-remo.vista-carrera .mr-tiempo .mr-etq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}

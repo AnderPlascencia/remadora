@@ -5,6 +5,9 @@ import { test, expect, abrirApp, completarBienvenida, remar, terminar, listar } 
 test('los eventos del hábito se guardan y la tarjeta «Tu constancia» los muestra', async ({ page }) => {
   await abrirApp(page);
   await completarBienvenida(page);
+  // La sesión del plan se elige sola al cerrar la bienvenida: sin esperarla, con la máquina cargada se podía empezar
+  // un remo libre (que no cuenta como dejado ni como plan).
+  await expect(page.locator('#sel-entrenamiento')).not.toHaveValue('');
   await remar(page, 30_000);
   await terminar(page);
   await expect(page.locator('#hoja-titulo')).toHaveText('¡Sesión terminada!');

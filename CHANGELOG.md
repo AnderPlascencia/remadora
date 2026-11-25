@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.127.1 · 2026-11-25
+
+Una meta por bloque en el modo remo (etapa 3 de la ronda 2).
+
+- **El nombre del bloque se lee entero** en Números y Gráfica (antes salía «1/3 · Calen…»). El número de bloque pasa a la línea del reloj: «Bloque 1/3 · luego Libre a 18–22 golpes/min».
+- **Cada reloj dice qué cuenta.** El grande es el del bloque («Bloque 1/3»), y en la carrera el de la sesión dice «fin en 37:54» en vez de «faltan». En horizontal, el título de la carrera ya no pisa el reloj.
+- **El verde es solo para cuando estás dentro.** Si remas por encima o por debajo de la zona que suma atributos, el reto dice hacia dónde ir («↓ 84–135 W para sumar Resistencia») en el color del texto. Con un bloque de golpes o de pulso, el reto de watts va en segundo plano.
+- **La gráfica del modo remo sigue al bloque.** Muestra 10 minutos alrededor de ahora (antes, la sesión entera, y tu línea era una astilla al principio), con el plan completo en una tira fina arriba. Los bloques libres, de golpes o de pulso van en gris, y «Rango objetivo» solo sale si hay un rango de watts que cumplir.
+
 ## 0.127.0 · 2026-11-25
 
 La historia avanza para todos (etapa 2 de la ronda 2).

@@ -229,7 +229,9 @@ export function crearGraficaVivo() {
 // Perfil completo de un entrenamiento por intervalos: eje X = tiempo del entrenamiento,
 // eje Y = watts. Cada intervalo con meta de potencia pinta su rango en verde y el resto en rojo.
 // puntos: [[t, watts], ...] de la sesión (opcional); ahora: segundo actual (opcional).
-export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
+// ventana (s): en vivo, en vez de la sesión entera se ve un tramo de ese largo que sigue a «ahora» (un tercio ya
+// remado, el resto por venir), con el plan completo en una tira fina arriba (UX2-8).
+export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null, { ventana = null } = {}) {
   const dpr = densidad();
   const ancho = canvas.clientWidth;
   const alto = canvas.clientHeight;
@@ -244,6 +246,10 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
 
   const total = bloques.reduce((a, b) => a + b.duracion, 0) || 60;
   const tFin = Math.max(total, puntos.length ? puntos.at(-1)[0] : 0);
+  // Tramo visible: la sesión entera o, en vivo con ventana, un trozo que sigue a «ahora».
+  const conVentana = ventana && ahora != null && tFin > ventana * 1.2;
+  const t0 = conVentana ? Math.max(0, Math.min(tFin - ventana, ahora - ventana / 3)) : 0;
+  const t1 = conVentana ? t0 + ventana : tFin;
   let maxW = 0;
   for (const b of bloques) if (b.metrica === 'watts') maxW = Math.max(maxW, b.max || b.min);
   for (const [, v] of puntos) maxW = Math.max(maxW, v);
@@ -251,30 +257,48 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
 
   // El margen izquierdo crece con el número más ancho del eje para que nunca se corte.
   ctx.font = '11px system-ui, sans-serif';
-  const m = { izq: Math.max(32, Math.ceil(ctx.measureText(String(yMax)).width) + 10), der: 12, arr: 10, aba: 22 };
+  const TIRA = conVentana ? 10 : 0;
+  const m = { izq: Math.max(32, Math.ceil(ctx.measureText(String(yMax)).width) + 10), der: 12, arr: 10 + TIRA, aba: 22 };
   const w = ancho - m.izq - m.der;
   const h = alto - m.arr - m.aba;
-  const X = (t) => m.izq + (t / tFin) * w;
+  const X = (t) => m.izq + ((Math.min(Math.max(t, t0), t1) - t0) / (t1 - t0)) * w;
   const Y = (v) => m.arr + h - (Math.min(v, yMax) / yMax) * h;
+  const gris = (activo) => (activo ? 'rgba(148, 163, 184, 0.22)' : 'rgba(148, 163, 184, 0.12)');
 
-  // Intervalos: con rango de potencia, verde dentro y gris fuera; sin rango, todo verde (cualquier potencia vale)
-  // con una etiqueta de lo que pide. Los que terminan por distancia o paladas llevan rayas: su duración es estimada.
+  // La tira del plan completo, con el tramo que se ve marcado.
+  if (conVentana) {
+    const XT = (t) => m.izq + (t / tFin) * w;
+    let d = 0;
+    for (const b of bloques) {
+      ctx.fillStyle = b.metrica === 'watts' ? 'rgba(34, 197, 94, 0.55)' : 'rgba(148, 163, 184, 0.35)';
+      ctx.fillRect(XT(d), 2, Math.max(1, XT(d + b.duracion) - XT(d) - 1), 5);
+      d += b.duracion;
+    }
+    ctx.strokeStyle = token('--texto-suave', '#888');
+    ctx.lineWidth = 1;
+    ctx.strokeRect(XT(t0) + 0.5, 0.5, XT(t1) - XT(t0) - 1, 8);
+  }
+
+  // Intervalos: con rango de potencia, verde dentro y gris fuera; sin rango de watts (libre, golpes o pulso), gris
+  // neutro con una etiqueta de lo que pide: el verde solo marca un rango de watts que de verdad hay que cumplir.
+  // Los que terminan por distancia o paladas llevan rayas: su duración es estimada.
   let desde = 0;
   ctx.font = '600 11px system-ui, sans-serif';
   ctx.textAlign = 'center';
   for (const b of bloques) {
+    if (desde + b.duracion <= t0 || desde >= t1) { desde += b.duracion; continue; }
     const x0 = X(desde);
     const x1 = X(desde + b.duracion);
     const activo = ahora != null && ahora >= desde && ahora < desde + b.duracion;
     if (b.metrica === 'watts') {
       const max = b.max || yMax;
       // Fuera del rango en gris: el rojo queda solo para cuando de verdad te sales.
-      ctx.fillStyle = activo ? 'rgba(148, 163, 184, 0.22)' : 'rgba(148, 163, 184, 0.12)';
+      ctx.fillStyle = gris(activo);
       ctx.fillRect(x0, m.arr, x1 - x0, h);
       ctx.fillStyle = activo ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.5)';
       ctx.fillRect(x0, Y(max), x1 - x0, Y(b.min) - Y(max));
     } else {
-      ctx.fillStyle = activo ? 'rgba(34, 197, 94, 0.5)' : 'rgba(34, 197, 94, 0.3)';
+      ctx.fillStyle = gris(activo);
       ctx.fillRect(x0, m.arr, x1 - x0, h);
       const etq = b.metrica === 'spm' ? `${b.min}–${b.max} g/min` : b.metrica === 'fc' ? `${b.min}–${b.max} lpm` : 'Libre';
       if (x1 - x0 >= ctx.measureText(etq).width + 6) {
@@ -315,9 +339,9 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
 
   // Eje X en minutos (u horas): tantas marcas como quepan, y la última nunca se sale por la derecha.
   const caben = Math.max(1, Math.min(6, Math.floor(w / 56)));
-  const paso = [60, 120, 300, 600, 900, 1800, 3600, 7200].find((p) => tFin / p <= caben) || 14400;
+  const paso = [60, 120, 300, 600, 900, 1800, 3600, 7200].find((p) => (t1 - t0) / p <= caben) || 14400;
   const textoX = (t) => (t < 3600 ? `${Math.round(t / 60)} min` : `${Math.floor(t / 3600)} h${t % 3600 ? ` ${Math.round((t % 3600) / 60)}` : ''}`);
-  for (let t = 0; t <= tFin; t += paso) {
+  for (let t = Math.ceil(t0 / paso) * paso; t <= t1; t += paso) {
     const etq = textoX(t);
     const media = ctx.measureText(etq).width / 2;
     ctx.textAlign = X(t) + media > ancho ? 'right' : 'center';
@@ -329,12 +353,16 @@ export function dibujarPerfil(canvas, bloques, puntos = [], ahora = null) {
     ctx.strokeStyle = token('--texto', '#fff');
     ctx.lineWidth = 2;
     ctx.beginPath();
-    puntos.forEach(([t, v], i) => (i ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v))));
+    let empezado = false;
+    for (const [t, v] of puntos) {
+      if (t < t0 - 5 || t > t1) continue;
+      if (empezado) ctx.lineTo(X(t), Y(v)); else { ctx.moveTo(X(t), Y(v)); empezado = true; }
+    }
     ctx.stroke();
   }
 
   // Marca de "ahora"
-  if (ahora != null && ahora <= tFin) {
+  if (ahora != null && ahora <= tFin && ahora >= t0 && ahora <= t1) {
     ctx.strokeStyle = token('--acento', '#39f');
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(ahora), m.arr); ctx.lineTo(X(ahora), m.arr + h); ctx.stroke();

@@ -138,7 +138,8 @@ export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, 
       atributo: 'tecnica', puntos: 1, progreso: fuera ? 0 : 1 - falta, faltanSeg: fuera ? null : Math.max(1, Math.ceil(falta / porSeg)),
       ...(bajar ? { aviso: true } : {}),
       titulo: bajar ? `Baja a ${txt}` : fuera ? `Vuelve a tu rango: ${txt}` : `Quédate en ${txt}`,
-      detalle: 'Cada minuto en rango, con la potencia pareja y la cadencia estable, suma Técnica.', corto: 'En rango y parejo sumas Técnica',
+      detalle: 'Cada minuto en rango, con la potencia pareja y la cadencia estable, suma Técnica.', corto: fuera ? `${txt} para sumar Técnica` : 'En rango y parejo sumas Técnica',
+      dentro: !fuera, direccion: fuera ? (rango.max && w > rango.max ? 'baja' : 'sube') : null,
     };
   } else if (!rango && !esIntenso(tipo) && tipo != null && (!zona || zona.atributo !== 'resistencia')) {
     // Día suave sin rango en watts (fondo por pulso, meta de distancia o calorías): solo zonas 2 y 3.
@@ -147,7 +148,8 @@ export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, 
     reto = {
       atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null, ...(bajar ? { aviso: true } : {}),
       titulo: bajar ? `Baja a ${vatios(f, 0.56)}–${vatios(f, 0.9)} W` : arriba ? `Hoy toca suave: entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} W` : `Desde ${vatios(f, 0.56)} W sumas Resistencia`,
-      detalle: 'Cada 2 min en zonas 2 y 3 suma Resistencia.', corto: `${vatios(f, 0.56)}–${vatios(f, 0.9)} W suma Resistencia`,
+      detalle: 'Cada 2 min en zonas 2 y 3 suma Resistencia.', corto: `${vatios(f, 0.56)}–${vatios(f, 0.9)} W para sumar Resistencia`,
+      dentro: false, direccion: arriba ? 'baja' : 'sube',
     };
   } else if (zona) {
     const v = totales[zona.atributo];
@@ -161,9 +163,10 @@ export function enVivo(muestras, { ftp = 0, clase = null, ctx = {}, pct = null, 
       atributo: zona.atributo, puntos: 1, progreso: 1 - falta, faltanSeg: Math.max(1, Math.ceil(falta / porSeg)),
       titulo: rango ? `Sigue por encima de ${zona.umbral} W` : `Sumas ${nombre(zona.atributo)} desde ${zona.umbral} W`,
       detalle: cabe ? `Por encima de ${sig.w} W sumas ${sig.txt}.` : aqui,
+      dentro: true, direccion: null,
     };
   } else {
-    reto = { atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null, titulo: rango ? `Sube a ${vatios(f, 0.56)} W` : `Desde ${vatios(f, 0.56)} W sumas Resistencia`, detalle: 'Desde ahí cada 2 min suma Resistencia.', corto: `Desde ${vatios(f, 0.56)} W sumas Resistencia` };
+    reto = { atributo: 'resistencia', puntos: 1, progreso: 0, faltanSeg: null, titulo: rango ? `Sube a ${vatios(f, 0.56)} W` : `Desde ${vatios(f, 0.56)} W sumas Resistencia`, detalle: 'Desde ahí cada 2 min suma Resistencia.', corto: `Desde ${vatios(f, 0.56)} W sumas Resistencia`, dentro: false, direccion: 'sube' };
   }
   return { totales, puntos: Object.fromEntries(Object.entries(totales).map(([k, v]) => [k, Math.floor(v)])), reto };
 }
