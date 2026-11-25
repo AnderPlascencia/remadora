@@ -3,7 +3,7 @@
 // Todo se calcula desde el historial, así que las sesiones viejas también cuentan.
 // Nada de esto cambia tus métricas reales: solo el juego.
 /** @import { Capitulo, Hazana, OpcionesAtributos, OpcionesJuego, OpcionesRivales } from '../tipos/datos' */
-import { VIKINGO_PALADA_DESDE, sendaEn, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
+import { VIKINGO_PALADA_DESDE, CLASES_JUSTAS_DESDE, sendaEn, gradosEn, puntosDeNivel, puntosGastados, xpTalentos, SLOTS, GRADOS_MAX, costeDe, motivoBloqueo, puntosSobrantes, MONEDAS_POR_PUNTO } from './talentos.js';
 import { estres, claveDia, RECORDS, mejorTiempoDe, factorIntensidadDe, mejoraPct, SOLO_TU_DESDE, nMuestras, segundosCon } from './estadisticas.js';
 import { tipoSesion } from './capacidades.js';
 import * as XC from './xp-carga.js';
@@ -317,6 +317,12 @@ export const MISION_CLASE = {
   polinesio: { id: 'oceano', nombre: 'Travesía del océano', texto: (m) => `Completa una sesión de ${m} min activos`, metas: [40], xp: [200], valor: (d) => d.maxMin },
   romano: { id: 'dominio', nombre: 'Dominio de Roma', texto: (m) => `Completa ${m} misiones diarias esta semana`, metas: [6], xp: [200], valor: (d) => d.diariasHechas },
 };
+// ⚖ Clases justas (desde CLASES_JUSTAS_DESDE): sin plan, las diarias casi nunca salen todas, y «Dominio de Roma»
+// quedaba fuera de alcance. Ahora también cuentan las sesiones del plan o sugeridas que cumples.
+const DOMINIO_JUSTO = {
+  texto: (m) => `Completa ${m} misiones diarias o ${m} sesiones del plan o sugeridas esta semana`,
+  valor: (d) => Math.max(d.diariasHechas, d.delDia),
+};
 
 // Misiones por capacidad (desde CAPACIDADES_DESDE). Las de intensidad (umbral y VO₂) solo salen martes y jueves
 // y nunca después de un día duro: como mucho 2 por semana, para que las misiones no empujen a sobreentrenar.
@@ -548,6 +554,10 @@ function misionesDeSemana12(lunes, clase, rit, reto) {
   let deClase = tema ? semanalATuMedida(tema, rit) : null;
   // Dominio de Roma cuenta diarias: con una por día de remo, la meta baja a lo que se puede cumplir.
   if (unaVez && deClase?.id === 'dominio') deClase = { ...deClase, metas: [entre(Math.round((rit?.sesSemana || 2) * 0.6), 1, 4)] };
+  // ⚖ Clases justas: «Rumbo pirata» pedía una sesión más de las que haces, y casi nunca salía. Como las misiones de
+  // las otras clases, ahora pide tu ritmo habitual.
+  if (lunes >= CLASES_JUSTAS_DESDE && deClase?.id === 'dominio') deClase = { ...deClase, ...DOMINIO_JUSTO };
+  if (lunes >= CLASES_JUSTAS_DESDE && deClase?.id === 'rumbo') deClase = { ...deClase, metas: [entre(Math.round(rit?.sesSemana || 2), 2, 5)] };
   // Con plan, la diaria ya pide la cadencia del bloque cada día de remo: sin «Semana pareja», que la repetía.
   const lista = [...(plan ? [plan] : []), ...(unaVez && rit?.conPlan ? [] : [tecnica]), reto, ...(deClase ? [deClase] : [])];
   return lista.map((d) => crear12({ ...d, xp: [XP_MISION_SEMANAL] }, r, semilla));
@@ -684,16 +694,45 @@ function minutosTecnicos(s, ftp) {
   }
   return cacheTecnica.get(k);
 }
+// ⚖ Clases justas (ronda 2, etapa 4): la hazaña de clase llegaba en la semana 4 (samurái) o nunca (el pirata que
+// sigue el plan, el romano que rema libre). Desde CLASES_JUSTAS_DESDE cada una tiene su camino de clase, con metas
+// pensadas para unos 6–9 meses a 4 sesiones por semana, y otro común a todas: 40 semanas con 2 sesiones o más (no
+// hace falta que sean seguidas). Cuenta todo tu historial; quien ya la tenía la conserva.
+export const SEMANAS_HAZANA = 40;
+const CAMINO_COMUN = { unidad: 'semanas con 2 sesiones o más', meta: SEMANAS_HAZANA, valor: (g) => g.semanas2 };
+const CAMINOS_CLASE = {
+  vikingo: [{ unidad: 'paladas', meta: 100000, valor: (g) => g.paladas }],
+  pirata: [{ unidad: 'fantasmas vencidos', meta: 150, valor: (g) => g.fantasmas }, { unidad: 'sesiones cumplidas con el 80 % en rango', meta: 120, valor: (g) => g.enRango80 }],
+  samurai: [{ unidad: 'minutos técnicos', meta: 3000, valor: (g) => g.tecMin }],
+  polinesio: [{ unidad: 'km', meta: 1200, valor: (g) => g.kmTotal }],
+  romano: [{ unidad: 'semanas del plan cumplidas', meta: 30, valor: (g) => g.semanasPlan }],
+};
+const textoCaminos = (caminos) => caminos.map((c, i) => `${i === caminos.length - 1 ? 'o ' : ''}${miles(c.meta)} ${c.unidad}`).join(caminos.length > 2 ? ', ' : ' ');
+// meta, unidad y valor de antes (hasta CLASES_JUSTAS_DESDE); caminos, los de ahora.
 export const HAZANAS_CLASE = [
   ['vikingo', 'Saga de las cien mil', 'paladas', 75000, (g) => g.paladas],
   ['pirata', 'Terror de los siete mares', 'fantasmas vencidos', 60, (g) => g.fantasmas],
   ['samurai', 'El camino de la forma', 'minutos técnicos', 400, (g) => g.tecMin],
   ['polinesio', 'Navegante del océano', 'km', 750, (g) => g.kmTotal],
   ['romano', 'Pax romana', 'semanas del plan cumplidas', 10, (g) => g.semanasPlan],
-].map((/** @type {[string, string, string, number, (g: any) => number]} */ [clase, nombre, unidad, meta, valor]) => ({
-  id: hazanaDeClase(clase), clase, nombre, unidad, meta, valor, xp: 1000, monedas: 300, desde: COLECCION_DESDE,
-  texto: `${miles(meta)} ${unidad} en total: vela legendaria y mascarón dorado de ${clase === 'samurai' ? 'samurái' : clase}`,
-}));
+].map((/** @type {[string, string, string, number, (g: any) => number]} */ [clase, nombre, unidad, meta, valor]) => {
+  const caminos = [...CAMINOS_CLASE[clase], CAMINO_COMUN];
+  const de = `vela legendaria y mascarón dorado de ${clase === 'samurai' ? 'samurái' : clase}`;
+  return {
+    id: hazanaDeClase(clase), clase, nombre, unidad, meta, valor, xp: 1000, monedas: 300, desde: COLECCION_DESDE, caminos,
+    textoAntes: `${miles(meta)} ${unidad} en total: ${de}`, texto: `${textoCaminos(caminos)}: ${de}`,
+  };
+});
+// ¿Cumple la hazaña con las reglas del día `dia`? Las de clase, por cualquiera de sus caminos desde CLASES_JUSTAS_DESDE.
+const cumpleHazana = (h, g, dia) => (h.caminos && dia >= CLASES_JUSTAS_DESDE ? h.caminos.some((c) => c.valor(g) >= c.meta) : h.valor(g) >= h.meta);
+// Cómo se ve una hazaña hoy: las de clase muestran el camino más avanzado y los demás aparte.
+function vistaHazana(h, g, dia) {
+  if (!h.caminos) return { valor: Math.min(h.meta, Math.floor(h.valor(g))) };
+  if (dia < CLASES_JUSTAS_DESDE) return { texto: h.textoAntes, caminos: null, valor: Math.min(h.meta, Math.floor(h.valor(g))) };
+  const caminos = h.caminos.map((c) => ({ unidad: c.unidad, meta: c.meta, valor: Math.min(c.meta, Math.floor(c.valor(g))) }));
+  const mejor = caminos.reduce((a, c) => (c.valor / c.meta > a.valor / a.meta ? c : a));
+  return { meta: mejor.meta, unidad: mejor.unidad, valor: mejor.valor, caminos };
+}
 /** @type {Hazana[]} */
 export const HAZANAS = [
   { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20 },
@@ -835,6 +874,9 @@ function datosTalento(s, m, ctx) {
     // Senda B (etapa 4): sesión clave del plan, victorias reñidas, Alta mar, % en rango y minutos de técnica.
     senda: ctx.senda || 'a', clave: esSesionClave(s), renidas: m.renidas || 0, altamar: m.altamar || 0,
     pctEnRango: s.pctEnRango ?? null, tecMin: m.tec?.minutos || 0,
+    // Clases justas (ronda 2, etapa 4): sesión cumplida (con meta) y si va con las reglas nuevas.
+    completa: s.tiempoMeta != null, justas: claveDia(s.fecha) >= CLASES_JUSTAS_DESDE,
+    sugerida: s.delDia === 'sugerida' && s.tiempoMeta != null, semanasSeguidas: ctx.semanasSeguidas || 0,
   };
 }
 
@@ -1091,7 +1133,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
   };
   let mppSuma = 0;
   let mppN = 0;
-  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, mejor2000Antes: null, primer2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0 };
+  const g = { clasesVencidas: new Set(), clasesAntiguas: new Set(), carrerasGanadas: [], kmTotal: 0, kmMax: 0, minMax: 0, rachaMax: 0, semanas: 0, semanasMax: 0, ultimoLunes: null, mejor2000: null, mejor2000Antes: null, primer2000: null, nivel: 1, nivelAntiguo: 1, sesiones: 0, misiones: 0, ftpInicial: null, ftpMejora: 0, paladas: 0, fantasmas: 0, tecMin: 0, semanasPlan: 0, semanas2: 0, enRango80: 0 };
   // Inicio del día y del lunes (ms) para ajustar las misiones a tu ritmo de las semanas anteriores.
   const inicioDia = (ms) => new Date(ms).setHours(0, 0, 0, 0);
   const inicioLunes = (lunes) => new Date(`${lunes}T00:00`).getTime();
@@ -1191,10 +1233,17 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     sesPorSemana.set(lunesS, (sesPorSemana.get(lunesS) || 0) + 1);
     kmPorSemana.set(lunesS, (kmPorSemana.get(lunesS) || 0) + m.metros / 1000);
     if (semAtr.lunes !== lunesS) semAtr = { lunes: lunesS, atr: { ...atributos }, pulso: hayPulso };
+    // Semanas seguidas con al menos una sesión (antes de la ganancia: la Ley de la flota la mira).
+    if (g.ultimoLunes !== lunesS) {
+      const seguida = g.ultimoLunes && claveDia(inicioLunes(g.ultimoLunes) + 7 * 864e5 + 12 * 36e5) === lunesS;
+      g.semanas = seguida ? g.semanas + 1 : 1;
+      g.ultimoLunes = lunesS;
+      g.semanasMax = Math.max(g.semanasMax, g.semanas);
+    }
     const nueva = XC.usaCarga(s);
     const creditos = nueva ? creditosAntesDe(hoy) : null;
     const gan = gananciaSesion(s, m, {
-      grados, clase: claveClase, senda: claveClase ? sendaEn(per, claveClase, s.fecha) : 'a', sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0,
+      grados, clase: claveClase, senda: claveClase ? sendaEn(per, claveClase, s.fecha) : 'a', sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0, semanasSeguidas: g.semanas,
       cargaAntes: cargaDia.get(hoy) || 0, creditos, planPagado: planPagado.has(hoy), tipo: nueva ? tipoSesion(s, ftp) : null, regreso: regreso && nueva,
     });
     if (gan.pagaPlan) planPagado.add(hoy);
@@ -1229,13 +1278,6 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const atrDia = hoy >= MISION_UNICA_DESDE ? atributoDeLaSemana(semAtr.lunes === lunes ? semAtr.atr : atributos, { sinPulso: !(semAtr.lunes === lunes ? semAtr.pulso : hayPulso), lunes }) : null;
     if (dia.clave !== hoy) Object.assign(dia, { clave: hoy, misiones: misionesDelDia(hoy, ritmoReciente(orden, inicioDia(s.fecha)), { cargaAyer: cargaDia.get(ayer) || 0, planHoy: hoy in cal ? cal[hoy] : null, atributo: atrDia }), hechas: new Set(), d: nuevoAgg() });
     if (semana.clave !== lunes) Object.assign(semana, { clave: lunes, misiones: misionesDeSemana(lunes, per.clase, ritmoReciente(orden, inicioLunes(lunes)), atributoDeLaSemana(semAtr.atr, { sinPulso: !semAtr.pulso, lunes })), hechas: new Set(), d: nuevoAgg() });
-    // Semanas seguidas con al menos una sesión
-    if (g.ultimoLunes !== lunes) {
-      const seguida = g.ultimoLunes && claveDia(inicioLunes(g.ultimoLunes) + 7 * 864e5 + 12 * 36e5) === lunes;
-      g.semanas = seguida ? g.semanas + 1 : 1;
-      g.ultimoLunes = lunes;
-      g.semanasMax = Math.max(g.semanasMax, g.semanas);
-    }
     for (const agg of [dia.d, semana.d]) {
       agg.metros += m.metros; agg.min += m.min; agg.kcal += m.kcal; agg.z2min += m.z2min; agg.z4min += m.z4min;
       agg.sobreSeg += m.sobreSeg; agg.spm24min += m.spm24min; agg.ganados += m.ganados; agg.sesiones++;
@@ -1280,6 +1322,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     g.fantasmas += m.ganados || 0;
     g.tecMin += Math.min(TOPE_TECNICA_MIN, m.tec ? m.tec.minutos : minutosTecnicos(s, s.ftp || ftp));
     g.semanasPlan += creditos?.semanas || 0;
+    if (sesPorSemana.get(lunesS) === 2) g.semanas2++;
+    if (s.tiempoMeta != null && (s.pctEnRango ?? 0) >= 80) g.enRango80++;
     if (creditos?.semanas && g.primeraSemanaPlan == null) g.primeraSemanaPlan = s.fecha;
     g.kmMax = Math.max(g.kmMax, m.metros / 1000);
     g.sesiones++;
@@ -1346,7 +1390,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
       g.nivel = nivelAhora(xp);
       if (!XC.usaReglas9(s)) g.nivelAntiguo = g.nivel;
       for (const h of HAZANAS) {
-        if (!hazanas.has(h.id) && h.valor(g) >= h.meta && !(h.desde && hoy < h.desde)) {
+        if (!hazanas.has(h.id) && cumpleHazana(h, g, hoy) && !(h.desde && hoy < h.desde)) {
           hazanas.add(h.id);
           nuevo = true;
           lograr(s.fecha, 'hazana', `Logro: ${h.nombre}`, h.monedas, h.objeto, h.xp || 0);
@@ -1421,7 +1465,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     capitulo,
     capitulosHechos: cap,
     piezasJefe: [...piezasJefe],
-    hazanas: HAZANAS.filter((h) => !h.oculto || hazanas.has(h.id)).map((h) => ({ ...h, xp: Math.round((h.xp || 0) * fHoy), hecha: hazanas.has(h.id), valor: Math.min(h.meta, Math.floor(h.valor(g))) })),
+    hazanas: HAZANAS.filter((h) => !h.oculto || hazanas.has(h.id)).map((h) => ({ ...h, xp: Math.round((h.xp || 0) * fHoy), hecha: hazanas.has(h.id), ...vistaHazana(h, g, hoy) })),
     xpPorSesion,
     ritmo: ritmoReciente(orden, ahora),
     factorXp: fHoy,

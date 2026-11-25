@@ -34,10 +34,10 @@ export const CLASES_TALENTO = {
   pirata: {
     cualidad: 'Hurto', bote: 'balandra', lema: 'Premia robar metros y botín a los fantasmas.',
     talentos: {
-      m1: { nombre: 'Bolsa ligera', tipo: 'xp', g: [8, 16, 24], g0: [10, 20, 30], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3).` },
+      m1: { nombre: 'Bolsa ligera', tipo: 'xp', g: [8, 16, 24], g0: [10, 20, 30], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3). Sin carrera, cuenta como 2 si cumples la sesión con el 80 % en rango.` },
       m2: { nombre: 'Robar el viento', tipo: 'carrera', g: [30, 25, 20], texto: (g) => `Mientras vas detrás de un fantasma, cada ${g} paladas recibes 1 palada extra.` },
       m3: { nombre: 'Mano rápida', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Cada vez que adelantas a un fantasma le robas ${g} m.` },
-      m4: { nombre: 'Botín escondido', tipo: 'xp', g: [20, 40, 60], g0: [15, 30, 45], texto: (g) => `+${g} XP en cada sesión con carrera contra fantasmas.` },
+      m4: { nombre: 'Botín escondido', tipo: 'xp', g: [20, 40, 60], g0: [15, 30, 45], texto: (g) => `+${g} XP en cada sesión con carrera contra fantasmas o que cumples con el 80 % en rango («robas los vatios del plan»).` },
       maestria: { nombre: 'Reparto del botín', tipo: 'xp', g: [40, 80, 120], texto: (g) => `Si les ganas a todos los fantasmas de la carrera, +${g} XP.` },
     },
   },
@@ -47,7 +47,7 @@ export const CLASES_TALENTO = {
       m1: { nombre: 'Corte limpio', tipo: 'carrera', g: [40, 35, 30], texto: (g) => `Cada ${g} paladas seguidas sin detenerte recibes 1 palada extra.` },
       m2: { nombre: 'Kata', tipo: 'xp', g: [25, 50, 75], g0: [15, 30, 45], texto: (g) => `+${g} XP si remas toda la sesión sin pausas (10 min o más).` },
       m3: { nombre: 'Kiai final', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `En los últimos 200 m de una carrera a distancia, cada 50 m avanzas ${g} m más.` },
-      m4: { nombre: 'Maestro del dojo', tipo: 'xp', g: [20, 40, 60], g0: [15, 30, 45], texto: (g) => `+${g} XP al terminar el entrenamiento que toca hoy en tu programa.` },
+      m4: { nombre: 'Maestro del dojo', tipo: 'xp', g: [20, 40, 60], g0: [15, 30, 45], texto: (g) => `+${g} XP al terminar el entrenamiento que toca hoy en tu programa o la sesión sugerida.` },
       maestria: { nombre: 'Senda del maestro', tipo: 'xp', g: [30, 60, 90], texto: (g) => `+${g} XP si terminas el entrenamiento del programa sin pausas.` },
     },
   },
@@ -66,7 +66,7 @@ export const CLASES_TALENTO = {
     talentos: {
       m1: { nombre: 'Semana de la flota', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP desde tu tercera sesión de la semana.` },
       m2: { nombre: 'Hortator', tipo: 'carrera', g: [1, 2, 3], texto: (g) => `Cada minuto remado sin detenerte avanzas ${g} m más.` },
-      m3: { nombre: 'Ley de la flota', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada día de racha del plan (hasta 7 días).` },
+      m3: { nombre: 'Ley de la flota', tipo: 'xp', g: [5, 10, 15], texto: (g) => `+${g} XP por cada día de racha del plan o, en una sesión sugerida, por cada semana seguida remando (hasta 7).` },
       m4: { nombre: 'Boga de la liburna', tipo: 'carrera', g: [3, 6, 9], texto: (g) => `Con 2 días de racha o más, empiezas la carrera ${g} m por delante.` },
       maestria: { nombre: 'Triunfo romano', tipo: 'xp', g: [75, 150, 225], texto: (g) => `Al completar 4 sesiones en una semana o llegar a tu meta semanal de km, +${g} XP (una vez por semana).` },
     },
@@ -83,7 +83,7 @@ export const SENDAS = {
     a: { nombre: 'Timonel del drakkar', lema: 'La palada larga que cruzaba el mar del Norte.' },
     b: { nombre: 'Berserker', lema: 'La furia del primer golpe y las series que pide tu plan.', talentos: {
       m3: { nombre: 'Furia de salida', tipo: 'carrera', intensidad: true, g: [0.4, 0.7, 1], texto: (g) => `Una salida de 15 paladas por carrera: cada palada avanza ${coma(g)} m más. Si no vienes de calentar, cuenta desde el minuto 5.` },
-      m4: { nombre: 'Grito de guerra', tipo: 'xp', g: [50, 100, 150], texto: (g) => `+${g} XP al cumplir una sesión clave de tu plan (umbral, VO₂, sprint o prueba).` },
+      m4: { nombre: 'Grito de guerra', tipo: 'xp', g: [50, 100, 150], texto: (g) => `+${g} XP al cumplir una sesión clave de tu plan (umbral, VO₂, sprint o prueba) o al ganarle a un fantasma de Alta mar.` },
       maestria: { nombre: 'Hambre de batalla', tipo: 'xp', g: [25, 50, 75], texto: (g) => `+${g} XP por cada fantasma vencido en carreras de 2000 m o menos (hasta 3).` },
     } },
   },
@@ -91,7 +91,7 @@ export const SENDAS = {
     a: { nombre: 'Abordaje', lema: 'Adelantar y robar metros a los fantasmas.' },
     b: { nombre: 'Intendente', lema: 'Quien llevaba las cuentas del botín: victorias justas y en mar abierto.', talentos: {
       m3: { nombre: 'Cuentas claras', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP por cada fantasma vencido por menos del 5 % de lo remado (hasta 3).` },
-      m4: { nombre: 'Partes del botín', tipo: 'xp', g: [20, 40, 60], texto: (g) => `+${g} XP en cada sesión en la que vences al menos a un fantasma.` },
+      m4: { nombre: 'Partes del botín', tipo: 'xp', g: [20, 40, 60], texto: (g) => `+${g} XP en cada sesión en la que vences al menos a un fantasma o que cumples con el 80 % en rango.` },
       maestria: { nombre: 'Artículos del barco', tipo: 'xp', g: [40, 80, 120], texto: (g) => `+${g} XP si ganas una carrera en Alta mar.` },
     } },
   },
@@ -107,7 +107,7 @@ export const SENDAS = {
     a: { nombre: 'Hoʻokele, el navegante', lema: 'Travesías largas a ritmo constante.' },
     b: { nombre: 'Remero de carrera', lema: 'Las regatas de canoa: remontar y ganar.', talentos: {
       m3: { nombre: 'Remontada', tipo: 'carrera', intensidad: true, g: [1, 2, 3], texto: (g) => `En el último 10 % de una carrera a distancia, si vas por detrás, cada 50 m avanzas ${g} m más.` },
-      m4: { nombre: 'Regata de canoas', tipo: 'xp', g: [10, 20, 30], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3).` },
+      m4: { nombre: 'Regata de canoas', tipo: 'xp', g: [10, 20, 30], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3). Sin carrera, +${g} al cumplir una sesión de 45 min o más.` },
       maestria: { nombre: 'Canoa ganadora', tipo: 'xp', g: [40, 80, 120], texto: (g) => `+${g} XP si les ganas a todos los fantasmas en una carrera de 5 km o más.` },
     } },
   },
@@ -115,7 +115,7 @@ export const SENDAS = {
     a: { nombre: 'Disciplina de la flota', lema: 'La semana del plan y la racha.' },
     b: { nombre: 'Harpax', lema: 'El arpón de Agripa en Nauloco (36 a. C.): alcanzar y enganchar al rival.', talentos: {
       m3: { nombre: 'Harpax', tipo: 'carrera', intensidad: true, g: [2, 4, 6], texto: (g) => `Cada vez que adelantas a un fantasma, avanzas ${g} m más (hasta 3 veces, con 90 s entre una y otra).` },
-      m4: { nombre: 'Victoria de Nauloco', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3).` },
+      m4: { nombre: 'Victoria de Nauloco', tipo: 'xp', g: [15, 30, 45], texto: (g) => `+${g} XP por cada fantasma vencido (hasta 3). Sin carrera, +${g} al cumplir la sesión.` },
       maestria: { nombre: 'Corona naval', tipo: 'xp', g: [40, 80, 120], texto: (g) => `+${g} XP si ganas una carrera en Alta mar.` },
     } },
   },
@@ -153,6 +153,9 @@ export function valorDe(clase, slot, grado, antes = false, paladas = false, send
   return tabla[Math.min(grado, GRADOS_MAX) - 1];
 }
 export const VIKINGO_PALADA_DESDE = '2026-11-11';
+// ⚖ Ronda 2, etapa 4 (clases justas): desde esta fecha cada senda tiene al menos 2 talentos que pagan con cualquier
+// forma de remar (plan, sugerida o libre). Las sesiones anteriores se cuentan con las reglas de antes.
+export const CLASES_JUSTAS_DESDE = '2026-11-26';
 // La palada de una sesión frente a tu media habitual (1 = igual de larga). 0 si no hay datos.
 export const paladaRelativa = (d) => (d.paladas > 0 && d.mppMedia > 0 ? d.metros / d.paladas / d.mppMedia : 0);
 // Triunfo romano: con 4 sesiones en la semana o al llegar a tu meta semanal de km, lo que pase antes (antes de la
@@ -198,6 +201,11 @@ export function motivoBloqueo(slot, { nivel, libres }, arbol, clase) {
   return null;
 }
 
+// Pirata desde CLASES_JUSTAS_DESDE: una sesión sin carrera cumplida con el 80 % en rango también es botín.
+const robado = (d) => !!d.justas && !d.rivales && !!d.completa && (d.pctEnRango ?? 0) >= 80;
+// Sesión cumplida sin carrera, con las reglas de CLASES_JUSTAS_DESDE (romano y polinesio de la senda B).
+const sinCarrera = (d) => !!d.justas && !d.rivales && !!d.completa;
+const fantasmasPirata = (d) => (robado(d) ? 2 : Math.min(3, d.ganados || 0));
 // XP de los talentos en una sesión. d = { paladas, metros, min, ganados, rivales, sinPausas, delPrograma, racha, sesSemana,
 // antes (sesión anterior a la etapa 12), kmSemana (con esta sesión), metaSemanaKm, palada (vikingo de palada larga),
 // mppMedia (tus metros por palada habituales) }.
@@ -212,27 +220,27 @@ export function xpTalentos(clase, grados, d) {
   if (senda === 'b') {
     // Mejoras 1 y 2 de la clase (las de siempre).
     if (k === 'vikingo') { const rel = d.mppMedia > 0 ? paladaRelativa(d) : 1; if (rel >= 1) sumar('m2', v('m2') * Math.floor(d.metros / 1000)); }
-    if (k === 'pirata') sumar('m1', v('m1') * Math.min(3, d.ganados));
+    if (k === 'pirata') sumar('m1', v('m1') * fantasmasPirata(d));
     if (k === 'samurai' && d.sinPausas) sumar('m2', v('m2'));
     if (k === 'polinesio' && d.min >= 30) sumar('m1', v('m1'));
     if (k === 'romano' && d.sesSemana >= 3) sumar('m1', v('m1'));
     const g3 = Math.min(3, d.ganados || 0);
     if (k === 'vikingo') {
-      if (d.clave) sumar('m4', v('m4'));
+      if (d.clave || (d.justas && d.altamar)) sumar('m4', v('m4'));
       if (d.metros <= 2000) sumar('maestria', v('maestria') * g3);
     } else if (k === 'pirata') {
       sumar('m3', v('m3') * Math.min(3, d.renidas || 0));
-      if (d.ganados > 0) sumar('m4', v('m4'));
+      if (d.ganados > 0 || robado(d)) sumar('m4', v('m4'));
       if (d.altamar) sumar('maestria', v('maestria'));
     } else if (k === 'samurai') {
       if ((d.pctEnRango ?? 0) >= 80) sumar('m3', v('m3'));
       sumar('m4', v('m4') * Math.floor(Math.min(30, d.tecMin || 0) / 5));
       if (d.sinPausas && d.delPrograma && (d.pctEnRango ?? 0) >= 90) sumar('maestria', v('maestria'));
     } else if (k === 'polinesio') {
-      sumar('m4', v('m4') * g3);
+      sumar('m4', v('m4') * (sinCarrera(d) && d.min >= 45 ? 1 : g3));
       if (d.rivales > 0 && d.ganados >= d.rivales && d.metros >= 5000) sumar('maestria', v('maestria'));
     } else {
-      sumar('m4', v('m4') * g3);
+      sumar('m4', v('m4') * (sinCarrera(d) ? 1 : g3));
       if (d.altamar) sumar('maestria', v('maestria'));
     }
   } else if (k === 'vikingo' && d.palada) {
@@ -246,12 +254,12 @@ export function xpTalentos(clase, grados, d) {
     if (d.paladas >= 500) sumar('m4', v('m4'));
     sumar('maestria', v('maestria') * Math.floor(d.paladas / 1000));
   } else if (k === 'pirata') {
-    sumar('m1', v('m1') * Math.min(3, d.ganados));
-    if (d.rivales > 0) sumar('m4', v('m4'));
+    sumar('m1', v('m1') * fantasmasPirata(d));
+    if (d.rivales > 0 || robado(d)) sumar('m4', v('m4'));
     if (d.rivales > 0 && d.ganados >= d.rivales) sumar('maestria', v('maestria'));
   } else if (k === 'samurai') {
     if (d.sinPausas) sumar('m2', v('m2'));
-    if (d.delPrograma) sumar('m4', v('m4'));
+    if (d.delPrograma || (d.justas && d.sugerida)) sumar('m4', v('m4'));
     if (d.delPrograma && d.sinPausas) sumar('maestria', v('maestria'));
   } else if (k === 'polinesio') {
     if (d.min >= 30) sumar('m1', v('m1'));
@@ -259,7 +267,7 @@ export function xpTalentos(clase, grados, d) {
     if (d.min >= 60) sumar('maestria', v('maestria'));
   } else {
     if (d.sesSemana >= 3) sumar('m1', v('m1'));
-    sumar('m3', v('m3') * Math.min(7, d.racha));
+    sumar('m3', v('m3') * Math.min(7, d.justas && d.sugerida ? Math.max(d.racha, d.semanasSeguidas || 0) : d.racha));
   }
   // Tope por sesión: se recorta la última fila que lo pase.
   let resto = TOPE_TALENTOS_XP;

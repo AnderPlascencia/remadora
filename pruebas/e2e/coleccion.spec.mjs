@@ -17,6 +17,8 @@ async function abrirTienda(page) {
 }
 
 test('la colección del vikingo: lo bloqueado dice qué falta y lo comprado queda en uso', async ({ page }) => {
+  // Después del corte de las clases justas (26 de noviembre): la hazaña tiene dos caminos.
+  await page.clock.setFixedTime(new Date('2026-11-27T12:00:00'));
   await page.goto('./');
   await completarBienvenida(page, { reloj: false });
   await conClase(page, 'vikingo', { gastado: -5000 });
@@ -29,8 +31,9 @@ test('la colección del vikingo: lo bloqueado dice qué falta y lo comprado qued
   await expect(fichas.filter({ hasText: 'Cuervos de Odín' }).locator('.bloqueada')).toHaveText('Nivel 20');
   await expect(fichas.filter({ hasText: 'Fuego del Valhalla' }).locator('.bloqueada')).toHaveText('Hazaña');
   const barra = page.locator('#coleccion-hazana [role="progressbar"]');
-  await expect(barra).toHaveAttribute('aria-valuemax', '75000');
-  await expect(barra).toHaveAttribute('aria-valuetext', /de 75.000 paladas/);
+  await expect(barra).toHaveAttribute('aria-valuemax', '100000');
+  await expect(barra).toHaveAttribute('aria-valuetext', /de 100.000 paladas/);
+  await expect(page.locator('#coleccion-hazana .hazana-otros')).toHaveText('También vale: 0 de 40 semanas con 2 sesiones o más');
 
   await fichas.filter({ hasText: 'Círculo de runas' }).locator('[data-pieza]').click();
   await expect.poll(() => page.evaluate(() => window.__avisos.at(-1))).toContain('Círculo de runas');

@@ -127,12 +127,14 @@ function arbolDesde(h, clase) {
 }
 
 // Corre un perfil: estado del juego al final, con los talentos repartidos (pasadas = veces que se reparte).
-export function simular(nombre, { semanas = 104, base = new Date('2026-11-23T19:00').getTime(), pasadas = 1 } = {}) {
-  const P = PERFILES[nombre];
+export function simular(nombre, { semanas = 104, base = new Date('2026-11-23T19:00').getTime(), pasadas = 1, clase = null, senda = 'a' } = {}) {
+  const P = clase ? { ...PERFILES[nombre], clase } : PERFILES[nombre];
   let { ses, cal } = generar(P, semanas, base);
   const ahora = base + semanas * 7 * D;
   const opts = { ftp: FTP0, ahora, calendario: P.plan ? cal : null, metaSemanaKm: 20 };
-  let per = { clase: P.clase, arbol: { [P.clase]: {} } };
+  // Senda B desde el principio (se elige en el nivel 20; antes solo pagan las mejoras 1 y 2, que son de la clase).
+  const conSenda = (p) => (senda === 'b' ? { ...p, senda: { [P.clase]: [[0, 'b']] } } : p);
+  let per = conSenda({ clase: P.clase, arbol: { [P.clase]: {} } });
   let h = J.estadoJuego(ses, { ...opts, per });
   // Quien sigue la sugerida hace la prueba del jefe cuando se la propone (dos vueltas: la prueba cambia los niveles).
   if (P.sigueJefe) for (let k = 0; k < 2; k++) {
@@ -140,7 +142,7 @@ export function simular(nombre, { semanas = 104, base = new Date('2026-11-23T19:
     h = J.estadoJuego(ses, { ...opts, per });
   }
   for (let k = 0; k < pasadas; k++) {
-    per = { clase: P.clase, arbol: { [P.clase]: arbolDesde(h, P.clase) } };
+    per = conSenda({ clase: P.clase, arbol: { [P.clase]: arbolDesde(h, P.clase) } });
     h = J.estadoJuego(ses, { ...opts, per });
   }
   const semanaDe = (f) => Math.floor((f - base) / (7 * D)) + 1;
@@ -153,8 +155,12 @@ export function simular(nombre, { semanas = 104, base = new Date('2026-11-23T19:
   const jefes = h.logros.filter((l) => l.tipo === 'jefe').map((l) => semanaDe(l.fecha));
   const bordes = [0, ...jefes, ...(jefes.length < J.CAPITULOS.length ? [semanas] : [])];
   const huecoMax = Math.max(...bordes.slice(1).map((j, i) => j - bordes[i]));
+  // Semana de la hazaña de clase (vela legendaria), o null si no llega.
+  const hz = J.HAZANAS_CLASE.find((x) => x.clase === P.clase);
+  const logroHz = h.logros.find((l) => l.tipo === 'hazana' && l.texto === `Logro: ${hz.nombre}`);
+  const hazanaClase = logroHz ? semanaDe(logroHz.fecha) : null;
   return {
-    h, ses, legendario, jefes, huecoMax, xpSesiones, xpMisiones, pctMisiones: xpSesiones ? (100 * xpMisiones) / xpSesiones : 0,
+    h, ses, legendario, hazanaClase, jefes, huecoMax, xpSesiones, xpMisiones, pctMisiones: xpSesiones ? (100 * xpMisiones) / xpSesiones : 0,
     xpSesionFinal: finales.reduce((a, b) => a + b, 0) / (finales.length || 1),
     diarias: h.logros.filter((l) => l.tipo === 'diaria'), diasDeRemo: new Set(ses.map((s) => clave(s.fecha))).size,
   };
