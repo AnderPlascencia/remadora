@@ -2245,3 +2245,26 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 @media (orientation: landscape) and (max-height: 560px) {
   .modo-remo.vista-carrera .mr-tiempo .mr-etq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
+
+/* ---------- Ronda 2, etapa 5: primer día y resumen ---------- */
+/* UX2-4: «Hoy toca» con título, por qué y Empezar; lo demás en un solo «Más» (al menos 44 px de alto). */
+.hoy-mas { margin-top: 6px; }
+.hoy-mas > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 44px; width: 100%; }
+.hoy-mas > summary::after { order: 1; }
+.hoy-mas > summary > span { order: 0; }
+.hoy-mas-resumen { order: 2; flex: 1 1 100%; font-weight: 500; color: var(--texto-tenue); font-size: var(--t-s); }
+.hoy-mas-resumen:empty { display: none; }
+.hoy-mas[open] > summary { margin-bottom: 2px; }
+.hoy-mas .antes-remar { margin: 12px 0 4px; }
+/* UX2-15: notas y perfil plegados al final del resumen. */
+.hoja-notas { margin: 4px 0 8px; }
+.hoja-notas .hoja-perfil { margin-top: 8px; }
+/* E17: tras una sesión dura sin tu esfuerzo, la pregunta se destaca. */
+.esfuerzo.pide { border: 1px solid color-mix(in srgb, var(--primario) 55%, transparent); background: color-mix(in srgb, var(--primario) 8%, transparent); border-radius: var(--radio); padding: 10px 12px; }
+.esfuerzo.pide #rpe-texto { color: var(--texto); font-weight: 600; }
+/* UX2-16: a 360 px, los 5 botones de esfuerzo en dos filas (3 + 2), con la palabra entera. */
+@media (max-width: 380px) {
+  #rpe { grid-template-columns: repeat(6, 1fr); }
+  #rpe > button { grid-column: span 2; padding: 0 4px; min-height: 52px !important; }
+  #rpe > button:nth-child(4) { grid-column: 2 / span 2; }
+}

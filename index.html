@@ -139,8 +139,10 @@
         <span id="hoy-resumen" class="hoy-resumen"></span>
         <p id="hoy-semana1" class="hoy-semana1" hidden></p>
         <p id="hoy-porque" class="hoy-porque" hidden></p>
-        <p id="hoy-cuerpo" class="hoy-cuerpo" hidden></p>
         <p id="hoy-ajuste" class="hoy-ajuste" hidden></p>
+        <!-- Ronda 2, UX2-4: título, por qué y Empezar a la vista; lo demás en un solo «Más». Si vienes cargado, el aviso sale fuera. -->
+        <p id="hoy-cuerpo" class="hoy-cuerpo" hidden></p>
+        <details id="hoy-mas" class="mas-detalle hoy-mas"><summary><span>Más</span><small id="hoy-mas-resumen" class="hoy-mas-resumen"></small></summary>
         <p id="hoy-cita" class="hoy-cita" hidden></p>
         <p id="hoy-meta" class="hoy-cita hoy-meta" hidden></p>
         <div id="hoy-corta" class="hoy-corta" hidden></div>
@@ -151,6 +153,14 @@
           <canvas id="hoy-perfil" class="grafica baja" role="img" aria-label="Perfil del entrenamiento"></canvas>
           <ol id="hoy-bloques" class="he-bloques"></ol>
         </div>
+        <div id="xp-estimada" class="xp-estimada" hidden></div>
+        <!-- Las preguntas de antes de remar (etapa 16) van aquí, encima de Empezar: debajo de la barra nadie las veía. -->
+        <div id="antes-remar" class="antes-remar" hidden>
+          <span class="etq-campo">Antes de remar <small>(opcional)</small></span>
+          <div id="antes-preguntas"></div>
+          <p id="antes-plegado" class="antes-plegado" hidden><span></span> · <button type="button" id="antes-cambiar" class="enlace-chevron">Cambiar ›</button></p>
+        </div>
+        </details>
         <div id="hoy-sugerencia" class="hoy-sugerencia" hidden><span></span><button type="button" class="boton chico"></button><button type="button" class="enlace-boton sug-no" hidden>Ahora no</button></div>
       </div>
 
@@ -206,7 +216,6 @@
         </label>
       </div>
       </details>
-      <div id="xp-estimada" class="xp-estimada" hidden></div>
       </div>
       <p id="resumen-sesion" class="resumen-sesion" hidden></p>
       <div id="rival" class="rival" hidden aria-live="polite"><svg class="ico" aria-hidden="true"><use href="#i-fantasma"/></svg><span id="rival-texto"></span></div>
@@ -228,13 +237,6 @@
       <div id="perfil-vivo" hidden>
         <div id="vivo-leyenda" class="leyenda"><span class="lr">Rango de potencia</span><span class="lf">Fuera de rango</span><span class="ll">Cualquier potencia</span><span class="ld">Sin tiempo fijo (≈)</span><span class="lp">Tu potencia</span></div>
         <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
-      </div>
-
-      <!-- Etapa 16: las preguntas de antes de remar van encima de Empezar, donde se ven. -->
-      <div id="antes-remar" class="antes-remar" hidden>
-        <span class="etq-campo">Antes de remar <small>(opcional)</small></span>
-        <div id="antes-preguntas"></div>
-        <p id="antes-plegado" class="antes-plegado" hidden><span></span> · <button type="button" id="antes-cambiar" class="enlace-chevron">Cambiar ›</button></p>
       </div>
 
       <div class="fila-botones barra-accion">
@@ -848,7 +850,7 @@
       </div>
       <p id="hoja-sub" class="ayuda"></p>
       <div id="hoja-hito" class="hoja-hito" hidden><b id="hoja-hito-texto"></b><button type="button" id="btn-hito-compartir" class="boton primario"><svg class="ico" aria-hidden="true"><use href="#i-descarga"/></svg><span>Compartir</span></button></div>
-      <!-- Orden del resumen (etapa 6): lo hecho frente al plan, el esfuerzo, lo próximo y después el juego. -->
+      <!-- Orden del resumen (ronda 2, UX2-15): qué hiciste, el esfuerzo, tu héroe y la XP, lo próximo y el resto plegado. -->
       <div id="hoja-capacidad" class="hoja-capacidad" hidden></div>
       <div id="hoja-esfuerzo" class="esfuerzo">
         <h2 id="hoja-esfuerzo-titulo">¿Qué tan duro se sintió?</h2>
@@ -856,9 +858,11 @@
         <div id="rpe" class="rpe" role="group" aria-label="Esfuerzo"></div>
         <details id="rpe-fino-caja" class="rpe-fino-caja"><summary>Afinar de 1 a 10</summary><div id="rpe-fino" class="rpe rpe-fino" role="group" aria-label="Esfuerzo del 1 al 10"></div></details>
         <p id="rpe-texto" class="ayuda"></p>
-        <label class="campo">Notas <textarea id="in-notas" rows="2" maxlength="500" placeholder="Cómo te sentiste, molestias, ajustes de la consola…"></textarea></label>
       </div>
+      <div id="hoja-xp" class="hoja-xp" hidden></div>
       <div id="hoja-proxima" class="hoja-atr" hidden></div>
+      <details id="hoja-notas" class="mas-detalle hoja-notas"><summary id="hoja-notas-titulo">Notas</summary>
+      <label class="campo">Notas <textarea id="in-notas" rows="2" maxlength="500" placeholder="Cómo te sentiste, molestias, ajustes de la consola…"></textarea></label>
       <div id="hoja-tu-perfil" class="hoja-perfil" hidden>
         <p><b>Tu edad y tu peso</b> afinan tus calorías y tu pulso máximo desde la próxima sesión.</p>
         <div class="hoja-perfil-campos">
@@ -867,8 +871,8 @@
         </div>
         <div class="fila-botones"><button type="button" id="hp-guardar" class="boton primario chico">Guardar</button><button type="button" id="hp-no" class="enlace-boton">Ahora no</button></div>
       </div>
+      </details>
       <div id="hoja-podio" class="podio" hidden></div>
-      <div id="hoja-xp" class="hoja-xp" hidden></div>
       <div id="hoja-atr" class="hoja-atr" hidden></div>
       <div id="hoja-ftp" class="aviso exito" hidden></div>
       <details id="hoja-detalle" class="hoja-detalle">

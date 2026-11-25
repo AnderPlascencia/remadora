@@ -4,7 +4,8 @@ import { test, expect, abrirApp, completarBienvenida, remar, terminar, leerAjust
 test('tus días y tu hora: la próxima cita en Hoy, el calendario y el cierre con cita en el resumen', async ({ page }) => {
   await abrirApp(page);
   await completarBienvenida(page);
-  // Hoy ya tiene una cita sin tocar nada (los días de serie y las 19:00).
+  // Hoy ya tiene una cita sin tocar nada (los días de serie y las 19:00), dentro del «Más» (UX2-4).
+  await page.locator('#hoy-mas > summary').click();
   await expect(page.locator('#hoy-cita')).toBeVisible();
   await expect(page.locator('#hoy-cita')).toContainText('Tu próxima cita:');
   await expect(page.locator('#hoy-cita')).toContainText('19:00');

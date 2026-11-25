@@ -110,6 +110,27 @@ export function tituloCapacidad(tipo, tipoPlan) {
   return { etiqueta: plan ? 'Tus watts parecieron de' : 'Entrenaste', plan };
 }
 
+// Resumen honesto (ronda 2, UX2-17): una sesión del plan cortada antes del 80 % no se titula como si se hubiera
+// hecho («Fondo · 1 de 38 min»), y un fondo con el pulso medio en zona 4 o 5 lo dice sin regañar.
+// Devuelve { corta: { hechos, plan } (minutos) | null, zonaAlta: zona de pulso | null }.
+export function lecturaHonesta(s, tipo, ref) {
+  const plan = (s.bloques || []).reduce((a, b) => a + (b.duracion || 0), 0);
+  const corta = s.bloques?.length && s.tiempoMeta == null && plan > 0 && (s.duracion || 0) < 0.8 * plan
+    ? { hechos: Math.max(1, Math.round((s.duracion || 0) / 60)), plan: Math.round(plan / 60) } : null;
+  const suave = tipo === 'fondo' || ['fondo', 'recuperacion'].includes(s.tipoPlan);
+  const z = suave && s.fcProm && ref ? E.zonaFc(s.fcProm, ref) : null;
+  return { corta, zonaAlta: z && z.n >= 4 ? z : null };
+}
+
+// Esfuerzo tras las duras (E17, parte de UX): solo el 30 % de las sesiones lleva tu esfuerzo, y sin él tus rangos
+// del plan no suben. Tras una sesión dura (del plan o por sus watts) que aún no lo tiene, el resumen lo pide con un toque.
+const DURAS = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
+export function pideEsfuerzo(s, ftp) {
+  if (!s || E.rpeSentido(s)) return false;
+  const fi = ftp ? E.factorIntensidadDe(s, ftp) : null;
+  return DURAS.has(s.tipoPlan) || (fi != null && fi >= 0.85);
+}
+
 // ---------- Capacidades en el tiempo ----------
 
 const enVentana = (sesiones, desde, hasta) => sesiones.filter((s) => s.fecha >= desde && s.fecha < hasta);

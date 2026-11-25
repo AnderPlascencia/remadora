@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.129.0 · 2026-11-25
+
+Primer día y resumen (etapa 5 de la ronda 2).
+
+- **«Hoy toca» cabe en una pantalla con Empezar.** La tarjeta muestra qué toca, por qué y tu primera semana. Lo demás va en un solo «Más», que dice en una línea lo que guarda: la XP, «¿Poco tiempo?», tu cita, los detalles y las preguntas de antes de remar (antes quedaban debajo de la barra, donde nadie las veía). Si vienes cargado o agotado, el aviso sigue a la vista. El «Más» recuerda si lo dejaste abierto.
+- **El resumen va en orden:** lo que hiciste, tu esfuerzo, tu héroe y la XP, lo próximo, y las notas plegadas. En la primera sesión, elegir tu héroe sale en la primera pantalla (antes, tras casi dos pantallas y el formulario de perfil). La edad y el peso se piden desde el segundo resumen.
+- **Los botones de esfuerzo caben a 360 px:** van en dos filas (3 + 2), con la palabra entera y la misma altura.
+- **Tras una sesión dura sin tu esfuerzo, la pregunta se destaca:** «Un toque basta: en las sesiones duras, tu esfuerzo decide si suben tus rangos del plan».
+- **Un resumen honesto.** Una sesión del plan cortada antes del 80 % dice «Empezaste Fondo · 1 de 38 min» en vez de «Entrenaste Fondo». Si en un fondo tu pulso medio fue de zona 4 o 5, lo dice sin regañar. «Te quedaste cerca 1» ahora es «1 logro casi conseguido: …», con el nombre.
+- **El siguiente hito de Héroe es uno que alcanzas.** Si el jefe está abierto, el jefe. Si el siguiente hito grande está a más de 8 sesiones, tu próximo punto de talento, y el nivel 10 queda como «después» (antes decía «nivel 10 · ≈ 105 sesiones» el primer día).
+
 ## 0.128.0 · 2026-11-25
 
 Clases justas (etapa 4 de la ronda 2).

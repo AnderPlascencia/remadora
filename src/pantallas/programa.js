@@ -406,6 +406,8 @@ export function arrancarPrograma() {
     pintarHoy();
   });
   // «Solo tengo 15 / 20 min»: la versión corta vale para la próxima sesión con lo elegido; 0 vuelve a la completa.
+  $('#hoy-mas').open = ajustes.si('hoyMas', false);
+  $('#hoy-mas').addEventListener('toggle', () => ajustes.escribir('hoyMas', $('#hoy-mas').open ? '1' : ''));
   $('#hoy-corta').addEventListener('click', (e) => {
     const b = e.target.closest('[data-corta]');
     if (!b) return;
@@ -515,7 +517,9 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
   // Semáforo de fatiga en una línea, para no apretar de más.
   // Sin FTP no hay carga que medir, pero lo que respondiste antes de remar sigue contando.
   const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo: previoHoy() });
-  $('#hoy-cuerpo').hidden = !cuerpo;
+  // Fuera del «Más» solo si vienes cargado o agotado: es el aviso antes de empezar (UX2-4).
+  const avisoCuerpo = !!cuerpo && ['cargado', 'agotado'].includes(cuerpo.clave);
+  $('#hoy-cuerpo').hidden = !avisoCuerpo;
   if (cuerpo) {
     $('#hoy-cuerpo').dataset.estado = cuerpo.clave;
     const motivo = cuerpo.motivos?.[0];
@@ -563,6 +567,11 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
     corta.innerHTML = opciones.length ? `<span>¿Poco tiempo?</span>${opciones.map((m) => `<button type="button" class="boton chico secundario" data-corta="${m}">Solo tengo ${m} min</button>`).join('')}` : '';
   }
   corta.hidden = !corta.innerHTML;
+  // Lo que guarda el «Más», en una línea: así se sabe qué hay sin abrirlo.
+  const enMas = [cuerpo && !avisoCuerpo ? cuerpo.nombre : '', !corta.hidden && !vc ? '¿poco tiempo?' : '', !$('#antes-remar').hidden && !previoHoy()?.sueno ? 'antes de remar' : '', ent ? 'XP y detalles' : 'XP'].filter(Boolean);
+  $('#hoy-mas-resumen').textContent = enMas.join(' · ');
+  // Con la versión corta elegida, el «Más» se abre: es lo que vas a remar.
+  if (vc) $('#hoy-mas').open = true;
   $('#btn-hoy-detalle').hidden = !ent;
   const abierto = !!ent && ajustes.si('hoyDetalle', false);
   $('#btn-hoy-detalle').textContent = abierto ? 'Ocultar detalles' : 'Ver detalles';

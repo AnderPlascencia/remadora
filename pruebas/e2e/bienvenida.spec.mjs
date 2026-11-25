@@ -41,13 +41,20 @@ test('3 toques hasta la primera palada; el héroe se elige en el resumen y la pr
   await page.locator('#btn-grabar').click();
   await avanzar(page, 70_000);
   await terminar(page);
-  // El resumen pide primero el héroe, que se queda con la XP de esta sesión, y luego edad y peso.
+  // El resumen pide el héroe, que se queda con la XP de esta sesión. Edad y peso, desde el segundo (UX2-15).
   const eleccion = page.locator('#hoja-xp .xp-heroe');
   await expect(eleccion).toBeVisible();
-  await expect(page.locator('#hoja-tu-perfil')).toBeVisible();
+  await expect(page.locator('#hoja-tu-perfil')).toBeHidden();
   await eleccion.locator('[data-clase-rapida]').first().click();
   await expect(page.locator('#hoja-xp')).toContainText('ya tiene esta experiencia');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('personaje')).clase)).toBeTruthy();
+  await page.locator('#hoja-cerrar').click();
+  await page.locator('#btn-grabar').click();
+  await avanzar(page, 70_000);
+  await terminar(page);
+  await expect(page.locator('#hoja-notas-titulo')).toHaveText('Notas · tu edad y peso');
+  await page.locator('#hoja-notas > summary').click();
+  await expect(page.locator('#hoja-tu-perfil')).toBeVisible();
   await page.locator('#hp-edad').fill('41');
   await page.locator('#hp-peso').fill('82');
   await page.locator('#hp-guardar').click();

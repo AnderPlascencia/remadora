@@ -8,6 +8,8 @@ test('la versión corta de la sesión del día se elige en Hoy, se rema y se gua
   await expect(page.locator('#hoy-etq')).toHaveText('Hoy toca');
   const nombre = await page.locator('#hoy-nombre').textContent();
   const corta = page.locator('#hoy-corta');
+  await expect(page.locator('#hoy-mas-resumen')).toContainText('¿poco tiempo?');
+  await page.locator('#hoy-mas > summary').click();
   await expect(corta).toBeVisible();
   const boton = corta.locator('[data-corta]').first();
   const min = Number(await boton.getAttribute('data-corta'));

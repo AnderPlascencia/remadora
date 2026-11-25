@@ -65,8 +65,9 @@ export function ctxPlanDePerfil(p, { sinHistorial = true } = {}) {
   return ctx;
 }
 
-// Perfil por partes (etapa 20): tras tus primeras sesiones, el resumen pide edad y peso si faltan.
+// Perfil por partes (etapa 20): tras tus primeras sesiones (desde la segunda), el resumen pide edad y peso si faltan.
 export const POR_PARTES_SESIONES = 3;
 export function pedirEnResumen({ resumen, previas = 0, edad = 0, peso = 0, descartado = false }) {
-  return !!resumen && !descartado && previas < POR_PARTES_SESIONES && (!edad || !peso);
+  // Desde el segundo resumen (ronda 2, UX2-15): en el primero manda elegir tu héroe.
+  return !!resumen && !descartado && previas >= 1 && previas < POR_PARTES_SESIONES && (!edad || !peso);
 }
