@@ -23,12 +23,13 @@ export default defineConfig({
   },
   projects: [
     { name: 'pixel7' },
-    // El teléfono de Ander (CPH2653): 1440 × 3168 a densidad 4. Solo corre las pruebas de cuadros por segundo y de
-    // densidad: a densidad 4 la carrera pintaba 2,3 veces más píxeles que en el Pixel 7 y rendía la mitad.
+    // El teléfono de Ander (CPH2653): 1440 × 3168 a densidad 4. Corre las pruebas de cuadros por segundo y de
+    // densidad (a densidad 4 la carrera pintaba 2,3 veces más píxeles que en el Pixel 7 y rendía la mitad) y las de
+    // accesibilidad, porque a 360 px de ancho aparecen botones de 43 px y textos que en el Pixel 7 no se ven.
     {
       name: 'cph2653',
-      testMatch: 'rendimiento.spec.mjs',
-      grep: /cuadros por segundo|densidad/,
+      testMatch: ['rendimiento.spec.mjs', 'accesibilidad.spec.mjs'],
+      grep: /cuadros por segundo|densidad|tema |hoja abierta/,
       use: { viewport: { width: 360, height: 792 }, screen: { width: 360, height: 792 }, deviceScaleFactor: 4 },
     },
   ],

@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.126.5 · 2026-11-25
+
+Letra más grande y mejor contraste (etapa 1 de la ronda 2: accesibilidad y letra).
+
+- **Ya no hay textos de 12 px.** El tamaño más chico sube a 13 px en toda la app. Lo que se lee para decidir (precios, bloqueos y nombres de la Tienda, misiones, progreso de la hazaña, días del calendario y etiquetas de «Lo que sigue») pasa a 14 px.
+- **El tema claro se lee mejor.** Los textos grises, el verde de la XP y el dorado de las monedas son más oscuros. En el modo remo, todo lo que lees llega a 7:1 (AAA) en los tres temas, también el botón Terminar, que ahora es un rojo más hondo.
+- **Botones de 44 px también en tu teléfono.** El botón de salir del modo remo medía 40 px en horizontal. Los días del calendario de Programa y los de «Días que remas» en Ajustes medían 43 px a 360 px de ancho. Los enlaces dentro del texto («Planes › Programa ›», «Cambiar ›») tienen zona táctil de 44 px.
+- **Las pruebas de accesibilidad corren también a 360 × 792**, el tamaño de tu teléfono, y revisan las cuatro subpestañas de Héroe y el modo remo de pie y en horizontal.
+
 ## 0.126.4 · 2026-11-24
 
 La app abre con menos código (corrección previa C5 de la ronda 2).
