@@ -6,6 +6,8 @@ test.beforeEach(async ({ page }) => {
   await esperarAviso(page, /^Tu plan está listo/);
   await avanzar(page, 3_000);
   await expect(page.locator('#hoy-etq')).toHaveText('Hoy toca');
+  // Desde la ronda 2 (UX2-4), las preguntas van dentro del «Más» de la tarjeta Hoy.
+  await page.locator('#hoy-mas > summary').click();
 });
 
 test('antes de remar: responder cambia el estado de hoy, se pliega y desaparece tras la primera sesión', async ({ page }) => {

@@ -30,10 +30,11 @@ test('primera semana: cuenta las sesiones de los primeros 7 días y cuántas lle
 });
 
 test('perfil por partes: edad y peso en el resumen de las primeras sesiones, si faltan', () => {
-  assert.equal(Pf.pedirEnResumen({ resumen: true, previas: 0 }), true);
+  assert.equal(Pf.pedirEnResumen({ resumen: true, previas: 0 }), false); // en el primero manda el héroe
+  assert.equal(Pf.pedirEnResumen({ resumen: true, previas: 1 }), true);
   assert.equal(Pf.pedirEnResumen({ resumen: true, previas: 2, edad: 40 }), true);
   assert.equal(Pf.pedirEnResumen({ resumen: true, previas: 0, edad: 40, peso: 80 }), false);
   assert.equal(Pf.pedirEnResumen({ resumen: true, previas: Pf.POR_PARTES_SESIONES }), false);
-  assert.equal(Pf.pedirEnResumen({ resumen: true, previas: 0, descartado: true }), false);
+  assert.equal(Pf.pedirEnResumen({ resumen: true, previas: 1, descartado: true }), false);
   assert.equal(Pf.pedirEnResumen({ resumen: false, previas: 0 }), false);
 });

@@ -69,6 +69,7 @@ export const AJUSTES = {
   seccionEnt: A('texto', 'potencia', false),
   subirAtr: A('texto', '', false),
   hoyDetalle: A('si', false, false),
+  hoyMas: A('si', false, false), // ronda 2, UX2-4: el «Más» de la tarjeta Hoy abierto
   clasificacionVista: A('numero', -1, false),
   // Avisos ya vistos y marcas de tiempo
   ultimoRespaldo: A('numero', 0, false),

@@ -549,7 +549,7 @@ export async function pintarAtrSesion(s, previas, resumen) {
   // Fuera del plan (día suave remado fuerte): primero y en ámbar, sin puntos.
   const fuera = r.fuera ? `<p class="aviso fuera-plan">${ico(r.fuera.icono)}<span><b>${escaparHtml(r.fuera.titulo)}</b> ${escaparHtml(r.fuera.detalle)}</span></p>` : '';
   caja.innerHTML = `${fuera}${r.logros.length ? `<h3>Lo que lograste</h3><ul class="lista-cond">${r.logros.map((x) => filaCond(x, 'hecho')).join('')}</ul>` : ''}
-    ${r.cerca.length ? `<details class="mas-detalle"><summary>Te quedaste cerca <span class="seccion-resumen">${r.cerca.length}</span></summary><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul></details>` : ''}`;
+    ${r.cerca.length ? `<details class="mas-detalle"><summary>${r.cerca.length === 1 ? `1 logro casi conseguido: <b>${escaparHtml(r.cerca[0].titulo)}</b>` : `${r.cerca.length} logros casi conseguidos`}</summary><ul class="lista-cond">${r.cerca.map((x) => filaCond(x, 'cerca')).join('')}</ul></details>` : ''}`;
 }
 
 // Podio de la carrera contra fantasmas: puesto, tiempo (o diferencia) y XP de cada fantasma vencido.

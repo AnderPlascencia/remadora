@@ -44,7 +44,13 @@ function pintarRpe() {
   const grande = tuyo ? Math.min(10, Math.ceil(tuyo / 2) * 2) : null;
   $('#rpe').innerHTML = RPE_GRANDE.map(([v, t]) => `<button type="button" class="boton rpe-grande${grande === v ? ' activo' : ''}" data-rpe="${v}" aria-pressed="${grande === v}"><span>${t}</span><small>${v}</small></button>`).join('');
   $('#rpe-fino').innerHTML = Array.from({ length: 10 }, (_, i) => `<button type="button" class="boton${tuyo === i + 1 ? ' activo' : ''}" data-rpe="${i + 1}" aria-pressed="${tuyo === i + 1}">${i + 1}</button>`).join('');
-  $('#rpe-texto').textContent = tuyo ? `${tuyo} de 10: ${TEXTO_RPE[tuyo]}` : 'Toca cómo se sintió: cuenta para tu carga aunque no tengas FTP.';
+  // Tras una sesión dura sin tu esfuerzo, se pide destacado: es lo que deja subir tus rangos del plan (E17).
+  const pide = Cap.pideEsfuerzo(s, s.ftp || ftp());
+  $('#hoja-esfuerzo').classList.toggle('pide', pide);
+  // Sin nada que decir (aún sin marcar y no era dura), la línea se calla: deja sitio para tu héroe (UX2-15).
+  $('#rpe-texto').textContent = tuyo ? `${tuyo} de 10: ${TEXTO_RPE[tuyo]}`
+    : pide ? 'Un toque basta: en las sesiones duras, tu esfuerzo decide si suben tus rangos del plan.' : '';
+  $('#rpe-texto').hidden = !$('#rpe-texto').textContent;
   document.querySelectorAll('#rpe button, #rpe-fino button').forEach((b) => {
     b.onclick = async () => {
       // Una sesión de antes con el esfuerzo del pulso en `rpe`: ese pasa a rpePulso y el tuyo queda en rpe.
@@ -125,6 +131,7 @@ function pintarPerfilPorPartes(resumen, previas) {
   const p = perfil();
   const caja = $('#hoja-tu-perfil');
   caja.hidden = !Pf.pedirEnResumen({ resumen, previas: previas.length, edad: p.edad, peso: p.peso, descartado: ajustes.si('perfilPorPartesNo', false) });
+  $('#hoja-notas-titulo').textContent = caja.hidden ? 'Notas' : 'Notas · tu edad y peso';
   if (caja.hidden) return;
   $('#hp-edad').value = p.edad || '';
   $('#hp-peso').value = p.peso || '';
@@ -244,6 +251,7 @@ export function abrirSesion(s, { resumen = false, previas = [], ftpAuto = null }
 
   pintarRpe();
   $('#in-notas').value = s.notas || '';
+  $('#hoja-notas').open = !resumen && !!s.notas;
   $('#hoja-intervalos').innerHTML = tablaIntervalos(s);
   $('#hoja-prediccion').innerHTML = tablaPrediccion(s);
 
@@ -279,8 +287,12 @@ function pintarCapacidadSesion(s) {
   // Si tus watts no se parecen al plan (un fondo remado a tirones), se dice así y no «Entrenaste Sprints».
   const nombre = avanzado() ? a.nombre : a.simple;
   const { etiqueta, plan } = Cap.tituloCapacidad(a.tipo, s.tipoPlan);
-  const cab = `<span class="etq">${etiqueta}</span><b>${nombre}</b>`;
-  const aviso = plan ? `<p class="ayuda hc-plan">El plan era de ${(avanzado() ? plan.nombre : plan.simple).toLowerCase()}; abajo, lo que dicen tus watts.</p>` : '';
+  // Una sesión del plan cortada no se titula como hecha, y un fondo con el pulso alto lo dice (UX2-17).
+  const { corta, zonaAlta } = Cap.lecturaHonesta(s, a.tipo, fcRef());
+  const cab = corta ? `<span class="etq">Empezaste</span><b>${nombre} · ${corta.hechos} de ${corta.plan} min</b>`
+    : `<span class="etq">${etiqueta}</span><b>${nombre}</b>`;
+  const pulso = zonaAlta ? `<p class="ayuda hc-pulso">Tu pulso medio fue de zona ${zonaAlta.n} (${zonaAlta.nombre.toLowerCase()}); los fondos rinden más en zona 2.</p>` : '';
+  const aviso = (plan && !corta ? `<p class="ayuda hc-plan">El plan era de ${(avanzado() ? plan.nombre : plan.simple).toLowerCase()}; abajo, lo que dicen tus watts.</p>` : '') + pulso;
   caja.innerHTML = `<div class="hc-cabecera">${cab}</div>${aviso}
     <div class="metricas compacta">${a.datos.map((d) => `<div class="metrica" title="${escaparHtml(d.ayuda)}"><span class="etq">${escaparHtml(d.etq)}</span><span class="valor">${d.valor}</span></div>`).join('')}</div>
     <p class="ayuda">${a.lectura}</p>`;

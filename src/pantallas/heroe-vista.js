@@ -341,7 +341,21 @@ function pintarCamino(h, per, clase) {
   const sinElegir = S && h.nivel >= J.NIVEL_SENDA && !per.senda?.[clave]?.length;
   const sig = hitos.find((x) => x.nivel > h.nivel);
   const caja = $('#camino-siguiente');
-  if (sinElegir) {
+  // Ronda 2, UX2-24: el hito destacado es el próximo alcanzable. Con el jefe abierto, el jefe; si el siguiente hito
+  // está a más de 8 sesiones, tu próximo punto de talento (y el hito grande queda como «después»).
+  const punto = h.nivel < J.NIVEL_MAX ? Math.max(PRIMER_PUNTO, (Math.floor(h.nivel / 3) + 1) * 3) : null;
+  const sesionesA = (n) => (h.xpPorSesion > 0 ? (J.xpParaNivel(n) - h.xp) / h.xpPorSesion : 0);
+  const cap = h.capitulo?.listo ? h.capitulo : null;
+  const despues = sig ? `Después: nivel ${sig.nivel}, ${sig.nivel === J.NIVEL_SENDA && S ? 'eliges tu senda' : sig.titulo.charAt(0).toLowerCase() + sig.titulo.slice(1)}.` : '';
+  if (!sinElegir && cap) {
+    caja.innerHTML = `<div class="eti">Siguiente hito · ya puedes</div><h3>Jefe: ${escaparHtml(cap.jefe.nombre)}</h3>
+      <p>El capítulo ${cap.n} está abierto: lo vences con ${escaparHtml(NOMBRE_PRUEBA[cap.preparar] || 'su prueba')} o con una sesión dura cumplida. ${escaparHtml(despues)}</p>`;
+  } else if (!sinElegir && sig && punto && punto < sig.nivel && sesionesA(sig.nivel) > 8) {
+    const primero = J.puntosDeNivel(h.nivel) === 0;
+    const cuando = enSesiones(J.xpParaNivel(punto) - h.xp, h);
+    caja.innerHTML = `<div class="eti">Siguiente hito · nivel ${punto}${cuando ? ` · ${cuando}` : ''}</div><h3>${primero ? 'Tu primer punto de talento' : 'Un punto de talento más'}</h3>
+      <p>Lo repartes en Talentos y senda: XP o metros de ventaja con lo que más remas. ${escaparHtml(despues)}</p>`;
+  } else if (sinElegir) {
     caja.innerHTML = `<div class="eti">Nivel ${J.NIVEL_SENDA} · ${escaparHtml(J.nombreRango(J.NIVEL_SENDA, clave))}</div><h3>Elige tu senda</h3>
       <p>Cambia tus mejoras 3, 4 y la maestría. Puedes cambiar gratis cuando quieras: tus grados se conservan.</p>${tarjetaSendas(clave, senda, h.nivel, true)}`;
   } else if (sig) {
