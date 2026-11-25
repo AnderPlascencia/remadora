@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.131.0 · 2026-11-25
+
+Arreglos rápidos del juego (etapa 7 de la ronda 2).
+
+- **La diaria de los días de plan ya no se cumple sola.** Pedía 15 o 20 min parejos, y en una sesión de 45 los hace casi cualquiera: se cumplía todos los días. Desde el 26 de noviembre, cuando ya remaste esa sesión 3 veces o más en las últimas 4 semanas, pide el % de la sesión con la potencia pareja que sueles hacer en ella, o, en días con rango, mantenerte en tu rango como sueles. La meta sale de tu historial: la cumples unas 2 de cada 3 veces. Las pruebas del plan no cambian.
+- **Los paisajes con filtro cuestan 200–375 monedas** (antes 600–3000), menos que la laguna. Son el fiordo y la laguna con otra luz, y costaban más que los pintados a mano. Quien ya compró uno lo conserva.
+- Por dentro: la XP que se paga y la que se muestra salen de la misma función, con una prueba que compara cada logro, jefe y misión semanal con lo que de verdad paga.
+
 ## 0.130.0 · 2026-11-25
 
 Ganarte a ti mismo (etapa 6 de la ronda 2).

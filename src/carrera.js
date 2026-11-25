@@ -110,17 +110,19 @@ export const PAISAJES = {
 // lienzo, se ven como el base) y sus propios colores de cielo y agua.
 const variante = (base, extra) => ({ ...PAISAJES[base], ...extra, base, colores: { ...PAISAJES[base].colores, ...extra.colores } });
 Object.assign(PAISAJES, {
-  'fiordo-invierno': variante('fiordo', { nombre: 'Fiordo en invierno', texto: 'El mismo fiordo bajo la nieve, con luz blanca y fría.', precio: 600, filtro: 'saturate(.35) brightness(1.12) contrast(.95)',
+  // Ronda 2, R2-14: las variantes son el mismo paisaje con un filtro, así que cuestan 200–375, menos que la laguna (400), y
+  // los paisajes pintados a mano (700–2700) quedan arriba de la escalera. Quien ya compró una la conserva.
+  'fiordo-invierno': variante('fiordo', { nombre: 'Fiordo en invierno', texto: 'El mismo fiordo bajo la nieve, con luz blanca y fría.', precio: 200, filtro: 'saturate(.35) brightness(1.12) contrast(.95)',
     colores: { agua2d: ['#3E6A86', '#2A4F66'], cielo3d: ['#C9D4DE', '#E8EDF1'], agua3d: ['#4A6476', '#24394A'], reflejo: '214,224,232', tierra2d: '#D8DEE3' } }),
-  'laguna-atardecer': variante('laguna', { nombre: 'Laguna al atardecer', texto: 'Sol bajo sobre la laguna: agua de cobre y palmeras a contraluz.', precio: 900, filtro: 'sepia(.45) saturate(1.5) hue-rotate(-12deg) brightness(.95)',
+  'laguna-atardecer': variante('laguna', { nombre: 'Laguna al atardecer', texto: 'Sol bajo sobre la laguna: agua de cobre y palmeras a contraluz.', precio: 250, filtro: 'sepia(.45) saturate(1.5) hue-rotate(-12deg) brightness(.95)',
     colores: { agua2d: ['#C9773E', '#8A4B2A'], cielo3d: ['#F29A5B', '#FBD08B'], agua3d: ['#B86B3E', '#5E3322'], reflejo: '250,190,130' } }),
-  'fiordo-tormenta': variante('fiordo', { nombre: 'Fiordo en tormenta', texto: 'Nubes de plomo y agua oscura: se rema igual, pero impone.', precio: 1300, filtro: 'grayscale(.55) brightness(.72) contrast(1.15)',
+  'fiordo-tormenta': variante('fiordo', { nombre: 'Fiordo en tormenta', texto: 'Nubes de plomo y agua oscura: se rema igual, pero impone.', precio: 300, filtro: 'grayscale(.55) brightness(.72) contrast(1.15)',
     colores: { agua2d: ['#2B3C48', '#18242D'], cielo3d: ['#59636C', '#8A939B'], agua3d: ['#26323B', '#111A21'], reflejo: '150,162,172' } }),
-  'laguna-luna': variante('laguna', { nombre: 'Laguna de luna llena', texto: 'La laguna de noche, plateada por la luna.', precio: 1800, filtro: 'brightness(.5) saturate(.7) hue-rotate(185deg)',
+  'laguna-luna': variante('laguna', { nombre: 'Laguna de luna llena', texto: 'La laguna de noche, plateada por la luna.', precio: 325, filtro: 'brightness(.5) saturate(.7) hue-rotate(185deg)',
     colores: { agua2d: ['#1A3A5C', '#0C2238'], cielo3d: ['#0F1E36', '#2B4468'], agua3d: ['#16324F', '#08172A'], reflejo: '170,190,230', tierra2d: '#3A4250' } }),
-  'fiordo-aurora': variante('fiordo', { nombre: 'Fiordo bajo la aurora', texto: 'Noche polar con el cielo verde de la aurora boreal.', precio: 2400, filtro: 'brightness(.55) saturate(1.3) hue-rotate(115deg)',
+  'fiordo-aurora': variante('fiordo', { nombre: 'Fiordo bajo la aurora', texto: 'Noche polar con el cielo verde de la aurora boreal.', precio: 350, filtro: 'brightness(.55) saturate(1.3) hue-rotate(115deg)',
     colores: { agua2d: ['#0E3B3A', '#06201F'], cielo3d: ['#08221F', '#1F6B55'], agua3d: ['#0C3330', '#041716'], reflejo: '120,230,180' } }),
-  'laguna-dorada': variante('laguna', { nombre: 'Laguna dorada', texto: 'La laguna de las leyendas: agua y cielo de oro.', precio: 3000, filtro: 'sepia(.85) saturate(2.2) brightness(1.05)',
+  'laguna-dorada': variante('laguna', { nombre: 'Laguna dorada', texto: 'La laguna de las leyendas: agua y cielo de oro.', precio: 375, filtro: 'sepia(.85) saturate(2.2) brightness(1.05)',
     colores: { agua2d: ['#C9A227', '#8C6D12'], cielo3d: ['#E8C45A', '#FBE7A1'], agua3d: ['#B8912A', '#6E5310'], reflejo: '255,225,140' } }),
 });
 // Colección de paisajes propios (v0.54.0): cinco escenarios con su panorama, su orilla 3D y su costa 2D, renderizados
