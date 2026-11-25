@@ -16,7 +16,8 @@ import * as Pf from '../perfil.js';
 import { aplicarEdad, avanzado, pintarPerfil } from './ajustes.js';
 import { guardarFtp } from './preparar.js';
 import { formatoRecord } from './progreso.js';
-import { hitoSesion, leerPersonaje, pintarAtrSesion, pintarPodio, pintarXpSesion } from './heroe.js';
+import { hitoSesion, leerPersonaje, pintarAtrSesion, pintarPodio } from './heroe.js';
+import { pintarXpSesion } from './resumen-xp.js';
 
 // ---------- Resumen / detalle de sesión ----------
 // Escala CR10: los cinco botones grandes caen en 2, 4, 6, 8 y 10 con el mismo nombre.

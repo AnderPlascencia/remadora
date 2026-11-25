@@ -118,7 +118,11 @@ const muestras = (seg, { w = 150, ruido = 0.03, spm = 24, dspm = 0.5, desde = 0 
 {
   const nuevos = Object.values(PAISAJES).filter((p) => p.base);
   assert.ok(nuevos.length >= 6);
-  for (const p of [...Object.values(PAISAJES).filter((x) => x.precio), ...Object.values(VELAS)]) assert.ok(p.precio >= 400 && p.precio <= 3000, `${p.nombre}: ${p.precio}`);
+  // Ronda 2, R2-14: las variantes con filtro cuestan 200–375, menos que cualquier paisaje pintado a mano.
+  for (const p of [...Object.values(PAISAJES).filter((x) => x.precio && !x.filtro), ...Object.values(VELAS)]) assert.ok(p.precio >= 400 && p.precio <= 3000, `${p.nombre}: ${p.precio}`);
+  const conFiltro = Object.values(PAISAJES).filter((x) => x.filtro);
+  assert.ok(conFiltro.length >= 6 && conFiltro.every((x) => x.precio >= 200 && x.precio <= 375));
+  assert.ok(Math.max(...conFiltro.map((x) => x.precio)) < Math.min(...Object.values(PAISAJES).filter((x) => x.precio && !x.filtro && x.panorama).map((x) => x.precio)));
   assert.ok(Object.values(VELAS).length >= 5);
   const per = { velas: [], gastado: 100 };
   assert.equal(comprarVelas(per, 'oro', 2000), null, 'sin monedas no se compra');
