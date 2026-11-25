@@ -707,13 +707,16 @@ function actualizarAtrVivo() {
     a.ultimoPop = estado.sesion.t;
   }
   for (const k of ATR_VIVO) a.vistos[k] = Math.max(a.vistos[k] || 0, v.puntos[k]);
-  pintarAtrVivo(v);
+  // Un bloque con meta de golpes o de pulso: el reto de watts no compite con ella, va en segundo plano (UX2-5).
+  pintarAtrVivo(v, !!(b?.metrica && !rw));
 }
-function pintarAtrVivo(v) {
+function pintarAtrVivo(v, otraMeta = false) {
   const r = v.reto;
   const n = nombreAtributo(r.atributo);
   const anillo = `<span class="anillo" style="--p:${Math.round(r.progreso * 100)}%" aria-hidden="true"></span>`;
-  const meta = r.faltanSeg ? `+1 ${n} en ${r.faltanSeg} s` : r.corto || `Suma ${n}`;
+  // Fuera de la zona que suma, el reto dice hacia dónde ir, sin verde: el verde es solo para cuando estás dentro (UX2-9).
+  const flecha = { sube: '↑ ', baja: '↓ ' }[r.direccion] || '';
+  const meta = r.faltanSeg ? `+1 ${n} en ${r.faltanSeg} s` : `${flecha}${r.corto || `Suma ${n}`}`;
   // En Entrenar el título ya va al lado: si trae los watts, la meta no los repite.
   const metaCaja = !r.faltanSeg && /\d W\b/.test(r.titulo) ? `Suma ${n}` : meta;
   $('#atr-vivo').hidden = false;
@@ -725,9 +728,13 @@ function pintarAtrVivo(v) {
   $('#atr-reto').innerHTML = `${anillo}<div><b>${escaparHtml(r.titulo)}</b><small>${escaparHtml(r.detalle)}</small></div><span class="cond-pts">${metaCaja}</span>`;
   const mr = $('#mr-atr');
   mr.hidden = false;
+  mr.classList.toggle('fuera', r.dentro === false);
+  mr.classList.toggle('secundario', otraMeta);
   // Una línea corta: el anillo es el avance hacia el próximo punto y va pegado a su texto; el resto, el total de hoy.
   const hoy = ATR_VIVO.reduce((a, k) => a + (v.puntos[k] || 0), 0);
-  mr.innerHTML = `${anillo}<span><b>${meta}</b> · ${hoy ? `hoy +${hoy} ${hoy === 1 ? 'punto' : 'puntos'}` : 'aún sin puntos hoy'}</span>`;
+  // Fuera de la zona, solo hacia dónde ir: el total de hoy queda en Entrenar.
+  const total = r.dentro === false ? '' : ` · ${hoy ? `hoy +${hoy} ${hoy === 1 ? 'punto' : 'puntos'}` : 'aún sin puntos hoy'}`;
+  mr.innerHTML = `${anillo}<span><b>${meta}</b>${total}</span>`;
   mr.title = `El anillo es lo que te falta para ${r.faltanSeg ? `+1 ${n}` : 'el próximo punto'}`;
 }
 let popAtrTimer = 0;

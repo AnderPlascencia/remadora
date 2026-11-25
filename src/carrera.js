@@ -864,7 +864,8 @@ function trozos(ctx, partes, x, y, medir = false) {
 function partesReloj(r) {
   const p = [['⏱ ', '700 13px system-ui, sans-serif', '#CBD5E1'], [reloj(r.lleva), '800 15px system-ui, sans-serif', '#F8FAFC']];
   if (r.falta != null) {
-    p.push(['   faltan ', '600 12px system-ui, sans-serif', '#CBD5E1']);
+    // Lo que falta de la sesión entera (el del bloque va arriba, con su etiqueta «Bloque 1/3»).
+    p.push(['   fin en ', '600 12px system-ui, sans-serif', '#CBD5E1']);
     p.push([`${r.porRitmo ? '≈' : ''}${reloj(r.falta)}`, '800 15px system-ui, sans-serif', '#FDE047']);
   }
   if (r.lugar && r.falta) p.push([`  · a este ritmo, ${r.lugar}º`, '600 12px system-ui, sans-serif', '#CBD5E1']);
@@ -944,15 +945,17 @@ function cabecera(c, { ctx, ancho }) {
     });
     y = 48;
   } else if (l1) {
+    // En horizontal, el reloj va a la derecha: el título se centra en lo que queda a su izquierda, sin pisarlo.
+    const [izq, der] = ancha(c) ? [10, ladoDerecho(c, ctx, ancho, l2)] : [insigniaW + 8, ancho - insigniaW - 8];
     ctx.textAlign = 'center';
     ctx.font = '800 16px system-ui, sans-serif';
     ctx.fillStyle = color;
-    ctx.fillText(cabe(ctx, l1, ancho - 2 * insigniaW - 16), ancho / 2, 21);
+    ctx.fillText(cabe(ctx, l1, der - izq), (izq + der) / 2, 21);
     y = 30;
   }
   ctx.textAlign = 'left';
   if (ancha(c)) {
-    if (!e.lugar) ladoDerecho(c, ctx, ancho, l2);
+    if (!e.lugar && !l1) ladoDerecho(c, ctx, ancho, l2);
     return;
   }
   if (e.reloj) {

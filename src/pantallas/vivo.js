@@ -588,10 +588,14 @@ function pintarGraficaRemo(t) {
   const previa = !estado.sesion && $('#sel-entrenamiento').value ? estado.entrenamientoPrevio : null;
   const plan = ent || previa;
   if (plan && Ent.tipoDe(plan) === 'intervalos') {
-    leyenda('<span class="lr">Rango objetivo</span><span class="lf">Fuera de rango</span><span class="lp">Tu potencia</span>');
+    const bloques = estado.sesion ? estado.sesion.bloques : paraPerfil(plan.bloques);
+    // «Rango objetivo» solo si algún bloque pide watts: en un plan libre o por golpes, la gráfica no marca rango (UX2-8).
+    const conRango = bloques.some((b) => b.metrica === 'watts');
+    leyenda(`${conRango ? '<span class="lr">Rango objetivo</span>' : ''}<span class="lf">${conRango ? 'Fuera de rango' : 'Libre, golpes o pulso'}</span><span class="lp">Tu potencia</span>`);
     canvas.setAttribute('aria-label', 'Plan de potencia con tu potencia real');
     graficaRemo.reiniciar();
-    dibujarPerfil(canvas, estado.sesion ? estado.sesion.bloques : paraPerfil(plan.bloques), estado.sesion ? estado.sesion.muestras.map((x) => [x.t, x.w]) : [], estado.sesion ? t : null);
+    // En vivo, 10 min que siguen a «ahora» (antes la sesión entera, y tu línea era una astilla al principio).
+    dibujarPerfil(canvas, bloques, estado.sesion ? estado.sesion.muestras.map((x) => [x.t, x.w]) : [], estado.sesion ? t : null, { ventana: estado.sesion ? 600 : null });
   } else if (plan) {
     const unidad = Ent.METRICAS_OBJETIVO[plan.objetivo.metrica].unidad;
     leyenda(`<span class="lw">Llevas (${unidad})</span><span class="lr">Meta ${plan.objetivo.valor} ${unidad}</span><span class="lp">Proyección a tu ritmo</span>`);
@@ -783,10 +787,12 @@ function pintarBloque(t) {
   $('#bloque-meta').textContent = b.metrica ? `Meta: ${meta}${b.deFc ? ' · con tu edad sería por pulso' : ''}` : 'Libre';
   $('#bloque-siguiente').textContent = siguiente ? `Sigue: ${textoSiguiente(siguiente, f)}` : 'Último intervalo';
   $('#bloque-barra').style.width = `${100 * info.fraccion}%`;
-  $('#mr-nombre').textContent = nombre;
+  // Modo remo: el nombre del bloque entero arriba; el número de bloque va con su reloj, en la línea de debajo, para que
+  // «7:27» no se confunda con lo que falta de la sesión (UX2-6 y UX2-7).
+  $('#mr-nombre').textContent = b.nombre || 'Intervalo';
   $('#mr-meta-texto').textContent = meta;
   $('#mr-resta').textContent = resta;
-  $('#mr-resta-etq').textContent = siguiente ? `luego ${Ent.textoMeta(siguiente, f, fcRef())}` : 'último';
+  $('#mr-resta-etq').textContent = `Bloque ${i + 1}/${estado.sesion.plan.length} · ${siguiente ? `luego ${Ent.textoMeta(siguiente, f, fcRef())}` : 'el último'}`;
   $('#mr-barra').style.width = `${100 * info.fraccion}%`;
   marcarRango(Ent.enRango(b, actual.watts, actual.spm, f, actual.split, actual.fc), !!Ent.rangoWatts(b, f), bloqueSuave(b));
 }
