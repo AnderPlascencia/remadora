@@ -171,8 +171,9 @@ function pintarInsigniasHistoria(h, per) {
     const ganada = h.insignias.has(c.objeto);
     const actual = !ganada && i === h.capitulosHechos && h.capitulo;
     const avance = ganada ? null : actual
-      ? (h.capitulo.listo ? { texto: `¡Ya puedes enfrentarlo! También vale cumplir la sesión clave de tu plan, ganar en Alta mar o cumplir una semana del plan.` }
-        : { texto: `Se abre al cumplir ${h.capitulo.progreso.map((r) => avanceMision({ clave: `cap-${r.clave}`, meta: r.meta, valor: r.valor })).join(' · ')}, o en el nivel ${c.nivel}` })
+      ? (h.capitulo.listo ? { texto: `¡Ya puedes enfrentarlo! También vale cumplir una sesión dura de tu plan o de las sugeridas, ganar en Alta mar o cumplir una semana (del plan, o 3 sugeridas).` }
+        : h.capitulo.soloNivel ? { texto: `Se abre en el nivel ${c.nivel} (vas en el ${h.nivel})` }
+          : { texto: `Se abre al cumplir ${h.capitulo.progreso.map((r) => avanceMision({ clave: `cap-${r.clave}`, meta: r.meta, valor: r.valor })).join(' · ')}, o en el nivel ${c.nivel}` })
       : { texto: `Antes, termina el capítulo ${i}.` };
     return { objeto: c.objeto, titulo: `Capítulo ${i + 1} · ${c.nombre}`, ganada, pasado: ganada, orden: ganada ? 2 : actual ? 0.5 : 1 + i / 100,
       como: ganada ? `Venciste a ${c.jefe.nombre}` : `Vence a ${c.jefe.nombre}: ${c.jefe.texto.charAt(0).toLowerCase()}${c.jefe.texto.slice(1)}`, avance };
@@ -420,9 +421,9 @@ function pintarMisiones(h) {
   $('#mis-semanales').innerHTML = pendientesPrimero(h.semanales).map((m) => filaMision(m)).join('');
   const c = h.capitulo;
   $('#mis-capitulo').innerHTML = c ? `<div class="cap-cabecera"><span class="etq">Capítulo ${c.n} de ${J.CAPITULOS.length}</span><b>${c.nombre}</b><p>${c.historia}</p>${c.pendiente ? '<p class="cap-avance">Ya lo venciste antes de tiempo: en cuanto se desbloquee, el capítulo es tuyo con tu próxima sesión.</p>' : ''}</div>
-    <ul class="lista misiones">${c.progreso.map((r) => filaMision({ clave: `cap-${r.clave}`, texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
+    <ul class="lista misiones">${c.progreso.map((r) => filaMision({ clave: r.clave === 'nivel' ? `nivel${r.meta}` : `cap-${r.clave}`, texto: r.texto, meta: r.meta, valor: r.valor, monedas: '', hecha: r.valor >= r.meta })).join('')}</ul>
     <div class="jefe ${c.listo ? 'listo' : ''}">${ico('i-fuego')}<div><b>Jefe: ${c.jefe.nombre}</b><small>${c.jefe.texto}${
-      c.listo ? ' · ¡ya puedes enfrentarlo!' : ` · se abre al cumplir lo de arriba o en el nivel ${c.nivel}`}</small>
+      c.listo ? ' · ¡ya puedes enfrentarlo!' : c.soloNivel ? ` · se abre en el nivel ${c.nivel}` : ` · se abre al cumplir lo de arriba o en el nivel ${c.nivel}`}</small>
       <details class="jefe-formas"><summary>Otras formas de vencerlo</summary><small>${J.OTRAS_FORMAS_JEFE.replace(/^o /, '').replace(/, o /g, ' · ')}</small></details></div>
       <span class="premio"><span class="xp">+${miles(c.xp)} XP</span> ${icoMoneda}${c.monedas + J.PREMIO_INSIGNIA} + insignia ${O.objeto(c.objeto)?.nombre || ''}</span>
       ${c.listo ? `<button type="button" class="boton primario jefe-boton" data-preparar="${c.preparar}">Enfrentar: ${NOMBRE_PRUEBA[c.preparar]}</button>` : ''}</div>`
