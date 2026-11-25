@@ -457,8 +457,11 @@ function pintarColeccion(h, per) {
   usarEquipo(equipo);
   const hz = h.hazanas.find((x) => x.id === CB.hazanaDeClase(clase.clave));
   $('#coleccion-titulo').textContent = `Tu bote: colección ${clase.nombre.toLowerCase()}`;
+  // Con dos caminos (clases justas), la barra sigue al más avanzado y los otros van debajo.
+  const otros = hz && !hz.hecha && hz.caminos ? hz.caminos.filter((c) => c.unidad !== hz.unidad) : [];
   $('#coleccion-hazana').innerHTML = hz ? `<div class="mision-fila"><span><b>Hazaña: ${hz.nombre}</b></span><small>${hz.hecha ? 'cumplida' : `${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}`}</small></div>
-    <div class="progreso" role="progressbar" aria-label="Avance de la hazaña de clase" aria-valuemin="0" aria-valuemax="${hz.meta}" aria-valuenow="${hz.valor}" aria-valuetext="${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}"><div style="width:${Math.min(100, (hz.valor / hz.meta) * 100)}%"></div></div>` : '';
+    <div class="progreso" role="progressbar" aria-label="Avance de la hazaña de clase" aria-valuemin="0" aria-valuemax="${hz.meta}" aria-valuenow="${hz.valor}" aria-valuetext="${miles(hz.valor)} de ${miles(hz.meta)} ${hz.unidad}"><div style="width:${Math.min(100, (hz.valor / hz.meta) * 100)}%"></div></div>
+    ${otros.length ? `<small class="hazana-otros">También vale: ${otros.map((c) => `${miles(c.valor)} de ${miles(c.meta)} ${c.unidad}`).join(' · ')}</small>` : ''}` : '';
   // Ficha corta: muestra, nombre, precio o estado y un botón. Lo demás (qué es, su ventaja, qué falta y la vista
   // previa) se abre al tocar la muestra o el nombre.
   const ficha = (x, tipo, tiene, enUso, falta) => {
@@ -476,7 +479,7 @@ function pintarColeccion(h, per) {
       `<small>${CB.TIPOS[tipo]} · ${x.texto}</small>${ventaja ? `<small class="ventaja-pieza">${ventaja}</small>` : ''}${falta ? `<small>${falta.largo}</small>` : ''}${!tiene && !falta && precio > h.monedas ? `<small>Te faltan ${icoMoneda}${miles(precio - h.monedas)}</small>` : ''}${ver}`);
   };
   const faltaDe = (x) => (x.como.nivel ? { corto: `Nivel ${x.como.nivel}`, largo: `Llega al nivel ${x.como.nivel}.` }
-    : x.como.hazana ? { corto: 'Hazaña', largo: hz ? `Cumple la hazaña «${hz.nombre}»: ${miles(hz.meta)} ${hz.unidad} en total. Llevas ${miles(hz.valor)}.` : 'Cumple la hazaña de tu clase.' }
+    : x.como.hazana ? { corto: 'Hazaña', largo: hz ? `Cumple la hazaña «${hz.nombre}»: ${hz.caminos ? hz.texto.replace(/:.*$/, '') : `${miles(hz.meta)} ${hz.unidad} en total`}. Llevas ${miles(hz.valor)} ${hz.unidad}.` : 'Cumple la hazaña de tu clase.' }
       : x.como.jefe ? { corto: `Jefe ${x.como.jefe}`, largo: `Vence a ${J.capituloDe(x.como.jefe - 1, per.clase).jefe.nombre}, el jefe del capítulo ${x.como.jefe}.` } : null);
   const propias = CB.piezasDe(clase.clave, ctx).map((x) => {
     const tiene = CB.tienePieza(per, x.id, ctx);

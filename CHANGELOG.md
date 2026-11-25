@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.128.0 · 2026-11-25
+
+Clases justas (etapa 4 de la ronda 2).
+
+- **Ninguna clase queda atrás por cómo remas.** Cada senda tiene al menos 2 talentos que pagan con cualquier forma de remar. El pirata cobra «Bolsa ligera» y «Botín escondido» (o «Partes del botín») cuando cumples una sesión con el 80 % en rango, aunque no haya carrera: robas los vatios del plan. Antes, siguiendo el plan, el pirata no cobraba ningún talento y llegaba a Legendario 10 semanas después que el resto. La sugerida cuenta para el «Maestro del dojo» del samurái y para la «Ley de la flota» del romano. Sin carrera, «Victoria de Nauloco» y «Regata de canoas» también pagan, y el «Grito de guerra» del vikingo paga al ganarle a un fantasma de Alta mar.
+- **Las misiones de clase piden lo que haces.** «Rumbo pirata» pedía una sesión más de las que haces y casi nunca salía. Ahora pide tus sesiones de siempre, como las de las otras clases. «Dominio de Roma» también cuenta las sesiones del plan o sugeridas que cumples.
+- **La hazaña de clase llega en 6 a 9 meses, sea cual sea tu clase.** Antes, el samurái la tenía en el primer mes, y el pirata que sigue el plan o el romano que rema libre no la tenían nunca. Ahora cada clase tiene su camino: 100 000 paladas, 150 fantasmas o 120 sesiones en rango, 3000 min técnicos, 1200 km o 30 semanas del plan. Todas tienen además uno común: 40 semanas con 2 sesiones o más, aunque no sean seguidas. La barra sigue al camino más avanzado.
+- La diferencia de XP entre clases en 2 años baja del 14 % a menos del 4 % con plan, remo libre o sugeridas. Lo remado hasta el 25 de noviembre se cuenta con las reglas de antes, y quien ya tenía la hazaña la conserva.
+
 ## 0.127.1 · 2026-11-25
 
 Una meta por bloque en el modo remo (etapa 3 de la ronda 2).
