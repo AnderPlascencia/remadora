@@ -9,7 +9,7 @@ La historia avanza para todos (etapa 2 de la ronda 2).
 - **Cada capítulo se abre al llegar a su nivel** (10, 20, 30…). Antes se abría también al juntar unos pocos kilómetros y sesiones, así que los jefes llegaban en racimos al principio y luego pasaban 10 meses o más sin ninguno. Ahora llega uno cerca de cada rango. Un capítulo que ya tenías abierto sigue abierto.
 - **Sin plan, también vences al jefe con lo que te sugiere la app:** una sesión sugerida dura (umbral, VO₂, sprint o prueba) cumplida, o 3 sugeridas cumplidas en la misma semana. Antes solo contaban la prueba del jefe y las sesiones del plan, y quien remaba sin plan no vencía ninguno.
 - **Si el jefe lleva 2 semanas esperando, la sesión del día te propone su prueba** («Hoy, el Guardián del muelle…»), salvo que vengas cargado o que ayer fuera dura.
-- Las sesiones de antes del 25 de noviembre siguen con las reglas de siempre: nadie pierde un jefe ni XP.
+- Las sesiones hasta el 25 de noviembre siguen con las reglas de siempre: nadie pierde un jefe ni XP.
 
 ## 0.126.5 · 2026-11-25
 

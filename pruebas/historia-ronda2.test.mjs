@@ -7,7 +7,7 @@ import * as A from '../src/adaptacion.js';
 import { TIPOS, simular } from './sim-curva.mjs';
 
 const D = 864e5;
-const NUEVA = new Date('2026-11-25T19:00').getTime(); // miércoles, el día del corte
+const NUEVA = new Date('2026-11-26T19:00').getTime(); // jueves, el día del corte
 const opts = (ahora) => ({ ftp: 200, per: { clase: 'vikingo' }, ahora, calendario: null });
 // 14 fondos libres (sin plan ni sugerida) llevan al nivel 10 y abren el capítulo 1; luego, lo que se pruebe.
 function tras14(base, extra) {
@@ -30,9 +30,9 @@ test('el capítulo se abre al llegar a su nivel, y una sugerida dura cumplida ve
 
 test('3 sugeridas cumplidas en la misma semana vencen al jefe; 2, o 3 repartidas entre dos semanas, no', () => {
   const sug = (f, dias) => dias.map((k) => TIPOS.fondo30(f + k * D, { delDia: 'sugerida' }, 200));
-  assert.equal(tras14(NUEVA, (f) => sug(f, [0, 1, 2])).h.capitulosHechos, 1); // mié, jue y vie
+  assert.equal(tras14(NUEVA, (f) => sug(f, [0, 1, 2])).h.capitulosHechos, 1); // jue, vie y sáb
   assert.equal(tras14(NUEVA, (f) => sug(f, [0, 1])).h.capitulosHechos, 0);
-  assert.equal(tras14(NUEVA, (f) => sug(f, [3, 4, 5])).h.capitulosHechos, 0); // sáb, dom y lun
+  assert.equal(tras14(NUEVA, (f) => sug(f, [3, 4, 5])).h.capitulosHechos, 0); // dom, lun y mar
   // Una sugerida no cumplida (fuera de rango) no cuenta.
   const mal = (f) => [0, 1, 2].map((k) => TIPOS.fondo30(f + k * D, { delDia: 'sugerida', pctEnRango: 30, pctAlto: 0, pctBajo: 70 }, 200));
   assert.equal(tras14(NUEVA, mal).h.capitulosHechos, 0);

@@ -622,7 +622,7 @@ export const esSesionClave = (s) => !!s.delPrograma && TIPOS_CLAVE.has(s.tipoPla
 // - sin plan, también vence al jefe una sesión sugerida dura cumplida (la sesión clave de quien rema sin plan),
 //   o 3 sugeridas cumplidas en una semana (vale como la semana del plan, solo para el jefe: no paga XP de semana);
 // - tras SUGERIR_JEFE_DIAS con el capítulo abierto, la sugerida del día propone la prueba del jefe.
-export const HISTORIA_DESDE = '2026-11-25';
+export const HISTORIA_DESDE = '2026-11-26';
 export const SUGERIDAS_SEMANA_JEFE = 3;
 export const SUGERIR_JEFE_DIAS = 14;
 const esHistoriaNueva = (s) => claveDia(s.fecha) >= HISTORIA_DESDE;
