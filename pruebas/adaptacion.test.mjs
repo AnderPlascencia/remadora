@@ -22,9 +22,9 @@ const pesadas = Array.from({ length: 30 }, (_, i) => ses(-30 + i, { muestras: mu
 const reventado = [...pesadas, ...[-3, -2, -1].map((d) => ses(d, { duracion: 7200, muestras: muestras(7200, 230) }))];
 const r1 = A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: reventado, entrenamientos, ftp: 200, ahora });
 const hoyR1 = r1.programa.dias.find((d) => d.fecha === hoy);
-assert.equal(hoyR1.ent, 'Fondo 30 min a pulso suave');
+assert.equal(hoyR1.ent, 'Fondo 30 min · pulso suave');
 assert.equal(hoyR1.original, 'Umbral 3 × 8 min');
-assert.equal(r1.entrenamientos[0].nombre, 'Fondo 30 min a pulso suave');
+assert.equal(r1.entrenamientos[0].nombre, 'Fondo 30 min · pulso suave');
 assert.match(r1.avisos[0], /cansado|carga/);
 assert.equal(r1.programa.avisos.at(-1).dia, hoy);
 // Un fondo no se toca aunque estés cansado.

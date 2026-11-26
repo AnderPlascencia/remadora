@@ -278,8 +278,8 @@
         <button type="button" data-pt="programa" aria-pressed="false">Programa</button>
       </div>
       <div id="pt-entrenamientos">
-        <details id="subir-caja" class="subir-atr"><summary>Quiero subir: <b id="subir-actual">cualquier atributo</b></summary>
-          <div id="subir-atr" class="chips secciones-ent" role="group" aria-label="Atributo que quieres subir"></div></details>
+        <div id="filtro-modo" class="filtro-modo" role="group" aria-label="Buscar entrenamientos"><button type="button" data-modo="tipo" aria-pressed="true">Por tipo</button><button type="button" data-modo="atributo" aria-pressed="false">Por atributo</button></div>
+        <div id="subir-atr" class="chips secciones-ent" role="group" aria-label="Atributo que quieres subir" hidden></div>
         <div id="subir-lista" class="subir-lista" hidden></div>
         <span id="secciones-etq" class="visualmente-oculto">Tipo de entrenamiento</span>
         <div id="secciones-ent" class="chips secciones-ent" role="group" aria-labelledby="secciones-etq"></div>
@@ -339,18 +339,21 @@
         <h3 id="semana-plan-titulo" class="etq-campo">Esta semana</h3>
         <ol id="semana-plan" class="semana-plan"></ol>
         <p id="semana-plan-nota" class="ayuda" hidden></p>
-        <h3 class="etq-campo">Cómo sube tu plan</h3>
+        <!-- UX2-20: arriba solo hoy y esta semana; cómo sube, lo que sigue y el calendario, plegados. -->
+        <details id="prog-curva" class="prog-mas"><summary>Cómo sube tu plan y lo que sigue</summary>
         <div id="plan-curva" class="plan-curva" role="group"></div>
         <p id="plan-curva-texto" class="ayuda"></p>
         <div class="leyenda plan-leyenda"><span class="pl-actual">Esta semana</span><span class="pl-futura">Próximas</span><span class="pl-descarga">Descarga</span><span class="pl-prueba">Con prueba</span></div>
         <h3 id="plan-sigue-titulo" class="etq-campo">Lo que sigue</h3>
         <p class="aviso suave-aviso plan-estimado">Lo que viene es una vista previa. El plan se ajusta solo: si te cuestan o te sobran las sesiones fuertes, los rangos bajan o suben un 3 %; si vienes cansado, una dura se cambia por fondo; y si una semana remas poco, se repite. Los watts de cada sesión salen de tu FTP del día. <span id="plan-factor"></span></p>
         <div id="plan-sigue" class="plan-sigue"></div>
-        <h3 class="etq-campo">Calendario</h3>
+        </details>
+        <details id="prog-calendario" class="prog-mas"><summary>Calendario</summary>
         <div class="cal-cabecera"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
         <div id="calendario" class="calendario"></div>
         <p id="prog-dia" class="ayuda" aria-live="polite"></p>
         <div class="leyenda cal-leyenda"><span class="c-hecho">Hecho</span><span class="c-perdido">No hecho</span><span class="c-hoy">Hoy</span><span class="c-pendiente">Próximo</span></div>
+        </details>
         <button type="button" id="btn-quitar-programa" class="boton peligro">Quitar programa</button>
       </div>
       </div>
@@ -642,7 +645,8 @@
         <select id="sel-experiencia"><option value="">Sin elegir</option><option value="inicio">Estoy empezando (poco o nunca)</option><option value="medio">Remo a veces (1 o 2 por semana)</option><option value="alto">Remo seguido (3 o más por semana)</option></select>
       </label>
       <div class="fila-dos">
-        <label class="campo">Días por semana
+        <!-- UX2-31: los días por semana salen de los días que marcas abajo (el selector queda oculto para la app). -->
+        <label class="campo" hidden>Días por semana
           <select id="sel-dias-perfil"><option value="1">1 día</option><option value="2">2 días</option><option value="3">3 días</option><option value="4">4 días</option><option value="5">5 días</option></select>
         </label>
         <label class="campo">Tiempo por sesión
@@ -650,7 +654,7 @@
         </label>
       </div>
       <fieldset class="cita-campo">
-        <legend>Tus días y tu hora</legend>
+        <legend>Tus días (<span id="cita-n">3</span> por semana) y tu hora</legend>
         <div id="cita-dias" class="chips" role="group" aria-label="Días que remas"></div>
         <label class="campo">Hora habitual <input type="time" id="in-hora-remo" value="19:00"></label>
         <p id="cita-nota" class="ayuda">Tu plan se arma en estos días. Si lo añades a tu calendario, te avisa 30 min antes.</p>
