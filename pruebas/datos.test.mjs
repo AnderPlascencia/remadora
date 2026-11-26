@@ -1,5 +1,5 @@
 // Capa de datos (I-1 de la ronda 2, INF-R6): db.js e historial.js sobre una IndexedDB falsa (fake-indexeddb).
-// Migración v2 → v3, transacciones que abortan, la caché por generación del historial y guardar/actualizar/borrar.
+// Migraciones v2 → v4 y v3 → v4, transacciones que abortan, la caché por generación del historial y guardar/actualizar/borrar.
 import 'fake-indexeddb/auto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,7 +24,7 @@ async function vaciar() {
   H.invalidar();
 }
 
-test('migración v2 → v3: las muestras salen a su almacén y las sesiones ganan el índice por fecha', async () => {
+test('migración v2 → v4: las muestras salen a su almacén y las sesiones ganan el índice por fecha', async () => {
   // Una base de la v2 (antes de que db.js la abra): sesiones con sus muestras dentro y el almacén de estado.
   const vieja = await abrirCrudo(2, (d) => {
     d.createObjectStore('sesiones', { keyPath: 'id', autoIncrement: true });
@@ -54,12 +54,12 @@ test('migración v2 → v3: las muestras salen a su almacén y las sesiones gana
   assert.equal(await H.obtener(99), undefined);
 });
 
-test('una base nueva se crea en la v3 con sus cuatro almacenes', async () => {
+test('una base nueva se crea en la v4 con sus cinco almacenes', async () => {
   await vaciar();
   assert.ok(avisos.includes('versionNueva'), 'borrar la base cierra la conexión y lo avisa');
   assert.deepEqual(await db.listar('entrenamientos'), []);
-  const d = await abrirCrudo(3);
-  assert.deepEqual([...d.objectStoreNames].sort(), ['entrenamientos', 'estado', 'muestras', 'sesiones']);
+  const d = await abrirCrudo(4);
+  assert.deepEqual([...d.objectStoreNames].sort(), ['entrenamientos', 'estado', 'muestras', 'rr', 'sesiones']);
   assert.ok(d.transaction('sesiones').objectStore('sesiones').indexNames.contains('fecha'));
   d.close();
 });
@@ -97,10 +97,10 @@ test('estado de la app: una clave, un valor', async () => {
 test('otra pestaña que actualiza la base: esta conexión se cierra, avisa y la siguiente operación la reabre', async () => {
   avisos.length = 0;
   await db.guardarEstado('x', 1);
-  const nueva = await abrirCrudo(4);
+  const nueva = await abrirCrudo(5);
   assert.deepEqual(avisos, ['versionNueva']);
   nueva.close();
-  // La v4 de prueba no la conoce db.js: abrir con la v3 falla con VersionError y no deja la conexión rota.
+  // La v5 de prueba no la conoce db.js: abrir con la v4 falla con VersionError y no deja la conexión rota.
   await assert.rejects(db.leerEstado('x'), (e) => e.name === 'VersionError');
   await vaciar();
   assert.equal(await db.leerEstado('x'), undefined, 'con la base rehecha vuelve a abrir');
@@ -183,7 +183,7 @@ test('poner dentro de otra transacción: la sesión y su gasto juntos (o nada)',
 test('si leer falla, la caché no se queda con el error', async () => {
   await vaciar();
   await H.guardar({ fecha: 1, duracion: 1 });
-  const nueva = await abrirCrudo(4); // la base pasa a una versión que db.js no abre
+  const nueva = await abrirCrudo(5); // la base pasa a una versión que db.js no abre
   nueva.close();
   H.invalidar();
   await assert.rejects(H.sesiones());
@@ -225,4 +225,75 @@ test('porLotes recorre todas las sesiones con sus muestras, de n en n, sin tocar
   assert.deepEqual(exactos, [4, 4]);
   await vaciar();
   for await (const l of porLotes()) assert.fail(`sin sesiones no hay lotes (${l.length})`);
+});
+
+// I-3 (INF-R4 reducida): RR aparte y uid por sesión.
+const rrDe = (n) => Array.from({ length: n }, (_, i) => 400 + (i % 50));
+
+test('migración v3 → v4: los RR salen de la lista ligera y cada sesión recibe su uid', async () => {
+  await vaciar();
+  // db.js no abre la base hasta la primera operación: aquí se arma una v3 a mano, como la del teléfono.
+  await new Promise((ok) => { const r = indexedDB.deleteDatabase('remadora'); r.onsuccess = ok; });
+  const v3 = await abrirCrudo(3, (d) => {
+    d.createObjectStore('sesiones', { keyPath: 'id', autoIncrement: true }).createIndex('fecha', 'fecha');
+    d.createObjectStore('entrenamientos', { keyPath: 'id', autoIncrement: true });
+    d.createObjectStore('estado');
+    d.createObjectStore('muestras');
+  });
+  const t = v3.transaction(['sesiones', 'muestras'], 'readwrite');
+  t.objectStore('sesiones').put({ fecha: 1000, duracion: 60, rr: rrDe(4200), rmssd: 31 });
+  t.objectStore('sesiones').put({ fecha: 2000, duracion: 60 });
+  t.objectStore('sesiones').put({ fecha: 3000, duracion: 60, rr: [] });
+  for (const id of [1, 2, 3]) t.objectStore('muestras').put(muestras(60), id);
+  await new Promise((ok) => { t.oncomplete = ok; });
+  v3.close();
+
+  const crudas = await db.listar('sesiones');
+  assert.equal(crudas.length, 3);
+  assert.ok(crudas.every((s) => !('rr' in s)), 'ninguna sesión guarda sus RR dentro');
+  assert.ok(crudas.every((s) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(s.uid)), 'cada una con su uid');
+  assert.equal(new Set(crudas.map((s) => s.uid)).size, 3, 'uid distintos');
+  assert.equal((await db.obtener('rr', 1)).length, 4200);
+  assert.equal(await db.obtener('rr', 3), undefined, 'una lista vacía no se guarda');
+  // La lista ligera ya no los trae; obtener() y el respaldo sí.
+  const ligera = await H.sinMuestras();
+  assert.ok(ligera.every((s) => !('rr' in s)));
+  assert.equal(ligera[0].rmssd, 31);
+  assert.equal((await H.obtener(1)).rr.length, 4200);
+  assert.equal((await H.obtener(1)).muestras.length, 60);
+  const lotes = [];
+  for await (const l of porLotes(2)) lotes.push(...l);
+  assert.equal(lotes.find((s) => s.id === 1).rr.length, 4200);
+  assert.equal(lotes.find((s) => s.id === 1).muestras.length, 60);
+});
+
+test('lista ligera con banda: 600 sesiones con RR pesan como sin banda', async () => {
+  await vaciar();
+  const peso = async () => JSON.stringify(await H.sinMuestras()).length;
+  await db.tx(H.ALMACENES, 'readwrite', (t) => { for (let i = 0; i < 600; i++) H.poner(t, { fecha: 1e12 + i * 864e5, duracion: 1800, distancia: 7000, muestras: muestras(5) }); });
+  H.invalidar();
+  const sinBanda = await peso();
+  await vaciar();
+  await db.tx(H.ALMACENES, 'readwrite', (t) => { for (let i = 0; i < 600; i++) H.poner(t, { fecha: 1e12 + i * 864e5, duracion: 1800, distancia: 7000, muestras: muestras(5), rr: rrDe(4200), rmssd: 30 }); });
+  H.invalidar();
+  const conBanda = await peso();
+  // Antes, los 4 200 RR de 30 min a 140 lpm iban en cada sesión de la lista: ~10 MB más con 600.
+  assert.ok(conBanda < sinBanda * 1.1, `con banda ${conBanda} B, sin banda ${sinBanda} B`);
+  assert.equal(await db.tx('rr', 'readonly', (s) => s.count()), 600);
+});
+
+test('poner: guarda el uid que trae, da uno si no trae, y borrar quita también los RR', async () => {
+  await vaciar();
+  const id = await H.guardar({ fecha: 10, duracion: 60, uid: 'abc', muestras: muestras(10), rr: rrDe(10) });
+  assert.equal((await H.obtener(id)).uid, 'abc');
+  // Reemplazarla sin RR (como al reparar, que lee la lista completa) no los borra.
+  const s = (await H.sesiones())[0];
+  assert.equal(s.rr, undefined);
+  await H.guardar({ ...s, notas: 'x' });
+  assert.equal((await H.obtener(id)).rr.length, 10);
+  const otro = await H.guardar({ fecha: 20, duracion: 60 });
+  assert.ok((await H.obtener(otro)).uid);
+  await H.borrar(id);
+  assert.equal(await db.obtener('rr', id), undefined);
+  assert.equal(await db.obtener('muestras', id), undefined);
 });

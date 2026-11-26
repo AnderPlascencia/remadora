@@ -420,7 +420,7 @@ async function restaurarRespaldo(archivo) {
   });
   // Todo en una transacción: si algo falla (disco lleno), no queda medio respaldo.
   try {
-    await db.tx(['sesiones', 'muestras', 'entrenamientos'], 'readwrite', (t) => {
+    await db.tx([...H.ALMACENES, 'entrenamientos'], 'readwrite', (t) => {
       for (const s of sesionesNuevas) H.poner(t, s);
       for (const e of entNuevos) t.objectStore('entrenamientos').put(e);
     });

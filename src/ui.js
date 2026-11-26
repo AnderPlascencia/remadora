@@ -2,6 +2,7 @@
 import { formatoTiempo } from './protocolo.js';
 import { token } from './grafica.js';
 import { defectoTexto } from './ajustes-guardados.js';
+import { fcMaxDeEdad } from './pulso.js';
 
 export const $ = (sel) => document.querySelector(sel);
 // Color de una variable CSS del tema, leído una vez (ver grafica.js); al cambiar de tema se llama olvidarTokens.
@@ -23,6 +24,8 @@ export const ajustes = {
 };
 export const ftp = () => ajustes.num('ftp', 0);
 export const fcMaxima = () => ajustes.num('fcMax', 0);
+// El pulso máximo para el esfuerzo según el pulso: el tuyo, el de tu edad o 190.
+export const fcParaEsfuerzo = () => fcMaxima() || fcMaxDeEdad(ajustes.num('edad', 0)) || 190;
 // Referencia de pulso para las zonas: el máximo y, si lo diste, el pulso en reposo (zonas con reserva de pulso).
 export const fcRef = () => ({ max: fcMaxima(), reposo: ajustes.num('fcReposo', 0) });
 // Lo que respondiste hoy antes de remar ({ sueno, dolor, zona }), o null si no es de hoy. Si hubo molestias en los

@@ -7,9 +7,11 @@
 //   2: almacén «estado» (claves sueltas: enCurso, versionDatos).
 //   3: las muestras de cada sesión pasan a su propio almacén («muestras», con el id de la sesión como clave)
 //      y «sesiones» gana un índice por fecha. Así listar el historial no carga cada segundo remado.
+//   4: los intervalos RR de la banda de pulso pasan a su propio almacén («rr», misma clave), fuera de la lista
+//      ligera, y cada sesión recibe un `uid` estable para no duplicarla al restaurar (I-3, INF-R4 reducida).
 
 const NOMBRE = 'remadora';
-const VERSION_BD = 3;
+const VERSION_BD = 4;
 let dbPromesa = null;
 
 // La app escucha estos avisos para decírselos a la persona (ver app.js).
@@ -28,7 +30,7 @@ function abrir() {
         db.createObjectStore('entrenamientos', { keyPath: 'id', autoIncrement: true });
       }
       if (e.oldVersion < 2) db.createObjectStore('estado');
-      if (e.oldVersion < 3) separarMuestras(req.transaction);
+      if (e.oldVersion < 4) separarSesiones(req.transaction, e.oldVersion);
     };
     req.onsuccess = () => {
       const db = req.result;
@@ -45,23 +47,38 @@ function abrir() {
   return dbPromesa;
 }
 
-// v3: crea «muestras» y el índice por fecha, y saca las muestras de cada sesión guardada. Corre dentro de la
+// v3: crea «muestras» y el índice por fecha, y saca las muestras de cada sesión guardada.
+// v4 (I-3): crea «rr», saca los RR de cada sesión y le da su uid.
+// Una sola pasada por las sesiones (dos cursores a la vez sobre el mismo almacén se pisarían). Corre dentro de la
 // transacción de la actualización: si algo falla, la base se queda entera en la versión anterior.
-function separarMuestras(t) {
-  const db = t.db;
-  const muestras = db.createObjectStore('muestras');
+function separarSesiones(t, desde) {
   const sesiones = t.objectStore('sesiones');
-  sesiones.createIndex('fecha', 'fecha');
+  if (desde < 3) {
+    t.db.createObjectStore('muestras');
+    sesiones.createIndex('fecha', 'fecha');
+  }
+  const muestras = t.objectStore('muestras');
+  const rr = t.db.createObjectStore('rr');
   sesiones.openCursor().onsuccess = (ev) => {
     const c = ev.target.result;
     if (!c) return;
-    const { muestras: m, ...resto } = c.value;
-    if (m) {
-      muestras.put(m, c.primaryKey);
-      c.update(resto);
-    }
+    const { muestras: m, rr: r, ...resto } = c.value;
+    if (m) muestras.put(m, c.primaryKey);
+    if (Array.isArray(r) && r.length) rr.put(r, c.primaryKey);
+    if (m || r !== undefined || !resto.uid) c.update({ ...resto, uid: resto.uid || nuevoUid() });
     c.continue();
   };
+}
+
+// Un identificador al azar por sesión (UUID v4). Sin crypto.randomUUID (página sin https), uno parecido con
+// getRandomValues.
+export function nuevoUid() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 // Una transacción termina siempre: con su resultado (complete) o con un error (error o abort). Un disco lleno

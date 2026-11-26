@@ -69,15 +69,17 @@ export function validarSesion(s) {
   return null;
 }
 
-// Qué traer de un respaldo (ya convertido) sin duplicar: sesiones por fecha de inicio y entrenamientos por
+// Qué traer de un respaldo (ya convertido) sin duplicar: sesiones por fecha de inicio (o por uid) y entrenamientos por
 // nombre (sin su id, que lo pone la base de datos). `distintos` lista lo que ya existe y es otro, para preguntar
 // antes de reemplazar; `invalidas` cuenta las sesiones dañadas que no se traen. Los ajustes salen como texto.
 export function planRestaurar(datos, { sesiones, entrenamientos, programa, leer }) {
   const fechas = new Set(sesiones.map((s) => s.fecha));
+  // I-3: también por uid, que viaja en los respaldos desde la v4 de la base.
+  const uids = new Set(sesiones.map((s) => s.uid).filter(Boolean));
   const nombres = new Set(entrenamientos.map((e) => e.nombre));
   const sinId = ({ id, ...resto }) => resto;
   const validas = datos.sesiones.filter((s) => validarSesion(s) == null);
-  const sesionesNuevas = validas.filter((s) => !fechas.has(s.fecha)).map(sinId);
+  const sesionesNuevas = validas.filter((s) => !fechas.has(s.fecha) && !(s.uid && uids.has(s.uid))).map(sinId);
   const entNuevos = (Array.isArray(datos.entrenamientos) ? datos.entrenamientos : [])
     .filter((e) => e && typeof e.nombre === 'string' && !nombres.has(e.nombre)).map(sinId);
   const ajustesResp = Object.entries(datos.ajustes || {}).filter(([k]) => CLAVES_AJUSTES.includes(k))
@@ -106,13 +108,17 @@ export const TIPO_GZ = 'application/gzip';
 export async function* porLotes(n = 5) {
   let desde = null;
   for (;;) {
-    const { lote, ultimo } = await db.tx(['sesiones', 'muestras'], 'readonly', (t) => {
+    const { lote, ultimo } = await db.tx(['sesiones', 'muestras', 'rr'], 'readonly', (t) => {
       const ss = t.objectStore('sesiones').getAll(desde == null ? null : IDBKeyRange.lowerBound(desde, true), n);
       const lote = [];
+      // Cada sesión con sus muestras y sus RR (I-3), que en la base van aparte.
       ss.onsuccess = () => ss.result.forEach((x, i) => {
-        if (x.muestras) { lote[i] = x; return; }
-        const m = t.objectStore('muestras').get(x.id);
-        m.onsuccess = () => { lote[i] = m.result ? { ...x, muestras: m.result } : x; };
+        lote[i] = { ...x };
+        for (const a of ['muestras', 'rr']) {
+          if (x[a]) continue;
+          const r = t.objectStore(a).get(x.id);
+          r.onsuccess = () => { if (r.result) lote[i][a] = r.result; };
+        }
       });
       return () => ({ lote, ultimo: ss.result.at(-1)?.id });
     });
