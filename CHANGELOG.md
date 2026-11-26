@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.140.0 · 2026-11-26
+
+Prevención y habilidades (etapa E-4 de la ronda 2). Las reglas nuevas de la Furia y el Zanshin rigen para las carreras desde hoy; las anteriores no cambian.
+
+- **Piernas cansadas ahora decide algo.** Si tu última sesión terminó con el empuje por palada un 10 % más bajo y fue hace menos de 36 h, tu estado pasa como mínimo a «Listo» con ese motivo, y la próxima sesión de fuerza o sprints (si toca en los próximos 2 días) pasa a un fondo de 30 min.
+- **Molestia de espalda 2 días o más en una semana:** durante los 7 días siguientes a la última, las sesiones de fuerza a cadencia baja y los sprints con resistencia alta pasan a fondos de 30 min. Antes solo se quitaba la sesión dura de ese día.
+- **Nueva zona de molestia: costillas**, con su consejo: menos volumen y menos resistencia, y si duele al respirar hondo, consultar a un profesional.
+- **Furia del berserker:** pide entre 24 y 30 paladas/min (a 18–20, tanta fuerza por palada carga la espalda) y descansa si esta semana marcaste molestia de espalda. En su lugar va el Timonel.
+- **Zanshin:** en los últimos 250 m ya puedes subir la cadencia para el final. Solo pide que no baje y que los vatios no caigan más de un 10 %.
+
 ## 0.139.0 · 2026-11-26
 
 Generador de planes por objetivo (etapa E-3 de la ronda 2). Los cambios llegan a los planes que armes desde ahora. Lo ya remado no cambia.

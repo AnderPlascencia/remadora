@@ -26,7 +26,8 @@ export const fcMaxima = () => ajustes.num('fcMax', 0);
 // Referencia de pulso para las zonas: el máximo y, si lo diste, el pulso en reposo (zonas con reserva de pulso).
 export const fcRef = () => ({ max: fcMaxima(), reposo: ajustes.num('fcReposo', 0) });
 // Lo que respondiste hoy antes de remar ({ sueno, dolor, zona }), o null si no es de hoy. Si hubo molestias en los
-// últimos 7 días, también trae dolores ([{ dia, dolor, zona }], etapa 27) aunque hoy no hayas respondido.
+// últimos 14 días, también trae dolores ([{ dia, dolor, zona }], etapa 27) aunque hoy no hayas respondido (14 para
+// la espalda repetida de E-4: sus 7 días cuentan desde la última molestia).
 export function previoHoy(ahora = new Date()) {
   const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
   let r = null;
@@ -34,7 +35,7 @@ export function previoHoy(ahora = new Date()) {
   const deHoy = r && r.dia === hoy ? r : null;
   let dolores = [];
   try { dolores = JSON.parse(ajustes.leer('dolores', '[]')) || []; } catch { /* sin registro */ }
-  const desde = ahora.getTime() - 7 * 864e5;
+  const desde = ahora.getTime() - 14 * 864e5;
   const recientes = dolores.filter((d) => d.dolor !== 'no' && new Date(`${d.dia}T12:00`).getTime() > desde);
   if (!recientes.length) return deHoy;
   return { ...(deHoy || {}), dolores: recientes };

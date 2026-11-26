@@ -257,6 +257,8 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now(), { previo = null 
   else if (horas > 0 && clave === 'fresco') clave = 'listo';
   const motivos = [];
   if (efecto) { clave = peor(clave, efecto.clave); motivos.push(efecto.motivo); }
+  const pc = piernasRecientes(sesiones, ahora);
+  if (pc) { clave = peor(clave, 'listo'); motivos.push(`Tus piernas acabaron cansadas en tu última sesión (el empuje por palada cayó un ${pc.piernas} %): hoy sin fuerza ni sprints`); }
   if (hrv?.baja) { clave = peor(clave, 'cargado'); motivos.push(`Tu variabilidad del pulso bajó (${hrv.hoy} ms, lo normal en ti es ${hrv.base})`); }
   const semana = dias.slice(-7).reduce((a, d) => a + d.carga, 0);
   // Monotonía (Foster): carga media de los 7 días entre su desviación. Remar casi igual todos los días, sin días
@@ -270,6 +272,14 @@ export function estadoCuerpo(sesiones, ftp, ahora = Date.now(), { previo = null 
     condicion: Math.round(cond), fatiga: Math.round(fat), frescura: Math.round(fres),
     semana: Math.round(semana), seguro, reparto, motivos, rmssd: hrv, monotonia,
   };
+}
+
+// E-4 (E14): tu última sesión, si acabó con las piernas cansadas (caída del empuje por palada ≥ 10 %, guardada al
+// terminar) y terminó hace menos de 36 h; si no, null.
+export const PIERNAS_HORAS = 36;
+export function piernasRecientes(sesiones, ahora = Date.now()) {
+  const ult = (sesiones || []).filter((s) => s.fecha <= ahora).reduce((a, s) => (!a || s.fecha > a.fecha ? s : a), null);
+  return ult?.piernas >= 10 && ahora - ult.fecha - (ult.duracion || 0) * 1000 < PIERNAS_HORAS * 36e5 ? ult : null;
 }
 
 // Monotonía de 7 cargas diarias (con los días sin remar en 0), o null si no pasa de 2 o hay menos de 5 días con carga.

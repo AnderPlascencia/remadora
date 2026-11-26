@@ -7,12 +7,19 @@
 // - Pago plano y sub-tope de 15 m por carrera para la habilidad. Ninguna de intensidad paga más que una de constancia.
 // - Todo se mide sobre medias de 10 s (el dato bruto de la consola tiene ruido).
 
+import { claveDia } from './estadisticas.js';
+
 export const SUBTOPE_HABILIDAD_M = 15;
+// ⚖ E-4 (H1 y H2): desde esta fecha la Furia pide entre 24 y 30 paladas/min (a 18–20 la fuerza por palada carga la
+// espalda) y descansa si esta semana marcaste molestia de espalda; el Zanshin acepta que la cadencia suba en el final.
+// Las carreras anteriores se rigen por las reglas de antes.
+export const HABILIDADES_E4_DESDE = '2026-11-26';
+export const FURIA_SPM = [24, 30];
 
 export const HABILIDADES = {
   furia: {
     nombre: 'Furia del berserker', intensidad: true, m: 4,
-    texto: '20 s por encima del 110 % de tu FTP con la cadencia en 30 o menos: la fuerza va en cada palada. Hasta 2 veces por carrera (3 si pasa de 5 km), con 3 min entre una y otra.',
+    texto: '20 s por encima del 110 % de tu FTP con la cadencia entre 24 y 30: la fuerza va en cada palada, sin cargar la espalda. Descansa si esta semana marcaste molestia de espalda. Hasta 2 veces por carrera (3 si pasa de 5 km), con 3 min entre una y otra.',
   },
   timonel: {
     nombre: 'Timonel', intensidad: false, m: 3,
@@ -24,7 +31,7 @@ export const HABILIDADES = {
   },
   zanshin: {
     nombre: 'Zanshin', intensidad: false, m: 6,
-    texto: 'En los últimos 250 m de una carrera a distancia, la cadencia estable (±1) y los vatios sin caer más de un 10 %.',
+    texto: 'En los últimos 250 m de una carrera a distancia, la cadencia sin bajar (subirla para el final vale) y los vatios sin caer más de un 10 %.',
   },
   estrella: {
     nombre: 'Estrella guía', intensidad: false, m: 3,
@@ -48,12 +55,14 @@ const media = (xs) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0
 
 // ftp: tu FTP; ftpFiable: viene de una prueba de las últimas 8 semanas (si no, el 110 % sale de tu media de 2 min + 15 %).
 // mppMedia: tus metros por palada habituales. final = { meta } o { duracion }.
-export function nuevaHabilidad({ clase, senda = 'a', ftp = 0, ftpFiable = true, mppMedia = 0, final = null, intensidadActiva = true } = {}) {
+// espalda: marcaste molestia de espalda en los últimos 7 días. fecha: cuándo empieza la carrera (reglas de E-4).
+export function nuevaHabilidad({ clase, senda = 'a', ftp = 0, ftpFiable = true, mppMedia = 0, final = null, intensidadActiva = true, espalda = false, fecha = Date.now() } = {}) {
   const base = habilidadDe(clase, senda);
   if (!base) return null;
-  const id = !intensidadActiva && RESERVA[base] ? RESERVA[base] : base;
+  const e4 = claveDia(fecha) >= HABILIDADES_E4_DESDE;
+  const id = (!intensidadActiva || (e4 && espalda && base === 'furia')) && RESERVA[base] ? RESERVA[base] : base;
   return {
-    id, base, ftp, ftpFiable, mppMedia, final, apagada: false,
+    id, base, ftp, ftpFiable, mppMedia, final, apagada: false, e4,
     m: 0, activaciones: [], hist: [], racha: 0, inicio: null, zanshin: null, objetivoSpm: null, eventos: [],
   };
 }
@@ -101,7 +110,7 @@ export function avanzarHabilidad(h, { t, dist, paladas, spm = 0, w = 0, brecha =
       // Umbral: 110 % del FTP, o tu media de los últimos 2 min + 15 % si el FTP no es de una prueba reciente.
       const prev = h.hist.slice(-140, -20);
       const umbral = h.ftpFiable && h.ftp > 0 ? h.ftp * 1.1 : media(prev.map((x) => x.w)) * 1.15;
-      const ok = umbral > 0 && w > umbral && spm > 0 && spm <= 30;
+      const ok = umbral > 0 && w > umbral && spm > 0 && spm <= FURIA_SPM[1] && (!h.e4 || spm >= FURIA_SPM[0]);
       h.racha = ok ? h.racha + 1 : 0;
       const max = (h.final?.meta || 0) > 5000 ? 3 : 2;
       if (h.racha >= 20 && t - ultima >= 180 && cupo(max) && permitida(h, intensidad, t)) { h.racha = 0; return pagar(h, t); }
@@ -158,7 +167,8 @@ export function avanzarHabilidad(h, { t, dist, paladas, spm = 0, w = 0, brecha =
       if (!meta || h.zanshin?.hecho) return 0;
       if (dist >= meta - 250 && !h.zanshin) { h.zanshin = { spm: m10('spm'), w: m10('w'), ok: true }; return 0; }
       if (!h.zanshin) return 0;
-      if (Math.abs(m10('spm') - h.zanshin.spm) > 1 || m10('w') < h.zanshin.w * 0.9) h.zanshin.ok = false;
+      const cae = h.e4 ? m10('spm') < h.zanshin.spm - 1 : Math.abs(m10('spm') - h.zanshin.spm) > 1;
+      if (cae || m10('w') < h.zanshin.w * 0.9) h.zanshin.ok = false;
       if (dist >= meta) { h.zanshin.hecho = true; return h.zanshin.ok ? pagar(h, t) : 0; }
       return 0;
     }

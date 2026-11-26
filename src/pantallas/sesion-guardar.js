@@ -151,6 +151,9 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
   // Desacople solo en el tramo principal estable (el bloque de trabajo más largo, o el remo libre sin sus extremos).
   const dsc = E.desacopleDe(m, registro.bloques);
   Object.assign(registro, { desacople: dsc?.pct ?? null, desacopleSeg: dsc?.seg ?? null });
+  // E-4 (E14): piernas cansadas (el empuje por palada cayó un 10 % o más): decide el estado del cuerpo de mañana.
+  const pc = E.piernasCansadas({ ...registro, muestras: m });
+  if (pc) registro.piernas = pc.caida;
   const fc5 = fcMax5s(m);
   if (fc5) registro.fcMax5 = fc5;
   // Recuperación de pulso a 60 s tras el último bloque de trabajo, si la sesión siguió un minuto más.
