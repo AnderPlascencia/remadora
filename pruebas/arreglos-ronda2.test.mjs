@@ -36,7 +36,7 @@ test('R2-8: desde el corte, un día de plan con historia sale la diaria a tu med
 test('R2-19: los logros, jefes y misiones semanales pagan lo que dicen (xpReal)', () => {
   const { h } = simular('plan4');
   const fecha = h.logros.at(-1).fecha;
-  assert.equal(J.xpReal(400, fecha), 200);
+  assert.equal(J.xpReal(400, fecha), Math.round(400 * J.FACTOR_XP_LENTA * J.FACTOR_RITMO3));
   let vistos = 0;
   for (const l of h.logros) {
     const hz = l.tipo === 'hazana' && J.HAZANAS.find((x) => l.texto === `Logro: ${x.nombre}`);

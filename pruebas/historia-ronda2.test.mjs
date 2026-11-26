@@ -19,7 +19,7 @@ function tras14(base, extra) {
 
 test('el capítulo se abre al llegar a su nivel, y una sugerida dura cumplida vence al jefe', () => {
   const { antes, h } = tras14(NUEVA, (f) => [TIPOS.umbral(f, { delDia: 'sugerida' }, 200)]);
-  assert.equal(antes.nivel, 10);
+  assert.ok(antes.nivel >= 10, `nivel ${antes.nivel}`); // 11 desde RITMO3_DESDE (R2-5)
   assert.equal(antes.capitulo.listo, true);
   assert.equal(antes.capitulo.porNivel, true);
   assert.equal(h.capitulosHechos, 1);

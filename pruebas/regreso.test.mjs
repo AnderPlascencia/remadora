@@ -109,7 +109,8 @@ test('sesión de regreso: tras 10 días o más, las 3 primeras pagan como la del
   const ses = ['2026-11-23', '2026-12-08', '2026-12-09', '2026-12-10', '2026-12-11'].map(libre);
   const h = J.estadoJuego(ses, { ftp: 200, per: {}, ahora: ms('2026-12-12') });
   const regreso = ses.map((s) => h.porSesion.get(s.fecha).detalle.find(([k]) => k === 'Sesión de regreso')?.[1] ?? 0);
-  assert.deepEqual(regreso, [0, XC.XP_PLAN.cumplida, XC.XP_PLAN.cumplida, XC.XP_PLAN.cumplida, 0]);
+  const pago = Math.round(XC.XP_PLAN.cumplida * J.FACTOR_RITMO3); // desde RITMO3_DESDE (R2-5), un 25 % más
+  assert.deepEqual(regreso, [0, pago, pago, pago, 0]);
   // Antes del corte, nada.
   const viejas = ['2026-11-01', '2026-11-16', '2026-11-17'].map(libre);
   const hv = J.estadoJuego(viejas, { ftp: 200, per: {}, ahora: ms('2026-11-18') });

@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.133.0 · 2026-11-26
+
+Del mes 7 en adelante (etapa 9 de la ronda 2).
+
+- **La curva se calibra a 3 sesiones por semana** (decisión de Ander). Desde el 27 de noviembre, la XP que ganas rinde un 25 % más. Con 3 días de plan llegas al nivel 90 en unos 17 meses, lo que antes tardaba quien remaba 4. Con 4 días tardas unos 14. Nadie pierde ni gana nivel por el cambio: lo remado antes cuenta igual. Las monedas no cambian.
+- **Cofre de medio rango.** En los niveles 15, 25, 35… 85, 100 monedas y su línea en el resumen. En el Camino aparecen como hitos, así el siguiente casi siempre está a unas pocas sesiones.
+- **Más escalones en las metas largas.** 750, 1,750, 2,000, 3,500, 4,000 y 5,000 km; 75, 150, 200, 300, 350 y 400 sesiones; 15, 30, 40, 52, 78 y 104 semanas seguidas; y los niveles 50 y 70. Quien ya cumplía alguno lo cobra en su siguiente sesión.
+- En la simulación de 2 años con plan de 4 días, los premios grandes por sesión desde la semana 27 pasan de 0,06 a 0,12.
+
 ## 0.132.0 · 2026-11-25
 
 Héroe más corto (etapa 8 de la ronda 2).

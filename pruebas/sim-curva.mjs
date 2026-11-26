@@ -51,6 +51,8 @@ const PLAN6 = [[0, 'fondo45'], [1, 'umbral'], [2, 'rec'], [3, 'vo2'], [5, 'fondo
 const PLAN3 = [[1, 'umbral'], [3, 'fondo45'], [6, 'fondo60']];
 export const PERFILES = {
   plan4: { clase: 'vikingo', plan: PLAN4 },
+  // Tres días de plan por semana (R2-5): la curva se calibra para este ritmo.
+  plan3: { clase: 'vikingo', plan: PLAN3 },
   plan3libre1: { clase: 'pirata', plan: PLAN3, libres: [[4, 'costa']] },
   libre4: { clase: 'pirata', libres: [[0, 'costa'], [2, 'costa'], [4, 'altamar'], [6, 'costa']] },
   // Sin plan, dos fondos sugeridos por semana; cuando la app propone la prueba del jefe, la hace (sigueJefe).

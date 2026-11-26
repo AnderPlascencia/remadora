@@ -316,6 +316,11 @@ export function hitosDeClase(clave, senda, { nivel = 1, capitulosHechos = 0 } = 
     const titulo = J.nombreRango(r.nivel, clave) + (r.nivel === J.NIVEL_SENDA ? ' · eliges senda' : '');
     return { nivel: r.nivel, rango: r.id, titulo, etqs: etqs.map(([txt, tipo, ok]) => ({ txt, tipo, ok: ok ?? nivel >= r.nivel })) };
   });
+  // R2-4: a mitad de cada rango, un cofre de monedas (desde HITOS_DESDE).
+  if (J.hayHitos()) {
+    for (const n of J.NIVELES_MEDIO_RANGO) hitos.push({ nivel: n, titulo: 'Medio rango', etqs: [{ txt: `Cofre de ${J.MONEDAS_MEDIO_RANGO} monedas`, tipo: 'pieza', ok: nivel >= n }] });
+    hitos.sort((a, b) => a.nivel - b.nivel);
+  }
   const fin = J.CAPITULOS.length - 1;
   if (!hitos.some((x) => x.nivel === J.CAPITULOS[fin].nivel)) {
     const n = J.CAPITULOS[fin].nivel;
