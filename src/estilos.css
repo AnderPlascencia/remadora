@@ -506,7 +506,7 @@ details.seccion[open] { padding-bottom: 8px; }
   --primario: #E39A30; --primario-osc: #B97A22; --primario-claro: #8A520C; --sobre-primario: #1A1206; --acento: #9C6210; --exito: #15803D; --peligro: #DC2626;
   --watts: #C2410C; --spm: #0284C7; --split: #7C3AED; --fondo-remo: #F6F8F9;
   --xp: #115E59; --moneda: #8A520C; --info: #075985;
-  --ok-texto: #166534; --mal-texto: #B91C1C;
+  --ok-texto: #14532D; --mal-texto: #B91C1C;
   color-scheme: light;
 }
 :root[data-tema="claro"] .mr-estado { color: #0369A1; }
@@ -2316,3 +2316,79 @@ body:has(#modo-remo:not([hidden])) .toast { top: calc(8px + env(safe-area-inset-
 .cita-campo .chips { gap: 2px; }
 .cita-campo .chip { min-width: 44px; min-height: 44px; padding: 0 6px; justify-content: center; }
 #vista-ajustes .enlace-chevron { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; margin: 0; }
+
+/* Ronda 2, etapa 11: horizontal y modo remo fino. */
+/* UX2-14: con el modo remo abierto, la página de debajo no se desplaza (ni saca la barra del navegador). */
+html:has(#modo-remo:not([hidden])), html:has(#modo-remo:not([hidden])) body { overflow: hidden; }
+/* UX2-10: el botón dice la vista actual; mantenerlo pulsado abre las vistas. */
+#mr-vista { padding-left: 2px; padding-right: 2px; min-width: 0; }
+#mr-vista .num { font-size: 13px; letter-spacing: 0; white-space: nowrap; }
+.mr-vistas {
+  position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 3;
+  display: grid; gap: 4px; padding: 6px; width: min(260px, calc(100vw - 32px));
+  background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-medio); box-shadow: 0 12px 32px rgba(0, 0, 0, .5);
+}
+.mr-vistas[hidden] { display: none; }
+.mr-vistas button { min-height: 48px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; padding: 4px 12px; border: 0; border-radius: var(--r-chico); background: transparent; color: var(--texto); font: inherit; text-align: left; cursor: pointer; }
+.mr-vistas button b { font-size: var(--t-m); }
+.mr-vistas button small { font-size: var(--t-s); color: var(--texto-suave); }
+.mr-vistas button[aria-checked="true"] { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--primario); }
+@media (orientation: landscape) and (max-height: 560px) {
+  .mr-vistas { bottom: auto; top: max(12px, env(safe-area-inset-top)); grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); width: min(560px, calc(100vw - 32px)); }
+  /* UX2-11: en Números, las casillas de la derecha llenan el alto (antes quedaban ~120 px vacíos bajo ellas) y sus cifras crecen. */
+  .modo-remo:not(.vista-grafica):not(.vista-rango):not(.vista-uno) .mr-grid { align-self: stretch; align-content: stretch; grid-auto-rows: 1fr; }
+  .modo-remo:not(.vista-grafica):not(.vista-rango):not(.vista-uno) .mr-grid > div { display: flex; flex-direction: column; justify-content: center; }
+  .modo-remo:not(.vista-grafica):not(.vista-rango):not(.vista-uno) .mr-valor { font-size: clamp(30px, 11vh, 52px); }
+  /* En Carrera, las casillas ocupan el hueco hasta los botones. */
+  .modo-remo.vista-carrera { grid-template-rows: auto auto auto minmax(0, 1fr) auto auto; }
+  .modo-remo.vista-carrera > .mr-grid { align-self: stretch; align-content: stretch; grid-auto-rows: 1fr; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .modo-remo.vista-carrera .mr-grid > div { min-height: 0; overflow: hidden; justify-content: center; gap: 2px; }
+  .modo-remo.vista-carrera .mr-valor { font-size: clamp(22px, 8vh, 36px); }
+}
+
+/* UX2-3 y UX2-35: Entrenar en horizontal bajo 560 px de alto. La barra de acción pasa a una columna a la derecha
+   (ya no tapa nada abajo), la cabecera se quita mientras remas y el contenido va a dos columnas. */
+@media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
+  :root { --accion-lat: 112px; }
+  #vista-entrenar { padding-right: calc(var(--accion-lat) - 4px + env(safe-area-inset-right)); }
+  #vista-entrenar .barra-accion {
+    position: fixed; top: 0; bottom: 0; right: 0; left: auto; z-index: 6;
+    width: calc(var(--accion-lat) + env(safe-area-inset-right)); margin: 0;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) 8px;
+    flex-direction: column; justify-content: center; gap: 8px;
+    background: var(--fondo); border-left: 1px solid var(--borde);
+  }
+  #vista-entrenar .barra-accion .boton.grande { flex: 0 0 auto; width: 100%; min-height: 64px; flex-direction: column; gap: 4px; padding: 6px 4px; font-size: var(--t-s); line-height: 1.15; white-space: normal; text-align: center; }
+  #vista-entrenar .barra-accion #btn-grabar { min-height: 112px; }
+  body:has(#vista-entrenar.activa) > header.barra { padding-right: calc(var(--accion-lat) + 12px + env(safe-area-inset-right)); }
+  body:has(#vista-entrenar.activa) .toast { left: calc(50% + var(--riel) / 2 - var(--accion-lat) / 2); }
+  /* Mientras remas: sin cabecera, y a la izquierda la carrera, el bloque y el plan (o «Hoy toca» antes de empezar);
+     a la derecha, los números. */
+  body:has(#vista-entrenar.activa #preparar[hidden]) > header.barra { display: none; }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: 14px; row-gap: 0; align-items: start; align-content: start; }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) > * { grid-column: 1; min-width: 0; }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) > #en-vivo { grid-column: 2; grid-row: 1 / span 12; }
+  #vista-entrenar.activa:has(#preparar[hidden]) > .resumen-sesion { margin-top: 8px; }
+  #vista-entrenar.activa:has(#preparar[hidden]) .grafica.carrera { height: min(240px, calc(100vh - 130px)); }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) #en-vivo .metricas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+  :root #vista-entrenar.activa:has(#en-vivo:not([hidden])) #en-vivo .metrica { grid-column: span 1; padding: 6px 10px 8px; }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) #en-vivo .metrica .valor { font-size: 30px; }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) #en-vivo .metrica.destacada .valor { font-size: 40px; }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) #en-vivo > h2 { margin-top: 14px; }
+  #vista-entrenar.activa:has(#en-vivo:not([hidden])) #grafica-vivo { height: 150px; }
+  /* Antes de remar: «Hoy toca» a la izquierda y las opciones a la derecha. */
+  #vista-entrenar.activa:has(#en-vivo[hidden]) #preparar:has(> :is(#otra-cosa, #recomendacion, #opciones-carrera):not([hidden])) { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); column-gap: 20px; align-items: start; }
+  #vista-entrenar.activa:has(#en-vivo[hidden]) #preparar > * { grid-column: 2; min-width: 0; }
+  #vista-entrenar.activa:has(#en-vivo[hidden]) #preparar > #hoy { grid-column: 1; grid-row: 1 / span 6; }
+}
+/* UX2-35: Héroe en horizontal, con la tarjeta fija a la izquierda y las pestañas a la derecha. */
+@media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
+  #heroe-ficha:not([hidden]) { display: grid; grid-template-columns: minmax(190px, .75fr) minmax(0, 2fr); column-gap: 16px; align-items: start; }
+  #heroe-ficha > * { grid-column: 2; min-width: 0; }
+  #heroe-ficha > .heroe-tarjeta { grid-column: 1; grid-row: 1 / span 20; position: sticky; top: 8px; flex-wrap: wrap; margin-top: 0; }
+  #heroe-ficha > .heroe-tarjeta .heroe-xp-caja { flex-basis: 100%; order: 4; }
+  #heroe-ficha > .heroe-tarjeta > .crece { flex-basis: 100%; order: 3; }
+  #heroe-ficha > .heroe-tarjeta > .heroe-nivel { margin-left: auto; }
+  /* La tarjeta ya queda a la vista: la cabecera compacta sobra. */
+  #heroe-ficha #heroe-mini { display: none; }
+}

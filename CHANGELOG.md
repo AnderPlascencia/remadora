@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.135.0 · 2026-11-26
+
+El teléfono en el soporte (etapa 11 de la ronda 2).
+
+- **En horizontal, la barra de Empezar, Terminar y Pausar va en una columna a la derecha.** Ya no tapa botones abajo, como «Solo tengo 15 min». Mientras remas se quita la cabecera y Entrenar pasa a dos columnas: la carrera, el bloque y el plan a la izquierda, y los números a la derecha. En 792 × 360, el área útil sube del 58 % al 75 % y Entrenar mide 2,1 pantallas (antes 4).
+- **Héroe en horizontal:** la tarjeta queda fija a la izquierda y las pestañas a la derecha.
+- **Modo remo:** el botón «Vista» dice qué vista ves (Números, Uno, Gráfica, Carrera). Si lo mantienes pulsado, se abren todas para ir directo a una. Las casillas de la derecha llenan el hueco que quedaba debajo, con cifras más grandes. Con el modo remo abierto, la página de debajo ya no se desplaza.
+- La gráfica del plan va debajo de la barra de acción, con su leyenda pegada: la barra ya no la parte en dos.
+- Tema claro: el verde de «vas por delante» del fantasma se oscurece y llega a 7:1 en el modo remo.
+
 ## 0.134.0 · 2026-11-26
 
 Planes y Programa (etapa 10 de la ronda 2).
