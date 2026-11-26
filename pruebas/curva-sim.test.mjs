@@ -8,10 +8,18 @@ import { simular, TIPOS, clave } from './sim-curva.mjs';
 const D = 864e5;
 const MES = 365.25 / 12 / 7; // semanas por mes
 
-test('plan de 4 días: Legendario entre 16 y 20 meses, con las misiones entre el 12 y el 20 % de la XP', () => {
+// ⚖ R2-5 (decisión de Ander): desde RITMO3_DESDE la curva se calibra a 3 sesiones por semana. El plan de 3 días llega
+// al 90 en lo que antes tardaba el de 4 (16 a 20 meses), y el de 4 llega antes.
+test('plan de 3 días: nivel 90 entre 16 y 20 meses; el de 4, entre 12 y 16', () => {
+  const r = simular('plan3');
+  assert.ok(r.legendario >= 16 * MES && r.legendario <= 20 * MES, `plan3: semana ${r.legendario}`);
+  const r4 = simular('plan4').legendario;
+  assert.ok(r4 >= 12 * MES && r4 < 16 * MES, `plan4: semana ${r4}`);
+});
+
+test('plan de 4 días: llega al 90 en 2 años, con las misiones entre el 12 y el 20 % de la XP', () => {
   const r = simular('plan4');
   assert.ok(r.legendario, 'llega a Legendario en 2 años');
-  assert.ok(r.legendario >= 16 * MES && r.legendario <= 20 * MES, `Legendario en la semana ${r.legendario}`);
   assert.ok(r.pctMisiones >= 12 && r.pctMisiones <= 20, `misiones ${r.pctMisiones.toFixed(1)} % de la XP`);
   // Una diaria por día de remo, nunca más.
   const porDia = new Map();
@@ -23,14 +31,15 @@ test('plan de 4 días: Legendario entre 16 y 20 meses, con las misiones entre el
   assert.ok(!r.h.logros.some((l) => /^(Fiel al plan|La sesión del día|Remo de recuperación|Semana fiel):/.test(l.texto)));
 });
 
-test('remo libre 4 días: no llega a Legendario antes de 24 meses', () => {
+// Seguir el plan sigue rindiendo más: 4 días de remo libre tardan más que 3 días de plan.
+test('remo libre 4 días: llega después que el plan de 3 días', () => {
   const r = simular('libre4');
-  assert.ok(!r.legendario || r.legendario > 24 * MES, `Legendario en la semana ${r.legendario}`);
+  assert.ok(!r.legendario || r.legendario > simular('plan3').legendario, `Legendario en la semana ${r.legendario}`);
 });
 
-test('plan de 6 días: Legendario antes que con 4, pero no antes de 12 meses', () => {
+test('plan de 6 días: Legendario antes que con 4, pero no antes de 10 meses', () => {
   const r = simular('plan6');
-  assert.ok(r.legendario && r.legendario >= 12 * MES && r.legendario < simular('plan4').legendario, `semana ${r.legendario}`);
+  assert.ok(r.legendario && r.legendario >= 10 * MES && r.legendario < simular('plan4').legendario, `semana ${r.legendario}`);
 });
 
 test('⚖ XP: un historial anterior al corte da la misma XP y monedas que antes del cambio', () => {

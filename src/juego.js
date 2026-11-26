@@ -107,6 +107,7 @@ export const XP_POR_METROS = 10;
 // Curva de niveles (etapa 2 del rediseño del héroe, decisión de Ander): se mide en sesiones por nivel, no en un
 // porcentaje. Con una sesión típica de 4 por semana con plan (unos 750 XP) va de 1 sesión por nivel al empezar a
 // unas 8 cerca del 80: unas 310 sesiones, 18 meses, hasta Legendario (nivel 80); el 90 queda unos 5 meses después.
+// ⚖ Desde RITMO3_DESDE (R2-5) la XP rinde un 25 % más: ese ritmo es ahora el de 3 sesiones por semana (ver factorRitmo).
 export const CURVA_DESDE = '2026-11-11';
 export const XP_SESION_REF = 750;
 export const MESES_LEGENDARIO = 18;
@@ -769,6 +770,13 @@ function vistaHazana(h, g, dia) {
   const mejor = caminos.reduce((a, c) => (c.valor / c.meta > a.valor / a.meta ? c : a));
   return { meta: mejor.meta, unidad: mejor.unidad, valor: mejor.valor, caminos };
 }
+// ⚖ Ronda 2, etapa 9 (R2-4): hitos para el mes 7 en adelante. A mitad de cada rango (niveles 15, 25 … 85), un cofre
+// de monedas; y escalones intermedios en las metas largas. Solo cuenta lo que pasa desde HITOS_DESDE.
+export const HITOS_DESDE = '2026-11-27';
+export const NIVELES_MEDIO_RANGO = [15, 25, 35, 45, 55, 65, 75, 85];
+export const MONEDAS_MEDIO_RANGO = 100;
+export const hayHitos = (ahora = Date.now()) => claveDia(ahora) >= HITOS_DESDE;
+export const textoMedioRango = (n, clase = null) => `Cofre de medio rango: nivel ${n}, a medio camino ${n + 5 > RANGOS.at(-1).nivel ? 'del nivel máximo' : `de ${nombreRango(n + 5, clase)}`}`;
 /** @type {Hazana[]} */
 export const HAZANAS = [
   { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20 },
@@ -806,6 +814,31 @@ export const HAZANAS = [
     // ⚖ Desde GANARTE_DESDE los sustituye la escalera de fuerza (cada 5 W): solo cuentan la mejora hasta entonces, y
     // quien los tiene los conserva.
     .map(([meta, nombre, xp, monedas]) => ({ id: `ftp${meta}`, nombre, texto: `Sube tu FTP ${meta} W desde tu primera sesión con FTP`, meta, valor: (g) => g.ftpMejoraAntes, xp, monedas, oculto: true })),
+  // ⚖ Ronda 2, etapa 9 (R2-4): un escalón entre cada dos de las metas largas, para que del mes 7 en adelante siga
+  // habiendo premios. Desde HITOS_DESDE; quien ya los cumplía los cobra en su siguiente sesión.
+  ...(/** @type {[string, string, string, number, number, number][]} */ ([
+    ['km', 'Setecientos cincuenta kilómetros', 'Rema 750 km en total', 750, 1000, 250],
+    ['km', 'Mil setecientos cincuenta kilómetros', `Rema ${miles(1750)} km en total`, 1750, 1600, 400],
+    ['ses', 'Setenta y cinco entrenamientos', 'Completa 75 sesiones', 75, 750, 200],
+    ['ses', 'Ciento cincuenta entrenamientos', 'Completa 150 sesiones', 150, 1200, 300],
+    ['ses', 'Trescientos cincuenta entrenamientos', 'Completa 350 sesiones', 350, 2000, 500],
+    ['semanas', 'Quince semanas al remo', 'Rema al menos una vez por semana 15 semanas seguidas', 15, 700, 200],
+    ['semanas', 'Treinta semanas al remo', 'Rema al menos una vez por semana 30 semanas seguidas', 30, 1200, 400],
+    ['semanas', 'Cuarenta semanas al remo', 'Rema al menos una vez por semana 40 semanas seguidas', 40, 1500, 450],
+    ['semanas', 'Un año sin fallar una semana', 'Rema al menos una vez por semana 52 semanas seguidas', 52, 2000, 600],
+    // Y más allá de la última meta: el segundo año también tiene escalones.
+    ['km', 'Dos mil kilómetros', `Rema ${miles(2000)} km en total`, 2000, 1800, 450],
+    ['km', 'Cuatro mil kilómetros', `Rema ${miles(4000)} km en total`, 4000, 2600, 700],
+    ['km', 'Tres mil quinientos kilómetros', `Rema ${miles(3500)} km en total`, 3500, 2400, 600],
+    ['km', 'Cinco mil kilómetros', `Rema ${miles(5000)} km en total`, 5000, 3000, 800],
+    ['ses', 'Doscientos entrenamientos', 'Completa 200 sesiones', 200, 1400, 350],
+    ['ses', 'Trescientos entrenamientos', 'Completa 300 sesiones', 300, 1800, 450],
+    ['ses', 'Cuatrocientos entrenamientos', 'Completa 400 sesiones', 400, 2200, 550],
+    ['semanas', 'Año y medio al remo', 'Rema al menos una vez por semana 78 semanas seguidas', 78, 2500, 700],
+    ['semanas', 'Dos años sin fallar una semana', 'Rema al menos una vez por semana 104 semanas seguidas', 104, 3000, 900],
+    ['nivel', 'Héroe de nivel 50', 'Llega al nivel 50', 50, 750, 250],
+    ['nivel', 'Héroe de nivel 70', 'Llega al nivel 70', 70, 1200, 400],
+  ])).map(([serie, nombre, texto, meta, xp, monedas]) => ({ id: `${serie}${meta}`, nombre, texto, meta, valor: { km: (g) => g.kmTotal, ses: (g) => g.sesiones, semanas: (g) => g.semanasMax, nivel: (g) => g.nivel }[serie], xp, monedas, desde: HITOS_DESDE })),
   { id: 'reto1', nombre: 'Primer reto aceptado', texto: 'Rema hasta el final contra el reto que te mandó alguien', meta: 1, valor: (g) => g.retos, monedas: 100, desde: GA.GANARTE_DESDE },
 ];
 
@@ -900,7 +933,14 @@ export function sinPausasMuestras(ms) {
 // Las anteriores cuentan igual que antes, así nadie pierde el nivel que ya tenía. Las monedas no cambian.
 export const XP_LENTA_DESDE = new Date(2026, 9, 29).getTime();
 export const FACTOR_XP_LENTA = 0.5;
-export const factorXp = (fecha) => (fecha >= XP_LENTA_DESDE ? FACTOR_XP_LENTA : 1);
+// ⚖ Ronda 2, etapa 9 (R2-5, decisión de Ander): desde RITMO3_DESDE la curva se calibra a 3 sesiones por semana. En vez
+// de rehacer la tabla de niveles (y mover el nivel de todos), la XP que se gana desde ese día rinde FACTOR_RITMO3 veces
+// más: quien rema 3 por semana llega al nivel 90 en lo que antes tardaba quien remaba 4. Lo ganado antes no cambia.
+export const RITMO3_DESDE = '2026-11-27';
+export const FACTOR_RITMO3 = 1.25;
+const RITMO3_MS = new Date(`${RITMO3_DESDE}T00:00`).getTime();
+export const factorRitmo = (fecha) => (fecha >= RITMO3_MS ? FACTOR_RITMO3 : 1);
+export const factorXp = (fecha) => (fecha >= XP_LENTA_DESDE ? FACTOR_XP_LENTA * factorRitmo(fecha) : 1);
 // Ronda 2, R2-19: la XP que de verdad se paga (y se muestra) de una cifra nominal. Las tablas (misiones, logros, jefes)
 // guardan la nominal; todo lo que se paga o se enseña pasa por aquí. Para pagar una cifra exacta, la nominal es el doble.
 export const xpReal = (nominal, fecha) => Math.round((nominal || 0) * factorXp(fecha));
@@ -1028,10 +1068,14 @@ function gananciaCarga(s, m, ctx, at, carga) {
   const cr = ctx.creditos || {};
   if (cr.descansos) detalle.push([cr.descansos === 1 ? 'Descanso del plan respetado' : `${cr.descansos} descansos del plan respetados`, P.descanso * cr.descansos]);
   if (cr.semanas) detalle.push([cr.semanas === 1 ? 'Semana del plan cumplida' : `${cr.semanas} semanas del plan cumplidas`, P.semana * cr.semanas]);
-  const todo = [...detalle, ...bonosDeJuego(s, m, ctx)].filter(([, v]) => v > 0);
+  // R2-5: desde RITMO3_DESDE la XP del plan y de la carga también rinde más (los bonos de juego ya lo traen de factorXp).
+  const r = factorRitmo(s.fecha);
+  const plan = r === 1 ? detalle : detalle.map(([k, v]) => /** @type {[string, number]} */ ([k, Math.round(v * r)]));
+  const todo = [...plan, ...bonosDeJuego(s, m, ctx)].filter(([, v]) => v > 0);
   const xp = todo.reduce((a, [, v]) => a + v, 0);
-  // Monedas: 1 por cada 50 XP que se ven desde la etapa 12 (las cuenta estadoJuego con xpBase o xp).
-  return { xp, xpBase: xp * 2, detalle: todo, atributos: at, carga, datosTal: datosTalento(s, m, ctx), pagaPlan: !!cumple || (!!ctx.regreso && !ctx.planPagado) };
+  // Monedas: 1 por cada 50 XP que se ven desde la etapa 12 (las cuenta estadoJuego con xpBase o xp); el ritmo de 3
+  // sesiones no cambia las monedas.
+  return { xp, xpBase: Math.round((xp * 2) / r), detalle: todo, atributos: at, carga, datosTal: datosTalento(s, m, ctx), pagaPlan: !!cumple || (!!ctx.regreso && !ctx.planPagado) };
 }
 
 // Calendario del plan que usa el juego (ver xp-carga.js). La app lo fija al arrancar y al cambiar de plan.
@@ -1475,6 +1519,11 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
           lograr(s.fecha, 'hazana', `Logro: ${h.nombre}`, h.monedas, h.objeto, h.xp || 0);
         }
       }
+    }
+    // Cofre de medio rango (R2-4): al cruzar el nivel 15, 25 … 85 en una sesión desde HITOS_DESDE.
+    if (hoy >= HITOS_DESDE) {
+      const nivelFin = nivelAhora(xp);
+      for (const n of NIVELES_MEDIO_RANGO) if (nivelAntes < n && nivelFin >= n) lograr(s.fecha, 'hito', textoMedioRango(n, claseEn(per, s.fecha)), MONEDAS_MEDIO_RANGO, null);
     }
     porSesion.set(s.fecha, { xp: gan.xp, xpExtra: xpSesion, detalle: gan.detalle, ganancias, nivelAntes, nivelDespues: nivelAhora(xp), monedas: monedasSesion, datosTal: gan.datosTal, grados, avisoDescanso, jefe: jefeSesion });
   }

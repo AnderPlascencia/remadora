@@ -175,7 +175,8 @@ console.log('juego OK', h.nivel, h.atributos, g1.xp, g2.xp);
   const dia = (d) => Date.UTC(2026, 10, d, 19);
   const corta = (d) => ({ fecha: dia(d), duracion: 960, distancia: 3000, paladas: 380, wattsProm: 95, muestras: [] });
   const ses = [2, 9, 16, 23].map(corta); // 1 vez por semana, 3 km
-  const h = J.estadoJuego(ses, { ftp: 120, per: { clase: 'polinesio' }, ahora: dia(30) });
+  // Antes de RITMO3_DESDE (R2-5): desde el 27 de noviembre la XP rinde un 25 % más.
+  const h = J.estadoJuego(ses, { ftp: 120, per: { clase: 'polinesio' }, ahora: dia(26) });
   // Desde el 29 de octubre todo da la mitad: lo que se muestra ya viene a la mitad
   const sinRitmo = J.misionesDelDia('2026-10-26');
   assert.ok(h.diarias.every((m) => m.xp <= J.XP_MISION_DIARIA.plan / 2), 'misiones diarias a la mitad');
