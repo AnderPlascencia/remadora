@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.142.0 · 2026-11-26
+
+Pruebas de la capa de datos (etapa I-1 de la ronda 2). No cambia nada de lo que ves.
+
+- La base local (IndexedDB) y el historial tienen pruebas en Node con una base falsa: la migración de la v2 a la v3, las transacciones que fallan o se abortan (como con el disco lleno), la caché del historial y guardar, actualizar y borrar sesiones. Cobertura de funciones de `db.js` y `historial.js`: de 0 % a más del 90 %, con un piso de 80 % en el CI.
+- Cuando falla una escritura, el error que se informa es el de la petición que falló, no uno genérico.
+
 ## 0.141.0 · 2026-11-26
 
 Adherencia (etapa E-5 de la ronda 2).

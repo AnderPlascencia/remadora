@@ -81,7 +81,8 @@ export async function tx(almacen, modo, fn) {
     const varios = Array.isArray(almacen);
     const leer = () => (typeof req === 'function' ? req() : req instanceof IDBRequest ? req.result : req);
     t.oncomplete = () => resolve(leer());
-    t.onerror = () => reject(t.error || req?.error || new Error(`error en ${almacen}`));
+    // El error llega desde la petición que falló (e.target): con varias peticiones, req es solo la última.
+    t.onerror = (e) => reject(e?.target?.error || t.error || req?.error || new Error(`error en ${almacen}`));
     t.onabort = () => reject(t.error || new DOMException(`transacción abortada en ${almacen}`, 'AbortError'));
     try {
       req = fn(varios ? t : t.objectStore(almacen));

@@ -31,3 +31,14 @@ const md = [
 ].join('\n');
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
 else console.log(md);
+
+// Pisos de cobertura de funciones (I-1, ronda 2): la capa de datos no puede volver a quedar sin pruebas.
+const PISOS = { 'src/db.js': 80, 'src/historial.js': 80 };
+const bajos = Object.entries(PISOS).filter(([n, min]) => {
+  const x = archivos.find((f) => f.nombre === n);
+  return !x || (100 * x.FNH) / (x.FNF || 1) < min;
+});
+if (bajos.length) {
+  console.error(`Cobertura de funciones bajo el piso: ${bajos.map(([n, min]) => `${n} (< ${min} %)`).join(', ')}`);
+  process.exitCode = 1;
+}
