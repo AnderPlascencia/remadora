@@ -235,15 +235,16 @@
         <div id="bloque-indicador" class="indicador" aria-live="polite"></div>
       </div>
 
-      <div id="perfil-vivo" hidden>
-        <div id="vivo-leyenda" class="leyenda"><span class="lr">Rango de potencia</span><span class="lf">Fuera de rango</span><span class="ll">Cualquier potencia</span><span class="ld">Sin tiempo fijo (≈)</span><span class="lp">Tu potencia</span></div>
-        <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
-      </div>
-
       <div class="fila-botones barra-accion">
         <button id="btn-grabar" class="boton primario grande" disabled><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
         <button id="btn-pausa" class="boton grande" hidden aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
         <button id="btn-modo-remo" class="boton grande" aria-label="Modo remo de pantalla completa"><svg class="ico" aria-hidden="true"><use href="#i-expandir"/></svg></button>
+      </div>
+
+      <!-- UX2-2: la gráfica del plan va debajo de la barra de acción, con su leyenda pegada: la barra ya no la parte. -->
+      <div id="perfil-vivo" hidden>
+        <div id="vivo-leyenda" class="leyenda"><span class="lr">Rango de potencia</span><span class="lf">Fuera de rango</span><span class="ll">Cualquier potencia</span><span class="ld">Sin tiempo fijo (≈)</span><span class="lp">Tu potencia</span></div>
+        <canvas id="grafica-perfil" class="grafica" role="img" aria-label="Plan de potencia del entrenamiento"></canvas>
       </div>
 
       <div id="pausa-aviso" class="aviso suave-aviso" hidden aria-live="polite">En pausa: empieza a remar para continuar</div>
@@ -844,8 +845,10 @@
       <button id="mr-empezar" class="boton primario lleno grande" hidden><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>Empezar</span></button>
       <button id="mr-terminar" class="boton peligro lleno grande"><svg class="ico" aria-hidden="true"><use href="#i-stop"/></svg><span>Terminar</span></button>
       <button id="mr-pausa" class="boton grande" aria-label="Pausar"><svg class="ico" aria-hidden="true"><use href="#i-pausa"/></svg><span>Pausar</span></button>
-      <button id="mr-vista" class="boton grande" aria-label="Cambiar a vista de gráfica"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg></button>
+      <button id="mr-vista" class="boton grande" aria-label="Cambiar a vista de gráfica" aria-haspopup="menu"><svg class="ico" aria-hidden="true"><use href="#i-grafica"/></svg></button>
     </div>
+    <!-- UX2-10: mantener pulsado «Vista» abre las vistas para ir directo a una. -->
+    <div id="mr-vistas" class="mr-vistas" role="menu" aria-label="Elegir vista" hidden></div>
   </div>
 
   <!-- RESUMEN / DETALLE DE SESIÓN -->

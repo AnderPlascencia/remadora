@@ -631,20 +631,56 @@ function aplicarVistaRemo() {
   const b = $('#mr-vista');
   // El botón muestra la vista actual y unos puntos con su lugar en la vuelta; tocarlo pasa a la siguiente.
   const vistas = vistasRemo();
-  const icono = { numeros: '<span class="num" aria-hidden="true">Vista</span>', uno: '<span class="num" aria-hidden="true">Vista</span>', rango: '<span class="num" aria-hidden="true">Vista</span>', grafica: '<span class="num" aria-hidden="true">Vista</span>', carrera: '<span class="num" aria-hidden="true">Vista</span>' };
-  const nombre = { numeros: 'números grandes', uno: 'solo un número', rango: 'rango del intervalo', grafica: 'gráfica', carrera: 'carrera' };
-  b.innerHTML = `${icono[v]}<span class="vista-puntos" aria-hidden="true">${vistas.map((x) => (x === v ? '●' : '○')).join('')}</span>`;
-  b.setAttribute('aria-label', `Vista: ${nombre[v]}. Toca para cambiar a ${nombre[sig]}`);
+  b.innerHTML = `<span class="num" aria-hidden="true">${CORTO_VISTA[v]}</span><span class="vista-puntos" aria-hidden="true">${vistas.map((x) => (x === v ? '●' : '○')).join('')}</span>`;
+  b.setAttribute('aria-label', `Vista: ${NOMBRE_VISTA[v]}. Toca para cambiar a ${NOMBRE_VISTA[sig]}; mantén pulsado para elegir`);
+}
+// UX2-10: el botón dice qué vista ves; mantenerlo pulsado abre las vistas para ir directo a una.
+const CORTO_VISTA = { numeros: 'Números', uno: 'Uno', rango: 'Rango', grafica: 'Gráfica', carrera: 'Carrera' };
+const NOMBRE_VISTA = { numeros: 'números grandes', uno: 'solo un número', rango: 'rango del intervalo', grafica: 'gráfica', carrera: 'carrera' };
+function ponerVista(v) {
+  ajustes.escribir('vistaRemo', v);
+  selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
+  aplicarVistaRemo();
+  requestAnimationFrame(pintar);
+}
+function abrirVistas() {
+  const menu = $('#mr-vistas');
+  const actual = vistaRemo();
+  menu.innerHTML = vistasRemo().map((x) => `<button type="button" role="menuitemradio" aria-checked="${x === actual}" data-vista="${x}"><b>${CORTO_VISTA[x]}</b><small>${NOMBRE_VISTA[x]}</small></button>`).join('');
+  menu.hidden = false;
+  $('#mr-vista').setAttribute('aria-expanded', 'true');
+  menu.querySelector('[aria-checked="true"]')?.focus();
+}
+function cerrarVistas() {
+  if ($('#mr-vistas').hidden) return;
+  $('#mr-vistas').hidden = true;
+  $('#mr-vista').setAttribute('aria-expanded', 'false');
 }
 
 // Al arrancar la app (en orden, desde app.js).
 export function arrancarVivo2() {
-  $('#mr-vista').addEventListener('click', () => {
-    ajustes.escribir('vistaRemo', siguienteVista());
-    selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
-    aplicarVistaRemo();
-    requestAnimationFrame(pintar);
-  });
+  {
+    // Toque: la vista siguiente. Mantener pulsado (0,5 s) o el menú contextual: las vistas, para ir directo a una.
+    const bv = $('#mr-vista');
+    let pulsado = 0;
+    let abrio = false;
+    bv.addEventListener('pointerdown', () => { abrio = false; clearTimeout(pulsado); pulsado = setTimeout(() => { abrio = true; abrirVistas(); vibrar(VIBRA.gesto); }, 500); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) bv.addEventListener(ev, () => clearTimeout(pulsado));
+    bv.addEventListener('contextmenu', (e) => { e.preventDefault(); clearTimeout(pulsado); if (!abrio) { abrio = true; abrirVistas(); } });
+    bv.addEventListener('click', () => {
+      if (abrio) { abrio = false; return; }
+      if (!$('#mr-vistas').hidden) { cerrarVistas(); return; }
+      ponerVista(siguienteVista());
+    });
+    $('#mr-vistas').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-vista]');
+      if (!b) return;
+      cerrarVistas();
+      ponerVista(b.dataset.vista);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#mr-vistas').hidden) { e.stopPropagation(); cerrarVistas(); bv.focus(); } }, true);
+    document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#mr-vistas, #mr-vista')) cerrarVistas(); });
+  }
   // Lo que eliges a mano manda el resto del día: al volver a abrir la app no se cambia por la sesión del día.
   $('#sel-entrenamiento').addEventListener('change', () => { ajustes.escribir('ultimoEnt', $('#sel-entrenamiento').value); ajustes.escribir('eleccionDia', E.claveDia(Date.now())); vistaPrevia(); });
   $('#modo-ent').addEventListener('click', (e) => {
@@ -696,11 +732,8 @@ export function arrancarVivo2() {
       inicio = null;
       if (rapido && Math.abs(dx) > 60 && Math.abs(dy) < 60) {
         gestoHecho = Date.now();
-        ajustes.escribir('vistaRemo', siguienteVista());
-        selVistaRemo.value = ajustes.leer('vistaRemo', 'numeros');
-        aplicarVistaRemo();
+        ponerVista(siguienteVista());
         vibrar(VIBRA.gesto);
-        requestAnimationFrame(pintar);
         return;
       }
       if (Math.abs(dx) > 12 || Math.abs(dy) > 12 || !estado.sesion) return;
@@ -894,6 +927,7 @@ export function textoAntesDeEmpezar() {
 }
 
 export function cerrarModoRemo() {
+  cerrarVistas();
   $('#modo-remo').hidden = true;
   carreraEnt.tapado = false;
   if (carreraEnt.estado) carreraEnt.actualizar(carreraEnt.estado);
