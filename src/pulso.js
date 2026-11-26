@@ -86,12 +86,14 @@ export const PREGUNTAS_PREVIAS = {
   dolor: { texto: '¿Algún dolor o malestar?', opciones: [['no', 'No'], ['leve', 'Leve'], ['si', 'Sí']] },
 };
 // Etapa 27: con dolor o molestia se pregunta dónde, y cada zona trae su consejo.
-export const ZONAS_DOLOR = [['espalda', 'Espalda baja'], ['rodillas', 'Rodillas'], ['hombros', 'Hombros o cuello'], ['munecas', 'Muñecas o manos'], ['otra', 'Otra']];
+export const ZONAS_DOLOR = [['espalda', 'Espalda baja'], ['rodillas', 'Rodillas'], ['hombros', 'Hombros o cuello'], ['munecas', 'Muñecas o manos'], ['costillas', 'Costillas'], ['otra', 'Otra']];
 const CONSEJO_ZONA = {
   espalda: 'sin series ni cadencia alta, y con la espalda firme al final de la palada',
   rodillas: 'sin llegar del todo adelante: acorta la entrada',
   hombros: 'sin tirar de brazos: que empujen las piernas',
   munecas: 'con el agarre suelto y las muñecas planas',
+  // E-4 (E15): la fractura por estrés de costilla es la lesión típica de quien sube volumen en remo.
+  costillas: 'con menos volumen y menos resistencia. Si te duele al respirar hondo, consulta a un profesional',
 };
 const nombreZona = (z) => (ZONAS_DOLOR.find(([k]) => k === z)?.[1] || '').toLowerCase();
 const DIA_MS = 864e5;
@@ -99,6 +101,18 @@ const DIA_MS = 864e5;
 export function diasConDolor(dolores = [], hoy = new Date(), zona = null) {
   const desde = hoy.getTime() - 7 * DIA_MS;
   return (dolores || []).filter((d) => (d.dolor === 'leve' || d.dolor === 'si') && new Date(`${d.dia}T12:00`).getTime() > desde && (!zona || d.zona === zona));
+}
+// E-4 (E15): molestia de espalda baja 2 días o más en una semana. Hasta 7 días después de la última, nada de fuerza
+// a cadencia baja, sprints con resistencia alta ni la Furia del berserker. Devuelve el día en que se levanta
+// ('aaaa-mm-dd') o null.
+export function espaldaCargadaHasta(dolores = [], hoy = new Date()) {
+  const dias = (dolores || []).filter((d) => (d.dolor === 'leve' || d.dolor === 'si') && d.zona === 'espalda').map((d) => d.dia).sort();
+  const ult = dias.at(-1);
+  if (!ult) return null;
+  const t = new Date(`${ult}T12:00`).getTime();
+  if (t <= hoy.getTime() - 7 * DIA_MS || dias.filter((d) => new Date(`${d}T12:00`).getTime() > t - 7 * DIA_MS).length < 2) return null;
+  const fin = new Date(t + 7 * DIA_MS);
+  return `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, '0')}-${String(fin.getDate()).padStart(2, '0')}`;
 }
 // Qué cambia según tus respuestas de hoy: el estado mínimo del cuerpo y por qué (null si nada).
 // Dolor o enfermedad mandan sobre todo lo demás: no se entrena fuerte enfermo ni con dolor.

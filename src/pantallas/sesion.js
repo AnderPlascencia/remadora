@@ -17,6 +17,7 @@ import * as Cap from '../capacidades.js';
 import * as Pf from '../perfil.js';
 import { crearReloj } from '../reloj.js';
 import { $, ajustes, escaparHtml, fcMaxima, fcRef, ftp, ico, perfil, pitido, previoHoy, toast, VIBRA, vibrar } from '../ui.js';
+import { diasConDolor } from '../pulso.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
 import { repararSesiones, ritmoObjetivo, selVariante } from './ajustes.js';
@@ -346,7 +347,9 @@ function crearVentaja(ent, racha, recientes = []) {
   const ftpFiable = recientes.some((x) => (x.pruebaWatts || x.pruebaFtp) && x.fecha > Date.now() - 56 * 864e5);
   const conPaladas = recientes.filter((x) => x.paladas > 0 && x.distancia > 0).slice(-20);
   const mppMedia = conPaladas.length ? conPaladas.reduce((a, x) => a + x.distancia / x.paladas, 0) / conPaladas.length : 0;
-  const habilidad = clave && !V.esPrueba(ent) ? { ftp: f, ftpFiable, mppMedia } : null;
+  // E-4 (H1): con molestia de espalda esta semana, la Furia del berserker descansa.
+  const espalda = diasConDolor(previoHoy()?.dolores, new Date(), 'espalda').length > 0;
+  const habilidad = clave && !V.esPrueba(ent) ? { ftp: f, ftpFiable, mppMedia, espalda, fecha: Date.now() } : null;
   return V.nuevaVentaja({ clase: clave, grados, objeto, final, racha, equipo, senda, intensidad, habilidad });
 }
 

@@ -417,8 +417,9 @@ export async function revisarPlanAuto() {
   const prog = leerPrograma();
   if (!prog?.dias?.length || estado.sesion) return;
   const [sesiones, ents] = await Promise.all([H.sinMuestras(), db.listar('entrenamientos')]);
-  const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo: previoHoy() });
-  let r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo });
+  const previo = previoHoy();
+  const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo });
+  let r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo, previo });
   // Plan de meta: tras la prueba de mitad, las zonas que quedan desde tu marca real (E-2, se carga aparte).
   const pm = r?.programa || prog;
   if (pm.meta && !pm.zonasDesde && sesiones.some((s) => /^Prueba/.test(s.entrenamiento || ''))) {

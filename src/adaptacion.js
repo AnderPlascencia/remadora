@@ -3,12 +3,16 @@
 // Sin dependencias de la interfaz: recibe el plan y devuelve el plan nuevo.
 import * as E from './estadisticas.js';
 import { estadoDias, repartirSemana, semanaFlexible, sesionDeVuelta, sesionFondo, semanaDe, TIPOS_DUROS } from './programa.js';
-import { tipoPlan, tipoSesion } from './capacidades.js';
+import { tipoPlan, tipoSesion, piernasRecientes } from './capacidades.js';
+import { espaldaCargadaHasta } from './pulso.js';
 
 const DIA = 864e5;
 const DURO = TIPOS_DUROS;
 const FACTOR_MIN = 0.85;
 const FACTOR_MAX = 1.15;
+// E-4: lo que más carga la espalda baja: fuerza a cadencia baja (≤ 20 paladas/min) y sprints con la resistencia de la
+// consola en 12 o más.
+export const cargaLumbar = (ent) => (ent?.bloques || []).some((b) => (b.spmMeta && b.spmMeta[1] <= 20) || (b.nivel >= 12 && b.min >= 120));
 const media = (xs) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0);
 
 // Pulso y watts medios entre el minuto 4 y el 5 (todavía calentando).
@@ -73,10 +77,11 @@ export function textoRegreso(tramo, dias) {
 // Revisa el plan. Devuelve { programa, entrenamientos, avisos } con lo que cambió, o null si no cambió nada.
 // entrenamientos: los guardados (para saber qué toca cada día); los nuevos que haga falta crear vuelven en la respuesta.
 // cuerpo: el estado de hoy (estadoCuerpo), con lo que respondiste antes de remar y la variabilidad del pulso.
-export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, cuerpo = null, ahora = Date.now() }) {
+// previo: tus respuestas de antes de remar con las molestias de los últimos días (previoHoy), o null.
+export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, cuerpo = null, previo = null, ahora = Date.now() }) {
   if (!programa?.dias?.length) return null;
   const orden = [...sesiones].sort((a, b) => a.fecha - b.fecha);
-  const revision = `${E.claveDia(ahora)}:${orden.length}${cuerpo?.motivos?.length ? `:${cuerpo.clave}` : ''}`;
+  const revision = `${E.claveDia(ahora)}:${orden.length}${cuerpo?.motivos?.length ? `:${cuerpo.clave}` : ''}${espaldaCargadaHasta(previo?.dolores, new Date(ahora)) ? ':espalda' : ''}`;
   if (programa.revision === revision) return null;
   const p = structuredClone(programa);
   p.revision = revision;
@@ -119,6 +124,23 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
       const min = avisado && cuerpo.clave === 'agotado' ? 20 : 30;
       cambiarDia(diaHoy, sesionFondo(min, { pulso: true }), `${motivo}: cambié «${diaHoy.ent}» por un fondo muy suave de ${min} min${min === 20 ? ', o descansa' : ''}.`);
     }
+  }
+
+  // 1b. E-4 (E14): piernas cansadas al final de la última sesión → la próxima de fuerza o sprints, un fondo.
+  // E15: molestia de espalda 2 días o más en la semana → 7 días sin fuerza a cadencia baja ni sprints pesados.
+  const estados = estadoDias(p, orden, ahora);
+  const pendiente = (d) => d.fecha >= hoy && estados[p.dias.indexOf(d)]?.estado !== 'hecho';
+  const piernas = piernasRecientes(orden, ahora);
+  if (piernas && p.piernasDe !== piernas.fecha) {
+    p.piernasDe = piernas.fecha;
+    const prox = p.dias.find((d) => pendiente(d) && (cargaLumbar(porNombre(d.ent)) || tipoDe(d.ent) === 'sprint'));
+    if (prox && prox.fecha <= E.claveDia(ahora + 2 * DIA)) cambiarDia(prox, sesionFondo(30), `Tus piernas acabaron cansadas en tu última sesión: cambié «${prox.ent}» por un fondo de 30 min.`);
+  }
+  const espalda = espaldaCargadaHasta(previo?.dolores, new Date(ahora));
+  if (espalda) {
+    const cambiar = p.dias.filter((d) => pendiente(d) && d.fecha < espalda && cargaLumbar(porNombre(d.ent)));
+    for (const d of cambiar) { d.original ??= d.ent; const f = sesionFondo(30); if (!porNombre(f.nombre)) nuevos.push(f); d.ent = f.nombre; }
+    if (cambiar.length) avisos.push(`Tuviste molestias de espalda varios días: hasta el ${espalda.slice(8)}/${espalda.slice(5, 7)}, las sesiones de fuerza a cadencia baja y los sprints pasan a fondos de 30 min.`);
   }
 
   // 2. Cumplimiento de las sesiones duras: dos seguidas por debajo del rango bajan los rangos un 3 %;

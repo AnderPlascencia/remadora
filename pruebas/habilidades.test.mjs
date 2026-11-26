@@ -43,6 +43,13 @@ assert.equal(V.nuevaVentaja({ clase: 'vikingo' }).habilidad, null);
   // Sin calentar, nada en los primeros 5 min.
   const fria = remar(nueva({ intensidad: { ...permiso, calentado: false } }), 299, () => ({ w: 230, spm: 28 }));
   assert.equal(de(fria, 'Furia del berserker').length, 0);
+  // ⚖ E-4 (H1): a 18–20 paladas/min (carga lumbar) ya no cobra; antes de HABILIDADES_E4_DESDE, sí.
+  assert.equal(de(remar(nueva(), 150, () => ({ w: 230, spm: 20 })), 'Furia del berserker').length, 0);
+  assert.equal(de(remar(nueva({ habilidad: { ftp: 200, ftpFiable: true, fecha: Date.parse('2026-11-25T10:00') } }), 150, () => ({ w: 230, spm: 20 })), 'Furia del berserker').length, 1);
+  assert.equal(de(remar(nueva(), 150, () => ({ w: 230, spm: 24 })), 'Furia del berserker').length, 1);
+  // Con molestia de espalda esta semana, la Furia descansa: Timonel en su lugar.
+  assert.equal(nueva({ habilidad: { ftp: 200, ftpFiable: true, espalda: true } }).habilidad.id, 'timonel');
+  assert.equal(nueva({ habilidad: { ftp: 200, ftpFiable: true, espalda: true, fecha: Date.parse('2026-11-25T10:00') } }).habilidad.id, 'furia');
   // Con el cuerpo cargado, la de reserva (Timonel) en vez de la Furia.
   const cargado = nueva({ intensidad: { activa: false, motivo: 'cuerpo', calentado: true } });
   assert.equal(cargado.habilidad.id, 'timonel');
@@ -96,12 +103,15 @@ assert.equal(V.nuevaVentaja({ clase: 'vikingo' }).habilidad, null);
 
 // ---------- Zanshin ----------
 {
-  const nueva = () => V.nuevaVentaja({ clase: 'samurai', intensidad: permiso, final: { meta: 2000 }, habilidad: { ftp: 200 } });
+  const nueva = (fecha) => V.nuevaVentaja({ clase: 'samurai', intensidad: permiso, final: { meta: 2000 }, habilidad: { ftp: 200, ...(fecha ? { fecha } : {}) } });
   // Ruido de ±2 en el dato bruto con la media estable: cobra al cruzar la meta.
   const e = remar(nueva(), 500, (t) => ({ spm: 24 + (t % 2 ? 2 : -2) }));
   assert.equal(de(e, 'Zanshin').length, 1);
-  // Subir la cadencia al final (el «sprint de cadencia») no cobra.
-  assert.equal(de(remar(nueva(), 500, (t) => ({ spm: t > 440 ? 30 : 24 })), 'Zanshin').length, 0);
+  // ⚖ E-4 (H2): subir la cadencia al final (el final natural de una regata) cobra; bajarla, no. Antes de
+  // HABILIDADES_E4_DESDE, subirla tampoco cobraba.
+  assert.equal(de(remar(nueva(), 500, (t) => ({ spm: t > 440 ? 30 : 24 })), 'Zanshin').length, 1);
+  assert.equal(de(remar(nueva(), 500, (t) => ({ spm: t > 440 ? 21 : 24 })), 'Zanshin').length, 0);
+  assert.equal(de(remar(nueva(Date.parse('2026-11-25T10:00')), 500, (t) => ({ spm: t > 440 ? 30 : 24 })), 'Zanshin').length, 0);
   // Aflojar más de un 10 % tampoco.
   assert.equal(de(remar(nueva(), 500, (t) => ({ w: t > 440 ? 160 : 200 })), 'Zanshin').length, 0);
 }
