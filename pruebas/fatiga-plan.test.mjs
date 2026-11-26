@@ -24,7 +24,10 @@ for (const o of P.OBJETIVOS_PLAN) for (const nivel of ['inicio', 'medio', 'alto'
     let ref = null;
     carga.forEach((c, i) => {
       const margen = sem[i].dias.length * 0.5;
-      if (ref != null) {
+      // E-3: un fondo nunca baja de 25 min. En la semana de una prueba con el resto de sesiones ya en ese mínimo (la
+      // base de 2 días de quien empieza) la prueba no se recorta, así que la semana puede pasar del tope.
+      const enMinimo = sem[i].prueba && sem[i].dias.every((d) => d.prueba || new RegExp(`^Fondo ${P.FONDO_MIN} min`).test(d.ent));
+      if (ref != null && !enMinimo) {
         assert.ok(c <= ref * tope + margen, `semana ${i + 1} sobre 1,15 × la última normal (${ref}) · ${id}`);
         if (sem[i - 1]?.descarga && !sem[i].prueba && tope === P.SUBIDA_MAX) assert.ok(c <= ref * P.VUELTA_DESCARGA + margen, `vuelta de la descarga · ${id}`);
       }

@@ -29,14 +29,14 @@ jobs:
           path: lcov.info
           retention-days: 14
 
-  # Las mismas unitarias en dos zonas horarias más: la de Ander (sin horario de verano) y una con horario de verano.
+  # Las mismas unitarias en tres zonas horarias más: la de Ander (sin horario de verano) y dos con horario de verano (cambian la hora en fechas distintas).
   # En UTC no se ven los fallos de «medianoche local» ni los del cambio de hora (QA-F1, QA-F2 de la ronda 2).
   zonas:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        tz: [America/Mexico_City, Europe/Madrid]
+        tz: [America/Mexico_City, Europe/Madrid, America/Los_Angeles]
     env:
       TZ: ${{ matrix.tz }}
     steps:

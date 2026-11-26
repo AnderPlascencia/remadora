@@ -80,15 +80,16 @@ for (const o of P.OBJETIVOS_PLAN) {
     }
   }
 }
-// Quien está empezando hace 3 semanas de base antes del plan de umbral.
+// Quien está empezando hace semanas de base antes del plan de umbral: hasta 3, pero la primera con intensidad no
+// puede ser de descarga ni de prueba (E-3), así que en 8 semanas son 2.
 {
   assert.equal(P.semanasDeBase('umbral', 'inicio', 8), 3);
   assert.equal(P.semanasDeBase('umbral', 'medio', 8), 0);
   assert.equal(P.semanasDeBase('base', 'inicio', 8), 0);
   const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'umbral', nivel: 'inicio', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
   const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
-  assert.equal(programa.semanasBase, 3);
-  const primeras = programa.dias.slice(0, 9).map((d) => buscar(d.ent));
+  assert.equal(programa.semanasBase, 2);
+  const primeras = programa.dias.slice(0, 6).map((d) => buscar(d.ent));
   assert.ok(primeras.every((e) => P.segIntenso(e) === 0), primeras.map((e) => e.nombre).join(', '));
   assert.ok(programa.dias.slice(9).some((d) => /^Umbral/.test(d.ent)), 'después llega el umbral');
 }

@@ -25,15 +25,19 @@ for (const o of P.OBJETIVOS_PLAN) {
 // La carga sube y la semana 4 descarga.
 const { programa: pv } = P.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
 assert.equal(pv.dias[0].ent, 'VO₂ 5 × 2 min');
-assert.equal(pv.dias[9].ent, 'VO₂ 4 × 2 min', 'semana 4 de descarga');
+// Semana 4: descarga con la prueba de mitad (E-3), que ocupa el lugar de la sesión dura.
+assert.ok(pv.dias.slice(9, 12).every((d) => !/^VO₂/.test(d.ent)) && pv.dias[11].ent === 'Prueba 5 min', 'semana 4 de descarga, con la prueba');
 assert.equal(pv.dias[18].ent, 'VO₂ 4 × 4 min');
 const { programa: pu } = P.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
 assert.equal(pu.dias[0].ent, 'Umbral 3 × 8 min');
-assert.equal(pu.dias[18].ent, 'Umbral 1 × 30 min');
+assert.equal(pu.dias[18].ent, 'Umbral 2 × 18 min'); // pasos más finos desde E-3 (antes 1 × 30 en la semana 7)
 assert.ok(pu.dias.filter((d) => d.ent === 'Prueba FTP 20 min').length === 2, 'prueba a mitad y al final');
 // Nivel: empezar pide menos volumen.
 const { programa: pi } = P.planPorObjetivo({ objetivo: 'base', nivel: 'inicio', dias: 3, semanas: 4, inicio: '2026-11-02', ctx });
-assert.equal(pi.dias[0].ent, 'Fondo 20 min · pulso suave');
+// Con el mínimo de 25 min por fondo (E-3): un fondo de 20 min casi no entrena.
+assert.equal(pi.dias[0].ent, 'Fondo 25 min · pulso suave');
+const { programa: pm } = P.planPorObjetivo({ objetivo: 'base', nivel: 'medio', dias: 3, semanas: 4, inicio: '2026-11-02', ctx });
+assert.ok(Number(pm.dias[0].ent.match(/\d+/)[0]) > 25, pm.dias[0].ent);
 // Calorías: meta semanal que sube un 10 % y baja en la descarga.
 const { programa: pc, entrenamientos: ec } = P.planPorObjetivo({ objetivo: 'calorias', dias: 4, semanas: 6, inicio: '2026-11-02', ctx });
 assert.deepEqual(pc.metaKcal, [900, 1000, 1100, 950, 1300, 1450]);
@@ -71,7 +75,9 @@ console.log('plan por objetivo OK');
   assert.ok(sem[3].descarga && sem[3].esfuerzo < sem[2].esfuerzo, 'semana 4 de descarga, más suave');
   assert.ok(sem[7].prueba, 'termina con prueba');
   assert.equal(sem[1].dias.find((d) => /^Umbral/.test(d.ent)).antes, 'Umbral 3 × 8 min');
-  assert.equal(sem[2].dias.find((d) => /^Umbral/.test(d.ent)).antes, undefined, 'igual que la semana anterior');
+  // Con pasos finos (E-3) el umbral sube también en la semana 3; si una semana repite, «antes» no se dice.
+  const u = (i) => sem[i].dias.find((d) => /^Umbral/.test(d.ent));
+  assert.equal(u(2).antes, u(2).ent === u(1).ent ? undefined : u(1).ent);
   assert.ok(sem[6].esfuerzo > sem[1].esfuerzo, 'la carga sube');
   // Una sesión que la adaptación pasó a otro día no cuenta dos veces.
   const movido = structuredClone(programa);

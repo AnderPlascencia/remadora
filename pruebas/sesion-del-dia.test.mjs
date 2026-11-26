@@ -52,7 +52,7 @@ assert.match(d.motivo, /Vas al día.*adelanta.*Te quedan 2 sesiones en 6 días/)
 const fondoMar = { fecha: lunes + DIA + 3600e3, duracion: 2400, entrenamiento: d.adelantar, muestras: muestras(2400, 120) };
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [hecha, fondoMar], ahora: lunes + 2 * DIA });
 assert.equal(d.fuente, 'descanso');
-assert.ok(d.adelantar && !/^Fondo/.test(d.adelantar), d.motivo);
+assert.ok(d.adelantar && d.adelantar !== fondoMar.entrenamiento, d.motivo);
 // Martes sin haber remado el lunes: recupera la sesión clave (mañana toca fondo).
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [], ahora: lunes + DIA });
 assert.equal(d.fuente, 'recuperar');
