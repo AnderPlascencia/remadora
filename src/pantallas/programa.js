@@ -107,8 +107,10 @@ export async function pintarPrograma() { (await import('./programa-vista.js')).p
 export async function contextoPlan() {
   const sesiones = await H.sinMuestras();
   let split2k = null;
+  // E-1: tu ritmo de 2000 m sale de un 2000 m a tope, no del de dentro de un fondo.
+  const pc = E.potenciaCriticaMax(sesiones.slice(-30));
   for (const x of sesiones.slice(-30)) {
-    const t = E.nMuestras(x) ? E.mejorTiempoDe(x, 2000) : null;
+    const t = E.nMuestras(x) ? E.marcaATope(x, 2000, pc) : null;
     if (t && (!split2k || t / 4 < split2k)) split2k = t / 4;
   }
   const w = ftp() || estimarFtp(sesiones);

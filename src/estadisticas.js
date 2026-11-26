@@ -758,6 +758,29 @@ export function ftpEstimadoDe(sesiones) {
   return Math.round(tres[Math.floor(tres.length / 2)]);
 }
 
+// Calibración honesta (E-1, E4): ¿la sesión tuvo un tramo exigente? Esfuerzo sentido o por pulso de 7 o más, pulso
+// medio ≥ 85 % del máximo, o watts que no bajan del FTP que tienes. Un fondo suave no lo es.
+export function esExigente(s, ftp) {
+  if (!s) return false;
+  if ((s.rpe || 0) >= 7 || (s.rpePulso || 0) >= 7 || (s.rpePct || 0) >= 85) return true;
+  return !(ftp > 0) || ftpDeSesion(s) >= ftp;
+}
+// El FTP que deja una sesión de 10 min o más cuando no tienes uno de prueba (o null si no cambia).
+//  · Sin FTP: el de tus sesiones (mediana de las 3 mejores, ftpEstimadoDe).
+//  · FTP del perfil (la bienvenida): lo reemplaza solo una sesión exigente; un fondo suave nunca lo baja.
+//  · FTP estimado: sube cuando la mediana de tus 3 mejores pasa del actual, no con un solo día bueno.
+export function ftpAutomaticoDe(s, previas = [], { ftp = 0, estimado = false, dePerfil = false } = {}) {
+  if (!s || s.pruebaWatts || (s.duracion || 0) < 600) return null;
+  if (ftp > 0 && !estimado && !dePerfil) return null;
+  if (ftp > 0 && dePerfil) {
+    if (!esExigente(s, ftp)) return null;
+    const nuevo = Math.round(ftpDeSesion(s));
+    return nuevo > 0 && nuevo !== ftp ? nuevo : null;
+  }
+  const nuevo = ftpEstimadoDe([...(previas || []).filter((x) => x.id !== s.id), s]);
+  return nuevo > (ftp || 0) ? nuevo : null;
+}
+
 // ¿Toca revisar el FTP? Repetir la prueba cada 6–8 semanas, y bajarlo si varias sesiones duras se quedan cortas.
 // sesiones: con pruebaFtp/pruebaWatts para saber la última prueba, y pctEnRango/pctBajo/bloques para las duras.
 // Devuelve { repetir: días desde la última prueba (si pasan de 42), bajar: { ftp, cortas } } o null si nada.
@@ -1171,6 +1194,33 @@ export function tiempoPara(metros, pc) {
   return Math.round(hi);
 }
 
+// Marcas solo a tope (E-1, E5): el tramo de `metros` cuenta como marca si es parejo (no la mitad fuerte y el resto
+// calentamiento), no es un trozo de algo más largo igual de fuerte (un 2000 m dentro de un fondo) y, fuera de las
+// pruebas y si ya hay modelo, llega al 95 % de lo que aguantas en ese tiempo según tu CP y W′. La misma regla para Detalle, Hoy, el
+// asistente de metas y el registro de predicciones.
+// formaTope: los watts del tramo si tiene forma de esfuerzo a tope, o 0. El resumen la guarda en res.tp.
+export function formaTope(muestras, metros) {
+  const t = mejorTiempo(muestras, metros);
+  if (!t) return 0;
+  const w = mejorPotencia(muestras, t);
+  if (!w) return 0;
+  const largo = mejorPotencia(muestras, Math.round(t * 1.5));
+  const parejo = w >= 0.93 * (mejorPotencia(muestras, Math.round(t / 2)) || w);
+  return parejo && !(largo != null && largo >= w * 0.97) ? w : 0;
+}
+// Tiempo de la marca a tope de `s` en `metros`, o null. `pc`: tu potencia crítica ({ cp, wPrima }). `sinModelo`:
+// si sin pc basta la forma (para predecir algo); el registro de predicciones no lo acepta.
+export function marcaATope(s, metros, pc, { sinModelo = true } = {}) {
+  const t = mejorTiempoDe(s, metros);
+  if (!(t > 0)) return null;
+  const w = conM(s) ? formaTope(s.muestras, metros) : s?.res?.tp?.[metros] || 0;
+  if (!w) return null;
+  if (s.tipoPlan === 'prueba') return t;
+  // Sin modelo todavía no hay con qué medirlo: basta la forma (un 2000 m suelto y parejo cuenta).
+  if (!pc?.cp) return sinModelo ? t : null;
+  return w >= 0.95 * (pc.cp + pc.wPrima / t) ? t : null;
+}
+
 const recientesMotor = (sesiones, ahora) => (sesiones || []).filter((s) => s.fecha < ahora && s.fecha > ahora - VENTANA_DIAS * 864e5 && nMuestras(s));
 export const perfilDe = (sesiones, { peso = 0, ahora = Date.now() } = {}) => potenciaCriticaMax(recientesMotor(sesiones, ahora), { peso });
 
@@ -1179,9 +1229,9 @@ export const perfilDe = (sesiones, { peso = 0, ahora = Date.now() } = {}) => pot
 // más cercana que hayas remado. `error` (MAPE de tus predicciones registradas) ensancha el rango si el modelo falla.
 export function estimar(sesiones, metros, { peso = 0, ahora = Date.now(), error = null, pc = undefined } = {}) {
   const lista = recientesMotor(sesiones, ahora);
-  const marcas = (d) => lista.map((s) => mejorTiempoDe(s, d)).filter((x) => x > 0);
-  const real = marcas(metros);
   const perfil = pc === undefined ? potenciaCriticaMax(lista, { peso }) : pc;
+  const marcas = (d) => lista.map((s) => marcaATope(s, d, perfil)).filter((x) => x > 0);
+  const real = marcas(metros);
   let res = null;
   if (real.length) res = { t: Math.min(...real), fuente: 'marca', desde: metros };
   else if (perfil) {
@@ -1189,7 +1239,11 @@ export function estimar(sesiones, metros, { peso = 0, ahora = Date.now(), error 
     if (t) res = { t, fuente: perfil.estimada ? 'estimada' : 'modelo', desde: null };
   }
   if (!res) {
-    const otras = DISTANCIAS_PREDICCION.filter((d) => d !== metros).map((d) => ({ d, m: marcas(d) })).filter((x) => x.m.length)
+    // Ni marca ni modelo: la ley de Paul desde una marca a tope o, si no hay ninguna, desde lo mejor que remaste
+    // (con el rango más ancho).
+    const crudas = (d) => lista.map((s) => mejorTiempoDe(s, d)).filter((x) => x > 0);
+    const de = DISTANCIAS_PREDICCION.some((d) => d !== metros && marcas(d).length) ? marcas : crudas;
+    const otras = DISTANCIAS_PREDICCION.filter((d) => d !== metros).map((d) => ({ d, m: de(d) })).filter((x) => x.m.length)
       .sort((a, b) => Math.abs(Math.log2(a.d / metros)) - Math.abs(Math.log2(b.d / metros)));
     if (!otras.length) return null;
     const { d, m } = otras[0];

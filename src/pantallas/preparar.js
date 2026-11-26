@@ -326,15 +326,12 @@ function extrasPlegados(filas) {
   return `<details class="mas-detalle"><summary>${C.resumenRetos(retos, retos < filas.length)}</summary><ul class="lista-cond">${filas.join('')}</ul></details>`;
 }
 
-// FTP automático: sin FTP (o con uno estimado), cada sesión de 10 min o más lo calcula o lo sube.
-// Con 20 min, el 95 % de tus mejores 20 min; con menos, el 90 % de tu mejor potencia de 10 min.
-export function ftpAutomatico(s) {
-  if (s.pruebaWatts || s.duracion < 600) return null;
-  const estimado = ajustes.si('ftpEstimado', false);
-  if (ftp() && !estimado) return null;
-  const nuevo = Math.round(E.ftpDeSesion(s));
-  const dePerfil = ajustes.si('ftpDePerfil', false);
-  if (!nuevo || (nuevo <= ftp() && !dePerfil)) return null;
+// FTP automático (E-1): sin FTP lo calcula; con uno estimado sube cuando la mediana de tus 3 mejores sesiones pasa
+// del actual; con el del perfil, solo una sesión exigente lo reemplaza (un fondo suave nunca lo baja).
+// `previas`: las sesiones de antes (con resumen basta).
+export function ftpAutomatico(s, previas = []) {
+  const nuevo = E.ftpAutomaticoDe(s, previas, { ftp: ftp(), estimado: ajustes.si('ftpEstimado', false), dePerfil: ajustes.si('ftpDePerfil', false) });
+  if (!nuevo) return null;
   const antes = ftp();
   guardarFtp(nuevo, true);
   ajustes.escribir('ftpDePerfil', '0');

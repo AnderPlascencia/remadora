@@ -35,8 +35,12 @@ test('estimar: manda tu marca reciente, luego el modelo y, sin modelo, la ley de
   const ref = R.tiempoPara(10000, PC);
   assert.ok(Math.abs(m.t - ref) <= ref * 0.01, `10 000 m: ${m.t} frente a ${ref}`);
   assert.ok(m.bajo < m.t && m.alto > m.t);
-  // Con un 2000 m remado en 90 días, manda tu marca (nunca más optimista que lo que remaste).
-  assert.equal(R.estimar(con, 2000, { ahora: AHORA }).fuente, 'marca');
+  // El 2000 m de dentro del esfuerzo de 12 min no es una marca (E-1): un trozo de algo más largo igual de fuerte.
+  assert.equal(R.estimar(con, 2000, { ahora: AHORA }).fuente, 'modelo');
+  // Con un 2000 m a tope en 90 días, manda tu marca (nunca más optimista que lo que remaste).
+  const t2k = R.tiempoPara(2000, PC);
+  const con2k = [...con, sesion(AHORA - 3 * DIA, [[300, 120], [t2k, Math.round(PC.cp + PC.wPrima / t2k)], [300, 100]])];
+  assert.equal(R.estimar(con2k, 2000, { ahora: AHORA }).fuente, 'marca');
   // Solo remo suave sin esfuerzos máximos: ley de Paul desde la distancia más cercana.
   const suave = [sesion(AHORA - 5 * DIA, [[1500, 150], [900, 140]])];
   const p = R.estimar(suave, 10000, { ahora: AHORA, pc: null });

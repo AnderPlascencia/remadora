@@ -242,14 +242,14 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
   }
   pitido(660, 0.2);
   agregarLog(`sesión guardada: ${formatoTiempo(registro.duracion)}, ${registro.distancia} m`);
-  const ftpAuto = ftpAutomatico(registro);
   // Con pulso, el esfuerzo según el pulso se guarda aparte (rpePulso) como sugerencia: el tuyo (rpe) lo marcas en el
-  // resumen, y es el que usa la adaptación del plan.
+  // resumen, y es el que usa la adaptación del plan. Va antes del FTP automático: un pulso alto cuenta como exigente.
   const porPulso = E.esfuerzoPorPulso(registro.muestras, { ...fcRef(), max: fcParaEsfuerzo() });
   if (porPulso) {
     Object.assign(registro, { rpePulso: porPulso.rpe, rpePct: porPulso.pct, trimp: porPulso.trimp });
     await H.actualizar(registro.id, { rpePulso: registro.rpePulso, rpePct: registro.rpePct, trimp: registro.trimp });
   }
+  const ftpAuto = ftpAutomatico(registro, previas || []);
   if (!previas) {
     // Sin historial no se puede calcular el resumen (récords, juego): la sesión está guardada y su detalle se abre igual.
     toast('Sesión guardada. El resumen completo estará en tu historial.', 6000);
