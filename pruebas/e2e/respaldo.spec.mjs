@@ -56,7 +56,8 @@ function historial(modelo, semanas = 10) {
       });
       const fecha = hoy - (semanas * 7 - (s * 7 + dia)) * DIA;
       sesiones.push({
-        ...modelo, id: undefined, fecha, duracion, distancia: Math.round(dist), muestras,
+        // Cada sesión es otra: sin el uid del modelo (I-3), que la haría pasar por la misma.
+        ...modelo, id: undefined, uid: undefined, fecha, duracion, distancia: Math.round(dist), muestras,
         wattsProm: Math.round(muestras.reduce((a, m) => a + m.w, 0) / duracion), notas: `semana ${s + 1}`,
       });
     }
