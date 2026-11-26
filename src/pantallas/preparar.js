@@ -17,7 +17,6 @@ import { chipsAtr, filaCond, icoMoneda, inventario, leerPersonaje, opcConsejos, 
 import { contextoXp } from './programa.js';
 
 // ---------- Fantasmas: hasta 3 a la vez, uno de ellos a tu medida ----------
-const MAX_RIVALES = 3;
 // Una estimación no lleva metros exactos: «unos 5 km» y no «unos 5,003 m».
 function distanciaRedonda(m) {
   if (m < 1000) return `${Math.round(m / 50) * 50} m`;
@@ -352,21 +351,3 @@ export function pintarFtpEstado() {
 // FTP aproximado sin prueba (estadisticas.js): no se infla con un 500 m.
 export const estimarFtp = (sesiones) => E.ftpEstimadoDe(sesiones);
 
-async function fantasmaPerso(ent, sesiones) {
-  const { modo, valor } = perso();
-  if (modo === 'tiempo') {
-    const seg = leerMmss(valor);
-    if (!seg) { toast('Escribe el tiempo objetivo del fantasma como mm:ss'); return null; }
-    const r = F.simularPorTiempo(ent, seg, ftp());
-    if (!r) toast('El fantasma por tiempo necesita un entrenamiento que acabe por distancia');
-    return r;
-  }
-  if (modo === 'mejora') {
-    const pct = Math.min(20, Math.max(-20, Number(String(valor).replace(',', '.')) || 2));
-    const mejor = E.elegirRival(await sesiones(), ent?.nombre, 'mejor');
-    if (!mejor) { toast('Aún no tienes una marca de este entrenamiento para acelerarla'); return null; }
-    return F.acelerar(mejor, pct);
-  }
-  const w = Math.round(Number(valor)) || Math.round((ftp() || 170) * 1.05);
-  return { ...F.simular(ent, { ftp: w }, ftp()), nombre: `Fantasma ${w} W` };
-}

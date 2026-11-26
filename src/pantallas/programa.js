@@ -418,7 +418,13 @@ export async function revisarPlanAuto() {
   if (!prog?.dias?.length || estado.sesion) return;
   const [sesiones, ents] = await Promise.all([H.sinMuestras(), db.listar('entrenamientos')]);
   const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo: previoHoy() });
-  const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo });
+  let r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo });
+  // Plan de meta: tras la prueba de mitad, las zonas que quedan desde tu marca real (E-2, se carga aparte).
+  const pm = r?.programa || prog;
+  if (pm.meta && !pm.zonasDesde && sesiones.some((s) => /^Prueba/.test(s.entrenamiento || ''))) {
+    const z = (await import('../meta-zonas.js')).zonasTrasPrueba({ programa: pm, sesiones, entrenamientos: [...ents, ...(r?.entrenamientos || [])] });
+    if (z) r = { programa: z.programa, entrenamientos: [...(r?.entrenamientos || []), ...z.entrenamientos], avisos: [...(r?.avisos || []), ...z.avisos] };
+  }
   if (!r) return;
   for (const e of r.entrenamientos) if (!ents.some((x) => x.nombre === e.nombre)) await db.guardar('entrenamientos', { ...e, dePlan: true });
   guardarPrograma(r.programa);

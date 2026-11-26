@@ -190,8 +190,7 @@ export function pctFtpDeFcpct(x) {
   return t.at(-1)[1];
 }
 // wattsSinFc: false deja el bloque sin meta, como antes (para dibujar sin inventar una banda).
-// factorSplit (E-2, E7): el ajuste de rangos del plan también en los bloques en split (los watts van con el cubo de la
-// velocidad: split / factor^⅓).
+// factorSplit (E7): el ajuste de rangos del plan en los bloques en split (split / factor^⅓).
 export function normalizarBloques(bloques, ftp, fcMax = 0, { wattsSinFc = true, factorSplit = 1 } = {}) {
   return bloques.map((b) => {
     if (b.metrica === 'split' && b.min > 0 && factorSplit > 0 && factorSplit !== 1) {

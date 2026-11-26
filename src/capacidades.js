@@ -348,8 +348,7 @@ export function tipoPlan(ent) {
   if (!pct && enSplit.length) {
     const meta = splitMetaDe(ent);
     if (meta) {
-      // E-2 (E6): en % del FTP equivalente, con los mismos cortes que los bloques en % del FTP (y los mismos que
-      // pctBloque, que usan los topes de intensidad): un «firme» de quien rema lento ya es umbral.
+      // E6: en % del FTP equivalente, con los cortes de los bloques en % del FTP.
       const pctSplit = Math.max(...enSplit.map((b) => PCT_RITMO_META * (meta / ((b.min + b.max) / 2)) ** 3));
       return pctSplit > 105 ? 'vo2' : pctSplit > 90 ? 'umbral' : 'fondo';
     }

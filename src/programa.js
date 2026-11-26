@@ -156,17 +156,12 @@ export function proximo(programa, ahora = Date.now()) {
 // Plan automático hacia una meta: distancia en un tiempo, en N semanas (0.81: sobre el mismo motor que los planes por
 // objetivo, con sus topes de carga, de VO₂ y de minutos). Una sola sesión dura por semana, que alterna umbral y
 // series a ritmo de la meta; el resto son fondos (uno de ellos firme). Con 4 o 5 días se añaden fondos, nunca más
-// intensidad. E-2 (E6): las zonas van en % del FTP equivalente y se pasan a split con la ley del cubo
-// (split = ref × (127 / %)^⅓): el mismo margen en segundos es mucho más esfuerzo para quien rema lento.
-// Fondo (UT2) 62–68 %, firme 82–88 %, umbral (AT) 94–100 % y calentamiento 50–60 %. Prueba a mitad y al final, con
-// afinamiento la semana de la prueba.
+// intensidad. Zonas en % del FTP equivalente (E6), a split con la ley del cubo. Prueba a mitad y al final.
 export const META_PCT = { cal: [50, 60], fondo: [62, 68], firme: [82, 88], umbral: [94, 100] };
 export const splitDePct = (ref, pct) => Math.round(ref * (PCT_RITMO_META / pct) ** (1 / 3));
-// { min, max } en split de una zona [% bajo, % alto] (el split más rápido es el % más alto).
 export const zonaSplit = (ref, [bajo, alto]) => ({ min: splitDePct(ref, alto), max: splitDePct(ref, bajo) });
 const centroZona = (ref, z) => splitDePct(ref, (z[0] + z[1]) / 2);
-// Split de 2000 m equivalente a una meta (las zonas salen de él). E16: con tu curva potencia–duración (pc) la
-// equivalencia sale del modelo; sin ella, de la ley de Paul.
+// Split de 2000 m equivalente a una meta: con tu curva (pc) del modelo; sin ella, de Paul (E16).
 export function ref2kDe(distancia, segundos, pc = null) {
   if (distancia === 2000) return Math.round(segundos / 4);
   const a = pc ? tiempoPara(2000, pc) : null;
@@ -266,7 +261,6 @@ export const NIVEL_SPRINT = { inicio: 12, medio: 14, alto: 16 };
 // dice al empezar el bloque y avisa con suavidad si te pasas en un fondo, pero no cambia la XP de técnica (eso solo
 // lo hace spmMeta, la cadencia obligatoria de los bloques de fuerza).
 export const CADENCIA_GUIA = { suave: [18, 22], firme: [20, 24], umbral: [24, 28], ritmo: [28, 34] };
-// Equivalencia del split con el % del FTP en un plan de meta (capacidades.js): el split de 2000 m de la meta es el 127 %.
 export { PCT_RITMO_META };
 const medio = (b) => (b.min + Math.min(b.max, b.min + 30)) / 2;
 // % del FTP equivalente de un bloque (null si no tiene meta de potencia o de split).
@@ -324,8 +318,7 @@ function semanaMeta(split, distancia, ritmoMeta = split) {
     const [n, f] = paso([[6, 0.25], [5, 0.3], [4, 0.375]], p);
     const tramo = Math.max(100, Math.min(1000, Math.round((distancia * f) / 50) * 50));
     const r = reps(n, k);
-    // En metas largas (10 km) el ritmo de la meta queda por debajo del umbral: las series van como mínimo al borde
-    // rápido del umbral (100 %), para que sigan siendo la sesión que sube el ritmo.
+    // En metas largas, las series van como mínimo al borde rápido del umbral.
     const sp = Math.min(ritmoMeta, zonaSplit(split, META_PCT.umbral).min) + Math.round(3 * (1 - p));
     const bloques = Array.from({ length: r }, (_, i) => [
       { nombre: `${tramo} m ${i + 1}/${r}`, fin: 'distancia', cantidad: tramo, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 1 },
@@ -336,10 +329,7 @@ function semanaMeta(split, distancia, ritmoMeta = split) {
   return [(p, k, c, s) => (s % 2 === 0 ? umbral : ritmo)(p, k), fondo([40, 60]), firme([40, 55]), fondo([30, 45]), fondo([30, 40])];
 }
 
-// E-2 (E8): la prueba del plan de meta, con calentamiento. 10 min progresivos (5 suaves y 5 de fondo), 3 arranques,
-// 3 min suaves y la prueba por distancia: los primeros 500 m a 1–2 s del split de la meta (no más rápido, para no
-// quemarte en la salida) y el resto al split de la meta. La marca sale del mejor tramo (mejorTiempo), así que el
-// calentamiento no cuenta.
+// E8: la prueba de meta con 10 min de calentamiento, arranques y los primeros 500 m a 1–2 s del split meta.
 export function pruebaMeta(distancia, split, ref) {
   const salida = Math.min(500, Math.round(distancia / 4));
   return {

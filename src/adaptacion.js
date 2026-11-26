@@ -2,8 +2,7 @@
 // Cada cambio deja una frase en programa.avisos para explicarlo en la pantalla Hoy.
 // Sin dependencias de la interfaz: recibe el plan y devuelve el plan nuevo.
 import * as E from './estadisticas.js';
-import { estadoDias, repartirSemana, semanaFlexible, sesionDeVuelta, sesionFondo, semanaDe, TIPOS_DUROS, ref2kDe } from './programa.js';
-import { formatoMmss as mm } from './entrenamientos.js';
+import { estadoDias, repartirSemana, semanaFlexible, sesionDeVuelta, sesionFondo, semanaDe, TIPOS_DUROS } from './programa.js';
 import { tipoPlan, tipoSesion } from './capacidades.js';
 
 const DIA = 864e5;
@@ -197,51 +196,8 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
     if (tramo === 'largo') p.proponerRehacer = hoy; else avisos.push(textoRegreso(tramo, fuera));
   }
 
-  // 7. Plan de meta (E-2, E7): tras la prueba de mitad, las zonas que quedan se rehacen desde tu marca real (no desde
-  //    el split de partida). Los rangos vuelven al 100 %: el ajuste de antes era sobre las zonas viejas.
-  if (p.meta && !p.zonasDesde) {
-    const ultimoDia = p.dias.at(-1)?.fecha;
-    const mitad = p.dias.find((d) => /^Prueba/.test(d.ent || '') && d.fecha < ultimoDia);
-    const desde = new Date(`${p.inicio}T00:00`).getTime();
-    // La de mitad, remada como mucho una semana después de su día (la final se llama igual).
-    const hasta = mitad && E.claveDia(new Date(`${mitad.fecha}T12:00`).getTime() + 7 * DIA);
-    const prueba = mitad && orden.filter((s) => s.entrenamiento === mitad.ent && s.fecha >= desde && E.claveDia(s.fecha) <= hasta && E.claveDia(s.fecha) < ultimoDia).at(-1);
-    const t = prueba && E.mejorTiempoDe(prueba, p.meta.distancia);
-    if (t > 0) {
-      p.zonasDesde = E.claveDia(prueba.fecha);
-      const refNueva = ref2kDe(p.meta.distancia, t, E.perfilDe(orden, { ahora }));
-      const dia = E.claveDia(prueba.fecha);
-      let cambiadas = 0;
-      for (const d of p.dias) {
-        const e = d.fecha > dia && d.ent && !/^Prueba/.test(d.ent) ? porNombre(d.ent) : null;
-        if (!(e?.splitMeta > 0) || Math.abs(refNueva - e.splitMeta) < 2) continue;
-        // El split del nombre también cambia (salvo en las series a ritmo de la meta).
-        const k = refNueva / e.splitMeta;
-        const base = /^Ritmo/.test(d.ent) ? d.ent : d.ent.replace(/\b(\d{1,2}):(\d\d)\b/g, (_, a, b) => mm(Math.round((Number(a) * 60 + Number(b)) * k)));
-        const nombre = `${base} · tras la prueba`;
-        if (!porNombre(nombre)) nuevos.push(rehacerZonas(e, refNueva, nombre));
-        d.original ??= d.ent;
-        d.ent = nombre;
-        cambiadas++;
-      }
-      if (cambiadas) {
-        p.factor = 1;
-        avisos.push(`Tu prueba de mitad dio ${mm(t)}: rehíce las zonas de lo que queda del plan desde esa marca (${mm(refNueva)} el 500 m de referencia).`);
-      }
-    }
-  }
-
   if (avisos.length) p.avisos = [...(p.avisos || []), ...avisos.map((texto) => ({ dia: hoy, texto }))].slice(-10);
   return { programa: p, entrenamientos: nuevos, avisos, cambio: avisos.length > 0 || p.ultimaSesion !== programa.ultimaSesion };
-}
-
-// Las zonas de una sesión de meta con otra referencia: todo bloque en split escala con ella, salvo las series a
-// ritmo de la meta (las de fin por distancia), que siguen al ritmo que buscas.
-export function rehacerZonas(e, ref, nombre = e.nombre) {
-  const k = ref / e.splitMeta;
-  const bloques = e.bloques.map((b) => (b.metrica === 'split' && b.min > 0 && b.fin !== 'distancia'
-    ? { ...b, min: Math.round(b.min * k), max: Math.round(b.max * k) } : { ...b }));
-  return { ...e, nombre, splitMeta: ref, bloques };
 }
 
 // ---------- Sesión del día ----------

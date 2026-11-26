@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as P from '../src/programa.js';
-import * as A from '../src/adaptacion.js';
+import { zonasTrasPrueba } from '../src/meta-zonas.js';
 import * as E from '../src/estadisticas.js';
 import { normalizarBloques } from '../src/entrenamientos.js';
 import { tipoPlan } from '../src/capacidades.js';
@@ -76,7 +76,7 @@ test('tras la prueba de mitad, las zonas que quedan salen de tu marca real', () 
   const fecha = new Date(`${mitad.fecha}T18:00`).getTime();
   const sesion = { id: 'p', fecha, entrenamiento: mitad.ent, duracion: 500, distancia: 2000, muestras };
   const ahora = fecha + 864e5;
-  const r = A.revisarPlan({ programa: { ...programa, factor: 0.97 }, sesiones: [sesion], entrenamientos, ftp: 200, ahora });
+  const r = zonasTrasPrueba({ programa: { ...programa, factor: 0.97 }, sesiones: [sesion], entrenamientos, ahora });
   assert.equal(r.programa.zonasDesde, mitad.fecha);
   assert.equal(r.programa.factor, 1, 'los rangos vuelven al 100 %');
   assert.ok(r.avisos.some((x) => /prueba de mitad dio 8:20/.test(x)), r.avisos.join(' | '));
@@ -87,6 +87,5 @@ test('tras la prueba de mitad, las zonas que quedan salen de tu marca real', () 
   cerca(P.pctBloque(fondo.bloques.find((b) => b.nombre === 'Fondo'), 125), 65, 2, 'fondo con la marca real');
   // Lo de antes de la prueba no cambia, y la revisión no se repite.
   assert.ok(r.programa.dias.filter((d) => d.fecha <= mitad.fecha).every((d) => !/tras la prueba/.test(d.ent)));
-  const r2 = A.revisarPlan({ programa: r.programa, sesiones: [sesion, { ...sesion, id: 'q', fecha: fecha + 2 * 864e5 }], entrenamientos: [...entrenamientos, ...r.entrenamientos], ftp: 200, ahora: ahora + 2 * 864e5 });
-  assert.ok(!r2 || !r2.avisos.some((x) => /prueba de mitad/.test(x)));
+  assert.equal(zonasTrasPrueba({ programa: r.programa, sesiones: [sesion], entrenamientos: [...entrenamientos, ...r.entrenamientos], ahora: ahora + 2 * 864e5 }), null);
 });
