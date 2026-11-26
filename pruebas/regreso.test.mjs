@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 import * as A from '../src/adaptacion.js';
 import * as XC from '../src/xp-carga.js';
 import * as J from '../src/juego.js';
@@ -10,7 +11,7 @@ import { TIPOS, clave } from './sim-curva.mjs';
 const D = 864e5;
 const ms = (k, h = '19:00') => new Date(`${k}T${h}`).getTime();
 const mas = (k, n) => clave(ms(k, '12:00') + n * D);
-const plan = P.planPorObjetivo({ objetivo: 'umbral', nivel: 'medio', dias: 3, semanas: 6, inicio: '2026-11-23' });
+const plan = G.planPorObjetivo({ objetivo: 'umbral', nivel: 'medio', dias: 3, semanas: 6, inicio: '2026-11-23' });
 const ent = (n) => plan.entrenamientos.find((e) => e.nombre === n);
 
 test('«Solo tengo 15 / 20 min»: conserva el calentamiento, el trabajo que cabe y el enfriamiento', () => {

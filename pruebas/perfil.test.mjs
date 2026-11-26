@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as Pf from '../src/perfil.js';
 import * as P from '../src/programa.js';
+import * as Gen from '../src/generador-plan.js';
 import * as G from '../src/guia.js';
 import { clasificacionDe } from '../src/juego.js';
 
@@ -34,7 +35,7 @@ assert.equal(clasificacionDe(160, 80, 1).faltaW, 40);
 for (const o of P.OBJETIVOS_PLAN) {
   for (const minutosMax of [30, 45, 60]) {
     for (const nivel of ['inicio', 'medio', 'alto']) {
-      const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: o.clave, nivel, dias: 5, semanas: 8, inicio: '2026-11-02', ctx: { minutosMax } });
+      const { programa, entrenamientos } = Gen.planPorObjetivo({ objetivo: o.clave, nivel, dias: 5, semanas: 8, inicio: '2026-11-02', ctx: { minutosMax } });
       assert.equal(programa.dias.length, 40);
       assert.equal(programa.minutosMax, minutosMax);
       const largas = entrenamientos.filter((e) => e.enfoque !== 'pruebas' && P.duracionPlan(e) > minutosMax * 60);
@@ -43,8 +44,8 @@ for (const o of P.OBJETIVOS_PLAN) {
   }
 }
 // Sin tope, el plan es el mismo de siempre.
-const sin = P.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 8, inicio: '2026-11-02', ctx: {} });
-const cero = P.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 8, inicio: '2026-11-02', ctx: { minutosMax: 0 } });
+const sin = Gen.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 8, inicio: '2026-11-02', ctx: {} });
+const cero = Gen.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 8, inicio: '2026-11-02', ctx: { minutosMax: 0 } });
 assert.deepEqual(cero.programa.dias, sin.programa.dias);
 assert.equal(sin.programa.minutosMax, undefined);
 

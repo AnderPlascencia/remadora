@@ -13,6 +13,7 @@ Generador de planes por objetivo (etapa E-3 de la ronda 2). Los cambios llegan a
 - **Si no tienes sesiones guardadas, la primera semana trae 12 min a tu ritmo fuerte** dentro de un fondo, para calibrar tu FTP desde el principio.
 - Las series de calorías por encima del umbral cuentan como sesión dura.
 - Las semanas del plan ya no se desfasan un día con el cambio de horario de verano.
+- El generador de planes se carga solo al armar o rehacer un plan: la primera carga baja unos 5 KB.
 
 ## 0.138.0 · 2026-11-26
 

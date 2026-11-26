@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 
 const INICIO = '2026-01-05';
-const plan = P.planPorMeta({ distancia: 2000, segundos: 470, semanas: 8, inicio: INICIO });
+const plan = G.planPorMeta({ distancia: 2000, segundos: 470, semanas: 8, inicio: INICIO });
 const buscar = (n) => plan.entrenamientos.find((e) => e.nombre === n);
 const semanaDe = (f) => Math.floor((Date.parse(f) - Date.parse(INICIO)) / (7 * 864e5));
 const porSemana = () => {
@@ -65,7 +66,7 @@ test('plan por meta: la semana de la prueba baja el volumen (afinamiento)', () =
 
 test('plan por meta de 5 y 10 km: zonas desde el 2000 m equivalente y una dura por semana', () => {
   for (const [distancia, segundos] of [[5000, 1260], [10000, 2640]]) {
-    const p = P.planPorMeta({ distancia, segundos, semanas: 8, inicio: INICIO });
+    const p = G.planPorMeta({ distancia, segundos, semanas: 8, inicio: INICIO });
     const ref = p.entrenamientos.find((e) => e.bloques).splitMeta;
     // El 2000 m equivalente es más rápido que el ritmo de la meta, y las zonas salen de él.
     assert.ok(ref < p.split, `${distancia}: ref ${ref} y meta ${p.split}`);

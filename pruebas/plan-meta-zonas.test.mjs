@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 import { zonasTrasPrueba } from '../src/meta-zonas.js';
 import * as E from '../src/estadisticas.js';
 import { normalizarBloques } from '../src/entrenamientos.js';
@@ -13,7 +14,7 @@ const cerca = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a
 
 test('con un 2000 m en 10:40 (2:40), el fondo queda en ~65 % del FTP, el firme en ~85 % y el umbral en ~97 %', () => {
   for (const split of [95, 117, 160]) {
-    const { entrenamientos } = P.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: INICIO });
+    const { entrenamientos } = G.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: INICIO });
     const bloque = (re, nb) => { const e = entrenamientos.find((x) => re.test(x.nombre)); return [e, e.bloques.find((b) => nb.test(b.nombre))]; };
     const [ef, fondo] = bloque(/^Fondo \d+ min a/, /^Fondo$/);
     const [, firme] = bloque(/firme$/, /^Firme/);
@@ -29,7 +30,7 @@ test('con un 2000 m en 10:40 (2:40), el fondo queda en ~65 % del FTP, el firme e
 
 test('la prueba del plan lleva 10 min de calentamiento, arranques y los primeros 500 m sin pasarte', () => {
   const split = 120;
-  const { entrenamientos } = P.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: INICIO });
+  const { entrenamientos } = G.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: INICIO });
   const prueba = entrenamientos.find((e) => /^Prueba/.test(e.nombre));
   assert.equal(prueba.tipo, 'intervalos');
   assert.equal(tipoPlan(prueba), 'prueba');
@@ -60,13 +61,13 @@ test('el 2000 m equivalente de una meta de 5 km sale de tu curva cuando la hay (
   assert.equal(P.ref2kDe(5000, t5, pc), Math.round(E.tiempoPara(2000, pc) / 4));
   assert.ok(P.ref2kDe(5000, t5, null) > 0, 'sin curva, la ley de Paul');
   const ctx = { pc };
-  const conPc = P.planPorMeta({ distancia: 5000, segundos: t5, semanas: 8, inicio: INICIO, ctx });
+  const conPc = G.planPorMeta({ distancia: 5000, segundos: t5, semanas: 8, inicio: INICIO, ctx });
   assert.ok(conPc.entrenamientos.filter((e) => e.bloques).every((e) => e.splitMeta === Math.round(E.tiempoPara(2000, pc) / 4)));
 });
 
 test('tras la prueba de mitad, las zonas que quedan salen de tu marca real', () => {
   const split = 120;
-  const { programa, entrenamientos } = P.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: INICIO });
+  const { programa, entrenamientos } = G.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: INICIO });
   const ultimo = programa.dias.at(-1).fecha;
   const mitad = programa.dias.find((d) => /^Prueba/.test(d.ent) && d.fecha < ultimo);
   assert.ok(mitad, 'el plan tiene prueba de mitad');

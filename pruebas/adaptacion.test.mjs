@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import * as A from '../src/adaptacion.js';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 import { claveDia } from '../src/estadisticas.js';
 
 const DIA = 864e5;
 const ahora = Date.parse('2026-11-11T09:00'); // miércoles
 const hoy = claveDia(ahora);
 const dia = (d) => claveDia(ahora + d * DIA);
-const { programa: base, entrenamientos } = P.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 6, inicio: hoy, ctx: {} });
+const { programa: base, entrenamientos } = G.planPorObjetivo({ objetivo: 'umbral', dias: 3, semanas: 6, inicio: hoy, ctx: {} });
 const conHoy = (ent) => ({ ...structuredClone(base), inicio: dia(-7), dias: [...base.dias.filter((d) => d.fecha !== hoy), { fecha: hoy, ent }].sort((a, b) => (a.fecha < b.fecha ? -1 : 1)) });
 const muestras = (segs, w, fc = 0) => Array.from({ length: segs }, (_, t) => ({ t, w, fc }));
 const ses = (d, extra) => ({ fecha: ahora + d * DIA, duracion: 1800, muestras: muestras(1800, 150), ...extra });
@@ -97,7 +98,7 @@ const r1d = A.revisarPlan({ programa: conHoy('Umbral 3 × 8 min'), sesiones: [..
 assert.equal(r1d.programa.dias.find((d) => d.fecha === hoy).ent, 'Umbral 3 × 8 min');
 
 // 5. Semana floja: 0 de 3 la semana pasada → se repite y el resto se corre 7 días.
-const largo = P.planPorObjetivo({ objetivo: 'base', dias: 3, semanas: 4, inicio: '2026-10-26', ctx: {} }).programa;
+const largo = G.planPorObjetivo({ objetivo: 'base', dias: 3, semanas: 4, inicio: '2026-10-26', ctx: {} }).programa;
 const r6 = A.revisarPlan({ programa: largo, sesiones: [], entrenamientos, ftp: 200, ahora });
 assert.equal(r6.programa.dias.length, largo.dias.length + 3);
 assert.equal(r6.programa.dias.at(-1).fecha, claveDia(Date.parse(`${largo.dias.at(-1).fecha}T12:00`) + 7 * DIA));

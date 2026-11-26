@@ -452,7 +452,7 @@ export async function rehacerPlan(prog, { ajustar = false, dias = null, aviso = 
   const nivel = ajustar ? ctx.nivelSugerido : orden[Math.min(orden.length - 1, orden.indexOf(prog.nivel) + 1)] || 'medio';
   const restantes = Math.ceil((new Date(`${prog.dias.at(-1).fecha}T12:00`) - Date.now()) / (7 * 864e5));
   const semanas = ajustar ? Math.max(2, restantes) : prog.semanas || 6;
-  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: prog.objetivo, nivel, dias: dias || prog.porSemana || 3, semanas, inicio: E.claveDia(Date.now()), ctx });
+  const { programa, entrenamientos } = (await import('../generador-plan.js')).planPorObjetivo({ objetivo: prog.objetivo, nivel, dias: dias || prog.porSemana || 3, semanas, inicio: E.claveDia(Date.now()), ctx });
   await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
   estado.elegirLoDeHoy = true;

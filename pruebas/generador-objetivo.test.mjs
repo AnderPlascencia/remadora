@@ -6,6 +6,7 @@ process.env.TZ = 'America/Los_Angeles'; // cambia la hora el 8 de marzo de 2026:
 import test from 'node:test';
 import assert from 'node:assert/strict';
 const P = await import('../src/programa.js');
+const G = await import('../src/generador-plan.js');
 const { tipoPlan } = await import('../src/capacidades.js');
 
 const ctx = { kcalHabitual: 300, kcalSemana: 900 };
@@ -13,7 +14,7 @@ const NIVELES = ['inicio', 'medio', 'alto'];
 const trabajoMin = (e) => (e.bloques || []).filter((b) => !/Calentamiento|Enfriamiento/.test(b.nombre || '')).reduce((a, b) => a + (b.duracion || 0), 0) / 60;
 function* planes() {
   for (const o of P.OBJETIVOS_PLAN) for (const nivel of NIVELES) for (const dias of [2, 3, 4, 5]) for (const semanas of [4, 6, 8, 12]) {
-    const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: o.clave, nivel, dias, semanas, inicio: '2026-02-16', ctx });
+    const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: o.clave, nivel, dias, semanas, inicio: '2026-02-16', ctx });
     const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
     yield { id: `${o.clave}/${nivel}/${dias} días/${semanas} sem`, dias, semanas, programa, buscar, sem: P.semanasPlan(programa, [], buscar, Date.parse('2026-01-01T12:00')) };
   }
@@ -51,7 +52,7 @@ test('la prueba de mitad va en la semana de descarga: no hay dos semanas flojas 
 });
 
 test('con 2 días de potencia la semana lleva un fondo con la fuerza dentro', () => {
-  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'potencia', nivel: 'medio', dias: 2, semanas: 6, inicio: '2026-11-02', ctx });
+  const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: 'potencia', nivel: 'medio', dias: 2, semanas: 6, inicio: '2026-11-02', ctx });
   const e = entrenamientos.find((x) => x.nombre === programa.dias[1].ent) || entrenamientos.find((x) => x.nombre === programa.dias[0].ent);
   const fondos = programa.dias.slice(0, 2).map((d) => entrenamientos.find((x) => x.nombre === d.ent)).filter((x) => tipoPlan(x) === 'fondo');
   assert.equal(fondos.length, 1, e.nombre);
@@ -60,7 +61,7 @@ test('con 2 días de potencia la semana lleva un fondo con la fuerza dentro', ()
 
 test('con 3 días hay 1 dura, 1 moderada y 1 fondo; el 30/15 solo sustituye a las series con «Remo seguido»', () => {
   for (const objetivo of ['vo2', 'umbral']) for (const nivel of NIVELES) {
-    const { programa, entrenamientos } = P.planPorObjetivo({ objetivo, nivel, dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
+    const { programa, entrenamientos } = G.planPorObjetivo({ objetivo, nivel, dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
     const de = (d) => entrenamientos.find((x) => x.nombre === d.ent);
     for (let s = 0; s < 8; s++) {
       const semana = programa.dias.slice(s * 3, s * 3 + 3).map(de);
@@ -71,14 +72,14 @@ test('con 3 días hay 1 dura, 1 moderada y 1 fondo; el 30/15 solo sustituye a la
 });
 
 test('las series de un plan de calorías cuentan como dura', () => {
-  const { entrenamientos } = P.planPorObjetivo({ objetivo: 'calorias', nivel: 'medio', dias: 3, semanas: 4, inicio: '2026-11-02', ctx });
+  const { entrenamientos } = G.planPorObjetivo({ objetivo: 'calorias', nivel: 'medio', dias: 3, semanas: 4, inicio: '2026-11-02', ctx });
   const series = entrenamientos.find((e) => /× 1 min/.test(e.nombre));
   assert.ok(series && P.esDura(series), series?.nombre);
   assert.ok(entrenamientos.filter((e) => /^Fondo/.test(e.nombre)).every((e) => !P.esDura(e)));
 });
 
 test('sin historial, la primera semana de un plan sin sesiones duras trae una sesión para calibrar el FTP', () => {
-  const plan = (sinHistorial) => P.planPorObjetivo({ objetivo: 'base', nivel: 'inicio', dias: 3, semanas: 6, inicio: '2026-11-02', ctx: { ...ctx, sinHistorial } });
+  const plan = (sinHistorial) => G.planPorObjetivo({ objetivo: 'base', nivel: 'inicio', dias: 3, semanas: 6, inicio: '2026-11-02', ctx: { ...ctx, sinHistorial } });
   const con = plan(true);
   const primera = con.programa.dias.slice(0, 3).map((d) => d.ent);
   assert.ok(primera.some((n) => /12 min a tu ritmo fuerte/.test(n)), primera.join(', '));
