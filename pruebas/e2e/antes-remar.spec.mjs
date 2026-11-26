@@ -23,8 +23,8 @@ test('antes de remar: responder cambia el estado de hoy, se pliega y desaparece 
   await expect(page.locator('#hoy-cuerpo')).toContainText('Dormiste mal');
 
   await caja.locator('[data-antes="dolor"][data-valor="si"]').click();
-  // Con dolor, también dónde (etapa 27): hasta responderlo no se pliega.
-  await expect(caja.locator('[data-antes="zona"]')).toHaveCount(5);
+  // Con dolor, también dónde (etapa 27): hasta responderlo no se pliega. E-4: con costillas, 6 zonas.
+  await expect(caja.locator('[data-antes="zona"]')).toHaveCount(6);
   await expect(page.locator('#antes-plegado')).toBeHidden();
   await caja.locator('[data-antes="zona"][data-valor="rodillas"]').click();
   await expect(page.locator('#antes-plegado')).toBeVisible();
