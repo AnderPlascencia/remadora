@@ -47,7 +47,7 @@ function notaPerfilInicio() {
   const f = numeroInicio('#inicio-ftp');
   const fi = Pf.ftpInicial(p);
   if (f) partes.push(`FTP ${f} W`);
-  else if (fi && (!ftp() || ajustes.si('ftpDePerfil', false)) && !(estado.cacheSesiones || []).length) partes.push(`FTP para empezar ≈ ${fi} W (lo afino con tu primera sesión)`);
+  else if (fi && (!ftp() || ajustes.si('ftpDePerfil', false)) && !(estado.cacheSesiones || []).length) partes.push(`FTP para empezar ≈ ${fi} W (lo afino cuando remes un tramo fuerte)`);
   if (p.peso && p.edad && p.altura && (p.sexo === 'h' || p.sexo === 'm')) partes.push(`gasto en reposo ${miles(Math.round(Pf.basalPorHora(p) * 24))} kcal al día`);
   $('#inicio-perfil-nota').textContent = partes.length ? `Con esto: ${partes.join(' · ')}.` : '';
 }

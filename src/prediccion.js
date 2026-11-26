@@ -1,6 +1,6 @@
 // Registro de predicciones y su error (etapa 17, REN-P9): cada vez que remas a tope un 500, 2000, 5000 o 10 000 m,
 // se guarda lo que la app predecía antes de esa sesión. Así cualquier cambio del modelo se puede medir.
-import { mejorPotencia, mejorTiempo, mejorTiempoDe, nMuestras, potenciaCriticaMax } from './estadisticas.js';
+import { marcaATope, mejorTiempo, mejorTiempoDe, nMuestras, potenciaCriticaMax } from './estadisticas.js';
 import { sugerirMeta } from './programa.js';
 // Lo que pintan el detalle y Progreso vive en estadisticas.js (primera carga); este módulo se carga al terminar una marca.
 export { resumenPredicciones, textoPrediccion } from './estadisticas.js';
@@ -8,18 +8,9 @@ export { resumenPredicciones, textoPrediccion } from './estadisticas.js';
 export const DISTANCIAS_MARCA = [500, 2000, 5000, 10000];
 const ordenar = (ss) => [...(ss || [])].sort((a, b) => a.fecha - b.fecha);
 
-// A tope: un tramo parejo (no la mitad fuerte y el resto calentamiento), que no es un trozo de algo más largo igual de
-// fuerte (un 500 dentro de una serie) y, fuera de las pruebas, que llega al 95 % de lo que aguantas en ese tiempo según
-// tu CP y W′ (un 10 000 m de fondo no es un 10 000 m a tope aunque sea tu mejor).
+// A tope: la regla compartida marcaATope (estadisticas.js, E-1): parejo, no un trozo de algo más largo igual de fuerte
+// y, fuera de las pruebas, al 95 % de lo que aguantas en ese tiempo según tu CP y W′.
 const DIA = 864e5;
-function aTope(muestras, t, pc, prueba) {
-  const w = mejorPotencia(muestras, t);
-  if (!w) return false;
-  const largo = mejorPotencia(muestras, Math.round(t * 1.5));
-  const parejo = w >= 0.93 * (mejorPotencia(muestras, Math.round(t / 2)) || w);
-  if (!parejo || (largo != null && largo >= w * 0.97)) return false;
-  return prueba || (!!pc && w >= 0.95 * (pc.cp + pc.wPrima / t));
-}
 // Distancias que la sesión remó a tope: en una prueba, o una marca nueva donde ya tenías marca.
 export function marcasATope(s, previas = []) {
   const res = [];
@@ -29,7 +20,7 @@ export function marcasATope(s, previas = []) {
     if (!t) continue;
     const antes = previas.map((x) => (nMuestras(x) ? mejorTiempoDe(x, d) : null)).filter((x) => x > 0);
     const record = antes.length > 0 && t < Math.min(...antes);
-    if ((s.tipoPlan === 'prueba' || record) && aTope(s.muestras, t, pc, s.tipoPlan === 'prueba')) res.push({ d, real: t });
+    if ((s.tipoPlan === 'prueba' || record) && marcaATope(s, d, pc, { sinModelo: false })) res.push({ d, real: t });
   }
   return res;
 }

@@ -2,6 +2,15 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.137.0 · 2026-11-26
+
+Calibración honesta (etapa E-1 de la ronda 2). No cambia la XP ni las monedas de lo ya remado.
+
+- **Un fondo suave ya no baja el FTP de tu perfil.** Antes, la primera sesión que sugiere la app (un fondo suave) dejaba el FTP en ~60 % del real: las zonas de fondo quedaban demasiado lentas y cada fondo contaba como una sesión dura. Ahora solo lo ajusta una sesión exigente: esfuerzo de 7 o más (sentido o por pulso), pulso medio de 85 % o más del máximo, o watts por encima de tu FTP.
+- **El FTP estimado sube con la mediana de tus 3 mejores sesiones**, no con un solo día bueno o un dato raro de la consola.
+- **Solo cuentan como marca los tramos a tope.** El 2000 m o el 5000 m de dentro de un fondo ya no es «tu marca» en Detalle, Hoy, el asistente de metas ni el ritmo con que se arma un plan. Cuenta una prueba o un tramo parejo, suelto y al 95 % de lo que aguantas según tu curva. Sin marca, la predicción sale del modelo. En el historial de prueba, el error de las predicciones baja de 1,3 % a 1,1 %.
+- La app rehace una vez el resumen guardado de cada sesión para saber qué tramos fueron a tope.
+
 ## 0.136.0 · 2026-11-26
 
 Economía, colección e insignias (etapa 12 de la ronda 2). Los cambios que tocan monedas o atributos cuentan desde el 28 de noviembre; lo remado antes no cambia.

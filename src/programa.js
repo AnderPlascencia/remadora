@@ -1,6 +1,6 @@
 // Programas de varias semanas: una lista de días con el entrenamiento que toca.
 // programa = { nombre, inicio: 'AAAA-MM-DD', dias: [{ fecha: 'AAAA-MM-DD', ent: nombre del entrenamiento }] }
-import { claveDia, mejorTiempoDe, nMuestras, potenciaCriticaMax, tiempoPara } from './estadisticas.js';
+import { claveDia, marcaATope, mejorTiempoDe, nMuestras, potenciaCriticaMax, tiempoPara } from './estadisticas.js';
 
 import { formatoMmss as mm, PRUEBAS, esBloqueTrabajo, ACTIVACION, predecir, DISTANCIAS_PREDICCION } from './entrenamientos.js';
 import { tipoPlan, SPLIT_CAL_META } from './capacidades.js';
@@ -185,16 +185,20 @@ export function sugerirMeta(sesiones, distancia, semanas = 8, ahora = Date.now()
   const nivel = nivelRemero(sesiones, ahora);
   const mejora = mejoraMeta(nivel, semanas);
   const con = (sesiones || []).filter((s) => s.fecha <= ahora && nMuestras(s));
-  const marcas = (lista, d) => lista.map((s) => ({ t: mejorTiempoDe(s, d), edad: (ahora - s.fecha) / DIA })).filter((x) => x.t > 0);
+  // E-1: solo cuentan los tramos a tope (no el 2000 m de dentro de un fondo).
+  const marcas = (lista, d, pc) => lista.map((s) => ({ t: marcaATope(s, d, pc), edad: (ahora - s.fecha) / DIA })).filter((x) => x.t > 0);
   const partida = (lista) => {
-    const real = marcas(lista, distancia);
+    const pc = potenciaCriticaMax(lista);
+    const real = marcas(lista, distancia, pc);
     if (real.length) return { t: Math.min(...real.map((x) => x.t)), real: true, desde: distancia };
     // Etapa 18: sin marca en esa distancia, el motor único (tu curva potencia–duración); la ley de Paul, de respaldo.
-    const pc = potenciaCriticaMax(lista);
     const tm = pc ? tiempoPara(distancia, pc) : null;
     if (tm) return { t: tm, real: false, desde: null, modelo: true };
+    // Ni marca ni modelo: desde una marca a tope o, si no hay ninguna, desde lo mejor que remaste.
+    const crudas = (d) => lista.map((s) => ({ t: mejorTiempoDe(s, d), edad: (ahora - s.fecha) / DIA })).filter((x) => x.t > 0);
+    const de = DISTANCIAS_PREDICCION.some((d) => d !== distancia && marcas(lista, d, pc).length) ? (d) => marcas(lista, d, pc) : crudas;
     const otras = DISTANCIAS_PREDICCION.filter((d) => d !== distancia)
-      .map((d) => ({ d, m: marcas(lista, d) })).filter((x) => x.m.length)
+      .map((d) => ({ d, m: de(d) })).filter((x) => x.m.length)
       .sort((a, b) => Math.abs(Math.log2(a.d / distancia)) - Math.abs(Math.log2(b.d / distancia)));
     if (!otras.length) return null;
     const { d, m } = otras[0];

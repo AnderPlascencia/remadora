@@ -80,7 +80,7 @@ test('predicciones: se registran las marcas a tope y el error no empeora', () =>
   assert.ok(r.n >= 10, `marcas registradas: ${r.n}`);
   // ⚖ Valor de referencia del modelo actual (marca real de 90 días o ley de Paul). Si cambias el modelo y baja,
   // actualízalo; si sube, el cambio empeora las predicciones.
-  const MAPE_REF = 1.4;
+  const MAPE_REF = 1.2; // 1,3 → 1,1 con las marcas solo a tope (E-1)
   assert.ok(r.mape <= MAPE_REF, `MAPE ${r.mape} % (referencia ${MAPE_REF} %)`);
 });
 

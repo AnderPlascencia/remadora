@@ -48,7 +48,7 @@ export function sinMuestras() {
 
 // Resume las sesiones sin resumen al día (viejas, recién guardadas o restauradas) y lo guarda; si guardarlo falla,
 // la lista sale igual. RESUMEN_V es el de resumen.js (lo comprueba la prueba), que solo se carga si hace falta.
-export const RESUMEN_V = 2;
+export const RESUMEN_V = 3;
 async function completarResumenes(lista, g) {
   const faltan = lista.filter((s) => s.res?.v !== RESUMEN_V);
   if (!faltan.length) return lista;
