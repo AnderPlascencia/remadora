@@ -66,18 +66,26 @@ assert.equal(p.invalidas, 2);
 
 console.log('respaldo: ok');
 
-// Etapa 23 (P5): el archivo va comprimido y por trozos, y restaurar lee el comprimido y el JSON de siempre.
+// Etapa 23 (P5) e I-2: el archivo va comprimido y en flujo, de lote en lote, y restaurar lee el comprimido y el JSON.
 {
-  const { partesJson, archivosRespaldo, leerArchivo } = await import('../src/respaldo.js');
+  const { archivoRespaldo, leerArchivo, TIPO_GZ } = await import('../src/respaldo.js');
   const muestras = Array.from({ length: 1800 }, (_, k) => ({ t: k + 1, w: 150 + (k % 40), spm: 22, split: 120, dist: k * 4, nivel: 5, fc: 130 }));
   const grande = armarRespaldo({ version: '0.108.0', sesiones: Array.from({ length: 30 }, (_, i) => ({ ...sesion, id: i, fecha: i * 1e6, muestras })), entrenamientos: [], programa: { semanas: 6 }, leer, fecha: new Date(0) });
-  assert.deepEqual(JSON.parse(partesJson(grande).join('')), grande);
-  assert.deepEqual(JSON.parse(partesJson({ ...grande, sesiones: [] }).join('')), { ...grande, sesiones: [] });
-  const { comprimido, json } = await archivosRespaldo(grande, 'rower-respaldo-x');
+  // Los lotes llegan de a 7, como los da historial.porLotes(): se leen solo a medida que el archivo los pide.
+  let pedidos = 0;
+  const lotes = () => (async function* () { for (let i = 0; i < grande.sesiones.length; i += 7) { pedidos++; yield grande.sesiones.slice(i, i + 7); } })();
+  const { archivo: comprimido, total } = await archivoRespaldo({ ...grande, sesiones: [] }, lotes, 'rower-respaldo-x');
+  assert.equal(total, 30);
+  assert.equal(pedidos, 5);
   assert.equal(comprimido.name, 'rower-respaldo-x.json.gz');
+  assert.equal(comprimido.type, TIPO_GZ);
+  const { archivo: json } = await archivoRespaldo(grande, lotes, 'rower-respaldo-x', { comprimir: false });
   assert.equal(json.name, 'rower-respaldo-x.json');
   assert.ok(comprimido.size * 8 < json.size, `${comprimido.size} B comprimido de ${json.size} B`);
   assert.deepEqual(await leerArchivo(comprimido), grande);
   assert.deepEqual(await leerArchivo(json), grande);
+  // Sin sesiones también es un respaldo válido.
+  const vacio = await archivoRespaldo(grande, () => (async function* () {})(), 'v');
+  assert.deepEqual(await leerArchivo(vacio.archivo), { ...grande, sesiones: [] });
   await assert.rejects(leerArchivo(new Blob(['no es json'])));
 }

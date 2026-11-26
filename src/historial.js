@@ -99,6 +99,28 @@ export function sesiones() {
   });
 }
 
+// I-2 (INF-R3): todas las sesiones con sus muestras, de n en n (por id; 5 por defecto), sin guardarlas en la caché: el respaldo
+// las escribe una a una al archivo y nunca tiene el historial entero en memoria.
+/** @returns {AsyncGenerator<any[]>} */
+export async function* porLotes(n = 5) {
+  let desde = null;
+  for (;;) {
+    const { lote, ultimo } = await db.tx(['sesiones', 'muestras'], 'readonly', (t) => {
+      const ss = t.objectStore('sesiones').getAll(desde == null ? null : IDBKeyRange.lowerBound(desde, true), n);
+      const lote = [];
+      ss.onsuccess = () => ss.result.forEach((x, i) => {
+        if (x.muestras) { lote[i] = x; return; }
+        const m = t.objectStore('muestras').get(x.id);
+        m.onsuccess = () => { lote[i] = m.result ? { ...x, muestras: m.result } : x; };
+      });
+      return () => ({ lote, ultimo: ss.result.at(-1)?.id });
+    });
+    if (lote.length) yield lote;
+    if (lote.length < n) return;
+    desde = ultimo;
+  }
+}
+
 export async function obtener(id) {
   const [s, m] = await db.tx(['sesiones', 'muestras'], 'readonly', (t) => {
     const a = t.objectStore('sesiones').get(id);

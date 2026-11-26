@@ -369,29 +369,35 @@ const selNivel = $('#sel-nivel-prueba');
 // respaldo.js se carga al guardar o restaurar, no al arrancar (etapa 22: deja sitio en la primera carga).
 export async function guardarRespaldo() {
   const R = await import('../respaldo.js');
-  const datos = R.armarRespaldo({
+  const cabecera = R.armarRespaldo({
     version: VERSION,
-    sesiones: await H.sesiones(),
+    sesiones: [],
     entrenamientos: await db.listar('entrenamientos'),
     programa: leerPrograma(),
     leer: (k) => ajustes.leer(k, null),
     eventos: await Hab.leerEventos(),
   });
-  // Comprimido (.json.gz) si el navegador sabe; se comparte si el teléfono lo deja y, si no, se descarga.
-  const { comprimido, json } = await R.archivosRespaldo(datos, `rower-respaldo-${E.claveDia(Date.now())}`);
-  const archivo = comprimido || json;
+  // I-2: las sesiones van de 5 en 5 desde la base directo al gzip, sin cargar el historial entero (con 600
+  // sesiones eran ~270 MB). Comprimido (.json.gz) si el navegador sabe; se comparte si el teléfono lo deja y, si no,
+  // se descarga. Si el teléfono solo comparte .json, se arma otra vez sin comprimir.
+  const nombre = `rower-respaldo-${E.claveDia(Date.now())}`;
+  const hecho = Date.now();
+  let { archivo, total } = await R.archivoRespaldo(cabecera, () => H.porLotes(), nombre);
   try {
-    const compartible = [archivo, json].find((f) => navigator.canShare?.({ files: [f] }));
-    if (compartible) await navigator.share({ files: [compartible], title: 'Respaldo de Rower' });
+    if (navigator.canShare && !navigator.canShare({ files: [archivo] }) && archivo.type === R.TIPO_GZ) {
+      const json = (await R.archivoRespaldo(cabecera, () => H.porLotes(), nombre, { comprimir: false })).archivo;
+      if (navigator.canShare({ files: [json] })) archivo = json;
+    }
+    if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Respaldo de Rower' });
     else descargar(archivo.name, archivo, archivo.type);
   } catch (err) {
     if (err.name === 'AbortError') return;
     descargar(archivo.name, archivo, archivo.type);
   }
-  ajustes.escribir('ultimoRespaldo', Date.now());
+  ajustes.escribir('ultimoRespaldo', hecho);
   pintarInfoRespaldo();
-  toast(`Respaldo listo: ${datos.sesiones.length} sesiones`);
-  if (vistaActiva('historial')) pintarAvisoRespaldo(datos.sesiones.length);
+  toast(`Respaldo listo: ${total} sesiones`);
+  if (vistaActiva('historial')) pintarAvisoRespaldo(await H.sinMuestras());
 }
 
 async function restaurarRespaldo(archivo) {
@@ -405,8 +411,9 @@ async function restaurarRespaldo(archivo) {
     return;
   }
   datos = conv.datos;
+  // Para no duplicar basta con las fechas: sin las muestras de lo que ya tienes (I-2).
   const { sesionesNuevas, entNuevos, ajustesResp, distintos, invalidas } = R.planRestaurar(datos, {
-    sesiones: await H.sesiones(),
+    sesiones: await H.sinMuestras(),
     entrenamientos: await db.listar('entrenamientos'),
     programa: leerPrograma(),
     leer: (k) => ajustes.leer(k, null),

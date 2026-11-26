@@ -98,24 +98,31 @@ export function listaHumana(cosas) {
 // 600 sesiones pasan de unos 65 MB a unos pocos. Restaurar acepta el .json.gz y el .json de siempre.
 export const TIPO_GZ = 'application/gzip';
 
-/** Partes del JSON del respaldo, con las sesiones al final y una por parte. @param {Record<string, any>} datos */
-export function partesJson(datos) {
-  const { sesiones = [], ...resto } = datos;
-  const partes = [`${JSON.stringify(resto).slice(0, -1)},"sesiones":[`];
-  sesiones.forEach((s, i) => partes.push(`${i ? ',' : ''}${JSON.stringify(s)}`));
-  partes.push(']}');
-  return partes;
-}
-
 /**
- * El archivo del respaldo: { comprimido, json } (comprimido es null si el navegador no comprime).
- * @param {Record<string, any>} datos @param {string} nombre sin extensión
+ * I-2 (INF-R3): el archivo del respaldo escrito en flujo, sesión por sesión, desde `lotes` (una función que da un
+ * iterable asíncrono de listas de sesiones): con gzip, en memoria solo queda lo comprimido. Devuelve
+ * { archivo, total } (total: cuántas sesiones van). Sin CompressionStream (o con comprimir: false), un .json.
+ * @param {Record<string, any>} cabecera el respaldo sin sesiones @param {() => AsyncIterable<any[]>} lotes
+ * @param {string} nombre sin extensión
  */
-export async function archivosRespaldo(datos, nombre) {
-  const json = new File(partesJson(datos), `${nombre}.json`, { type: 'application/json' });
-  if (typeof CompressionStream !== 'function') return { comprimido: null, json };
-  const gz = await new Response(json.stream().pipeThrough(new CompressionStream('gzip'))).blob();
-  return { comprimido: new File([gz], `${nombre}.json.gz`, { type: TIPO_GZ }), json };
+export async function archivoRespaldo(cabecera, lotes, nombre, { comprimir = true } = {}) {
+  const enc = new TextEncoder();
+  const { sesiones: _, ...resto } = cabecera;
+  const it = lotes()[Symbol.asyncIterator]();
+  let fase = 0;
+  let total = 0;
+  const flujo = new ReadableStream({
+    async pull(c) {
+      if (fase === 0) { fase = 1; c.enqueue(enc.encode(`${JSON.stringify(resto).slice(0, -1)},"sesiones":[`)); return; }
+      const { value, done } = await it.next();
+      if (done) { c.enqueue(enc.encode(']}')); c.close(); return; }
+      c.enqueue(enc.encode(value.map((x) => `${total++ ? ',' : ''}${JSON.stringify(x)}`).join('')));
+    },
+    async cancel() { await it.return?.(); },
+  });
+  const gz = comprimir && typeof CompressionStream === 'function';
+  const blob = await new Response(gz ? flujo.pipeThrough(new CompressionStream('gzip')) : flujo).blob();
+  return { archivo: new File([blob], `${nombre}.json${gz ? '.gz' : ''}`, { type: gz ? TIPO_GZ : 'application/json' }), total };
 }
 
 /** Lee un archivo de respaldo, comprimido o no, y devuelve su JSON (lanza si no es JSON). @param {Blob} archivo */
