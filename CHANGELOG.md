@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.136.0 · 2026-11-26
+
+Economía, colección e insignias (etapa 12 de la ronda 2). Los cambios que tocan monedas o atributos cuentan desde el 28 de noviembre; lo remado antes no cambia.
+
+- **Monedas mejor repartidas.** Los logros de las primeras semanas (Primera travesía, Primera misión, Gran travesía y Cruzar el Canal) pagan la mitad. La sesión ya paga un 25 % más desde el 27 de noviembre, porque las monedas salen de la XP que ves. En la 0.133.0 dijimos que las monedas no cambiaban, y no era así. Con 4 días de plan, las 12 primeras semanas dan el 14,5 % de las monedas de 2 años (la auditoría medía el 23 %).
+- **Velas de color, solo aspecto y a mitad de precio** (de 200 a 1 250). Antes daban la misma ventaja que las velas de tu clase. En la tienda hay una sola sección «Velas»: primero las de tu clase, que sí dan ventaja, y después las de color.
+- **Los atributos también suben remando libre.** Volver a remar tras 1 o 2 días de descanso suma Recuperación (+3). Una sesión libre de 20 min o más suma Voluntad (+3). Cada fantasma que vences suma Agilidad (+2), y ganar en Alta mar suma Fuerza (+3). Con 4 sesiones libres por semana, ningún atributo se queda en 0 (antes eran 4).
+- **Una sola vitrina de insignias** en Héroe › Ficha, con dos filas: las de la historia y las de entrenamiento. Progreso solo enlaza a ella.
+- Progreso › Tu constancia cuenta cuántas ventajas de un solo uso compras y cuántas usas, para saber cuáles sobran.
+
 ## 0.135.0 · 2026-11-26
 
 El teléfono en el soporte (etapa 11 de la ronda 2).

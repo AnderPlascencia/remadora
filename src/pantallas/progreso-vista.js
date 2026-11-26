@@ -13,7 +13,7 @@ import * as db from '../db.js';
 import { $, ajustes, color, fcRef as refFc, fechaCorta, formatoMeta, ftp, ico, miles, perfil } from '../ui.js';
 import { estado } from '../estado.js';
 import { avanzado } from './ajustes.js';
-import { estadoHeroe, fichaInsignia, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
+import { estadoHeroe, horasYMin, leerPersonaje, srcHeroe } from './heroe.js';
 import { abrirSesion } from './detalle.js';
 import { leerPrograma } from './programa.js';
 
@@ -239,6 +239,7 @@ export async function pintarConstancia() {
     ['Días con la app abierta (28 días)', String(ev.diasConApp)],
     ['Sesiones empezadas · dejadas (28 días)', `${ev.empezadas} · ${ev.dejadas}`],
     r.carga.sesiones ? ['Sesiones con carga conocida · con tu esfuerzo (28 días)', `${r.carga.pctCarga} % · ${r.carga.pctEsfuerzo} %`] : null,
+    ev.ventajas.compradas || ev.ventajas.usadas ? ['Ventajas compradas · usadas (28 días)', `${ev.ventajas.compradas} · ${ev.ventajas.usadas}`] : null,
     ['Imágenes compartidas (28 días)', ev.compartidas ? `${ev.compartidas}${ev.tasaCompartir != null ? ` · ${ev.tasaCompartir} % de tus sesiones` : ''}` : '0'],
   ].filter(Boolean);
   $('#tabla-constancia').innerHTML = `<tbody>${filas.map(([k, v]) => `<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join('')}</tbody>`;
@@ -344,14 +345,9 @@ export async function pintarHistorial() {
   sel.value = nombres.includes(previo) ? previo : '*';
   pintarTendencia();
 
+  // R2-18: las insignias de entrenamiento viven en la vitrina de Héroe › Ficha; aquí solo el enlace con la cuenta.
   const ins = E.insignias(lista, { primeraSemanaPlan: h.racha?.primeraSemanaPlan ?? null });
-  $('#insignias-resumen').textContent = `${ins.filter((x) => x.ganada).length} de ${ins.length}`;
-  // Primero las que te faltan, de la más cercana a la más lejana; las ganadas al final.
-  const cerca = (x) => (x.ganada ? 2 : x.meta ? 1 - x.valor / x.meta : 1);
-  $('#insignias').innerHTML = [...ins].sort((a, b) => cerca(a) - cerca(b)).map((x) => fichaInsignia({
-    nombre: x.nombre, como: x.detalle, ganada: x.ganada, fecha: x.fecha,
-    avance: x.meta && !x.ganada ? { texto: `${(Math.floor(x.valor * 10) / 10).toLocaleString('es-MX')} de ${x.meta} ${x.unidad}`, pct: (100 * x.valor) / x.meta } : null,
-  })).join('');
+  $('#insignias-resumen').textContent = `(${ins.filter((x) => x.ganada).length + h.insignias.size} ganadas)`;
 
   const recs = E.calcularRecords(lista);
   // Cuatro récords a la vista; el resto, al tocar «Ver todos».

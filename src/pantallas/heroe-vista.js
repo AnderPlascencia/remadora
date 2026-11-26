@@ -7,6 +7,7 @@ import * as J from '../juego.js';
 import * as O from '../objetos.js';
 import * as V from '../ventajas.js';
 import * as B from '../base.js';
+import * as E from '../estadisticas.js';
 import {
   $, ajustes, escaparHtml, ftp, marcarPestanas, ico, miles, toast, 
 } from '../ui.js';
@@ -157,7 +158,7 @@ function pintarFicha(h, per, clase, sesiones) {
   // Ronda 2, UX2-23: «Te conviene subir…» va dentro del atributo abierto (con su botón), no en una tarjeta aparte.
   // Héroe nuevo: los 7 atributos en una lista compacta, sin barras vacías ni «sin cambios esta semana».
   $('#heroe-atributos').classList.toggle('vacio', !Object.values(h.atributos).some((v) => v > 0));
-  pintarInsigniasHistoria(h, per);
+  pintarInsignias(h, per, sesiones);
 }
 
 // «Iniciado de la fuerza · 12 para Diestro».
@@ -168,7 +169,7 @@ function tituloCorto(clave, valor) {
 }
 // Insignias de la historia: los jefes de los capítulos y los logros con premio. Cada ficha dice qué la gana («Cómo»),
 // cuánto llevas y, si ya es tuya, cuándo la ganaste. Un mismo objeto es una sola ficha (el aura de hielo tiene dos logros).
-function pintarInsigniasHistoria(h, per) {
+function pintarInsignias(h, per, sesiones) {
   const fechaDe = (obj) => h.logros.find((l) => l.objeto === obj)?.fecha;
   const fichas = J.CAPITULOS.map((c0, i) => {
     const c = J.capituloDe(i, per.clase);
@@ -194,10 +195,21 @@ function pintarInsigniasHistoria(h, per) {
       como: x.texto, avance: ganada ? null : { texto: avanceMision({ clave: x.id, meta: x.meta, valor: x.valor }), pct: (100 * x.valor) / x.meta } });
   }
   fichas.sort((a, b) => a.orden - b.orden);
-  $('#insignias-historia-resumen').textContent = `${fichas.filter((x) => x.ganada).length} de ${fichas.length}`;
   $('#ficha-insignias').innerHTML = fichas.map((x) => fichaInsignia({
     nombre: x.titulo, como: x.como, ganada: x.ganada, fecha: fechaDe(x.objeto), avance: x.avance, premio: O.objeto(x.objeto)?.nombre, pasado: x.pasado,
   })).join('');
+  // Las de entrenamiento (antes en Progreso): primero las que te faltan, de la más cercana a la más lejana.
+  const ins = E.insignias(sesiones || [], { primeraSemanaPlan: h.racha?.primeraSemanaPlan ?? null });
+  const cerca = (x) => (x.ganada ? 2 : x.meta ? 1 - x.valor / x.meta : 1);
+  $('#ficha-insignias-ent').innerHTML = [...ins].sort((a, b) => cerca(a) - cerca(b)).map((x) => fichaInsignia({
+    nombre: x.nombre, como: x.detalle, ganada: x.ganada, fecha: x.fecha,
+    avance: x.meta && !x.ganada ? { texto: `${(Math.floor(x.valor * 10) / 10).toLocaleString('es-MX')} de ${x.meta} ${x.unidad}`, pct: (100 * x.valor) / x.meta } : null,
+  })).join('');
+  const nh = fichas.filter((x) => x.ganada).length;
+  const ne = ins.filter((x) => x.ganada).length;
+  $('#ins-historia-n').textContent = `${nh} de ${fichas.length}`;
+  $('#ins-ent-n').textContent = `${ne} de ${ins.length}`;
+  $('#insignias-historia-resumen').textContent = `${nh + ne} de ${fichas.length + ins.length}`;
 }
 
 // Semana de héroe: la meta de atributo de la semana, una semana sugerida para equilibrarte y el título más cercano.
@@ -519,12 +531,15 @@ function pintarColeccion(h, per) {
   const faltaDe = (x) => (x.como.nivel ? { corto: `Desde el nivel ${x.como.nivel}`, largo: `Llega al nivel ${x.como.nivel}.` }
     : x.como.hazana ? { corto: 'Con tu hazaña', largo: hz ? `Cumple la hazaña «${hz.nombre}»: ${hz.caminos ? hz.texto.replace(/:.*$/, '') : `${miles(hz.meta)} ${hz.unidad} en total`}. Llevas ${miles(hz.valor)} ${hz.unidad}.` : 'Cumple la hazaña de tu clase.' }
       : x.como.jefe ? { corto: `Vence al jefe ${x.como.jefe}`, largo: `Vence a ${J.capituloDe(x.como.jefe - 1, per.clase).jefe.nombre}, el jefe del capítulo ${x.como.jefe}.` } : null);
-  const propias = CB.piezasDe(clase.clave, ctx).map((x) => {
+  const piezas = CB.piezasDe(clase.clave, ctx);
+  const fichaPieza = (x) => {
     const tiene = CB.tienePieza(per, x.id, ctx);
     return ficha(x, x.tipo, tiene, equipo[x.tipo] === x.id, tiene || x.como.precio ? null : faltaDe(x));
-  });
+  };
+  // R2-13: una sola sección de velas. Las de tu clase dan ventaja; las de color son solo aspecto y van detrás.
   const deColor = Object.entries(VELAS).map(([id, x]) => ficha({ ...x, id }, 'vela', tieneVelas(per, id), equipo.vela === id, null));
-  caja.innerHTML = `${propias.join('')}<h3 class="tienda-sub">Velas de color · para cualquier bote</h3>${deColor.join('')}`;
+  caja.innerHTML = `<h3 class="tienda-sub">Velas</h3>${piezas.filter((x) => x.tipo === 'vela').map(fichaPieza).join('')}${deColor.join('')}`
+    + `<h3 class="tienda-sub">Mascarón, palas y bandera</h3>${piezas.filter((x) => x.tipo !== 'vela').map(fichaPieza).join('')}`;
 }
 
 // Sin monedas suficientes, en lugar de un «Comprar» apagado: cuánto te falta.

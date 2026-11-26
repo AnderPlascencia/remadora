@@ -4,6 +4,7 @@ import * as CB from '../coleccion-bote.js';
 import * as H from '../historial.js';
 import * as db from '../db.js';
 import { hablar } from '../voz.js';
+import { anotar } from '../habito.js';
 import { fraseGrabadaAlAzar } from '../voces-clase.js';
 import { confeti } from '../efectos.js';
 import * as J from '../juego.js';
@@ -144,6 +145,7 @@ export function arrancarHeroe() {
     if (!x || h.monedas < precio) return;
     const inv = per.inventario || {};
     guardarPersonaje({ inventario: { ...inv, [x.id]: (inv[x.id] || 0) + n }, gastado: (per.gastado || 0) + precio });
+    anotar('ventajaCompra', { id: x.id, n });
     vibrar(60);
     toast(`${lote ? `${n} × ` : ''}${x.nombre} a tu bolsa. Elígela en Entrenar antes de la carrera.`);
     pintarHeroe();

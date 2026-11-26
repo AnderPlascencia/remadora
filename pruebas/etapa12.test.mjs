@@ -119,15 +119,17 @@ const muestras = (seg, { w = 150, ruido = 0.03, spm = 24, dspm = 0.5, desde = 0 
   const nuevos = Object.values(PAISAJES).filter((p) => p.base);
   assert.ok(nuevos.length >= 6);
   // Ronda 2, R2-14: las variantes con filtro cuestan 200–375, menos que cualquier paisaje pintado a mano.
-  for (const p of [...Object.values(PAISAJES).filter((x) => x.precio && !x.filtro), ...Object.values(VELAS)]) assert.ok(p.precio >= 400 && p.precio <= 3000, `${p.nombre}: ${p.precio}`);
+  for (const p of Object.values(PAISAJES).filter((x) => x.precio && !x.filtro)) assert.ok(p.precio >= 400 && p.precio <= 3000, `${p.nombre}: ${p.precio}`);
+  // Ronda 2, R2-13: las velas de color son solo aspecto y cuestan la mitad (200–1250).
+  for (const p of Object.values(VELAS)) assert.ok(p.precio >= 200 && p.precio <= 1250, `${p.nombre}: ${p.precio}`);
   const conFiltro = Object.values(PAISAJES).filter((x) => x.filtro);
   assert.ok(conFiltro.length >= 6 && conFiltro.every((x) => x.precio >= 200 && x.precio <= 375));
   assert.ok(Math.max(...conFiltro.map((x) => x.precio)) < Math.min(...Object.values(PAISAJES).filter((x) => x.precio && !x.filtro && x.panorama).map((x) => x.precio)));
   assert.ok(Object.values(VELAS).length >= 5);
   const per = { velas: [], gastado: 100 };
-  assert.equal(comprarVelas(per, 'oro', 2000), null, 'sin monedas no se compra');
+  assert.equal(comprarVelas(per, 'oro', 1000), null, 'sin monedas no se compra');
   const c = comprarVelas(per, 'carmesi', 500);
-  assert.deepEqual(c, { velas: ['carmesi'], gastado: 500, vela: 'carmesi' });
+  assert.deepEqual(c, { velas: ['carmesi'], gastado: 300, vela: 'carmesi' });
   assert.ok(tieneVelas(c, 'carmesi'));
   assert.equal(velasElegidas({ vela: 'oro' }), null, 'no se usan velas que no compraste');
   // Por sesión, la mitad de monedas desde la etapa 12; antes, igual que siempre.

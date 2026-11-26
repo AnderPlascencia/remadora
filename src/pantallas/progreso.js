@@ -3,6 +3,7 @@ import { formatoTiempo } from '../protocolo.js';
 import { $, ajustes, cargarVista, miles } from '../ui.js';
 import { estado } from '../estado.js';
 import { irA } from '../navegacion.js';
+import { vh } from './heroe.js';
 import { guardarRespaldo } from './ajustes.js';
 import { abrirCompartirPeriodo } from './planes.js';
 
@@ -34,6 +35,13 @@ export function arrancarProgreso() {
   }));
   $('#filtro-ent').addEventListener('change', () => pintarHistorial());
   $('#progreso-heroe').addEventListener('click', () => irA('heroe'));
+  // R2-18: las insignias están en una sola vitrina, en Héroe › Ficha.
+  $('#ir-insignias').addEventListener('click', () => {
+    vh.seccion = 'ficha';
+    $('#vitrina-insignias').open = true;
+    irA('heroe');
+    requestAnimationFrame(() => $('#vitrina-insignias').scrollIntoView({ block: 'start' }));
+  });
 }
 
 export function formatoRecord(r, v) {

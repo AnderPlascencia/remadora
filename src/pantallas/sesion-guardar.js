@@ -7,6 +7,7 @@ import * as H from '../historial.js';
 import * as Ent from '../entrenamientos.js';
 import * as E from '../estadisticas.js';
 import { hablar } from '../voz.js';
+import { anotar } from '../habito.js';
 import * as P from '../programa.js';
 import * as V from '../ventajas.js';
 import { VERSION } from '../version.js';
@@ -237,6 +238,7 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
   if (registro.ventajaUsada) {
     const inv = inventario();
     guardarPersonaje({ inventario: { ...inv, [registro.ventajaUsada]: Math.max(0, (inv[registro.ventajaUsada] || 0) - 1) } });
+    anotar('ventajaUso', { id: registro.ventajaUsada });
   }
   pitido(660, 0.2);
   agregarLog(`sesión guardada: ${formatoTiempo(registro.duracion)}, ${registro.distancia} m`);

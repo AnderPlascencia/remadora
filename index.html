@@ -458,9 +458,14 @@
           <h2>Atributos <small class="h2-nota">Últimas 6 semanas · toca uno para ver qué lo sube</small></h2>
           <div id="heroe-radar" class="radar solo-avanzado"></div>
           <div id="heroe-atributos" class="atributos-guia"></div>
-          <details class="seccion insignias-seccion">
-            <summary><h2>Insignias de la historia</h2><span id="insignias-historia-resumen" class="seccion-resumen"></span></summary>
+          <!-- Ronda 2 (R2-18, UX2-30): una sola vitrina de insignias, con la historia y el entrenamiento. Progreso solo enlaza. -->
+          <details id="vitrina-insignias" class="seccion insignias-seccion">
+            <summary><h2>Insignias</h2><span id="insignias-historia-resumen" class="seccion-resumen"></span></summary>
+            <h3 class="insignias-fila">De la historia <small id="ins-historia-n"></small></h3>
             <div id="ficha-insignias" class="insignias"></div>
+            <h3 class="insignias-fila">De entrenamiento <small id="ins-ent-n"></small></h3>
+            <p class="ayuda">Salen de tus métricas: distancia, ritmo, constancia y pruebas.</p>
+            <div id="ficha-insignias-ent" class="insignias"></div>
           </details>
           <div class="fila-botones"><button id="btn-cambiar-clase" class="boton">Cambiar de clase</button></div>
         </div>
@@ -608,11 +613,7 @@
       <p id="tendencia-texto" class="ayuda"></p>
       </details>
 
-      <details class="seccion" data-seccion="insignias">
-      <summary><h2>Insignias de entrenamiento</h2><span id="insignias-resumen" class="seccion-resumen"></span></summary>
-      <p class="ayuda">Salen de tus métricas. Las insignias de la historia del héroe están en Héroe › Ficha.</p>
-      <div id="insignias" class="insignias"></div>
-      </details>
+      <button type="button" id="ir-insignias" class="enlace-chevron ir-insignias">Tus insignias <span id="insignias-resumen"></span> están en Héroe › Ficha ›</button>
 
       <h2>Récords</h2>
       <div id="records" class="records"></div>
