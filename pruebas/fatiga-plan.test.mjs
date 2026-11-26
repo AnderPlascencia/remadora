@@ -2,6 +2,7 @@
 // realistas en el asistente.
 import assert from 'node:assert/strict';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 import * as Ent from '../src/entrenamientos.js';
 import { tipoPlan, splitMetaDe } from '../src/capacidades.js';
 
@@ -15,7 +16,7 @@ const antes = new Date('2025-12-01').getTime();
 let planes = 0;
 for (const o of P.OBJETIVOS_PLAN) for (const nivel of ['inicio', 'medio', 'alto']) for (const dias of [2, 3, 4, 5]) {
   for (const semanas of [4, 6, 8, 12]) for (const minutosMax of [0, 45]) {
-    const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: o.clave, nivel, dias, semanas, inicio: '2026-01-05', ctx: { kcalHabitual: 300, minutosMax } });
+    const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: o.clave, nivel, dias, semanas, inicio: '2026-01-05', ctx: { kcalHabitual: 300, minutosMax } });
     const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
     const sem = P.semanasPlan(programa, [], buscar, antes);
     const carga = sem.map((s) => s.esfuerzo);
@@ -24,7 +25,10 @@ for (const o of P.OBJETIVOS_PLAN) for (const nivel of ['inicio', 'medio', 'alto'
     let ref = null;
     carga.forEach((c, i) => {
       const margen = sem[i].dias.length * 0.5;
-      if (ref != null) {
+      // E-3: un fondo nunca baja de 25 min. En la semana de una prueba con el resto de sesiones ya en ese mínimo (la
+      // base de 2 días de quien empieza) la prueba no se recorta, así que la semana puede pasar del tope.
+      const enMinimo = sem[i].prueba && sem[i].dias.every((d) => d.prueba || new RegExp(`^Fondo ${P.FONDO_MIN} min`).test(d.ent));
+      if (ref != null && !enMinimo) {
         assert.ok(c <= ref * tope + margen, `semana ${i + 1} sobre 1,15 × la última normal (${ref}) · ${id}`);
         if (sem[i - 1]?.descarga && !sem[i].prueba && tope === P.SUBIDA_MAX) assert.ok(c <= ref * P.VUELTA_DESCARGA + margen, `vuelta de la descarga · ${id}`);
       }
@@ -41,12 +45,12 @@ assert.equal(planes, 5 * 3 * 4 * 4 * 2);
 
 // La carga sigue subiendo: el plan de VO₂ llega a sus series largas, solo que sin saltos.
 {
-  const { programa } = P.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 8, inicio: '2026-11-02', ctx: {} });
+  const { programa } = G.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 8, inicio: '2026-11-02', ctx: {} });
   assert.equal(programa.dias[18].ent, 'VO₂ 4 × 4 min');
 }
 // Con 1 o 2 días la prueba ocupa el lugar de la sesión dura: la semana de la prueba no tiene dos duras.
 {
-  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'umbral', nivel: 'medio', dias: 2, semanas: 6, inicio: '2026-11-02', ctx: {} });
+  const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: 'umbral', nivel: 'medio', dias: 2, semanas: 6, inicio: '2026-11-02', ctx: {} });
   const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
   const semana = programa.dias.slice(10, 12).map((d) => buscar(d.ent));
   assert.ok(semana.some((e) => e.pruebaFtp), 'la última semana tiene la prueba');
@@ -55,7 +59,7 @@ assert.equal(planes, 5 * 3 * 4 * 4 * 2);
 
 // ---------- Sesiones duras escritas en split (plan hacia una meta) ----------
 {
-  const { entrenamientos, split } = P.planPorMeta({ distancia: 2000, segundos: 480, semanas: 8, inicio: '2026-11-02' });
+  const { entrenamientos, split } = G.planPorMeta({ distancia: 2000, segundos: 480, semanas: 8, inicio: '2026-11-02' });
   assert.equal(split, 120);
   const de = (re) => entrenamientos.filter((e) => re.test(e.nombre));
   assert.ok(entrenamientos.every((e) => e.splitMeta === 120), 'cada sesión guarda el split de la meta');

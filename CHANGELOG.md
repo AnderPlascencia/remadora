@@ -2,6 +2,19 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.139.0 · 2026-11-26
+
+Generador de planes por objetivo (etapa E-3 de la ronda 2). Los cambios llegan a los planes que armes desde ahora. Lo ya remado no cambia.
+
+- **Ningún fondo de menos de 25 min.** Antes, quien empezaba con 2 o 3 días tenía fondos de 15–20 min, que casi no entrenan. Si pusiste un tope de minutos por sesión, se respeta.
+- **Con 2 días a la semana, como mucho una sesión dura.** La otra es un fondo. En «Potencia» ese fondo trae 4 × 1 min con más fuerza por palada (18–20 paladas por minuto).
+- **La prueba de mitad cae en la semana de descarga** y ocupa el lugar de la sesión dura, así no llegas cansado. La primera semana con intensidad nunca es de descarga ni de prueba.
+- **El umbral sube en pasos más finos** (3 × 8, 3 × 9, 3 × 10… hasta 1 × 30), y quien entrena mucho alterna el VO₂ con series 30/15.
+- **Si no tienes sesiones guardadas, la primera semana trae 12 min a tu ritmo fuerte** dentro de un fondo, para calibrar tu FTP desde el principio.
+- Las series de calorías por encima del umbral cuentan como sesión dura.
+- Las semanas del plan ya no se desfasan un día con el cambio de horario de verano.
+- El generador de planes se carga solo al armar o rehacer un plan: la primera carga baja unos 5 KB.
+
 ## 0.138.0 · 2026-11-26
 
 Plan de meta (etapa E-2 de la ronda 2). Las zonas nuevas y la prueba con calentamiento llegan a los planes de meta que armes desde ahora. Lo ya remado no cambia.

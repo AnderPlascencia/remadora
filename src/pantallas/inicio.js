@@ -196,7 +196,7 @@ async function terminarInicio({ saltar = false } = {}) {
   const cambia = !repetir || !prog?.dias?.length || inicio.objetivo !== inicio.objAntes || prog.porSemana !== inicio.dias || (inicio.minutos != null && (prog.minutosMax || 0) !== (inicio.minutos || 0));
   if (!saltar && inicio.objetivo && inicio.objetivo !== 'libre' && cambia) {
     const ctx = await contextoPlan();
-    const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: inicio.objetivo, nivel: ctx.nivelSugerido, dias: inicio.dias, semanas: 6, inicio: E.claveDia(Date.now()), ctx });
+    const { programa, entrenamientos } = (await import('../generador-plan.js')).planPorObjetivo({ objetivo: inicio.objetivo, nivel: ctx.nivelSugerido, dias: inicio.dias, semanas: 6, inicio: E.claveDia(Date.now()), ctx });
     await guardarEntrenamientosDePlan(entrenamientos);
     guardarPrograma(programa);
     estado.elegirLoDeHoy = true;

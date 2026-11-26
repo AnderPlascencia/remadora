@@ -338,10 +338,11 @@ export function splitMetaDe(ent) {
 export function tipoPlan(ent) {
   if (!ent) return null;
   if (ent.prueba || ent.pruebaFtp) return 'prueba';
-  if (ent.objetivo?.metrica === 'kcal' || ent.enfoque === 'calorias') return 'calorias';
   const trabajo = (ent.bloques || []).filter((b) => b.metrica && !/calentamiento|enfriamiento|descanso/i.test(b.nombre || ''));
-  if (trabajo.some((b) => b.metrica === 'spm') || ent.enfoque === 'tecnica') return 'tecnica';
   const pct = Math.max(0, ...trabajo.filter((b) => b.metrica === 'ftp').map((b) => b.max));
+  // E-3 (E13): una sesión de calorías con series fuertes («8 × 1 min fuerte») cuenta como dura: primero los bloques.
+  if (ent.objetivo?.metrica === 'kcal' || ent.enfoque === 'calorias') return pct > 105 ? 'vo2' : pct > 90 ? 'umbral' : 'calorias';
+  if (trabajo.some((b) => b.metrica === 'spm') || ent.enfoque === 'tecnica') return 'tecnica';
   // Bloques en split (los planes hacia una meta): se comparan con el split de la meta. A ritmo de meta o más
   // rápido son series (vo2); a menos de 12 s más lento, umbral; más lento, fondo.
   const enSplit = trabajo.filter((b) => b.metrica === 'split' && b.min > 0);

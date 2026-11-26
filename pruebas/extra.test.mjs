@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as E from '../src/estadisticas.js';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 
 const muestras = Array.from({ length: 600 }, (_, i) => ({ t: i + 1, w: 200, spm: 24, split: 125, dist: (i + 1) * 4, fc: 150 }));
 const s = { fecha: Date.parse('2026-10-20T10:00'), duracion: 600, distancia: 2400, paladas: 240, wattsProm: 200, spmProm: 24, fcProm: 150, muestras,
@@ -82,7 +83,7 @@ console.log('extra OK');
   const ganadas = new Set(ins.filter((x) => x.ganada).map((x) => x.clave));
   for (const k of ['primera', 'km5', 'min30', 'ses10', 'racha7']) assert.ok(ganadas.has(k), k);
   assert.ok(!ganadas.has('ses50'));
-  const plan = P.planPorMeta({ distancia: 2000, segundos: 470, semanas: 8, inicio: '2026-01-05' });
+  const plan = G.planPorMeta({ distancia: 2000, segundos: 470, semanas: 8, inicio: '2026-01-05' });
   assert.equal(plan.split, 118);
   assert.ok(plan.programa.dias.length >= 23);
   assert.ok(plan.entrenamientos.some((e) => e.prueba));

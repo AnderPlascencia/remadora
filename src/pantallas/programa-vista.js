@@ -33,7 +33,7 @@ function escuchar() {
   $('#btn-asistente').addEventListener('click', async () => {
     if (!asistente.objetivo) return;
     if (asistente.objetivo === 'meta') { crearPlanMeta(); return; }
-    const { programa, entrenamientos } = P.planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx: await contextoPlan() });
+    const { programa, entrenamientos } = (await import('../generador-plan.js')).planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx: await contextoPlan() });
     await guardarEntrenamientosDePlan(entrenamientos);
     guardarPrograma(programa);
     estado.elegirLoDeHoy = true;
@@ -280,7 +280,7 @@ async function pintarAsistente() {
   const res = $('#as-resumen');
   res.hidden = !asistente.objetivo || meta;
   if (!asistente.objetivo || meta) return;
-  const { programa } = P.planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx });
+  const { programa } = (await import('../generador-plan.js')).planPorObjetivo({ ...asistente, inicio: E.claveDia(Date.now()), ctx });
   const primera = programa.dias.slice(0, asistente.dias).map((d) => d.ent);
   const ultima = programa.dias.slice(-asistente.dias).map((d) => d.ent);
   const o = P.objetivoPlan(asistente.objetivo);
@@ -313,7 +313,7 @@ async function crearPlanMeta() {
   if (split < 80 || split > 200) { $('#pm-error').textContent = 'Ese tiempo da un ritmo fuera de lo posible: revisa la distancia y el tiempo.'; return; }
   $('#pm-error').textContent = '';
   const nivel = P.nivelRemero(await H.sinMuestras());
-  const { programa, entrenamientos } = P.planPorMeta({ distancia, segundos, semanas, inicio, nivel, dias: perfil().dias, ctx: { diasSemana: citaGuardada().dias } });
+  const { programa, entrenamientos } = (await import('../generador-plan.js')).planPorMeta({ distancia, segundos, semanas, inicio, nivel, dias: perfil().dias, ctx: { diasSemana: citaGuardada().dias } });
   await guardarEntrenamientosDePlan(entrenamientos);
   guardarPrograma(programa);
   estado.elegirLoDeHoy = true;

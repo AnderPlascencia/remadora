@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Ci from '../src/cita.js';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 
 const ms = (k, h = '12:00') => new Date(`${k}T${h}`).getTime();
 const dia = (k) => (new Date(`${k}T12:00`).getDay() + 6) % 7;
@@ -65,13 +66,13 @@ test('el .ics: un evento por sesión con aviso 30 min antes, a tu hora local', (
 
 test('el plan se arma en tus días, sin dos duras seguidas', () => {
   const base = { objetivo: 'umbral', nivel: 'medio', dias: 3, semanas: 6, inicio: '2026-11-23' };
-  const { programa } = P.planPorObjetivo({ ...base, ctx: { diasSemana: [1, 3, 6] } });
+  const { programa } = G.planPorObjetivo({ ...base, ctx: { diasSemana: [1, 3, 6] } });
   assert.deepEqual([...new Set(programa.dias.map((d) => dia(d.fecha)))].sort(), [1, 3, 6]);
   // Si no cuadran con los días por semana, los de serie.
-  const serie = P.planPorObjetivo({ ...base, ctx: { diasSemana: [1, 3] } }).programa;
+  const serie = G.planPorObjetivo({ ...base, ctx: { diasSemana: [1, 3] } }).programa;
   assert.deepEqual([...new Set(serie.dias.map((d) => dia(d.fecha)))].sort(), P.DIAS_PLAN[3]);
   // Días seguidos (lunes, martes y miércoles): nunca dos duras en días seguidos.
-  const { programa: seguidos, entrenamientos } = P.planPorObjetivo({ ...base, objetivo: 'vo2', ctx: { diasSemana: [0, 1, 2] } });
+  const { programa: seguidos, entrenamientos } = G.planPorObjetivo({ ...base, objetivo: 'vo2', ctx: { diasSemana: [0, 1, 2] } });
   const dura = (n) => P.esDura(entrenamientos.find((e) => e.nombre === n));
   const porFecha = new Map(seguidos.dias.map((d) => [d.fecha, d.ent]));
   for (const d of seguidos.dias) {

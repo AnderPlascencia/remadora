@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as A from '../src/adaptacion.js';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 import { claveDia } from '../src/estadisticas.js';
 
 const DIA = 864e5;
@@ -11,7 +12,7 @@ const ctx = {};
 // Periodización: nunca dos sesiones duras en días seguidos (contando domingo → lunes) si se puede evitar.
 for (const o of P.OBJETIVOS_PLAN) {
   for (const dias of [3, 4, 5]) {
-    const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: o.clave, dias, semanas: 8, inicio: '2026-11-02', ctx });
+    const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: o.clave, dias, semanas: 8, inicio: '2026-11-02', ctx });
     const dura = (n) => P.esDura(entrenamientos.find((e) => e.nombre === n));
     for (let i = 1; i < programa.dias.length; i++) {
       const [a, b] = [programa.dias[i - 1], programa.dias[i]];
@@ -26,12 +27,12 @@ for (const o of P.OBJETIVOS_PLAN) {
 }
 // Potencia con 4 días: los sprints y la fuerza ya no caen lunes y martes.
 {
-  const { programa } = P.planPorObjetivo({ objetivo: 'potencia', dias: 4, semanas: 6, inicio: '2026-11-02', ctx });
+  const { programa } = G.planPorObjetivo({ objetivo: 'potencia', dias: 4, semanas: 6, inicio: '2026-11-02', ctx });
   assert.deepEqual(programa.dias.slice(0, 4).map((d) => d.ent.split(' ')[0]), ['Sprints', 'Fondo', 'Fuerza', 'Fondo']);
 }
 
 // Sesión del día con plan.
-const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
+const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
 // Lunes: la sesión clave.
 let d = A.sesionDelDia({ programa, entrenamientos, ahora: lunes });
 assert.equal(d.fuente, 'plan');
@@ -52,7 +53,7 @@ assert.match(d.motivo, /Vas al día.*adelanta.*Te quedan 2 sesiones en 6 días/)
 const fondoMar = { fecha: lunes + DIA + 3600e3, duracion: 2400, entrenamiento: d.adelantar, muestras: muestras(2400, 120) };
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [hecha, fondoMar], ahora: lunes + 2 * DIA });
 assert.equal(d.fuente, 'descanso');
-assert.ok(d.adelantar && !/^Fondo/.test(d.adelantar), d.motivo);
+assert.ok(d.adelantar && d.adelantar !== fondoMar.entrenamiento, d.motivo);
 // Martes sin haber remado el lunes: recupera la sesión clave (mañana toca fondo).
 d = A.sesionDelDia({ programa, entrenamientos, sesiones: [], ahora: lunes + DIA });
 assert.equal(d.fuente, 'recuperar');
@@ -109,7 +110,7 @@ assert.equal(claveDia(lunes), '2026-11-02');
 console.log('sesión del día OK');
 {
   // Las semanas del plan van de lunes a domingo, como el calendario, aunque empiece a media semana.
-  const { programa } = P.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 8, inicio: '2026-10-18', ctx: {} });
+  const { programa } = G.planPorObjetivo({ objetivo: 'vo2', dias: 3, semanas: 8, inicio: '2026-10-18', ctx: {} });
   assert.deepEqual(P.semanaDe(programa, Date.parse('2026-11-04T09:00')), { n: 4, total: 8, descarga: true });
   assert.equal(P.semanaDe(programa, Date.parse('2026-10-18T09:00')).n, 1);
   assert.equal(P.semanaDe(null), null);

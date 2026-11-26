@@ -1,6 +1,7 @@
 // Etapa 8: planes bien calibrados (zonas, descargas, topes de VO₂, progresión y volumen por condición).
 import assert from 'node:assert/strict';
 import * as P from '../src/programa.js';
+import * as G from '../src/generador-plan.js';
 import * as B from '../src/base.js';
 import * as Ent from '../src/entrenamientos.js';
 import { esBloqueTrabajo } from '../src/entrenamientos.js';
@@ -11,7 +12,7 @@ const porSemana = (programa, n) => Array.from({ length: programa.dias.length / n
 // (1) Plan de 2000 m: zonas en % del FTP equivalente (E-2): fondo 62–68 %, umbral 94–100 %, calentamiento sin pisar el fondo.
 {
   const split = 118;
-  const { programa, entrenamientos } = P.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: '2026-11-02' });
+  const { programa, entrenamientos } = G.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: '2026-11-02' });
   const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
   const fondo = entrenamientos.find((e) => /^Fondo/.test(e.nombre));
   const bF = fondo.bloques.find((b) => b.nombre === 'Fondo');
@@ -35,7 +36,7 @@ const porSemana = (programa, n) => Array.from({ length: programa.dias.length / n
 
 // (2) Potencia con 3 días: una sesión es un fondo puro.
 {
-  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'potencia', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
+  const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: 'potencia', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
   for (const sem of porSemana(programa, 3)) {
     const ents = sem.map((d) => entrenamientos.find((e) => e.nombre === d.ent));
     assert.ok(ents.some((e) => /^Fondo \d+ min · suave$/.test(e.nombre) || e.prueba), sem.map((d) => d.ent).join(', '));
@@ -46,7 +47,7 @@ const porSemana = (programa, n) => Array.from({ length: programa.dias.length / n
 for (const objetivo of ['vo2', 'umbral', 'potencia', 'calorias']) {
   for (const nivel of ['inicio', 'medio', 'alto']) {
     for (const dias of [3, 5]) {
-      const { programa, entrenamientos } = P.planPorObjetivo({ objetivo, nivel, dias, semanas: 8, inicio: '2026-11-02', ctx });
+      const { programa, entrenamientos } = G.planPorObjetivo({ objetivo, nivel, dias, semanas: 8, inicio: '2026-11-02', ctx });
       const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
       for (const e of entrenamientos) if (!e.prueba) assert.ok(P.segVo2(e) <= P.VO2_MAX_SESION, `${e.nombre}: ${P.segVo2(e)} s`);
       for (const [s, sem] of porSemana(programa, dias).entries()) {
@@ -58,7 +59,7 @@ for (const objetivo of ['vo2', 'umbral', 'potencia', 'calorias']) {
 }
 // Los 30/15 se quedan en 13 por serie.
 {
-  const { entrenamientos } = P.planPorObjetivo({ objetivo: 'vo2', nivel: 'alto', dias: 5, semanas: 8, inicio: '2026-11-02', ctx });
+  const { entrenamientos } = G.planPorObjetivo({ objetivo: 'vo2', nivel: 'alto', dias: 5, semanas: 8, inicio: '2026-11-02', ctx });
   for (const e of entrenamientos.filter((x) => /30\/15/.test(x.nombre))) assert.ok(Number(e.nombre.match(/de (\d+) ×/)[1]) <= 13, e.nombre);
 }
 
@@ -66,7 +67,7 @@ for (const objetivo of ['vo2', 'umbral', 'potencia', 'calorias']) {
 for (const o of P.OBJETIVOS_PLAN) {
   for (const nivel of ['inicio', 'medio', 'alto']) {
     const dias = 4;
-    const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: o.clave, nivel, dias, semanas: 10, inicio: '2026-11-02', ctx });
+    const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: o.clave, nivel, dias, semanas: 10, inicio: '2026-11-02', ctx });
     const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
     const sem = porSemana(programa, dias);
     let previo = null;
@@ -80,33 +81,34 @@ for (const o of P.OBJETIVOS_PLAN) {
     }
   }
 }
-// Quien está empezando hace 3 semanas de base antes del plan de umbral.
+// Quien está empezando hace semanas de base antes del plan de umbral: hasta 3, pero la primera con intensidad no
+// puede ser de descarga ni de prueba (E-3), así que en 8 semanas son 2.
 {
   assert.equal(P.semanasDeBase('umbral', 'inicio', 8), 3);
   assert.equal(P.semanasDeBase('umbral', 'medio', 8), 0);
   assert.equal(P.semanasDeBase('base', 'inicio', 8), 0);
-  const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'umbral', nivel: 'inicio', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
+  const { programa, entrenamientos } = G.planPorObjetivo({ objetivo: 'umbral', nivel: 'inicio', dias: 3, semanas: 8, inicio: '2026-11-02', ctx });
   const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
-  assert.equal(programa.semanasBase, 3);
-  const primeras = programa.dias.slice(0, 9).map((d) => buscar(d.ent));
+  assert.equal(programa.semanasBase, 2);
+  const primeras = programa.dias.slice(0, 6).map((d) => buscar(d.ent));
   assert.ok(primeras.every((e) => P.segIntenso(e) === 0), primeras.map((e) => e.nombre).join(', '));
   assert.ok(programa.dias.slice(9).some((d) => /^Umbral/.test(d.ent)), 'después llega el umbral');
 }
 
 // (5) Resistencia según la experiencia, cadencia meta y arranques antes de lo intenso.
 {
-  const nivelDe = (nivel, re) => P.planPorObjetivo({ objetivo: 'potencia', nivel, dias: 3, semanas: 6, inicio: '2026-11-02', ctx })
+  const nivelDe = (nivel, re) => G.planPorObjetivo({ objetivo: 'potencia', nivel, dias: 3, semanas: 6, inicio: '2026-11-02', ctx })
     .entrenamientos.find((e) => re.test(e.nombre)).bloques.find((b) => b.nivel).nivel;
   assert.deepEqual(['inicio', 'medio', 'alto'].map((n) => nivelDe(n, /^Fuerza/)), [P.NIVEL_FUERZA.inicio, P.NIVEL_FUERZA.medio, P.NIVEL_FUERZA.alto]);
   assert.deepEqual(['inicio', 'medio', 'alto'].map((n) => nivelDe(n, /^Sprints/)), [P.NIVEL_SPRINT.inicio, P.NIVEL_SPRINT.medio, P.NIVEL_SPRINT.alto]);
   assert.ok(P.NIVEL_FUERZA.alto <= 14 && P.NIVEL_SPRINT.alto <= 16, 'resistencia limitada');
-  const { entrenamientos } = P.planPorObjetivo({ objetivo: 'potencia', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
+  const { entrenamientos } = G.planPorObjetivo({ objetivo: 'potencia', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
   const fuerza = entrenamientos.find((e) => /^Fuerza/.test(e.nombre)).bloques.find((b) => b.spmMeta);
   assert.deepEqual(fuerza.spmMeta, [18, 20]);
   assert.match(Ent.textoMeta(fuerza, 200), /a 18–20 golpes\/min$/);
   assert.doesNotMatch(Ent.textoMeta({ metrica: 'ftp', min: 56, max: 75 }, 200), /golpes/);
   // Antes de VO₂ y sprints hay arranques progresivos (que no cuentan como trabajo).
-  const todos = ['vo2', 'potencia', 'calorias'].flatMap((o) => P.planPorObjetivo({ objetivo: o, nivel: 'alto', dias: 5, semanas: 8, inicio: '2026-11-02', ctx }).entrenamientos);
+  const todos = ['vo2', 'potencia', 'calorias'].flatMap((o) => G.planPorObjetivo({ objetivo: o, nivel: 'alto', dias: 5, semanas: 8, inicio: '2026-11-02', ctx }).entrenamientos);
   for (const e of todos.filter((x) => !x.prueba && P.segVo2(x) > 0 && !/arranques$/.test(x.nombre))) {
     assert.ok(e.bloques.some((b) => /arranque progresivo/.test(b.nombre)), `${e.nombre} con activación`);
   }
