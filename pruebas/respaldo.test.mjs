@@ -32,6 +32,13 @@ assert.deepEqual(p.sesionesNuevas[0].pausas, sesion.pausas);
 assert.equal(p.sesionesNuevas[0].version, '0.42.1');
 assert.equal(p.entNuevos.length, 0);
 
+// I-3: una sesión con el mismo uid tampoco se duplica (aunque su hora de inicio no coincida), y el uid viaja.
+const conUid = { ...r, sesiones: [{ ...sesion, uid: 'u-1', rr: [800, 810] }, { ...sesion, fecha: 2000, uid: 'u-2' }] };
+p = planRestaurar(conUid, { sesiones: [{ id: 3, fecha: 1500, uid: 'u-1' }], entrenamientos: [], programa: null, leer });
+assert.deepEqual(p.sesionesNuevas.map((s) => s.uid), ['u-2']);
+p = planRestaurar(conUid, { sesiones: [], entrenamientos: [], programa: null, leer });
+assert.deepEqual(p.sesionesNuevas[0].rr, [800, 810], 'los RR del respaldo se traen');
+
 // Héroe, plan y perfil distintos: se pregunta
 // (un respaldo de formato 1, con los ajustes como texto, se convierte antes)
 const viejo = { app: 'remadora', sesiones: [], programa: { semanas: 8 }, ajustes: { ftp: '200', personaje: '{"clase":"pirata"}', tema: 'claro', voz: '0', raro: 'x' } };

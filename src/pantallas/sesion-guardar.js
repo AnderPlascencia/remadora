@@ -11,14 +11,14 @@ import { anotar } from '../habito.js';
 import * as P from '../programa.js';
 import * as V from '../ventajas.js';
 import { VERSION } from '../version.js';
-import { $, fcRef, ftp, miles, pitido, toast } from '../ui.js';
+import { $, fcParaEsfuerzo, fcRef, ftp, miles, pitido, toast } from '../ui.js';
 import { estado } from '../estado.js';
 import { actualizarFcMax } from './ajustes.js';
 import { fcMax5s } from '../pulso.js';
 import { ftpAutomatico } from './preparar.js';
 import { agregarLog, guardarRegistroSesion } from '../registro.js';
 import { resumenDiagnostico } from '../diagnostico.js';
-import { guardarPersonaje, inventario, pintarLineaNivel } from './heroe.js';
+import { pintarLineaNivel } from './heroe.js';
 import { delProgramaHoy, pintarHoy, revisarPlanAuto } from './programa.js';
 import { decirResumenJuego } from './sesion-voz.js';
 import * as XC from '../xp-carga.js';
@@ -34,12 +34,13 @@ function copiaEnCurso(s, ent) {
   return {
     inicio: s.inicio, t: s.t, dist: s.dist, distConsola: s.distConsola, distFuente: s.distFuente, kcal: s.kcal, paladas: s.paladas, muestras: s.muestras,
     segConMeta: s.segConMeta, segEnRango: s.segEnRango, segBajo: s.segBajo, segAlto: s.segAlto, tiempoMeta: s.tiempoMeta, entrenamiento: s.entrenamiento,
-    pruebaFtp: s.pruebaFtp, versionCorta: s.versionCorta || null, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(), xpCtx: s.xpCtx ?? null,
+    rr: s.rr || [], uid: s.uid, pruebaFtp: s.pruebaFtp, versionCorta: s.versionCorta || null, plan: s.plan, estadoAv: s.estadoAv, pausas: s.pausas, fin: s.fin ?? null, guardada: Date.now(), xpCtx: s.xpCtx ?? null,
     ent: ent ? { nombre: ent.nombre, bloques: ent.bloques, objetivo: ent.objetivo, ...(ent.versionCorta ? { versionCorta: ent.versionCorta } : {}) } : null,
   };
 }
 export async function guardarSesionEnCurso(s = estado.sesion, ent = estado.entrenamientoActivo) {
   if (!s || s.muestras.length < 10) return;
+  s.uid ??= db.nuevoUid();
   const copia = copiaEnCurso(s, ent);
   try {
     await db.guardarEstado('enCurso', copia);
@@ -63,6 +64,7 @@ export async function leerSesionEnCurso() {
 
 // Al abrir la app con una sesión que quedó a medias, se ofrece guardarla (sin carrera: los fantasmas no se guardan).
 export async function ofrecerRecuperar() {
+  import('./gasto-objeto.js').then((g) => g.descontarPendientes()).catch(() => {});
   const s = await leerSesionEnCurso();
   if (!s || estado.sesion) return;
   if (await sesionEnOtraPestana()) { toast('Hay una sesión en curso en otra pestaña de la app'); return; }
@@ -77,7 +79,7 @@ export async function ofrecerRecuperar() {
   $('#recuperar-guardar').focus();
 }
 export async function yaGuardada(s) {
-  try { return (await H.sinMuestras()).some((x) => x.fecha === s.inicio); } catch { return false; }
+  try { return (await H.sinMuestras()).some((x) => x.fecha === s.inicio || (s.uid && x.uid === s.uid)); } catch { return false; }
 }
 // Lo que ya se había remado, para seguir en la misma sesión. El tiempo con la app cerrada queda como pausa:
 // la que estaba abierta sigue abierta, o se abre una desde la última copia, y se cierra al volver a remar.
@@ -88,7 +90,7 @@ export function estadoReanudado(c) {
   const n500 = Math.floor(c.dist / 500);
   const cruce = n500 ? m.find((x) => x.dist >= n500 * 500) : null;
   return {
-    inicio: c.inicio, t: c.t, dist: c.dist, distConsola: c.distConsola || 0, kcal: c.kcal, paladas: c.paladas, muestras: m,
+    inicio: c.inicio, uid: c.uid, rr: c.rr || [], t: c.t, dist: c.dist, distConsola: c.distConsola || 0, kcal: c.kcal, paladas: c.paladas, muestras: m,
     segConMeta: c.segConMeta || 0, segEnRango: c.segEnRango || 0, segBajo: c.segBajo || 0, segAlto: c.segAlto || 0, tiempoMeta: c.tiempoMeta ?? null,
     estadoAv: c.estadoAv ?? estado.sesion.estadoAv, pruebaFtp: !!c.pruebaFtp, pausas, pausaPrevia: 'auto', reanudada: true, xpCtx: c.xpCtx ?? null,
     avance: estado.entrenamientoActivo?.objetivo?.metrica === 'distancia' ? m.map((x) => [x.t, x.dist]) : [],
@@ -101,8 +103,10 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
   const m = s.muestras;
   const prom = (k) => Math.round(m.reduce((a, x) => a + x[k], 0) / m.length);
   const conSplit = m.filter((x) => x.split > 0);
+  s.uid ??= db.nuevoUid();
   const registro = {
     fecha: s.inicio,
+    uid: s.uid,
     duracion: m.at(-1).t,
     distancia: m.at(-1).dist,
     // Sin distFuente (una sesión a medias de una versión anterior) se pasa a watts al reparar sesiones.
@@ -214,6 +218,15 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
     });
   }
   registro.marcas = E.marcasDeSesion(registro);
+  // I-3 (N5): con pulso, el esfuerzo según el pulso (rpePulso) va en el mismo registro, no en una escritura aparte
+  // después de guardar. Es una sugerencia: el tuyo (rpe) lo marcas en el resumen, y es el que usa la adaptación.
+  const fcEsf = fcParaEsfuerzo();
+  const porPulso = E.esfuerzoPorPulso(m, { ...fcRef(), max: fcEsf });
+  const fcTrabajo = E.pulsoTrabajoPct(m, registro.bloques, fcEsf);
+  if (fcTrabajo != null) registro.fcPctTrabajo = fcTrabajo;
+  if (porPulso) Object.assign(registro, { rpePulso: porPulso.rpe, rpePct: porPulso.pct, trimp: porPulso.trimp });
+  // El gasto del objeto queda marcado en la sesión: si la app se cierra antes de descontarlo, se descuenta al abrirla.
+  if (registro.ventajaUsada) registro.gasto = 1;
   // Primero se guarda, y solo después se lee el historial (récords, resumen, héroe): si leer cientos de sesiones con
   // sus muestras falla o se queda sin memoria, la sesión ya está a salvo.
   try {
@@ -230,7 +243,7 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
   if (!recuperada) guardarRegistroSesion(registro.fecha, registro.diagnostico);
   // Ronda 2 (QA-F4): el detalle de la sesión se carga aquí, con la sesión ya guardada (no va en la primera
   // carga). Sin conexión sale de la caché del service worker, como el resto.
-  const { abrirSesion, fcParaEsfuerzo } = await import('./detalle.js');
+  const { abrirSesion } = await import('./detalle.js');
   let previas = null;
   try {
     // Sin muestras: el resumen, los récords y el juego leen el resumen guardado de cada sesión (etapa 23).
@@ -239,21 +252,12 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
     agregarLog(`sesión guardada, pero no se pudo leer el historial: ${e?.name || ''} ${e?.message || e}`);
   }
   if (registro.ventajaUsada) {
-    const inv = inventario();
-    guardarPersonaje({ inventario: { ...inv, [registro.ventajaUsada]: Math.max(0, (inv[registro.ventajaUsada] || 0) - 1) } });
+    import('./gasto-objeto.js').then((g) => g.gastarObjeto(registro)).catch(() => {});
     anotar('ventajaUso', { id: registro.ventajaUsada });
   }
   pitido(660, 0.2);
   agregarLog(`sesión guardada: ${formatoTiempo(registro.duracion)}, ${registro.distancia} m`);
-  // Con pulso, el esfuerzo según el pulso se guarda aparte (rpePulso) como sugerencia: el tuyo (rpe) lo marcas en el
-  // resumen, y es el que usa la adaptación del plan. Va antes del FTP automático: un pulso alto cuenta como exigente.
-  const porPulso = E.esfuerzoPorPulso(registro.muestras, { ...fcRef(), max: fcParaEsfuerzo() });
-  const fcTrabajo = E.pulsoTrabajoPct(registro.muestras, registro.bloques, fcParaEsfuerzo());
-  if (fcTrabajo != null) { registro.fcPctTrabajo = fcTrabajo; await H.actualizar(registro.id, { fcPctTrabajo: fcTrabajo }); }
-  if (porPulso) {
-    Object.assign(registro, { rpePulso: porPulso.rpe, rpePct: porPulso.pct, trimp: porPulso.trimp });
-    await H.actualizar(registro.id, { rpePulso: registro.rpePulso, rpePct: registro.rpePct, trimp: registro.trimp });
-  }
+  // El FTP automático va después del esfuerzo según el pulso: un pulso alto cuenta como exigente.
   const ftpAuto = ftpAutomatico(registro, previas || []);
   if (!previas) {
     // Sin historial no se puede calcular el resumen (récords, juego): la sesión está guardada y su detalle se abre igual.

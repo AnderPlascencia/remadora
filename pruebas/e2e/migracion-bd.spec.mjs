@@ -1,7 +1,7 @@
 import { test, expect, listar, leerEstado } from './ayuda.mjs';
 
-// Quien ya tenía la app (base de datos versión 1) conserva su historial al pasar a la versión actual (3), con
-// las muestras de cada sesión movidas a su propio almacén.
+// Quien ya tenía la app (base de datos versión 1) conserva su historial al pasar a la versión actual (4), con
+// las muestras y los RR de cada sesión movidos a su propio almacén y un uid por sesión (I-3).
 test('al actualizar la base de datos se conservan sesiones y entrenamientos', async ({ page }) => {
   await page.goto('./manifest.webmanifest');
   await page.evaluate(() => new Promise((ok, mal) => {
@@ -14,7 +14,7 @@ test('al actualizar la base de datos se conservan sesiones y entrenamientos', as
     req.onsuccess = () => {
       const t = req.result.transaction(['sesiones', 'entrenamientos'], 'readwrite');
       const muestras = Array.from({ length: 60 }, (_, i) => ({ t: i + 1, w: 150, spm: 24, split: 120, dist: Math.round((i + 1) * 4.2), nivel: 8, fc: 0 }));
-      t.objectStore('sesiones').put({ fecha: Date.now() - 864e5, duracion: 60, distancia: 252, distFuente: 'watts', muestras });
+      t.objectStore('sesiones').put({ fecha: Date.now() - 864e5, duracion: 60, distancia: 252, distFuente: 'watts', muestras, rr: [800, 810, 790], rmssd: 14 });
       t.objectStore('entrenamientos').put({ nombre: 'Mío', bloques: [] });
       t.oncomplete = () => { req.result.close(); ok(); };
     };
@@ -30,14 +30,18 @@ test('al actualizar la base de datos se conservan sesiones y entrenamientos', as
     const req = indexedDB.open('remadora');
     req.onsuccess = () => {
       const db = req.result;
-      const t = db.transaction(['sesiones', 'muestras']);
+      const t = db.transaction(['sesiones', 'muestras', 'rr']);
       const crudas = t.objectStore('sesiones').getAll();
       const muestras = t.objectStore('muestras').getAll();
+      const rr = t.objectStore('rr').getAll();
       const indices = [...t.objectStore('sesiones').indexNames];
       t.oncomplete = () => {
         db.close();
-        ok({ version: db.version, conMuestras: crudas.result.filter((x) => x.muestras).length, aparte: muestras.result.map((m) => m.length), indices });
+        ok({
+          version: db.version, conMuestras: crudas.result.filter((x) => x.muestras || x.rr).length, aparte: muestras.result.map((m) => m.length),
+          rr: rr.result, indices, uid: crudas.result.every((x) => /^[0-9a-f-]{36}$/.test(x.uid)),
+        });
       };
     };
-  }))).toEqual({ version: 3, conMuestras: 0, aparte: [60], indices: ['fecha'] });
+  }))).toEqual({ version: 4, conMuestras: 0, aparte: [60], rr: [[800, 810, 790]], indices: ['fecha'], uid: true });
 });

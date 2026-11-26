@@ -4,6 +4,8 @@
 // Aquí se juntan y se guardan en memoria: la lista se lee una vez y se vuelve a leer solo después de guardar,
 // borrar o restaurar. El estado del juego (XP, nivel, misiones) se calcula una sola vez por versión de la lista.
 // Etapa 23: casi todo usa sinMuestras(), con el resumen de cada sesión (s.res, ver resumen.js).
+// I-3: los intervalos RR de la banda van en su propio almacén («rr», misma clave). Solo los traen obtener() y el
+// respaldo; la lista ligera y la completa usan el RMSSD guardado (s.rmssd).
 import * as db from './db.js';
 import { estadoJuego as calcularJuego } from './juego.js';
 
@@ -27,6 +29,9 @@ export function invalidar() {
 }
 
 export const version = () => generacion;
+
+// Los almacenes de una sesión: escribir o borrar una toca los tres.
+export const ALMACENES = ['sesiones', 'muestras', 'rr'];
 
 const porFecha = (t) => t.objectStore('sesiones').index('fecha').getAll();
 
@@ -100,23 +105,26 @@ export function sesiones() {
 }
 
 export async function obtener(id) {
-  const [s, m] = await db.tx(['sesiones', 'muestras'], 'readonly', (t) => {
+  const [s, m, rr] = await db.tx(ALMACENES, 'readonly', (t) => {
     const a = t.objectStore('sesiones').get(id);
     const b = t.objectStore('muestras').get(id);
-    return () => [a.result, b.result];
+    const c = t.objectStore('rr').get(id);
+    return () => [a.result, b.result, c.result];
   });
   if (!s) return s;
-  return s.muestras || !m ? s : { ...s, muestras: m };
+  return { ...s, ...(s.muestras || !m ? {} : { muestras: m }), ...(s.rr || !rr ? {} : { rr }) };
 }
 
-// Pone una sesión en una transacción abierta sobre «sesiones» y «muestras». La sesión se guarda sin muestras;
-// las muestras van aparte con el id que le toca. alTerminar(id) recibe el id.
+// Pone una sesión en una transacción abierta sobre ALMACENES. La sesión se guarda sin muestras ni RR, que van
+// aparte con el id que le toca, y con un uid si no lo traía (I-3). alTerminar(id) recibe el id.
 export function poner(t, sesion, alTerminar) {
-  const { muestras, ...resto } = sesion;
+  const { muestras, rr, ...resto } = sesion;
   if (muestras) delete resto.res;
+  if (!resto.uid) resto.uid = db.nuevoUid();
   const req = t.objectStore('sesiones').put(resto);
   req.onsuccess = () => {
     if (muestras) t.objectStore('muestras').put(muestras, req.result);
+    if (Array.isArray(rr) && rr.length) t.objectStore('rr').put(rr, req.result);
     alTerminar?.(req.result);
   };
   return req;
@@ -126,7 +134,7 @@ export function poner(t, sesion, alTerminar) {
 // No cambia el objeto que recibe.
 export async function guardar(sesion) {
   try {
-    return await db.tx(['sesiones', 'muestras'], 'readwrite', (t) => poner(t, sesion));
+    return await db.tx(ALMACENES, 'readwrite', (t) => poner(t, sesion));
   } finally {
     invalidar();
   }
@@ -149,9 +157,8 @@ export async function actualizar(id, cambios) {
 
 export async function borrar(id) {
   try {
-    await db.tx(['sesiones', 'muestras'], 'readwrite', (t) => {
-      t.objectStore('sesiones').delete(id);
-      t.objectStore('muestras').delete(id);
+    await db.tx(ALMACENES, 'readwrite', (t) => {
+      for (const a of ALMACENES) t.objectStore(a).delete(id);
     });
   } finally {
     invalidar();

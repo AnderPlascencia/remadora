@@ -11,7 +11,6 @@ import {
   $, COLOR_ZONA, ajustarTexto, ajustes, color, escaparHtml, fcMaxima, fcRef, fechaCorta, formatoMeta, ftp, ico, miles, perfil, toast,
 } from '../ui.js';
 import { estado } from '../estado.js';
-import { fcMaxDeEdad } from '../pulso.js';
 import * as Pf from '../perfil.js';
 import { aplicarEdad, avanzado, pintarPerfil } from './ajustes.js';
 import { guardarFtp } from './preparar.js';
@@ -29,7 +28,6 @@ async function guardarSesionAbierta() {
 }
 
 // Pulso máximo para el esfuerzo: el tuyo, o el de tu edad (Tanaka), o 190 como aproximación.
-export const fcParaEsfuerzo = () => fcMaxima() || fcMaxDeEdad(ajustes.num('edad', 0)) || 190;
 // Esfuerzo: lo marcas tú (1–10). Si la sesión tiene pulso, el esfuerzo según el pulso va como sugerencia aparte.
 function pintarRpe() {
   const s = estado.sesionAbierta;

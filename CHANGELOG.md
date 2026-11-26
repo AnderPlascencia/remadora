@@ -2,6 +2,17 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.144.0 · 2026-11-26
+
+Base de datos v4 (etapa I-3 de la ronda 2). No cambia nada de lo que ves.
+
+- **Los intervalos de la banda de pulso (RR) van aparte.** Antes iban dentro de cada sesión de la lista que la app lee al abrir: con banda, unos 17 KB por sesión de 30 min, unos 10 MB con 600 sesiones. Ahora van en su propio almacén y la lista pesa lo mismo con banda que sin ella. El detalle de la sesión y el respaldo los siguen trayendo.
+- Una sesión que se recupera después de que la app se cerró ya no pierde sus RR.
+- Cada sesión tiene un identificador propio (`uid`), que viaja en el respaldo. Al restaurar, una sesión que ya tienes se reconoce también por ese identificador, no solo por su hora de inicio.
+- El esfuerzo según el pulso se guarda junto con la sesión, no en una escritura aparte.
+- Si la app se cierra justo después de guardar una sesión con un objeto de la tienda, el objeto se descuenta al volver a abrirla, y nunca dos veces.
+- Al abrir la app se migra la base una sola vez. Si algo falla, la base queda como estaba.
+
 ## 0.143.0 · 2026-11-26
 
 Respaldo sin cargar todo (etapa I-2 de la ronda 2).
