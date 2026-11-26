@@ -71,7 +71,7 @@ console.log('respaldo: ok');
   const { archivoRespaldo, leerArchivo, TIPO_GZ } = await import('../src/respaldo.js');
   const muestras = Array.from({ length: 1800 }, (_, k) => ({ t: k + 1, w: 150 + (k % 40), spm: 22, split: 120, dist: k * 4, nivel: 5, fc: 130 }));
   const grande = armarRespaldo({ version: '0.108.0', sesiones: Array.from({ length: 30 }, (_, i) => ({ ...sesion, id: i, fecha: i * 1e6, muestras })), entrenamientos: [], programa: { semanas: 6 }, leer, fecha: new Date(0) });
-  // Los lotes llegan de a 7, como los da historial.porLotes(): se leen solo a medida que el archivo los pide.
+  // Los lotes llegan de a 7, como los da porLotes(): se leen solo a medida que el archivo los pide.
   let pedidos = 0;
   const lotes = () => (async function* () { for (let i = 0; i < grande.sesiones.length; i += 7) { pedidos++; yield grande.sesiones.slice(i, i + 7); } })();
   const { archivo: comprimido, total } = await archivoRespaldo({ ...grande, sesiones: [] }, lotes, 'rower-respaldo-x');

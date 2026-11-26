@@ -1,11 +1,13 @@
 // @ts-check
-// Respaldo en archivo: qué se guarda y cómo se combina al restaurar, sin tocar la pantalla ni la base de datos.
+// Respaldo en archivo: qué se guarda y cómo se combina al restaurar, sin tocar la pantalla. De la base solo lee
+// (porLotes), y se carga al guardar o restaurar: no pesa en la primera carga.
 //
 // Formatos:
 //   1 (sin campo «formato», hasta la v0.48): los ajustes como el texto de localStorage ('75', '1', '{"clase":…}').
 //   2: «formato»: 2 y cada ajuste con su tipo (75, true, { clase: … }), según ajustes-guardados.js.
 // Un respaldo viejo se convierte al formato actual antes de restaurarlo.
 import { CLAVES_RESPALDO, aTexto, aTipo } from './ajustes-guardados.js';
+import * as db from './db.js';
 
 export const FORMATO = 2;
 export const CLAVES_AJUSTES = CLAVES_RESPALDO;
@@ -97,6 +99,28 @@ export function listaHumana(cosas) {
 // El respaldo se escribe por trozos (una sesión cada vez, sin armar un texto gigante) y se comprime con gzip:
 // 600 sesiones pasan de unos 65 MB a unos pocos. Restaurar acepta el .json.gz y el .json de siempre.
 export const TIPO_GZ = 'application/gzip';
+
+// I-2 (INF-R3): todas las sesiones con sus muestras, de n en n (por id; 5 por defecto), sin pasar por la caché de
+// historial.js: el respaldo las escribe una a una al archivo y nunca tiene el historial entero en memoria.
+/** @returns {AsyncGenerator<any[]>} */
+export async function* porLotes(n = 5) {
+  let desde = null;
+  for (;;) {
+    const { lote, ultimo } = await db.tx(['sesiones', 'muestras'], 'readonly', (t) => {
+      const ss = t.objectStore('sesiones').getAll(desde == null ? null : IDBKeyRange.lowerBound(desde, true), n);
+      const lote = [];
+      ss.onsuccess = () => ss.result.forEach((x, i) => {
+        if (x.muestras) { lote[i] = x; return; }
+        const m = t.objectStore('muestras').get(x.id);
+        m.onsuccess = () => { lote[i] = m.result ? { ...x, muestras: m.result } : x; };
+      });
+      return () => ({ lote, ultimo: ss.result.at(-1)?.id });
+    });
+    if (lote.length) yield lote;
+    if (lote.length < n) return;
+    desde = ultimo;
+  }
+}
 
 /**
  * I-2 (INF-R3): el archivo del respaldo escrito en flujo, sesión por sesión, desde `lotes` (una función que da un

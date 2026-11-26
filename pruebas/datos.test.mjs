@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 const db = await import('../src/db.js');
 const H = await import('../src/historial.js');
+const { porLotes } = await import('../src/respaldo.js');
 
 const abrirCrudo = (version, upgrade) => new Promise((ok, mal) => {
   const r = indexedDB.open('remadora', version);
@@ -212,7 +213,7 @@ test('porLotes recorre todas las sesiones con sus muestras, de n en n, sin tocar
   await db.guardar('sesiones', { fecha: 50, duracion: 5, muestras: muestras(5) });
   const v = H.version();
   const lotes = [];
-  for await (const l of H.porLotes(3)) lotes.push(l);
+  for await (const l of porLotes(3)) lotes.push(l);
   assert.deepEqual(lotes.map((l) => l.length), [3, 3, 2]);
   const todas = lotes.flat();
   assert.deepEqual(todas.map((s) => s.id), [1, 2, 3, 4, 5, 6, 7, 8]);
@@ -220,8 +221,8 @@ test('porLotes recorre todas las sesiones con sus muestras, de n en n, sin tocar
   assert.equal(H.version(), v, 'leer no invalida nada');
   // Con un múltiplo exacto de n no queda un lote vacío.
   const exactos = [];
-  for await (const l of H.porLotes(4)) exactos.push(l.length);
+  for await (const l of porLotes(4)) exactos.push(l.length);
   assert.deepEqual(exactos, [4, 4]);
   await vaciar();
-  for await (const l of H.porLotes()) assert.fail(`sin sesiones no hay lotes (${l.length})`);
+  for await (const l of porLotes()) assert.fail(`sin sesiones no hay lotes (${l.length})`);
 });

@@ -382,10 +382,10 @@ export async function guardarRespaldo() {
   // se descarga. Si el teléfono solo comparte .json, se arma otra vez sin comprimir.
   const nombre = `rower-respaldo-${E.claveDia(Date.now())}`;
   const hecho = Date.now();
-  let { archivo, total } = await R.archivoRespaldo(cabecera, () => H.porLotes(), nombre);
+  let { archivo, total } = await R.archivoRespaldo(cabecera, () => R.porLotes(), nombre);
   try {
     if (navigator.canShare && !navigator.canShare({ files: [archivo] }) && archivo.type === R.TIPO_GZ) {
-      const json = (await R.archivoRespaldo(cabecera, () => H.porLotes(), nombre, { comprimir: false })).archivo;
+      const json = (await R.archivoRespaldo(cabecera, () => R.porLotes(), nombre, { comprimir: false })).archivo;
       if (navigator.canShare({ files: [json] })) archivo = json;
     }
     if (navigator.canShare?.({ files: [archivo] })) await navigator.share({ files: [archivo], title: 'Respaldo de Rower' });
