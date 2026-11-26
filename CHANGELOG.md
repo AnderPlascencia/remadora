@@ -2,6 +2,13 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.141.0 · 2026-11-26
+
+Adherencia (etapa E-5 de la ronda 2).
+
+- **Un plan a la medida de lo que remas.** Si 2 semanas seguidas cumples menos del 60 % de tu plan y remas menos días de los que pide, Hoy te lo dice una sola vez: «Remas unas 2,5 veces por semana. ¿Paso tu plan a 3 días? Mantienes la sesión clave y quitas un fondo.» Baja un día cada vez, y si dices que no, no vuelve a preguntar en ese plan.
+- **Tus rangos suben aunque no marques el esfuerzo.** Antes solo subían si marcabas un esfuerzo de 6 o menos. Ahora, sin esfuerzo marcado, también suben cuando tus dos últimas sesiones fuertes fueron sobradas y el pulso medio del trabajo quedó por debajo del 85 % de tu máximo. Si marcas tu esfuerzo, manda el tuyo.
+
 ## 0.140.0 · 2026-11-26
 
 Prevención y habilidades (etapa E-4 de la ronda 2). Las reglas nuevas de la Furia y el Zanshin rigen para las carreras desde hoy; las anteriores no cambian.

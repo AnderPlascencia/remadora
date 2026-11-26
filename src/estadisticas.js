@@ -687,6 +687,16 @@ export function esfuerzoPorPulso(muestras, ref) {
   const pct = (100 * con.reduce((a, x) => a + x.fc, 0)) / con.length / r.max;
   return { rpe: Math.max(1, Math.min(10, rpe)), pct: Math.round(pct), trimp: Math.round(trimp / 60) };
 }
+// E-5 (E17): pulso medio de los bloques de trabajo, en % de tu máximo (null sin bloques, sin pulso o con menos de
+// 1 min con pulso). Con él los rangos pueden subir aunque no marques tu esfuerzo.
+export function pulsoTrabajoPct(muestras, bloques, max) {
+  if (!max || !bloques?.length || !muestras?.length) return null;
+  const tramos = [];
+  let t = 0;
+  for (const b of bloques) { const ini = t; t += b.duracion || 0; if (esBloqueTrabajo(b) && b.duracion) tramos.push([ini, t]); }
+  const fc = muestras.filter((x) => x.fc > 0 && tramos.some(([a, z]) => x.t > a && x.t <= z)).map((x) => x.fc);
+  return fc.length >= 60 ? Math.round((100 * media(fc)) / max) : null;
+}
 // El RPE que diste tú (null si no lo marcaste): es el que deciden la adaptación y las reglas de fatiga.
 // Las sesiones de antes de la 0.77 guardaban el del pulso en `rpe` con rpeFuente 'pulso'; ahora va en `rpePulso`.
 export const rpeSentido = (s) => (s?.rpe > 0 && s.rpeFuente !== 'pulso' ? s.rpe : null);

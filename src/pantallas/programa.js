@@ -313,6 +313,8 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
     if (riesgo && previo?.dia !== hoyClave) ajustes.escribir('riesgoAbandono', JSON.stringify({ dia: hoyClave }));
   }
   const desdePlan = prog ? sesiones.filter((x) => E.claveDia(x.fecha) >= prog.inicio).length : 0;
+  const aMedida = !riesgo && !estado.sesion && prog ? Hab.planAMedida(prog, sesiones) : null;
+  if (aMedida && !prog.diasAMedida) guardarPrograma({ ...prog, diasAMedida: { dia: hoyClave } });
   if (prog?.proponerRehacer === E.claveDia(Date.now()) && prog.objetivo) {
     // Regreso tras 3 semanas o más (etapa 14): rehacer el plan desde hoy, a tu nivel de ahora.
     sug = { texto: A.textoRegreso('largo', prog.regreso?.dias ?? 21), boton: 'Rehacer plan', accion: () => rehacerPlan(prog, { ajustar: true, aviso: 'Rehice tu plan desde hoy' }) };
@@ -325,6 +327,10 @@ export async function pintarHoy(ent = estado.entrenamientoPrevio) {
     sug = n >= 3
       ? { texto: Hab.textoRiesgo(riesgo), boton: `Bajar a ${n - 1} días`, accion: () => { fin(); rehacerPlan(prog, { ajustar: true, dias: n - 1, aviso: `Tu plan ahora es de ${n - 1} días por semana` }); }, no: () => { fin(); pintarHoy(); } }
       : { texto: `${Hab.textoRiesgo(riesgo)} Una sesión suave y corta también cuenta.`, boton: 'Fondo suave', accion: () => { fin(); elegirEnt('base:dis-suave'); pintarHoy(); }, no: () => { fin(); pintarHoy(); } };
+  } else if (aMedida) {
+    // E-5 (E18): una sola vez por plan, el plan a la medida de lo que remas.
+    const marcar = (respondido) => guardarPrograma({ ...leerPrograma(), diasAMedida: { dia: hoyClave, respondido } });
+    sug = { texto: Hab.textoAMedida(aMedida), boton: `Pasar a ${aMedida.dias} días`, accion: () => { marcar(true); rehacerPlan(leerPrograma(), { ajustar: true, dias: aMedida.dias, aviso: `Tu plan ahora es de ${aMedida.dias} días por semana` }); }, no: () => { marcar(true); pintarHoy(); } };
   } else if (valorDia && !esDelDia && dia.fuente !== 'hecho') {
     const que = { plan: 'Tu plan dice', recuperar: 'Puedes recuperar', sugerida: 'Te sugiero' }[dia.fuente] || 'Hoy';
     const nombre = dia.ent || estado.baseActual.find((x) => x.id === dia.id)?.nombre || '';

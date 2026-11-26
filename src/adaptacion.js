@@ -10,6 +10,7 @@ const DIA = 864e5;
 const DURO = TIPOS_DUROS;
 const FACTOR_MIN = 0.85;
 const FACTOR_MAX = 1.15;
+export const PULSO_SOBRADO = 85;
 // E-4: lo que más carga la espalda baja: fuerza a cadencia baja (≤ 20 paladas/min) y sprints con la resistencia de la
 // consola en 12 o más.
 export const cargaLumbar = (ent) => (ent?.bloques || []).some((b) => (b.spmMeta && b.spmMeta[1] <= 20) || (b.nivel >= 12 && b.min >= 120));
@@ -150,8 +151,10 @@ export function revisarPlan({ programa, sesiones, entrenamientos = [], ftp = 0, 
   if (a && b && recientes.includes(b)) {
     const ratio = ftp ? E.ratioCarga(orden, ftp, ahora) : null;
     const cargaOk = ratio == null || ratio <= 1.3;
-    // Solo cuenta el esfuerzo que diste tú: sin él (o con solo el del pulso) no se suben los rangos.
-    const facil = (E.rpeSentido(b) ?? 10) <= 6;
+    // Cuenta el esfuerzo que diste tú. E-5 (E17): si no lo marcaste en ninguna de las dos, basta con que el pulso medio
+    // del trabajo de ambas quede bajo el 85 % de tu máximo.
+    const pulsoBajo = (s) => E.rpeSentido(s) == null && s.fcPctTrabajo > 0 && s.fcPctTrabajo < PULSO_SOBRADO;
+    const facil = (E.rpeSentido(b) ?? 10) <= 6 || (pulsoBajo(a) && pulsoBajo(b));
     if (corta(a) && corta(b) && p.factor > FACTOR_MIN) {
       p.factor = Math.max(FACTOR_MIN, Math.round(p.factor * 0.97 * 100) / 100);
       avisos.push('Dos sesiones fuertes seguidas te quedaste por debajo del rango: bajé tus rangos un 3 %.');
