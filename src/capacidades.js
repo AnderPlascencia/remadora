@@ -324,6 +324,8 @@ export function curvasComparadas(sesiones, ahora = Date.now()) {
 // Split de la meta de un entrenamiento escrito en split: el que guarda el plan, o (en los guardados antes) el que
 // sale de su calentamiento, que en los planes hacia una meta va de +32 a +45 s sobre la meta.
 export const SPLIT_CAL_META = [32, 45];
+// Equivalencia del split con el % del FTP en un plan de meta: el split de 2000 m (equivalente) de la meta es el 127 %.
+export const PCT_RITMO_META = 127;
 export function splitMetaDe(ent) {
   if (ent?.splitMeta > 0) return ent.splitMeta;
   const [a, b] = SPLIT_CAL_META;
@@ -346,8 +348,9 @@ export function tipoPlan(ent) {
   if (!pct && enSplit.length) {
     const meta = splitMetaDe(ent);
     if (meta) {
-      const dif = Math.min(...enSplit.map((b) => (b.min + b.max) / 2)) - meta;
-      return dif <= 3 ? 'vo2' : dif < 12 ? 'umbral' : 'fondo';
+      // E6: en % del FTP equivalente, con los cortes de los bloques en % del FTP.
+      const pctSplit = Math.max(...enSplit.map((b) => PCT_RITMO_META * (meta / ((b.min + b.max) / 2)) ** 3));
+      return pctSplit > 105 ? 'vo2' : pctSplit > 90 ? 'umbral' : 'fondo';
     }
   }
   if (pct > 120) return 'sprint';

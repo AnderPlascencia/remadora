@@ -21,6 +21,8 @@ test('remando en horizontal: área útil > 60 %, Entrenar ≤ 2,5 pantallas y la
   await completarBienvenida(page);
   await page.locator('#btn-grabar').click();
   await avanzar(page, 5_000);
+  // Con el reto de atributos a la vista (sale a los pocos segundos): la medida es la del caso más largo.
+  await expect(page.locator('#atr-vivo')).toBeVisible();
   const m = await medir(page);
   expect(m.cab, 'sin cabecera mientras remas').toBe(false);
   expect(m.util).toBeGreaterThan(0.6);

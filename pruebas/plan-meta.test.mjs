@@ -70,16 +70,16 @@ test('plan por meta de 5 y 10 km: zonas desde el 2000 m equivalente y una dura p
     // El 2000 m equivalente es más rápido que el ritmo de la meta, y las zonas salen de él.
     assert.ok(ref < p.split, `${distancia}: ref ${ref} y meta ${p.split}`);
     const fondo = p.entrenamientos.find((e) => /^Fondo \d+ min a/.test(e.nombre));
-    assert.deepEqual([fondo.bloques[1].min, fondo.bloques[1].max], [ref + P.META_FONDO[0], ref + P.META_FONDO[1]]);
+    assert.deepEqual([fondo.bloques[1].min, fondo.bloques[1].max], [P.splitDePct(ref, 68), P.splitDePct(ref, 62)]);
     const umbral = p.entrenamientos.find((e) => /^Umbral/.test(e.nombre));
-    assert.equal(umbral.bloques.find((b) => /^Umbral/.test(b.nombre)).min, ref + P.META_UMBRAL[0]);
+    assert.equal(umbral.bloques.find((b) => /^Umbral/.test(b.nombre)).min, P.splitDePct(ref, 100));
     const sem = [];
     for (const d of p.programa.dias) (sem[Math.floor((Date.parse(d.fecha) - Date.parse(INICIO)) / (7 * 864e5))] ||= []).push(p.entrenamientos.find((e) => e.nombre === d.ent) || { prueba: /^Prueba/.test(d.ent) });
     for (const [i, s] of sem.entries()) assert.equal(s.filter((e) => e.prueba || P.esDura(e)).length, 1, `${distancia}, semana ${i + 1}`);
     // Las series nunca van más lentas que la meta ni que el umbral + 1 s.
     for (const e of p.entrenamientos.filter((x) => /^Ritmo/.test(x.nombre))) {
       const b = e.bloques.find((x) => x.fin === 'distancia');
-      assert.ok(b.max <= Math.min(p.split, ref + 8) + 4, `${e.nombre}: ${b.min}–${b.max}`);
+      assert.ok(b.max <= Math.min(p.split, P.splitDePct(ref, 100)) + 4, `${e.nombre}: ${b.min}–${b.max}`);
     }
   }
 });

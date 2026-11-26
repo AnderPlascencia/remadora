@@ -63,13 +63,13 @@ assert.equal(planes, 5 * 3 * 4 * 4 * 2);
   assert.ok(de(/^Ritmo/).length && de(/^Ritmo/).every((e) => tipoPlan(e) === 'vo2'));
   assert.ok(de(/^Fondo/).length && de(/^Fondo/).every((e) => tipoPlan(e) === 'fondo' && !P.esDura(e)));
   assert.ok(de(/^(Umbral|Ritmo|Prueba)/).every(P.esDura), 'umbral, series y prueba cuentan como duras');
-  // Los guardados antes de esta versión no tienen splitMeta: sale del calentamiento (+32–45 s).
-  for (const e of entrenamientos) {
-    const { splitMeta, ...viejo } = e;
-    assert.equal(splitMeta, 120);
-    if (!e.prueba) assert.equal(splitMetaDe(viejo), 120, e.nombre);
-    assert.equal(tipoPlan(viejo), tipoPlan(e), e.nombre);
-  }
+  // Los guardados antes de la 0.81 no tienen splitMeta: sale del calentamiento (+32–45 s). Desde E-2 las zonas
+  // van en % y las sesiones nuevas siempre guardan splitMeta.
+  const viejo = { tipo: 'intervalos', nombre: 'Umbral a 2:10 3 × 8 min', bloques: [
+    { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: 152, max: 165 },
+    { nombre: 'Umbral 1/3', duracion: 480, metrica: 'split', min: 128, max: 132 }] };
+  assert.equal(splitMetaDe(viejo), 120);
+  assert.equal(tipoPlan(viejo), 'umbral');
 }
 // Una sesión tuya en split, sin el calentamiento de los planes de meta, no se clasifica a ciegas.
 assert.equal(tipoPlan({ tipo: 'intervalos', nombre: 'Mía', bloques: [{ nombre: 'Calentamiento', duracion: 300, metrica: 'split', min: 140, max: 150 }, { nombre: 'Serie', duracion: 300, metrica: 'split', min: 110, max: 112 }] }), null);

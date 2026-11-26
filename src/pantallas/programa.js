@@ -127,6 +127,8 @@ export async function contextoPlan() {
     split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000,
     kcalHabitual: kcals[Math.floor(kcals.length / 2)] || 250, kcalSemana: Math.round(kcalMes / 4),
     nivelSugerido: pf.nivel || (recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto'), sinHistorial: sesiones.length < 3,
+    // E-2 (E16): tu curva potencia–duración de 90 días, para el 2000 m equivalente de una meta de 5 o 10 km.
+    pc: E.perfilDe(sesiones, { peso: perfil().peso }),
   };
 }
 // Al arrancar la app (en orden, desde app.js).
@@ -416,7 +418,13 @@ export async function revisarPlanAuto() {
   if (!prog?.dias?.length || estado.sesion) return;
   const [sesiones, ents] = await Promise.all([H.sinMuestras(), db.listar('entrenamientos')]);
   const cuerpo = Cap.estadoCuerpo(ftp() ? sesiones : [], ftp(), Date.now(), { previo: previoHoy() });
-  const r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo });
+  let r = A.revisarPlan({ programa: prog, sesiones, entrenamientos: ents, ftp: ftp(), cuerpo });
+  // Plan de meta: tras la prueba de mitad, las zonas que quedan desde tu marca real (E-2, se carga aparte).
+  const pm = r?.programa || prog;
+  if (pm.meta && !pm.zonasDesde && sesiones.some((s) => /^Prueba/.test(s.entrenamiento || ''))) {
+    const z = (await import('../meta-zonas.js')).zonasTrasPrueba({ programa: pm, sesiones, entrenamientos: [...ents, ...(r?.entrenamientos || [])] });
+    if (z) r = { programa: z.programa, entrenamientos: [...(r?.entrenamientos || []), ...z.entrenamientos], avisos: [...(r?.avisos || []), ...z.avisos] };
+  }
   if (!r) return;
   for (const e of r.entrenamientos) if (!ents.some((x) => x.nombre === e.nombre)) await db.guardar('entrenamientos', { ...e, dePlan: true });
   guardarPrograma(r.programa);
@@ -430,6 +438,11 @@ export async function revisarPlanAuto() {
 export function ftpDelPlan(ent) {
   const f = leerPrograma()?.factor;
   return ent && esDePlan(ent) && f ? Math.round(ftp() * f) : ftp();
+}
+// El mismo ajuste para los bloques en split (planes de meta): Ent.normalizarBloques(…, { factorSplit }).
+export function factorDelPlan(ent) {
+  const f = leerPrograma()?.factor;
+  return ent && esDePlan(ent) && !ent.prueba && f > 0 ? f : 1;
 }
 
 // Siguiente plan (un poco más de carga) o el mismo ajustado a tu historial, desde hoy.
