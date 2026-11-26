@@ -11,6 +11,7 @@ Plan de meta (etapa E-2 de la ronda 2). Las zonas nuevas y la prueba con calenta
 - **Tras la prueba de mitad, las zonas que quedan salen de tu marca real**, no del split de partida, y los rangos vuelven al 100 %.
 - **«Bajé (o subí) tus rangos un 3 %» ahora también cambia los splits** de los planes de meta. Antes solo cambiaba los watts.
 - Las metas de 5 y 10 km sacan su 2000 m equivalente de tu curva potencia–duración. Si no la hay, de la ley de Paul.
+- En horizontal, el reto de atributos mientras remas ya no aprieta su texto en una columna de 68 px: los puntos van debajo y Entrenar queda en 2,2 pantallas, también con el reto abierto.
 
 ## 0.137.0 · 2026-11-26
 
