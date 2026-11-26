@@ -248,6 +248,8 @@ export async function guardarSesionTerminada(s, ent, { recuperada = false } = {}
   // Con pulso, el esfuerzo según el pulso se guarda aparte (rpePulso) como sugerencia: el tuyo (rpe) lo marcas en el
   // resumen, y es el que usa la adaptación del plan. Va antes del FTP automático: un pulso alto cuenta como exigente.
   const porPulso = E.esfuerzoPorPulso(registro.muestras, { ...fcRef(), max: fcParaEsfuerzo() });
+  const fcTrabajo = E.pulsoTrabajoPct(registro.muestras, registro.bloques, fcParaEsfuerzo());
+  if (fcTrabajo != null) { registro.fcPctTrabajo = fcTrabajo; await H.actualizar(registro.id, { fcPctTrabajo: fcTrabajo }); }
   if (porPulso) {
     Object.assign(registro, { rpePulso: porPulso.rpe, rpePct: porPulso.pct, trimp: porPulso.trimp });
     await H.actualizar(registro.id, { rpePulso: registro.rpePulso, rpePct: registro.rpePct, trimp: registro.trimp });

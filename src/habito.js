@@ -112,6 +112,30 @@ export function textoRiesgo(r) {
   return `${antes} Le pasa a todos. ¿Lo hacemos más fácil? Si prefieres parar unas semanas, también está bien: tu progreso te espera.`;
 }
 
+// E-5 (E18): plan a la medida de lo que remas. Con 2 semanas cerradas seguidas del plan por debajo del 60 % y menos
+// sesiones reales que las del plan, se ofrece una sola vez bajar un día (la sesión clave se queda, sale un fondo).
+// Devuelve { media, dias } o null. `guardado` = programa.diasAMedida ({ dia, respondido }) del aviso ya mostrado.
+export const A_MEDIDA = { cumple: 0.6, semanas: 2 };
+export function planAMedida(programa, sesiones, ahora = Date.now()) {
+  const n = programa?.porSemana || 0;
+  if (!programa?.objetivo || n < 3) return null;
+  const g = programa.diasAMedida;
+  if (g?.dia && (g.dia !== claveDia(ahora) || g.respondido)) return null;
+  const lunes = inicioPeriodo(ahora, 'semana');
+  const estados = P.estadoDias(programa, sesiones, ahora);
+  for (let k = 1; k <= A_MEDIDA.semanas; k++) {
+    const desde = claveDia(lunes - k * 7 * DIA);
+    const hasta = claveDia(lunes - (k - 1) * 7 * DIA);
+    const sem = estados.filter((d) => d.fecha >= desde && d.fecha < hasta && !d.repetido);
+    if (sem.length < n || sem.filter((d) => d.estado === 'hecho').length >= sem.length * A_MEDIDA.cumple) return null;
+  }
+  const reales = sesionesPorSemana(sesiones.filter((s) => s.fecha <= ahora), A_MEDIDA.semanas + 1, ahora).slice(0, -1);
+  const media = Math.round((10 * reales.reduce((a, b) => a + b, 0)) / reales.length) / 10;
+  // Un día menos cada vez (como el aviso de abandono): bajar de golpe deja el plan sin margen si vuelves a remar más.
+  return media < n - 0.5 ? { media, dias: n - 1 } : null;
+}
+export const textoAMedida = ({ media, dias }) => `Remas unas ${vecesSemana(media)}. ¿Paso tu plan a ${dias} días? Mantienes la sesión clave y quitas un fondo.`;
+
 // Lo que dicen los eventos en los últimos `dias` días.
 export function resumenEventos(eventos, sesiones, dias = 28, ahora = Date.now()) {
   const desde = ahora - dias * DIA;
