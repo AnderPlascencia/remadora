@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 const db = await import('../src/db.js');
 const H = await import('../src/historial.js');
+const { porLotes } = await import('../src/respaldo.js');
 
 const abrirCrudo = (version, upgrade) => new Promise((ok, mal) => {
   const r = indexedDB.open('remadora', version);
@@ -203,4 +204,25 @@ test('estado del juego: se calcula una vez por versión de la lista; una lista f
   assert.notEqual(H.estadoJuegoDe(filtrada, { ftp: 200 }), H.estadoJuegoDe(filtrada, { ftp: 200 }), 'una lista ajena no se cachea');
   await H.actualizar(lista[0].id, { rpe: 5 });
   assert.notEqual(H.estadoJuegoDe(lista, { ftp: 200 }), a, 'tras guardar, la lista vieja ya no es la de ahora');
+});
+
+test('porLotes recorre todas las sesiones con sus muestras, de n en n, sin tocar la caché del historial', async () => {
+  await vaciar();
+  for (let i = 0; i < 7; i++) await H.guardar({ fecha: 100 - i, duracion: 10, muestras: muestras(10 + i) });
+  // Una de antes de la v3, con las muestras dentro.
+  await db.guardar('sesiones', { fecha: 50, duracion: 5, muestras: muestras(5) });
+  const v = H.version();
+  const lotes = [];
+  for await (const l of porLotes(3)) lotes.push(l);
+  assert.deepEqual(lotes.map((l) => l.length), [3, 3, 2]);
+  const todas = lotes.flat();
+  assert.deepEqual(todas.map((s) => s.id), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(todas.map((s) => s.muestras.length), [10, 11, 12, 13, 14, 15, 16, 5]);
+  assert.equal(H.version(), v, 'leer no invalida nada');
+  // Con un múltiplo exacto de n no queda un lote vacío.
+  const exactos = [];
+  for await (const l of porLotes(4)) exactos.push(l.length);
+  assert.deepEqual(exactos, [4, 4]);
+  await vaciar();
+  for await (const l of porLotes()) assert.fail(`sin sesiones no hay lotes (${l.length})`);
 });

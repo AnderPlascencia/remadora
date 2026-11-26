@@ -49,13 +49,16 @@ export function formatoRecord(r, v) {
   return r.unidad === 'm' ? `${(v / 1000).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` : `${miles(v)} ${r.unidad}`;
 }
 
-export function pintarAvisoRespaldo(total) {
+// I-2: el aviso dice cuántas sesiones quedarían sin respaldo (las de después del último).
+export function pintarAvisoRespaldo(lista) {
   const ultimo = Number(ajustes.leer('ultimoRespaldo', 0));
   const dias = ultimo ? Math.floor((Date.now() - ultimo) / 864e5) : null;
+  const sin = lista.filter((s) => s.fecha > ultimo).length;
   const av = $('#aviso-respaldo');
-  av.hidden = !(total >= 3 && (dias == null || dias >= 7));
+  av.hidden = !(lista.length >= 3 && sin > 0 && (dias == null || dias >= 7));
   if (!av.hidden) {
-    av.innerHTML = `${dias == null ? 'Aún no guardas un respaldo de tus sesiones.' : `Tu último respaldo fue hace ${dias} días.`}
+    const n = `${sin} ${sin === 1 ? 'sesión' : 'sesiones'}`;
+    av.innerHTML = `${dias == null ? `Aún no guardas un respaldo: tienes ${n} sin respaldo.` : `Tienes ${n} sin respaldo: el último fue hace ${dias} días.`}
       <div class="fila-botones"><button class="boton primario" id="btn-respaldo-aviso">Guardar respaldo ahora</button></div>`;
     $('#btn-respaldo-aviso').onclick = guardarRespaldo;
   }

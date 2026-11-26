@@ -326,7 +326,7 @@ export async function pintarHistorial() {
     $('#semana-barra').style.width = `${Math.min(100, (100 * km) / meta)}%`;
     $('#semana-barra').parentElement.setAttribute('aria-label', 'Meta semanal');
   }
-  pintarAvisoRespaldo(lista.length);
+  pintarAvisoRespaldo(lista);
   pintarHeroeProgreso(lista);
   pintarPeriodos();
   pintarForma();

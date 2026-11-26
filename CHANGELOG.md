@@ -2,6 +2,14 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.143.0 · 2026-11-26
+
+Respaldo sin cargar todo (etapa I-2 de la ronda 2).
+
+- **El respaldo ya no carga todo tu historial en memoria.** Las sesiones van de 5 en 5 de la base al archivo comprimido. Con 600 sesiones de 30 min, la memoria que ocupa baja de 59 MB (con picos de 135 MB) a 3 MB (con picos de 14 MB). En teléfonos con poca memoria, la app ya no se cierra a mitad del respaldo.
+- Al restaurar, se compara solo la fecha de lo que ya tienes, sin cargar sus muestras. Si algo falla, sigue sin quedar nada a medias.
+- El aviso de Progreso dice cuántas sesiones tienes sin respaldo: «Tienes 12 sesiones sin respaldo: el último fue hace 9 días». Si no hay sesiones nuevas desde el último respaldo, no sale.
+
 ## 0.142.0 · 2026-11-26
 
 Pruebas de la capa de datos (etapa I-1 de la ronda 2). No cambia nada de lo que ves.
