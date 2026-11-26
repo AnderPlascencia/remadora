@@ -190,8 +190,14 @@ export function pctFtpDeFcpct(x) {
   return t.at(-1)[1];
 }
 // wattsSinFc: false deja el bloque sin meta, como antes (para dibujar sin inventar una banda).
-export function normalizarBloques(bloques, ftp, fcMax = 0, { wattsSinFc = true } = {}) {
+// factorSplit (E-2, E7): el ajuste de rangos del plan también en los bloques en split (los watts van con el cubo de la
+// velocidad: split / factor^⅓).
+export function normalizarBloques(bloques, ftp, fcMax = 0, { wattsSinFc = true, factorSplit = 1 } = {}) {
   return bloques.map((b) => {
+    if (b.metrica === 'split' && b.min > 0 && factorSplit > 0 && factorSplit !== 1) {
+      const k = factorSplit ** (1 / 3);
+      return { ...b, min: Math.round(b.min / k), max: Math.round(b.max / k) };
+    }
     if (b.metrica === 'fcpct') {
       const r = rangoFc(b, fcMax);
       if (r) return { ...b, metrica: 'fc', min: r.min, max: r.max };

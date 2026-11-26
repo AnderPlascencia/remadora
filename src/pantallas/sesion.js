@@ -29,7 +29,7 @@ import { datoRecibido, fijarFuenteBle, iniciarBateria, numerosPintados, reinicia
 import { leyendaPerfil, obtenerEnt } from './planes.js';
 import { pintarConstancia, pintarCurva, pintarForma, pintarGasto, pintarMotor, pintarTendencia } from './progreso.js';
 import { estadoHeroe, inventario, leerPersonaje, nombreAtributo } from './heroe.js';
-import { contextoXp, ftpDelPlan } from './programa.js';
+import { contextoXp, factorDelPlan, ftpDelPlan } from './programa.js';
 import { bonoEquipo } from '../coleccion-bote.js';
 import * as Hab from '../habito.js';
 import { equipoEnUso } from '../carrera.js';
@@ -388,7 +388,7 @@ async function iniciarSesion(reanudar = null) {
   const intervalos = estado.entrenamientoActivo && Ent.tipoDe(estado.entrenamientoActivo) === 'intervalos';
   const [calMin, enfMin] = ajustes.leer('guiado', '0-0').split('-').map(Number);
   const plan = reanudar ? reanudar.plan || null
-    : intervalos ? Ent.normalizarBloques(Ent.conCalentamientoMinimo(Ent.conCalentamiento(estado.entrenamientoActivo.bloques, calMin, enfMin), P.esDura(estado.entrenamientoActivo)), ftpDelPlan(estado.entrenamientoActivo), fcRef()) : null;
+    : intervalos ? Ent.normalizarBloques(Ent.conCalentamientoMinimo(Ent.conCalentamiento(estado.entrenamientoActivo.bloques, calMin, enfMin), P.esDura(estado.entrenamientoActivo)), ftpDelPlan(estado.entrenamientoActivo), fcRef(), { factorSplit: factorDelPlan(estado.entrenamientoActivo) }) : null;
   $('#perfil-vivo').hidden = !plan;
   if (plan) $('#vivo-leyenda').innerHTML = leyendaPerfil(estado.entrenamientoActivo.bloques, true);
   const rivales = reanudar ? [] : await crearRivales(estado.entrenamientoActivo);

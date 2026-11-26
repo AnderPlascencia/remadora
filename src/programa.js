@@ -3,7 +3,7 @@
 import { claveDia, marcaATope, mejorTiempoDe, nMuestras, potenciaCriticaMax, tiempoPara } from './estadisticas.js';
 
 import { formatoMmss as mm, PRUEBAS, esBloqueTrabajo, ACTIVACION, predecir, DISTANCIAS_PREDICCION } from './entrenamientos.js';
-import { tipoPlan, SPLIT_CAL_META } from './capacidades.js';
+import { tipoPlan, PCT_RITMO_META } from './capacidades.js';
 
 const DIA = 864e5;
 const aFecha = (clave) => new Date(`${clave}T12:00:00`);
@@ -156,12 +156,24 @@ export function proximo(programa, ahora = Date.now()) {
 // Plan automático hacia una meta: distancia en un tiempo, en N semanas (0.81: sobre el mismo motor que los planes por
 // objetivo, con sus topes de carga, de VO₂ y de minutos). Una sola sesión dura por semana, que alterna umbral y
 // series a ritmo de la meta; el resto son fondos (uno de ellos firme). Con 4 o 5 días se añaden fondos, nunca más
-// intensidad. Zonas desde el split de la meta: fondo (UT2) a +20–30 s, firme a +13–17 s, umbral (AT) a +8–12 s y el
-// calentamiento más suave que el fondo (+32–45 s). Prueba a mitad y al final, con afinamiento la semana de la prueba.
-export const META_FONDO = [20, 30];
-export const META_FIRME = [13, 17];
-export const META_UMBRAL = [8, 12];
-export const META_CAL = SPLIT_CAL_META;
+// intensidad. E-2 (E6): las zonas van en % del FTP equivalente y se pasan a split con la ley del cubo
+// (split = ref × (127 / %)^⅓): el mismo margen en segundos es mucho más esfuerzo para quien rema lento.
+// Fondo (UT2) 62–68 %, firme 82–88 %, umbral (AT) 94–100 % y calentamiento 50–60 %. Prueba a mitad y al final, con
+// afinamiento la semana de la prueba.
+export const META_PCT = { cal: [50, 60], fondo: [62, 68], firme: [82, 88], umbral: [94, 100] };
+export const splitDePct = (ref, pct) => Math.round(ref * (PCT_RITMO_META / pct) ** (1 / 3));
+// { min, max } en split de una zona [% bajo, % alto] (el split más rápido es el % más alto).
+export const zonaSplit = (ref, [bajo, alto]) => ({ min: splitDePct(ref, alto), max: splitDePct(ref, bajo) });
+const centroZona = (ref, z) => splitDePct(ref, (z[0] + z[1]) / 2);
+// Split de 2000 m equivalente a una meta (las zonas salen de él). E16: con tu curva potencia–duración (pc) la
+// equivalencia sale del modelo; sin ella, de la ley de Paul.
+export function ref2kDe(distancia, segundos, pc = null) {
+  if (distancia === 2000) return Math.round(segundos / 4);
+  const a = pc ? tiempoPara(2000, pc) : null;
+  const b = pc ? tiempoPara(distancia, pc) : null;
+  const t2k = a && b ? (a * segundos) / b : predecir(distancia, segundos, 2000);
+  return Math.round((t2k * 500) / 2000);
+}
 export function planPorMeta({ distancia, segundos, semanas, inicio, dias = 3, nivel = 'medio', ctx = {} }) {
   return planPorObjetivo({ objetivo: 'meta', nivel, dias, semanas, inicio, ctx, meta: { distancia, segundos } });
 }
@@ -254,8 +266,8 @@ export const NIVEL_SPRINT = { inicio: 12, medio: 14, alto: 16 };
 // dice al empezar el bloque y avisa con suavidad si te pasas en un fondo, pero no cambia la XP de técnica (eso solo
 // lo hace spmMeta, la cadencia obligatoria de los bloques de fuerza).
 export const CADENCIA_GUIA = { suave: [18, 22], firme: [20, 24], umbral: [24, 28], ritmo: [28, 34] };
-// Equivalencia del split con el % del FTP en un plan de meta: el umbral (+10 s del split meta) cae en el 100 %.
-export const PCT_RITMO_META = 127;
+// Equivalencia del split con el % del FTP en un plan de meta (capacidades.js): el split de 2000 m de la meta es el 127 %.
+export { PCT_RITMO_META };
 const medio = (b) => (b.min + Math.min(b.max, b.min + 30)) / 2;
 // % del FTP equivalente de un bloque (null si no tiene meta de potencia o de split).
 export function pctBloque(b, splitMeta = null) {
@@ -278,22 +290,22 @@ export const conCadencia = (e) => (e.bloques ? { ...e, bloques: e.bloques.map((b
 // Las zonas (fondo, firme, umbral y calentamiento) salen del split de 2000 m equivalente a la meta (ley de Paul): así un
 // 5 o 10 km no entrena el fondo y el umbral demasiado suaves. Las series de ritmo van al split de la propia meta.
 function semanaMeta(split, distancia, ritmoMeta = split) {
-  const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', min: split + META_CAL[0], max: split + META_CAL[1] };
+  const cal = { nombre: 'Calentamiento', duracion: 480, metrica: 'split', ...zonaSplit(split, META_PCT.cal) };
   const descanso = (seg) => ({ nombre: 'Descanso', duracion: seg, metrica: '', min: 0, max: 0 });
-  const fondoB = (seg) => ({ nombre: 'Fondo', duracion: seg, metrica: 'split', min: split + META_FONDO[0], max: split + META_FONDO[1] });
+  const fondoB = (seg) => ({ nombre: 'Fondo', duracion: seg, metrica: 'split', ...zonaSplit(split, META_PCT.fondo) });
   const minutos = (min, p, k) => ronda((min[0] + (min[1] - min[0]) * p) * k, 5);
   const fondo = (min) => (p, k) => {
     const m = minutos(min, p, k);
-    return { nombre: `Fondo ${m} min a ${mm(split + 25)}`, enfoque: 'distancia', bloques: [cal, fondoB(m * 60), ENF] };
+    return { nombre: `Fondo ${m} min a ${mm(centroZona(split, META_PCT.fondo))}`, enfoque: 'distancia', bloques: [cal, fondoB(m * 60), ENF] };
   };
-  // Un fondo firme: tramos a +13–17 s dentro del fondo (el «tempo» del remo).
+  // Un fondo firme: tramos al 82–88 % dentro del fondo (el «tempo» del remo).
   const firme = (min) => (p, k) => {
     const m = minutos(min, p, k);
     const n = p < 0.5 ? 3 : 2;
     const t = p < 0.5 ? 6 : 10;
     const resto = Math.max(10, m - n * t);
     const tramos = Array.from({ length: n }, (_, i) => [
-      { nombre: `Firme ${i + 1}/${n}`, duracion: t * 60, metrica: 'split', min: split + META_FIRME[0], max: split + META_FIRME[1] },
+      { nombre: `Firme ${i + 1}/${n}`, duracion: t * 60, metrica: 'split', ...zonaSplit(split, META_PCT.firme) },
       ...(i < n - 1 ? [fondoB(120)] : []),
     ]).flat();
     return { nombre: `Fondo ${m} min con ${n} × ${t} min firme`, enfoque: 'distancia', bloques: [cal, fondoB(Math.round((resto / 2) * 60)), ...tramos, fondoB(Math.round((resto / 2) * 60)), ENF] };
@@ -302,19 +314,19 @@ function semanaMeta(split, distancia, ritmoMeta = split) {
     const [n, min] = paso([[3, 8], [3, 10], [3, 12], [2, 15]], p);
     const r = reps(n, k);
     const bloques = Array.from({ length: r }, (_, i) => [
-      { nombre: `Umbral ${i + 1}/${r}`, duracion: min * 60, metrica: 'split', min: split + META_UMBRAL[0], max: split + META_UMBRAL[1] },
+      { nombre: `Umbral ${i + 1}/${r}`, duracion: min * 60, metrica: 'split', ...zonaSplit(split, META_PCT.umbral) },
       ...(i < r - 1 ? [descanso(180)] : []),
     ]).flat();
-    return { nombre: `Umbral a ${mm(split + 10)} ${r} × ${min} min`, enfoque: 'potencia', bloques: [cal, ...bloques, ENF] };
+    return { nombre: `Umbral a ${mm(centroZona(split, META_PCT.umbral))} ${r} × ${min} min`, enfoque: 'potencia', bloques: [cal, ...bloques, ENF] };
   };
   // Series a ritmo de la meta (6 × 500 m → 5 × 600 m → 4 × 750 m en un 2000 m): el split baja hasta el de la meta.
   const ritmo = (p, k) => {
     const [n, f] = paso([[6, 0.25], [5, 0.3], [4, 0.375]], p);
     const tramo = Math.max(100, Math.min(1000, Math.round((distancia * f) / 50) * 50));
     const r = reps(n, k);
-    // En metas largas (10 km) el ritmo de la meta queda por debajo del umbral: las series van como mínimo a +8 s del
-    // 2000 m equivalente, para que sigan siendo la sesión que sube el ritmo.
-    const sp = Math.min(ritmoMeta, split + 8) + Math.round(3 * (1 - p));
+    // En metas largas (10 km) el ritmo de la meta queda por debajo del umbral: las series van como mínimo al borde
+    // rápido del umbral (100 %), para que sigan siendo la sesión que sube el ritmo.
+    const sp = Math.min(ritmoMeta, zonaSplit(split, META_PCT.umbral).min) + Math.round(3 * (1 - p));
     const bloques = Array.from({ length: r }, (_, i) => [
       { nombre: `${tramo} m ${i + 1}/${r}`, fin: 'distancia', cantidad: tramo, duracion: 0, metrica: 'split', min: sp - 2, max: sp + 1 },
       ...(i < r - 1 ? [descanso(Math.round(tramo / 5) + 30)] : []),
@@ -322,6 +334,26 @@ function semanaMeta(split, distancia, ritmoMeta = split) {
     return { nombre: `Ritmo ${mm(sp)} · ${r} × ${tramo} m`, enfoque: 'potencia', bloques: [cal, ...ACTIVACION, ...bloques, ENF] };
   };
   return [(p, k, c, s) => (s % 2 === 0 ? umbral : ritmo)(p, k), fondo([40, 60]), firme([40, 55]), fondo([30, 45]), fondo([30, 40])];
+}
+
+// E-2 (E8): la prueba del plan de meta, con calentamiento. 10 min progresivos (5 suaves y 5 de fondo), 3 arranques,
+// 3 min suaves y la prueba por distancia: los primeros 500 m a 1–2 s del split de la meta (no más rápido, para no
+// quemarte en la salida) y el resto al split de la meta. La marca sale del mejor tramo (mejorTiempo), así que el
+// calentamiento no cuenta.
+export function pruebaMeta(distancia, split, ref) {
+  const salida = Math.min(500, Math.round(distancia / 4));
+  return {
+    tipo: 'intervalos', nombre: `Prueba ${distancia} m`, prueba: true, enfoque: 'pruebas', distanciaPrueba: distancia,
+    bloques: [
+      { nombre: 'Calentamiento', duracion: 300, metrica: 'split', ...zonaSplit(ref, META_PCT.cal) },
+      { nombre: 'Calentamiento progresivo', duracion: 300, metrica: 'split', ...zonaSplit(ref, META_PCT.fondo) },
+      ...ACTIVACION,
+      { nombre: 'Calentamiento: 3 min suaves', duracion: 180, metrica: '', min: 0, max: 0 },
+      { nombre: `Prueba: primeros ${salida} m sin pasarte`, fin: 'distancia', cantidad: salida, duracion: 0, metrica: 'split', min: split + 1, max: split + 2 },
+      { nombre: `Prueba: ${distancia - salida} m a tu ritmo`, fin: 'distancia', cantidad: distancia - salida, duracion: 0, metrica: 'split', min: split - 2, max: split + 1 },
+      ENF,
+    ],
+  };
 }
 
 // Cada sesión recibe el avance del plan (p: 0 la primera semana, 1 la última), k (volumen del nivel,
@@ -463,11 +495,9 @@ export function planPorObjetivo({ objetivo, nivel = 'medio', dias = 3, semanas =
     && ctx.diasSemana.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) ? [...ctx.diasSemana].sort((a, b) => a - b) : DIAS_PLAN[dias];
   const split = meta ? Math.round((meta.segundos * 500) / meta.distancia) : null;
   // Referencia de las zonas: el split de 2000 m equivalente a la meta (en un 2000 m, el mismo).
-  const ref = meta ? (meta.distancia === 2000 ? split : Math.round((predecir(meta.distancia, meta.segundos, 2000) * 500) / 2000)) : null;
+  const ref = meta ? ref2kDe(meta.distancia, meta.segundos, ctx?.pc || null) : null;
   const obj = meta ? { clave: 'meta', prueba: 'meta' } : objetivoPlan(objetivo) || OBJETIVOS_PLAN[0];
-  const pruebaDe = () => (meta
-    ? { tipo: 'objetivo', nombre: `Prueba ${meta.distancia} m`, prueba: true, objetivo: { metrica: 'distancia', valor: meta.distancia } }
-    : { ...structuredClone(PRUEBAS[obj.prueba]), enfoque: 'pruebas' });
+  const pruebaDe = () => (meta ? pruebaMeta(meta.distancia, split, ref) : { ...structuredClone(PRUEBAS[obj.prueba]), enfoque: 'pruebas' });
   const vol = NIVELES_PLAN.find((n) => n.clave === nivel)?.volumen ?? 1;
   const cx = { ...ctx, nivelPlan: nivel };
   const tiposBase = SEMANA_TIPO.base.slice(0, dias);

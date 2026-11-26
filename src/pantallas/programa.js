@@ -127,6 +127,8 @@ export async function contextoPlan() {
     split2k: Math.round(split2k), distHabitual: dists[Math.floor(dists.length / 2)] || 4000,
     kcalHabitual: kcals[Math.floor(kcals.length / 2)] || 250, kcalSemana: Math.round(kcalMes / 4),
     nivelSugerido: pf.nivel || (recientes < 4 ? 'inicio' : recientes < 10 ? 'medio' : 'alto'), sinHistorial: sesiones.length < 3,
+    // E-2 (E16): tu curva potencia–duración de 90 días, para el 2000 m equivalente de una meta de 5 o 10 km.
+    pc: E.perfilDe(sesiones, { peso: perfil().peso }),
   };
 }
 // Al arrancar la app (en orden, desde app.js).
@@ -430,6 +432,11 @@ export async function revisarPlanAuto() {
 export function ftpDelPlan(ent) {
   const f = leerPrograma()?.factor;
   return ent && esDePlan(ent) && f ? Math.round(ftp() * f) : ftp();
+}
+// El mismo ajuste para los bloques en split (planes de meta): Ent.normalizarBloques(…, { factorSplit }).
+export function factorDelPlan(ent) {
+  const f = leerPrograma()?.factor;
+  return ent && esDePlan(ent) && !ent.prueba && f > 0 ? f : 1;
 }
 
 // Siguiente plan (un poco más de carga) o el mismo ajustado a tu historial, desde hoy.

@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.138.0 · 2026-11-26
+
+Plan de meta (etapa E-2 de la ronda 2). Las zonas nuevas y la prueba con calentamiento llegan a los planes de meta que armes desde ahora. Lo ya remado no cambia.
+
+- **Zonas en % de tu potencia, no en segundos fijos.** El fondo va al 62–68 %, el firme al 82–88 % y el umbral al 94–100 %, y se pasan a split con la ley del cubo. Antes, quien rema un 2000 m en 10:40 hacía el «fondo» al 82 % y el «firme» al 97 % (un umbral que no contaba como sesión dura). Ahora el fondo queda en ~65 % para todos, y cada sesión se clasifica según lo que de verdad pide.
+- **La prueba del plan ya no arranca en frío.** Son 10 min de calentamiento progresivo, 3 arranques y 3 min suaves antes de la prueba. Los primeros 500 m van a 1–2 s del split de tu meta, para no quemarte en la salida. La marca sale del mejor tramo, así que el calentamiento no cuenta.
+- **Tras la prueba de mitad, las zonas que quedan salen de tu marca real**, no del split de partida, y los rangos vuelven al 100 %.
+- **«Bajé (o subí) tus rangos un 3 %» ahora también cambia los splits** de los planes de meta. Antes solo cambiaba los watts.
+- Las metas de 5 y 10 km sacan su 2000 m equivalente de tu curva potencia–duración. Si no la hay, de la ley de Paul.
+
 ## 0.137.0 · 2026-11-26
 
 Calibración honesta (etapa E-1 de la ronda 2). No cambia la XP ni las monedas de lo ya remado.

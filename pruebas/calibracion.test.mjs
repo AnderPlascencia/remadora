@@ -8,16 +8,16 @@ import { esBloqueTrabajo } from '../src/entrenamientos.js';
 const ctx = { kcalHabitual: 300, kcalSemana: 900 };
 const porSemana = (programa, n) => Array.from({ length: programa.dias.length / n }, (_, s) => programa.dias.slice(s * n, s * n + n));
 
-// (1) Plan de 2000 m: fondo a +20–30 s del split meta, umbral a +8–12 s, calentamiento sin pisar el fondo.
+// (1) Plan de 2000 m: zonas en % del FTP equivalente (E-2): fondo 62–68 %, umbral 94–100 %, calentamiento sin pisar el fondo.
 {
   const split = 118;
   const { programa, entrenamientos } = P.planPorMeta({ distancia: 2000, segundos: split * 4, semanas: 8, inicio: '2026-11-02' });
   const buscar = (n) => entrenamientos.find((e) => e.nombre === n);
   const fondo = entrenamientos.find((e) => /^Fondo/.test(e.nombre));
   const bF = fondo.bloques.find((b) => b.nombre === 'Fondo');
-  assert.deepEqual([bF.min, bF.max], [split + 20, split + 30], 'fondo a +20–30 s');
+  assert.deepEqual([bF.min, bF.max], [P.splitDePct(split, 68), P.splitDePct(split, 62)], 'fondo al 62–68 %');
   const um = entrenamientos.find((e) => /^Umbral/.test(e.nombre)).bloques.find((b) => /^Umbral/.test(b.nombre));
-  assert.deepEqual([um.min, um.max], [split + 8, split + 12], 'umbral a +8–12 s');
+  assert.deepEqual([um.min, um.max], [P.splitDePct(split, 100), P.splitDePct(split, 94)], 'umbral al 94–100 %');
   const cal = fondo.bloques[0];
   assert.ok(cal.min > bF.max, `calentamiento (${cal.min}) más lento que el fondo (${bF.max})`);
   assert.ok(programa.conDescarga);
