@@ -2,6 +2,16 @@
 
 Lo que cambia en cada versión de Rower. La versión de la app vive en `src/version.js`; esta lista empieza siempre por esa versión (lo comprueba `pruebas/version.test.mjs`).
 
+## 0.134.0 · 2026-11-26
+
+Planes y Programa (etapa 10 de la ronda 2).
+
+- **Un solo filtro en Planes:** «Por tipo» o «Por atributo». Antes había dos filtros que se pisaban: «Quiero subir: cualquier atributo» y, a la vez, un tipo elegido. Por atributo empieza por tu atributo más bajo. «Potencia» se llama ahora «Fuerza y potencia».
+- **Programa cabe en menos de dos pantallas** (antes 3,4). Arriba solo van hoy y esta semana. «Cómo sube tu plan y lo que sigue» y el calendario van plegados, y los días del calendario miden 44 px también a 360 de ancho.
+- **Un solo patrón de nombres** en los planes nuevos: «Fondo 30 min · suave», «Fondo 25 min · pulso suave». Los planes que ya tienes conservan sus nombres, porque identifican tus sesiones y récords.
+- **Ajustes pide los días una sola vez:** marcas tus días (L–D), y de ahí sale cuántos por semana. Los botones de los días y el enlace a Programa miden 44 px.
+- La vista Programa, el editor de entrenamientos y el diálogo de compartir se cargan al abrirlos. La primera carga baja de 378 a 368 KB de JS.
+
 ## 0.133.0 · 2026-11-26
 
 Del mes 7 en adelante (etapa 9 de la ronda 2).

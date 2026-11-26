@@ -33,7 +33,7 @@ assert.equal(pu.dias[18].ent, 'Umbral 1 × 30 min');
 assert.ok(pu.dias.filter((d) => d.ent === 'Prueba FTP 20 min').length === 2, 'prueba a mitad y al final');
 // Nivel: empezar pide menos volumen.
 const { programa: pi } = P.planPorObjetivo({ objetivo: 'base', nivel: 'inicio', dias: 3, semanas: 4, inicio: '2026-11-02', ctx });
-assert.equal(pi.dias[0].ent, 'Fondo 20 min a pulso suave');
+assert.equal(pi.dias[0].ent, 'Fondo 20 min · pulso suave');
 // Calorías: meta semanal que sube un 10 % y baja en la descarga.
 const { programa: pc, entrenamientos: ec } = P.planPorObjetivo({ objetivo: 'calorias', dias: 4, semanas: 6, inicio: '2026-11-02', ctx });
 assert.deepEqual(pc.metaKcal, [900, 1000, 1100, 950, 1300, 1450]);

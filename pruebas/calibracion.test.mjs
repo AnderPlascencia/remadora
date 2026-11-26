@@ -38,7 +38,7 @@ const porSemana = (programa, n) => Array.from({ length: programa.dias.length / n
   const { programa, entrenamientos } = P.planPorObjetivo({ objetivo: 'potencia', dias: 3, semanas: 6, inicio: '2026-11-02', ctx });
   for (const sem of porSemana(programa, 3)) {
     const ents = sem.map((d) => entrenamientos.find((e) => e.nombre === d.ent));
-    assert.ok(ents.some((e) => /^Fondo \d+ min \(zona 2\)$/.test(e.nombre) || e.prueba), sem.map((d) => d.ent).join(', '));
+    assert.ok(ents.some((e) => /^Fondo \d+ min · suave$/.test(e.nombre) || e.prueba), sem.map((d) => d.ent).join(', '));
   }
 }
 

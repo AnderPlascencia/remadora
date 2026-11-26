@@ -178,6 +178,7 @@ function alCambiarPerfil() { pintarPerfil(); ofrecerFtpInicial(); }
 const misDias = () => Ci.diasDeCita(citaGuardada().dias, perfil().dias);
 export function pintarCita() {
   const dias = misDias();
+  $('#cita-n').textContent = String(dias.length);
   $('#cita-dias').innerHTML = Ci.DIAS_CORTO.map((c, i) => `<button type="button" class="chip" data-dia="${i}" aria-pressed="${dias.includes(i)}" aria-label="${Ci.DIAS_NOMBRE[i]}">${c}</button>`).join('');
   $('#in-hora-remo').value = Ci.horaValida(citaGuardada().hora);
 }
