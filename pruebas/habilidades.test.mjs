@@ -30,9 +30,12 @@ assert.ok(maxInt <= Math.max(...Object.values(H.HABILIDADES).filter((h) => !h.in
 // Sin habilidad (pruebas): null.
 assert.equal(V.nuevaVentaja({ clase: 'vikingo' }).habilidad, null);
 
+// Una carrera con las reglas de E-4 (la fecha de corte va en día local: en Los Ángeles aún puede ser la víspera).
+const DESPUES = Date.parse('2026-11-27T10:00');
+
 // ---------- Furia del berserker ----------
 {
-  const nueva = (x = {}) => V.nuevaVentaja({ clase: 'vikingo', senda: 'b', intensidad: permiso, final: { meta: 2000 }, habilidad: { ftp: 200, ftpFiable: true }, ...x });
+  const nueva = (x = {}) => V.nuevaVentaja({ clase: 'vikingo', senda: 'b', intensidad: permiso, final: { meta: 2000 }, habilidad: { ftp: 200, ftpFiable: true, fecha: DESPUES }, ...x });
   // 20 s a 230 W con cadencia 28: cobra; luego no antes de 3 min; como mucho 2 en 2000 m.
   const e = remar(nueva(), 900, (t) => ({ w: t % 100 < 30 ? 230 : 180, spm: 28 }));
   const f = de(e, 'Furia del berserker');
@@ -48,7 +51,7 @@ assert.equal(V.nuevaVentaja({ clase: 'vikingo' }).habilidad, null);
   assert.equal(de(remar(nueva({ habilidad: { ftp: 200, ftpFiable: true, fecha: Date.parse('2026-11-25T10:00') } }), 150, () => ({ w: 230, spm: 20 })), 'Furia del berserker').length, 1);
   assert.equal(de(remar(nueva(), 150, () => ({ w: 230, spm: 24 })), 'Furia del berserker').length, 1);
   // Con molestia de espalda esta semana, la Furia descansa: Timonel en su lugar.
-  assert.equal(nueva({ habilidad: { ftp: 200, ftpFiable: true, espalda: true } }).habilidad.id, 'timonel');
+  assert.equal(nueva({ habilidad: { ftp: 200, ftpFiable: true, espalda: true, fecha: DESPUES } }).habilidad.id, 'timonel');
   assert.equal(nueva({ habilidad: { ftp: 200, ftpFiable: true, espalda: true, fecha: Date.parse('2026-11-25T10:00') } }).habilidad.id, 'furia');
   // Con el cuerpo cargado, la de reserva (Timonel) en vez de la Furia.
   const cargado = nueva({ intensidad: { activa: false, motivo: 'cuerpo', calentado: true } });
@@ -103,7 +106,7 @@ assert.equal(V.nuevaVentaja({ clase: 'vikingo' }).habilidad, null);
 
 // ---------- Zanshin ----------
 {
-  const nueva = (fecha) => V.nuevaVentaja({ clase: 'samurai', intensidad: permiso, final: { meta: 2000 }, habilidad: { ftp: 200, ...(fecha ? { fecha } : {}) } });
+  const nueva = (fecha) => V.nuevaVentaja({ clase: 'samurai', intensidad: permiso, final: { meta: 2000 }, habilidad: { ftp: 200, fecha: fecha ?? DESPUES } });
   // Ruido de ±2 en el dato bruto con la media estable: cobra al cruzar la meta.
   const e = remar(nueva(), 500, (t) => ({ spm: 24 + (t % 2 ? 2 : -2) }));
   assert.equal(de(e, 'Zanshin').length, 1);
