@@ -4,6 +4,8 @@
 /** Un logro (hazaña): meta contra valor(g), con su premio. desde: cuenta desde ese día; oculto: no se lista hasta lograrlo. */
 export interface Hazana {
   id: string; nombre: string; texto: string; meta: number; valor: (g: any) => number; xp?: number; monedas: number;
+  /** Monedas desde ECONOMIA_DESDE (los logros de las primeras semanas pagan la mitad). */
+  monedas2?: number;
   objeto?: string; desde?: string; oculto?: boolean; clase?: string; unidad?: string;
 }
 

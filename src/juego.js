@@ -55,6 +55,13 @@ export const MEJORA_REAL_PCT = 0.02;
 // los segundos por encima de la zona 3 (91 % del FTP o más) no dan Fuerza ni Agilidad: premiaban justo lo que
 // estropea un fondo. Desde SUAVE_SIN_ZONAS_DESDE; las sesiones de antes no cambian.
 export const SUAVE_SIN_ZONAS_DESDE = '2026-11-24';
+// ⚖ Ronda 2, etapa 12 (R2-15 y R2-17): los logros de las primeras semanas pagan la mitad de monedas, y los
+// atributos también suben remando libre (descansos entre sesiones, carreras y sesiones libres largas).
+// Solo desde este día: lo de antes no cambia.
+export const ECONOMIA_DESDE = '2026-11-28';
+export const esEconomia2 = (fecha) => claveDia(fecha) >= ECONOMIA_DESDE;
+// Monedas de un logro el día que se gana: los de las primeras semanas (monedas2) pagan la mitad desde ECONOMIA_DESDE.
+export const monedasHazana = (h, fecha = Date.now()) => (h.monedas2 != null && esEconomia2(fecha) ? h.monedas2 : h.monedas);
 export const TIPOS_INTENSOS = new Set(['umbral', 'vo2', 'sprint', 'prueba']);
 export const esSuaveDelPlan = (s) => claveDia(s.fecha) >= SUAVE_SIN_ZONAS_DESDE && !!s.delPrograma && !!s.tipoPlan && !TIPOS_INTENSOS.has(s.tipoPlan);
 export const XP_MEJORA_REAL = 250;
@@ -79,12 +86,12 @@ export const REGRESO_SESIONES = 3;
 const vatios = (f, pct) => (f ? `${Math.round(f * pct)} W` : `el ${Math.round(pct * 100)} % de tu FTP`);
 export function comoSubir(clave, f = 0) {
   return {
-    fuerza: [`Cada minuto por encima de ${vatios(f, 0.91)} (zona 4 o más): +1,2`],
-    agilidad: [`Cada 20 s por encima de ${vatios(f, 1.06)}: +1`, 'Un 500 m a fondo en menos de 2:30: +5'],
+    fuerza: [`Cada minuto por encima de ${vatios(f, 0.91)} (zona 4 o más): +1,2`, 'Ganar una carrera en Alta mar: +3'],
+    agilidad: [`Cada 20 s por encima de ${vatios(f, 1.06)}: +1`, 'Un 500 m a fondo en menos de 2:30: +5', 'Cada fantasma que vences: +2'],
     resistencia: [`Cada minuto entre ${vatios(f, 0.56)} y ${vatios(f, 0.9)} (zonas 2 y 3): +0,5`, 'Sesiones de 20 min o más: +4'],
-    recuperacion: ['Un día de descanso después de un día duro: +4', `Una sesión suave (media por debajo de ${vatios(f, 0.75)}): +2, o +5 si ayer fue duro`, 'Con banda de pulso: +3 por cada descanso en que el pulso baja 20 lpm en un minuto'],
+    recuperacion: ['Un día de descanso después de un día duro: +4', `Una sesión suave (media por debajo de ${vatios(f, 0.75)}): +2, o +5 si ayer fue duro`, 'Volver a remar tras 1 o 2 días de descanso: +3', 'Con banda de pulso: +3 por cada descanso en que el pulso baja 20 lpm en un minuto'],
     tecnica: [`Cada minuto con la potencia pareja (±8 %) y la cadencia estable, por encima de ${vatios(f, 0.55)}: +0,6 (hasta ${TOPE_TECNICA_MIN} min)`, 'Con el 70 % de la sesión así (10 min o más): +3', 'Si el bloque pide una cadencia, solo cuenta remando a esa cadencia'],
-    voluntad: ['Terminar el entrenamiento completo: +3', 'Cumplir una semana entera de tu plan: +5', 'Cada día seguido cumpliendo el plan (sesiones y descansos): +0,5 (hasta 7)'],
+    voluntad: ['Terminar el entrenamiento completo: +3', 'Una sesión libre de 20 min o más: +3', 'Cumplir una semana entera de tu plan: +5', 'Cada día seguido cumpliendo el plan (sesiones y descansos): +0,5 (hasta 7)'],
     gasto: ['Cada 50 kcal quemadas: +1', 'Los fondos largos en zona 2 son lo que más quema con menos fatiga'],
   }[clave] || [];
 }
@@ -779,10 +786,10 @@ export const hayHitos = (ahora = Date.now()) => claveDia(ahora) >= HITOS_DESDE;
 export const textoMedioRango = (n, clase = null) => `Cofre de medio rango: nivel ${n}, a medio camino ${n + 5 > RANGOS.at(-1).nivel ? 'del nivel máximo' : `de ${nombreRango(n + 5, clase)}`}`;
 /** @type {Hazana[]} */
 export const HAZANAS = [
-  { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20 },
-  { id: 'mision1', nombre: 'Primera misión', texto: 'Completa tu primera misión', meta: 1, valor: (g) => g.misiones, xp: 50, monedas: 20 },
-  { id: 'gran', nombre: 'Gran travesía', texto: 'Rema 8 km en una sola sesión', meta: 8, valor: (g) => g.kmMax, xp: 180, monedas: 60 },
-  { id: 'canal', nombre: 'Cruzar el Canal de la Mancha', texto: 'Rema 34 km en total', meta: 34, valor: (g) => g.kmTotal, monedas: 150, objeto: 'aura-fuego' },
+  { id: 'primera', nombre: 'Primera travesía', texto: 'Registra tu primera sesión', meta: 1, valor: (g) => g.sesiones, xp: 100, monedas: 20, monedas2: 10 },
+  { id: 'mision1', nombre: 'Primera misión', texto: 'Completa tu primera misión', meta: 1, valor: (g) => g.misiones, xp: 50, monedas: 20, monedas2: 10 },
+  { id: 'gran', nombre: 'Gran travesía', texto: 'Rema 8 km en una sola sesión', meta: 8, valor: (g) => g.kmMax, xp: 180, monedas: 60, monedas2: 30 },
+  { id: 'canal', nombre: 'Cruzar el Canal de la Mancha', texto: 'Rema 34 km en total', meta: 34, valor: (g) => g.kmTotal, monedas: 150, monedas2: 75, objeto: 'aura-fuego' },
   { id: 'km50', nombre: 'Cincuenta kilómetros', texto: 'Rema 50 km en total', meta: 50, valor: (g) => g.kmTotal, xp: 300, monedas: 100 },
   { id: 'hora', nombre: 'La hora del remero', texto: 'Rema 60 minutos en una sola sesión', meta: 60, valor: (g) => g.minMax, monedas: 150, objeto: 'cinta-campeon' },
   { id: 'ses25', nombre: 'Veinticinco entrenamientos', texto: 'Completa 25 sesiones', meta: 25, valor: (g) => g.sesiones, xp: 500, monedas: 150 },
@@ -991,6 +998,13 @@ function gananciaSesion(s, m, ctx) {
   if (!nueva && s.rpe >= 8) at.voluntad += 3;
   if (nueva) at.voluntad += 5 * (ctx.creditos?.semanas || 0);
   if (!esUnaRacha(s.fecha)) at.voluntad += Math.min(ctx.racha, 7) * 0.5;
+  // ⚖ R2-17 (ECONOMIA_DESDE): con remo libre, Fuerza, Agilidad, Voluntad y Recuperación se quedaban en 0 durante años.
+  if (esEconomia2(s.fecha)) {
+    if (ctx.descansoEntre && !ctx.descansoATiempo) at.recuperacion += 3;
+    if (!completo && (s.duracion || 0) >= 1200) at.voluntad += 3;
+    at.agilidad += 2 * (m.ganados || 0);
+    at.fuerza += 3 * (m.altamar || 0);
+  }
 
   const carga = s.estres ?? estres(s, m.f) ?? Math.round(m.min * 0.8);
   if (nueva) return gananciaCarga(s, m, ctx, at, carga);
@@ -1073,8 +1087,8 @@ function gananciaCarga(s, m, ctx, at, carga) {
   const plan = r === 1 ? detalle : detalle.map(([k, v]) => /** @type {[string, number]} */ ([k, Math.round(v * r)]));
   const todo = [...plan, ...bonosDeJuego(s, m, ctx)].filter(([, v]) => v > 0);
   const xp = todo.reduce((a, [, v]) => a + v, 0);
-  // Monedas: 1 por cada 50 XP que se ven desde la etapa 12 (las cuenta estadoJuego con xpBase o xp); el ritmo de 3
-  // sesiones no cambia las monedas.
+  // Monedas: 1 por cada 50 XP que se ven desde la etapa 12 (las cuenta estadoJuego con xpBase o xp). Como desde
+  // RITMO3_DESDE la XP que se ve rinde un 25 % más, la sesión paga lo que antes 1 moneda por cada 40 XP: es la R2-15 (b).
   return { xp, xpBase: Math.round((xp * 2) / r), detalle: todo, atributos: at, carga, datosTal: datosTalento(s, m, ctx), pagaPlan: !!cumple || (!!ctx.regreso && !ctx.planPagado) };
 }
 
@@ -1333,6 +1347,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     }
     const grados = claveClase ? gradosEn(arbol, claveClase, s.fecha) : {};
     const descansoATiempo = !dias.has(ayer) && (cargaDia.get(anteayer) || 0) >= 60;
+    // Descanso entre sesiones (R2-17): ayer no remaste, y sí remaste anteayer o el día antes.
+    const descansoEntre = !dias.has(ayer) && (dias.has(anteayer) || dias.has(claveDia(s.fecha - 3 * 864e5)));
     const lunesS = lunesDe(s.fecha);
     sesPorSemana.set(lunesS, (sesPorSemana.get(lunesS) || 0) + 1);
     kmPorSemana.set(lunesS, (kmPorSemana.get(lunesS) || 0) + m.metros / 1000);
@@ -1347,7 +1363,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     const nueva = XC.usaCarga(s);
     const creditos = nueva ? creditosAntesDe(hoy) : null;
     const gan = gananciaSesion(s, m, {
-      grados, clase: claveClase, senda: claveClase ? sendaEn(per, claveClase, s.fecha) : 'a', sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, mppPromedio: mppN ? mppSuma / mppN : 0, semanasSeguidas: g.semanas,
+      grados, clase: claveClase, senda: claveClase ? sendaEn(per, claveClase, s.fecha) : 'a', sesSemana: sesPorSemana.get(lunesS), kmSemana: kmPorSemana.get(lunesS), metaSemanaKm, racha, records, cargaAyer: cargaDia.get(ayer) || 0, descansoATiempo, descansoEntre, mppPromedio: mppN ? mppSuma / mppN : 0, semanasSeguidas: g.semanas,
       cargaAntes: cargaDia.get(hoy) || 0, creditos, planPagado: planPagado.has(hoy), tipo: nueva ? tipoSesion(s, ftp) : null, regreso: regreso && nueva,
     });
     if (gan.pagaPlan) planPagado.add(hoy);
@@ -1516,7 +1532,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
         if (!hazanas.has(h.id) && cumpleHazana(h, g, hoy) && !(h.desde && hoy < h.desde)) {
           hazanas.add(h.id);
           nuevo = true;
-          lograr(s.fecha, 'hazana', `Logro: ${h.nombre}`, h.monedas, h.objeto, h.xp || 0);
+          lograr(s.fecha, 'hazana', `Logro: ${h.nombre}`, monedasHazana(h, s.fecha), h.objeto, h.xp || 0);
         }
       }
     }
@@ -1565,6 +1581,8 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     pendiente: capPendiente,
     preparar: PRUEBA_JEFE[CAPITULOS[cap].jefe.tipo],
   } : null;
+  // Lo que pagó cada logro ya ganado (sin la insignia, que la vista suma aparte).
+  const monedasPagadas = (hz) => { const l = logros.find((x) => x.tipo === 'hazana' && x.texto === `Logro: ${hz.nombre}`); return l ? l.monedas - (hz.objeto ? PREMIO_INSIGNIA : 0) : null; };
   return {
     xp,
     nivel,
@@ -1593,7 +1611,7 @@ export function estadoJuego(sesiones, { ftp = 0, per = {}, ahora = Date.now(), c
     capitulo,
     capitulosHechos: cap,
     piezasJefe: [...piezasJefe],
-    hazanas: HAZANAS.filter((h) => !h.oculto || hazanas.has(h.id)).map((h) => ({ ...h, xp: xpReal(h.xp, ahora), hecha: hazanas.has(h.id), ...vistaHazana(h, g, hoy) })),
+    hazanas: HAZANAS.filter((h) => !h.oculto || hazanas.has(h.id)).map((h) => ({ ...h, xp: xpReal(h.xp, ahora), monedas: monedasPagadas(h) ?? monedasHazana(h, ahora), hecha: hazanas.has(h.id), ...vistaHazana(h, g, hoy) })),
     xpPorSesion,
     // Escalera de fuerza (GANARTE_DESDE): cuánto subió tu FTP y el próximo escalón. null sin FTP o antes de la fecha.
     escaleraFtp: g.ftpInicial != null && hoy >= GA.GANARTE_DESDE ? { ...GA.escaleraFtp(g.ftpMejora), xp: GA.XP_ESCALON_FTP, monedas: GA.MONEDAS_ESCALON_FTP } : null,

@@ -160,7 +160,7 @@ export function comprarPieza(per = {}, id, monedas) {
 }
 
 // Cambios para equipar una pieza (id null: quitarla; en la vela, null vuelve a la clásica). La vela también acepta
-// las velas de color de la tienda (id de VELAS en carrera.js), que valen para cualquier bote.
+// las velas de color de la tienda (id de VELAS en carrera.js), que valen para cualquier bote y son solo aspecto.
 export function equipar(per = {}, clase, tipo, id) {
   const actual = per.equipoBote?.[clase] || {};
   return { equipoBote: { ...(per.equipoBote || {}), [clase]: { ...actual, [tipo]: id } } };
@@ -194,7 +194,9 @@ export function velaDeRival(clase, { dificultad = null, rango = null } = {}) {
 // mascarón: un % más de distancia en los primeros 2 min; palas: 1 m cada 100 paladas.
 // Las piezas de jefe dan la ventaja de su tipo: la vela del capítulo 3 como la de taller y el mascarón como el de nivel 40.
 export const SALIDA_VELA = { clasica: 0, rango: 5, taller: 8, epica: 12, legendaria: 15, jefe3: 8 };
-export const SALIDA_VELA_COLOR = { carmesi: 4, esmeralda: 6, medianoche: 8, hielo: 10, oro: 12 };
+// R2-13: las velas de color eran una segunda escalera con la misma ventaja que las de tu clase (la de oro, 12 m como la
+// épica). Desde la etapa 12 de la ronda 2 son solo aspecto: la carrera no cambia, así que no hace falta fecha de corte.
+export const SALIDA_VELA_COLOR = { carmesi: 4, esmeralda: 6, medianoche: 8, hielo: 10, oro: 12 }; // solo historia
 export const INICIO_PROA = { proa: 0.01, 'proa-oro': 0.02, jefe2: 0.01 };
 export const PALAS_M = 1;
 export const EFECTO_LEGENDARIO = {
@@ -206,7 +208,7 @@ export const EFECTO_LEGENDARIO = {
 };
 export function ventajaTexto(x, id = x?.id) {
   if (!x) return '';
-  if (!x.escalon) return SALIDA_VELA_COLOR[id] ? `Ventaja: empiezas ${SALIDA_VELA_COLOR[id]} m por delante` : '';
+  if (!x.escalon) return id in SALIDA_VELA_COLOR ? 'Solo aspecto: tiñe la vela de cualquier bote' : '';
   if (x.tipo === 'bandera') return 'Sin ventaja: es tu trofeo';
   if (x.tipo === 'palas') return `Ventaja: +${PALAS_M} m cada 100 paladas`;
   if (x.tipo === 'proa') return `Ventaja: +${INICIO_PROA[x.escalon] * 100} % de distancia en los primeros 2 min`;
@@ -219,7 +221,7 @@ export function bonoEquipo(equipo) {
   if (!equipo) return null;
   const vela = PIEZAS[equipo.vela];
   const b = {
-    salida: vela ? SALIDA_VELA[vela.escalon] || 0 : SALIDA_VELA_COLOR[equipo.vela] || 0,
+    salida: vela ? SALIDA_VELA[vela.escalon] || 0 : 0,
     inicio: INICIO_PROA[PIEZAS[equipo.proa]?.escalon] || 0,
     porPaladas: PIEZAS[equipo.palas] ? PALAS_M : 0,
     legendaria: vela?.escalon === 'legendaria' ? vela.clase : null,

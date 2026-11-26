@@ -2392,3 +2392,8 @@ html:has(#modo-remo:not([hidden])), html:has(#modo-remo:not([hidden])) body { ov
   /* La tarjeta ya queda a la vista: la cabecera compacta sobra. */
   #heroe-ficha #heroe-mini { display: none; }
 }
+
+/* Ronda 2, etapa 12 (R2-18, UX2-30): una sola vitrina de insignias en Héroe › Ficha, con dos filas. */
+.insignias-fila { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 6px; font-size: var(--t-m); }
+.insignias-fila small { font-size: var(--t-s); font-weight: 600; color: var(--texto-suave); }
+.ir-insignias { display: flex; align-items: center; min-height: 48px; margin: 16px 0 0; padding: 0 4px; font-weight: 700; }

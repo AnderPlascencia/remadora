@@ -167,3 +167,18 @@ export function simular(nombre, { semanas = 104, base = new Date('2026-11-23T19:
     diarias: h.logros.filter((l) => l.tipo === 'diaria'), diasDeRemo: new Set(ses.map((s) => clave(s.fecha))).size,
   };
 }
+
+// Libro de cuentas (R2-15): monedas por fuente y por semana de un perfil. pct12: % de las monedas de todo el periodo
+// que entran en las 12 primeras semanas; y2y1: ingreso del segundo año frente al primero (con 104 semanas).
+export function libroDeCuentas(nombre, { semanas = 104, base = new Date('2026-11-30T19:00').getTime() } = {}) {
+  const r = simular(nombre, { semanas, base });
+  const semana = (f) => Math.floor((f - base) / (7 * D));
+  const porSemana = Array(semanas).fill(0);
+  const fuentes = {};
+  const sumar = (fuente, f, m) => { if (!m) return; fuentes[fuente] = (fuentes[fuente] || 0) + m; porSemana[Math.min(semanas - 1, semana(f))] += m; };
+  for (const [f, p] of r.h.porSesion) sumar('sesion', f, p.monedas);
+  for (const l of r.h.logros) sumar(l.tipo, l.fecha, l.monedas);
+  const suma = (a, b) => porSemana.slice(a, b).reduce((x, y) => x + y, 0);
+  const total = suma(0, semanas);
+  return { total, fuentes, porSemana, pct12: total ? (100 * suma(0, 12)) / total : 0, y2y1: semanas >= 104 ? suma(52, 104) / (suma(0, 52) || 1) : null, monedas: r.h.monedas };
+}

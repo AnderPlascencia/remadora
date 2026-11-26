@@ -8,7 +8,8 @@ import * as P from './programa.js';
 export const ESTADO_EVENTOS = 'eventosHabito';
 export const EVENTOS_MAX = 3000;
 // Tipos de evento. «sesionFin» lleva { completa } (false: terminada antes del final del plan del día).
-export const TIPOS_EVENTO = ['app', 'sesionInicio', 'sesionFin', 'sesionCorta', 'sesionDescartada', 'bienvenida', 'bienvenidaFin', 'compartir'];
+// «ventajaCompra» lleva { id, n } y «ventajaUso» { id } (R2-16: medir si las ventajas de un solo uso se usan).
+export const TIPOS_EVENTO = ['app', 'sesionInicio', 'sesionFin', 'sesionCorta', 'sesionDescartada', 'bienvenida', 'bienvenidaFin', 'compartir', 'ventajaCompra', 'ventajaUso'];
 // Una pausa: 4 días o más sin remar. Un hueco largo: 8 días o más.
 export const PAUSA_DIAS = 4;
 export const HUECO_DIAS = 8;
@@ -134,6 +135,7 @@ export function resumenEventos(eventos, sesiones, dias = 28, ahora = Date.now())
     compartidas: de('compartir').length,
     tasaCompartir: remadas ? Math.round((100 * de('compartir').length) / remadas) : null,
     bienvenida: { pasoMax: pasos.length ? Math.max(...pasos) : 0, terminada: de('bienvenidaFin').length > 0 },
+    ventajas: { compradas: de('ventajaCompra').reduce((a, e) => a + (e.n || 1), 0), usadas: de('ventajaUso').length },
   };
 }
 

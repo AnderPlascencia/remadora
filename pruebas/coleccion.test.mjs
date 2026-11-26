@@ -110,13 +110,15 @@ assert.equal(CB.velaDeRival(null, { dificultad: 'altamar' }), null);
 assert.equal(CB.bonoEquipo({ vela: 'vikingo-clasica' }), null);
 assert.deepEqual(CB.bonoEquipo({ vela: 'vikingo-taller', proa: 'vikingo-proa', palas: 'vikingo-palas' }), { salida: 8, inicio: 0.01, porPaladas: 1, legendaria: null });
 assert.deepEqual(CB.bonoEquipo({ vela: 'romano-legendaria', proa: 'romano-proa-oro' }), { salida: 15, inicio: 0.02, porPaladas: 0, legendaria: 'romano' });
-assert.equal(CB.bonoEquipo({ vela: 'oro' }).salida, 12, 'las velas de color también dan salida');
+// Ronda 2, R2-13: las velas de color son solo aspecto (antes la de oro daba 12 m, lo mismo que la épica de tu clase).
+assert.equal(CB.bonoEquipo({ vela: 'oro' }), null, 'las velas de color no dan ventaja');
+assert.match(CB.ventajaTexto(VELAS.oro, 'oro'), /Solo aspecto/);
 for (const clase of CB.CLASES_COLECCION) {
   const salidas = ['clasica', 'rango', 'taller', 'epica', 'legendaria'].map((e) => CB.SALIDA_VELA[e]);
   assert.deepEqual(salidas, [...salidas].sort((a, b) => a - b), 'más alta, más ventaja');
   assert.match(CB.ventajaTexto(CB.PIEZAS[`${clase}-legendaria`]), /15 m por delante y \+/);
 }
-assert.equal(CB.ventajaTexto(VELAS.hielo, 'hielo'), 'Ventaja: empiezas 10 m por delante');
+assert.equal(CB.ventajaTexto(VELAS.hielo, 'hielo'), 'Solo aspecto: tiñe la vela de cualquier bote');
 assert.equal(CB.ventajaTexto(CB.PIEZAS['pirata-palas']), 'Ventaja: +1 m cada 100 paladas');
 
 // Monedas de las ventajas: Estandarte +10 y Botín +20 por fantasma, solo desde la revisión.

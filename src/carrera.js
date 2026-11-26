@@ -437,13 +437,14 @@ export const BOTES = {
   polinesio: { nombre: 'Canoa polinesia', tela: '#0EA5E9', marca: '#FDE047' },
   romano: { nombre: 'Trirreme romano', tela: '#7E22CE', marca: '#FACC15' },
 };
-// Velas y banderas de tu bote (etapa 12): colección de 400 a 2500 monedas. Solo cambian tu bote, nunca los rivales.
+// Velas de color (etapa 12): solo aspecto desde la ronda 2 (R2-13), a la mitad de precio, de 200 a 1250 monedas.
+// Solo cambian tu bote, nunca los rivales.
 export const VELAS = {
-  carmesi: { nombre: 'Velas carmesí', texto: 'Rojo de batalla con franjas negras.', precio: 400, tela: '#991B1B', marca: '#111827' },
-  esmeralda: { nombre: 'Velas esmeralda', texto: 'Verde selva con remates de oro.', precio: 800, tela: '#047857', marca: '#FCD34D' },
-  medianoche: { nombre: 'Velas de medianoche', texto: 'Azul noche con estrellas de plata.', precio: 1200, tela: '#1E1B4B', marca: '#E2E8F0' },
-  hielo: { nombre: 'Velas de hielo', texto: 'Blanco glaciar con azul polar.', precio: 1800, tela: '#E0F2FE', marca: '#0284C7' },
-  oro: { nombre: 'Velas de oro', texto: 'Para quien ya lo ha ganado todo.', precio: 2500, tela: '#CA8A04', marca: '#FEF3C7' },
+  carmesi: { nombre: 'Velas carmesí', texto: 'Rojo de batalla con franjas negras.', precio: 200, tela: '#991B1B', marca: '#111827' },
+  esmeralda: { nombre: 'Velas esmeralda', texto: 'Verde selva con remates de oro.', precio: 400, tela: '#047857', marca: '#FCD34D' },
+  medianoche: { nombre: 'Velas de medianoche', texto: 'Azul noche con estrellas de plata.', precio: 600, tela: '#1E1B4B', marca: '#E2E8F0' },
+  hielo: { nombre: 'Velas de hielo', texto: 'Blanco glaciar con azul polar.', precio: 900, tela: '#E0F2FE', marca: '#0284C7' },
+  oro: { nombre: 'Velas de oro', texto: 'Para quien ya lo ha ganado todo.', precio: 1250, tela: '#CA8A04', marca: '#FEF3C7' },
 };
 export const tieneVelas = (per, id) => !!VELAS[id] && (per.velas || []).includes(id);
 export const velasElegidas = (per = {}) => (tieneVelas(per, per.vela) ? per.vela : null);
